@@ -17,13 +17,9 @@
 </head>
 <body>
   <!-- Authentication comes first. Credentials and registration data stay on this device. -->
-  <section class="auth-screen" id="authScreen" aria-labelledby="authTitle">
+  <section class="auth-screen" id="authScreen" aria-label="Active Plus শিক্ষার্থী লগইন">
     <div class="auth-topbar">
       <div class="auth-brand"><img src="logo.svg" alt="Active Plus logo" width="38" height="38"><span><strong>Active Plus</strong><small data-fixed-tagline aria-label="শিখতে থাকো, এগিয়ে যাও">শিখতে থাকো, এগিয়ে যাও</small></span></div>
-    </div>
-    <div class="auth-hero">
-      <h1 id="authTitle">অ্যাকাউন্টে প্রবেশ করুন</h1>
-      <p>মোবাইল নম্বর ও PIN দিয়ে প্রবেশ করুন</p>
     </div>
     <div class="auth-card">
       <div class="auth-tabs" role="tablist" aria-label="অ্যাকাউন্ট অপশন">
@@ -33,7 +29,7 @@
       <p class="auth-message" id="authMessage" role="status" hidden></p>
 
       <div class="auth-panel active" id="loginPanel" data-auth-panel="login">
-        <div class="auth-panel-heading"><div><h2>শিক্ষার্থী লগইন</h2><p>মোবাইল নম্বর ও PIN দিয়ে প্রবেশ করুন</p></div></div>
+        <div class="auth-panel-heading"><div><h2>শিক্ষার্থী লগইন</h2></div></div>
         <form id="loginForm" novalidate>
           <label for="loginMobile">মোবাইল নম্বর</label>
           <div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-phone"></use></svg><input id="loginMobile" name="mobile" type="tel" inputmode="numeric" autocomplete="tel" placeholder="০১XXXXXXXXX" required></div>
