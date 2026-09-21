@@ -1,6 +1,6 @@
 /* Authentication feature: login, registration, PIN recovery and pending access. */
 import { $, $$, normalizeMobile, normalizeAnswer, setAuthMessage, showFeedback, openModal, closeModal } from './ui.js';
-import { enabledClasses } from './config.js';
+import { enabledClasses, defaultStudent } from './config.js';
 import { saveAccount, saveStudent, generateStudentId, persistSession } from './storage.js';
 
 export function switchAuthTab(tab) {
@@ -192,7 +192,7 @@ function handleRecovery(event, state) {
   setAuthMessage('নতুন PIN সংরক্ষণ হয়েছে। এখন লগইন করুন।', true);
 }
 
-export function initAuth({ state, onAuthenticated, onLogout }) {
+export function initAuth({ state, onAuthenticated, onLogout, onDemo }) {
   populateRegistrationClasses();
   initPinVisibility();
   const registrationSteps = initRegistrationSteps();
@@ -206,5 +206,10 @@ export function initAuth({ state, onAuthenticated, onLogout }) {
   $('#registrationForm')?.addEventListener('submit', event => handleRegistration(event, state));
   $('#recoveryForm')?.addEventListener('submit', event => handleRecovery(event, state));
   $('#forgotPinButton')?.addEventListener('click', () => openModal('recoveryModal'));
+  $('#demoLoginButton')?.addEventListener('click', () => {
+    state.account = { mobile: '01700000000', pin: '123456', status: 'active', student: { ...defaultStudent } };
+    state.student = { ...defaultStudent };
+    onDemo?.();
+  });
   $('#pendingLogout')?.addEventListener('click', () => onLogout?.());
 }
