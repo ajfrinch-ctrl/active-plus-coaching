@@ -1,5 +1,5 @@
 /* Home dashboard */
-.app-main { padding: 98px 20px 116px; }
+.app-main { padding: calc(98px + env(safe-area-inset-top, 0px)) 20px calc(116px + env(safe-area-inset-bottom, 0px)); }
 .view { display: none; animation: viewIn .3s ease both; }
 .view.active { display: block; }
 @keyframes viewIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
