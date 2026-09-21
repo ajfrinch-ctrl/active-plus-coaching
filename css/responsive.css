@@ -13,7 +13,7 @@
 
 @media (max-width: 360px) {
   .app-main { padding-left: 16px; padding-right: 16px; }
-  .topbar-inner { padding-left: 16px; padding-right: 16px; }
+  .topbar-inner { padding-left: 0; padding-right: 0; }
   .progress-card h2 { font-size: 15px; }
   .progress-copy { font-size: 9px; }
   .progress-ring { flex-basis: 68px; width: 68px; height: 68px; }
