@@ -1,23 +1,8 @@
-/* Authentication feature: login, registration, PIN recovery and pending access. */
-import { $, $$, normalizeMobile, normalizeAnswer, setAuthMessage, showFeedback, openModal, closeModal } from './ui.js';
-import { enabledClasses, defaultStudent } from './config.js';
-import { saveAccount, saveStudent, generateStudentId, persistSession } from './storage.js';
-
-export function switchAuthTab(tab) {
-  $$('[data-auth-tab]').forEach(trigger => {
-    if (!trigger.classList.contains('auth-tab')) return;
-    const active = trigger.dataset.authTab === tab;
-    trigger.classList.toggle('active', active);
-    trigger.setAttribute('aria-selected', String(active));
-  });
-  $$('[data-auth-panel]').forEach(panel => {
-    const active = panel.dataset.authPanel === tab;
-    panel.classList.toggle('active', active);
-    panel.hidden = !active;
-  });
-  setAuthMessage('');
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
+/* Registration feature: step-by-step student self-registration with auto Student ID. */
+import { $, $$, normalizeMobile, normalizeAnswer, setAuthMessage } from './ui.js';
+import { enabledClasses } from './config.js';
+import { saveAccount, saveStudent, generateStudentId } from './storage.js';
+import { switchAuthTab } from './login.js';
 
 function populateRegistrationClasses() {
   const select = $('#regClass');
@@ -25,21 +10,11 @@ function populateRegistrationClasses() {
   select.insertAdjacentHTML('beforeend', enabledClasses.map(className => `<option value="${className}">${className}</option>`).join(''));
 }
 
-function toggleMajorField() {
+export function toggleMajorField() {
   const isHonours = ($('#regClass')?.value || '').includes('অনার্স');
   const field = $('#majorField');
   if (field) field.hidden = !isHonours;
   if ($('#major')) $('#major').required = isHonours;
-}
-
-function initPinVisibility() {
-  $$('[data-toggle-pin]').forEach(button => {
-    button.addEventListener('click', () => {
-      const input = $(`#${button.dataset.togglePin}`);
-      if (!input) return;
-      input.type = input.type === 'password' ? 'text' : 'password';
-    });
-  });
 }
 
 function initFixedContactMobile() {
@@ -49,29 +24,6 @@ function initFixedContactMobile() {
   const sync = () => { contactMobile.value = loginMobile.value; };
   loginMobile.addEventListener('input', sync);
   sync();
-}
-
-function handleLogin(event, state, onAuthenticated) {
-  event.preventDefault();
-  const form = new FormData(event.currentTarget);
-  const mobile = normalizeMobile(form.get('mobile'));
-  const pin = String(form.get('pin') || '');
-  if (!mobile || pin.length < 4) {
-    setAuthMessage('মোবাইল নম্বর ও ৪–৬ সংখ্যার PIN সঠিকভাবে দিন।');
-    return;
-  }
-  if (!state.account) {
-    setAuthMessage('এই ডিভাইসে কোনো অ্যাকাউন্ট নেই। আগে রেজিস্ট্রেশন করুন।');
-    return;
-  }
-  if (mobile !== state.account.mobile || pin !== state.account.pin) {
-    setAuthMessage('মোবাইল নম্বর অথবা PIN সঠিক নয়। আবার চেষ্টা করুন।');
-    return;
-  }
-  state.student = { ...state.student, ...(state.account.student || {}) };
-  saveStudent(state.student);
-  persistSession($('#rememberMe')?.checked !== false);
-  onAuthenticated?.();
 }
 
 function handleRegistration(event, state) {
@@ -175,51 +127,15 @@ function initRegistrationSteps() {
   return { reset: () => showStep(0) };
 }
 
-function handleRecovery(event, state) {
-  event.preventDefault();
-  const formElement = event.currentTarget;
-  if (!formElement.checkValidity()) {
-    formElement.reportValidity();
-    return;
-  }
-  if (!state.account) {
-    closeModal('recoveryModal');
-    setAuthMessage('এই ডিভাইসে কোনো রেজিস্টার্ড অ্যাকাউন্ট পাওয়া যায়নি।');
-    return;
-  }
-  const form = new FormData(formElement);
-  const matches = normalizeMobile(form.get('mobile')) === state.account.mobile
-    && form.get('question') === state.account.securityQuestion
-    && normalizeAnswer(form.get('answer')) === state.account.securityAnswer;
-  const pin = String(form.get('pin') || '');
-  if (!matches) return showFeedback('মোবাইল নম্বর, প্রশ্ন বা উত্তর সঠিক নয়');
-  if (!/^\d{4,6}$/.test(pin)) return showFeedback('নতুন PIN ৪ থেকে ৬ সংখ্যার হতে হবে');
-  state.account.pin = pin;
-  saveAccount(state.account);
-  closeModal('recoveryModal');
-  $('#loginMobile').value = state.account.mobile;
-  setAuthMessage('নতুন PIN সংরক্ষণ হয়েছে। এখন লগইন করুন।', true);
-}
-
-export function initAuth({ state, onAuthenticated, onLogout, onDemo }) {
+export function initRegister({ state }) {
   populateRegistrationClasses();
-  initPinVisibility();
   initFixedContactMobile();
-  const registrationSteps = initRegistrationSteps();
-
-  $$('[data-auth-tab]').forEach(trigger => trigger.addEventListener('click', () => {
-    if (trigger.dataset.authTab === 'register') registrationSteps.reset();
-    switchAuthTab(trigger.dataset.authTab);
-  }));
+  const registerSteps = initRegistrationSteps();
   $('#regClass')?.addEventListener('change', toggleMajorField);
-  $('#loginForm')?.addEventListener('submit', event => handleLogin(event, state, onAuthenticated));
   $('#registrationForm')?.addEventListener('submit', event => handleRegistration(event, state));
-  $('#recoveryForm')?.addEventListener('submit', event => handleRecovery(event, state));
-  $('#forgotPinButton')?.addEventListener('click', () => openModal('recoveryModal'));
-  $('#demoLoginButton')?.addEventListener('click', () => {
-    state.account = { mobile: '01700000000', pin: '123456', status: 'active', student: { ...defaultStudent } };
-    state.student = { ...defaultStudent };
-    onDemo?.();
-  });
-  $('#pendingLogout')?.addEventListener('click', () => onLogout?.());
+
+  // Starting registration always returns to the first step.
+  $$('[data-auth-tab]').forEach(trigger => trigger.addEventListener('click', () => {
+    if (trigger.dataset.authTab === 'register') registerSteps.reset();
+  }));
 }

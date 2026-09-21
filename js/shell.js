@@ -1,6 +1,5 @@
 /* App shell lifecycle and student identity rendering. */
 import { $, $$, scrollToTop, toBanglaNumber } from './ui.js';
-import { clearSession } from './storage.js';
 
 export function renderStudent(student) {
   const firstName = String(student.name || 'শিক্ষার্থী').trim().split(/\s+/)[0] || 'শিক্ষার্থী';
@@ -42,11 +41,6 @@ export function showAuthScreen() {
     app.classList.remove('is-pending');
   }
   scrollToTop();
-}
-
-export function logout() {
-  clearSession();
-  showAuthScreen();
 }
 
 export function setView(viewName) {

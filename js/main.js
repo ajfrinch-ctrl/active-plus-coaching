@@ -1,9 +1,12 @@
 /* Application composition root. Feature modules can be replaced independently. */
 import { APP_TAGLINE } from './config.js';
-import { loadStudent, loadAccount, hasSession, persistSession, saveStudent } from './storage.js';
-import { $, openModal, setAuthMessage, showFeedback } from './ui.js';
-import { renderStudent, openStudentApp, showAuthScreen, logout, setView } from './shell.js';
-import { switchAuthTab, initAuth } from './auth.js';
+import { loadStudent, loadAccount, hasSession, persistSession, saveStudent, clearSession } from './storage.js';
+import { $, setAuthMessage, showFeedback } from './ui.js';
+import { renderStudent, openStudentApp, showAuthScreen, setView } from './shell.js';
+import { switchAuthTab, initLogin } from './login.js';
+import { initRegister } from './register.js';
+import { initRecovery } from './recovery.js';
+import { requestLogout, initLogout } from './logout.js';
 import { initNavigation } from './navigation.js';
 import { initModals } from './modals.js';
 import { initProfile, openProfileEditor, shareStudentOnWhatsApp } from './profile.js';
@@ -50,15 +53,11 @@ function handleAction(action) {
       showFeedback('অফিসে যোগাযোগের জন্য অ্যাপের নোটিশ দেখুন');
       break;
     case 'logout':
-      confirmLogoutAndLeave();
+      requestLogout();
       break;
     default:
       break;
   }
-}
-
-function confirmLogoutAndLeave() {
-  openModal('logoutModal');
 }
 
 function enterApp() {
@@ -66,14 +65,15 @@ function enterApp() {
 }
 
 function leaveApp() {
-  logout();
+  clearSession();
   switchAuthTab('login');
+  showAuthScreen();
   setAuthMessage('লগআউট হয়েছে। আবার প্রবেশ করতে মোবাইল নম্বর ও PIN দিন।');
 }
 
 renderStudent(state.student);
 initNavigation({ onAction: handleAction });
-initModals({ onLogoutConfirm: leaveApp });
+initModals();
 initProfile({
   state,
   onStudentChange: student => renderStudent(student)
@@ -84,16 +84,21 @@ initDynamicTheme();
 initScrollHeader();
 initInstallPrompt();
 registerServiceWorker();
-initAuth({
+initLogin({
   state,
   onAuthenticated: enterApp,
   onDemo: () => {
     persistSession(false);
     enterApp();
     showFeedback('ডামি অ্যাকাউন্টে প্রবেশ করা হয়েছে');
-  },
-  onLogout: leaveApp
+  }
 });
+initRegister({ state });
+initRecovery({ state });
+initLogout({ onLoggedOut: leaveApp });
+
+// Pending-account screen is the only other place a student can leave the app.
+$('#pendingLogout')?.addEventListener('click', leaveApp);
 
 if (state.account && hasSession()) {
   state.student = { ...state.student, ...(state.account.student || {}) };
