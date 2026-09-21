@@ -31,6 +31,8 @@
   font-size: 18px;
   font-weight: 800;
 }
+.day-time-card { display: flex; align-items: center; gap: 9px; margin-top: 17px; padding: 10px 11px; border: 1px solid rgba(255,255,255,.76); border-radius: 15px; background: rgba(255,255,255,.48); box-shadow: 0 8px 22px rgba(36,74,64,.07), inset 0 1px 0 rgba(255,255,255,.72); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+.day-time-icon { display: grid; place-items: center; flex: 0 0 31px; width: 31px; height: 31px; border-radius: 10px; color: var(--forest); background: rgba(214,239,225,.74); }.day-time-icon svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }.day-time-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; }.day-time-copy strong { color: var(--ink); font-size: 12px; line-height: 1.2; }.day-time-copy small { margin-top: 2px; color: var(--muted); font-size: 9px; }.day-time-card time { color: var(--forest); font-size: 14px; font-weight: 800; white-space: nowrap; }
 .offline-pill {
   display: inline-flex;
   align-items: center;

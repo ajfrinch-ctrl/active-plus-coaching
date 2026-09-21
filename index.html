@@ -129,7 +129,7 @@
         <button class="brand-button" type="button" data-view="home" aria-label="হোমে ফিরে যান">
           <span class="brand-mark"><img src="logo.svg" alt="" width="36" height="36"></span>
           <span class="brand-copy">
-            <strong>Active Plus</strong>
+            <strong id="topbarStudentName" class="student-topbar-name">রাইসা ইসলাম</strong>
             <small data-fixed-tagline aria-label="শিখতে থাকো, এগিয়ে যাও">শিখতে থাকো, এগিয়ে যাও</small>
           </span>
         </button>
@@ -150,15 +150,15 @@
           <div>
             <p class="eyebrow" id="dayGreeting">শুভ সকাল</p>
             <h1 id="homeTitle"><span id="studentName">রাইসা</span> <span class="wave">✦</span></h1>
-            <p class="muted">আজকের শেখা হোক আরও গোছানো।</p>
+            <p class="muted" id="dailyAdvice">আজকের শেখা হোক আরও গোছানো।</p>
           </div>
           <button class="avatar" type="button" data-view="profile" aria-label="প্রোফাইল খুলুন"><span id="avatarInitial">র</span></button>
         </div>
 
-        <div class="offline-pill" id="connectionPill">
-          <span class="status-dot"></span>
-          <span id="connectionText">অফলাইনেও সব ঠিকঠাক চলছে</span>
-          <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-wifi-off"></use></svg>
+        <div class="day-time-card" aria-label="আজকের দিন তারিখ ও সময়">
+          <span class="day-time-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-calendar"></use></svg></span>
+          <span class="day-time-copy"><strong id="todayDay">সোমবার</strong><small id="todayDate">২১ সেপ্টেম্বর ২০২৬</small></span>
+          <time id="currentTime">০৪:৩০ বিকেল</time>
         </div>
 
         <article class="progress-card">
@@ -217,7 +217,7 @@
         </div>
 
         <div class="section-heading section-heading-spaced">
-          <div><p class="eyebrow">আজ, ২১ সেপ্টেম্বর</p><h2>পরবর্তী ক্লাস</h2></div>
+          <div><p class="eyebrow" id="homeScheduleDate">আজ, ২১ সেপ্টেম্বর</p><h2>পরবর্তী ক্লাস</h2></div>
           <button type="button" class="text-button" data-view="routine">সব দেখুন</button>
         </div>
         <div class="next-class-card">

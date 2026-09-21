@@ -8,6 +8,7 @@ export function renderStudent(student) {
   const meta = `${student.className} · ${student.group}`;
 
   $('#studentName') && ($('#studentName').textContent = firstName);
+  $('#topbarStudentName') && ($('#topbarStudentName').textContent = student.name || firstName);
   $('#avatarInitial') && ($('#avatarInitial').textContent = initial);
   $('#profileAvatar') && ($('#profileAvatar').textContent = initial);
   $('#profileName') && ($('#profileName').textContent = student.name);
