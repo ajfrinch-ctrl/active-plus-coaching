@@ -1,4 +1,6 @@
 /* Shared application configuration. Future admin data can replace these local defaults. */
+export const APP_TAGLINE = 'শিখতে থাকো, এগিয়ে যাও';
+
 export const STORAGE_KEYS = Object.freeze({
   student: 'active-plus-student-v1',
   account: 'active-plus-account-v1',

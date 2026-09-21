@@ -1,4 +1,5 @@
 /* Application composition root. Feature modules can be replaced independently. */
+import { APP_TAGLINE } from './config.js';
 import { loadStudent, loadAccount, hasSession, persistSession, saveStudent } from './storage.js';
 import { $, setAuthMessage, showFeedback } from './ui.js';
 import { renderStudent, openStudentApp, showAuthScreen, logout, setView } from './shell.js';
@@ -10,6 +11,8 @@ import { initRoutine } from './routine.js';
 import { initInstallPrompt, installApp } from './install.js';
 import { initConnectivity } from './connectivity.js';
 import { registerServiceWorker } from './service-worker.js';
+
+document.querySelector('[data-fixed-tagline]')?.setAttribute('aria-label', APP_TAGLINE);
 
 const state = {
   student: loadStudent(),
