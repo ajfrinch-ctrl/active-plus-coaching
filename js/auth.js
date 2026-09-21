@@ -125,6 +125,47 @@ function handleRegistration(event, state) {
   setAuthMessage(`রেজিস্ট্রেশন সফল। তোমার ইউনিক Student ID: ${studentId}`, true);
 }
 
+function initRegistrationSteps() {
+  const steps = $$('[data-registration-step]');
+  if (!steps.length) return { reset: () => {} };
+  let current = 0;
+  const progressBar = $('#registrationProgressBar');
+  const count = $('#registrationStepCount');
+  const title = $('#registrationStepTitle');
+
+  const showStep = index => {
+    current = Math.max(0, Math.min(index, steps.length - 1));
+    steps.forEach((step, stepIndex) => {
+      const active = stepIndex === current;
+      step.hidden = !active;
+      step.classList.toggle('active', active);
+      step.setAttribute('aria-hidden', String(!active));
+    });
+    if (progressBar) progressBar.style.width = `${((current + 1) / steps.length) * 100}%`;
+    if (count) count.textContent = `ধাপ ${current + 1} / ${steps.length}`;
+    if (title) title.textContent = steps[current].dataset.stepTitle;
+  };
+
+  const validateCurrentStep = () => {
+    const fields = $$('input, select, textarea', steps[current]);
+    const invalid = fields.find(field => !field.checkValidity());
+    if (invalid) {
+      invalid.reportValidity();
+      return false;
+    }
+    return true;
+  };
+
+  steps.forEach((step, index) => {
+    $('[data-next-step]', step)?.addEventListener('click', () => {
+      if (validateCurrentStep()) showStep(index + 1);
+    });
+    $('[data-previous-step]', step)?.addEventListener('click', () => showStep(index - 1));
+  });
+  showStep(0);
+  return { reset: () => showStep(0) };
+}
+
 function handleRecovery(event, state) {
   event.preventDefault();
   const formElement = event.currentTarget;
@@ -154,8 +195,12 @@ function handleRecovery(event, state) {
 export function initAuth({ state, onAuthenticated, onLogout }) {
   populateRegistrationClasses();
   initPinVisibility();
+  const registrationSteps = initRegistrationSteps();
 
-  $$('[data-auth-tab]').forEach(trigger => trigger.addEventListener('click', () => switchAuthTab(trigger.dataset.authTab)));
+  $$('[data-auth-tab]').forEach(trigger => trigger.addEventListener('click', () => {
+    if (trigger.dataset.authTab === 'register') registrationSteps.reset();
+    switchAuthTab(trigger.dataset.authTab);
+  }));
   $('#regClass')?.addEventListener('change', toggleMajorField);
   $('#loginForm')?.addEventListener('submit', event => handleLogin(event, state, onAuthenticated));
   $('#registrationForm')?.addEventListener('submit', event => handleRegistration(event, state));
