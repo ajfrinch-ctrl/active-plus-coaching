@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="bn" class="">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#059669" />
+  <meta name="description" content="SSC প্রস্তুতি — অধ্যায়ভিত্তিক MCQ, টাইড মডেল টেস্ট ও লাইভ এক্সাম, সৃজনশীল প্রশ্ন এবং পারফরম্যান্স ড্যাশবোর্ড।" />
+  <title>SSC Prep · Assessment</title>
+
+  <!-- Tailwind Play CDN is fine for prototyping; for production compile a static
+       stylesheet (npx tailwindcss -i app.css -o tailwind.build.css) and drop this
+       script tag — the CDN ships a JIT compiler and needs the network. -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Noto Sans Bengali"', 'Hind Siliguri', 'system-ui', 'sans-serif'],
+            exam: ['"Noto Serif Bengali"', 'Georgia', 'serif']
+          },
+          colors: {
+            brand: { 50: '#ecfdf5', 100: '#d1fae5', 500: '#10b981', 600: '#059669', 700: '#047857', 900: '#064e3b' }
+          },
+          keyframes: {
+            'slide-up': { from: { opacity: '0', transform: 'translateY(8px)' }, to: { opacity: '1', transform: 'none' } },
+            pop: { from: { opacity: '0', transform: 'translateY(12px) scale(.98)' }, to: { opacity: '1', transform: 'none' } }
+          },
+          animation: {
+            'slide-up': 'slide-up .22s ease-out both',
+            pop: 'pop .18s ease-out both'
+          }
+        }
+      }
+    };
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600;700&family=Noto+Serif+Bengali:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="app.css" />
+</head>
+<body class="bg-slate-50 font-sans text-slate-800 antialiased selection:bg-brand-100 dark:bg-slate-950 dark:text-slate-100">
+  <a href="#app" class="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-50 focus:rounded-lg focus:bg-white focus:px-3 focus:py-2 focus:text-sm focus:font-bold focus:shadow">মূল অংশে যান</a>
+
+  <div id="app" class="animate-slide-up">
+    <!-- Boot state: keeps the first paint meaningful even on a slow fetch. -->
+    <div class="grid min-h-screen place-items-center">
+      <div class="flex flex-col items-center gap-3 text-slate-400">
+        <span class="h-8 w-8 animate-spin rounded-full border-2 border-slate-300 border-t-brand-600"></span>
+        <p class="text-sm font-semibold">প্রশ্নব্যাংক লোড হচ্ছে…</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toasts and confirm dialogs are static chrome, deliberately outside #app:
+       re-rendering a view must never wipe an open dialog or a live toast. -->
+  <div id="toastHost" class="pointer-events-none fixed inset-x-0 bottom-24 z-50 flex justify-center px-4 sm:bottom-8" aria-live="polite"></div>
+
+  <div id="submitModal" data-modal-backdrop="submitModal" class="fixed inset-0 z-40 hidden items-end justify-center bg-slate-900/50 p-4 backdrop-blur-sm sm:items-center" role="dialog" aria-modal="true" aria-labelledby="submitTitle">
+    <div class="pop w-full max-w-md rounded-3xl border border-slate-200 bg-white p-5 shadow-xl dark:border-slate-700 dark:bg-slate-900" role="document">
+      <h3 id="submitTitle" class="text-lg font-black">জমা দেবে?</h3>
+      <div id="submitSummary" class="mt-2"></div>
+      <div class="mt-4 flex gap-2">
+        <button type="button" data-close-modal="submitModal" class="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800">আরও সময় লাগবে</button>
+        <button type="button" data-action="confirm-submit" class="flex-1 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-brand-700">জমা দাও</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="clearModal" data-modal-backdrop="clearModal" class="fixed inset-0 z-40 hidden items-end justify-center bg-slate-900/50 p-4 backdrop-blur-sm sm:items-center" role="dialog" aria-modal="true" aria-labelledby="clearTitle">
+    <div class="pop w-full max-w-md rounded-3xl border border-slate-200 bg-white p-5 shadow-xl dark:border-slate-700 dark:bg-slate-900" role="document">
+      <h3 id="clearTitle" class="text-lg font-black">সব ডেটা মুছে ফেলবে?</h3>
+      <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">সংরক্ষিত ফলাফল, সৃজনশীল স্ব-মূল্যায়ন ও অসম্পন্ন খসড়া — সব মুছে যাবে (থিম থাকবে)। সব এই ডিভাইসেই থাকে, তাই মুছলে ফেরানো যাবে না।</p>
+      <div class="mt-4 flex gap-2">
+        <button type="button" data-close-modal="clearModal" class="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800">না</button>
+        <button type="button" data-action="clear-history" class="flex-1 rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-rose-700">হ্যাঁ, মুছুন</button>
+      </div>
+    </div>
+  </div>
+
+  <noscript>
+    <p class="mx-auto max-w-lg p-6 text-center text-sm font-semibold">এই অ্যাপের জন্য JavaScript চালু করতে হবে।</p>
+  </noscript>
+
+  <script type="module">
+    import { initApp } from './js/app.js';
+    initApp();
+  </script>
+</body>
+</html>
