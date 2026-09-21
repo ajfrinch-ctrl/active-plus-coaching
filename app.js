@@ -3,6 +3,8 @@
   'use strict';
 
   const STORAGE_KEY = 'active-plus-student-v1';
+  const ACCOUNT_STORAGE_KEY = 'active-plus-account-v1';
+  const SESSION_STORAGE_KEY = 'active-plus-session-v1';
   const INSTALL_DISMISSED_KEY = 'active-plus-install-dismissed';
 
   // This local list is intentionally kept separate so the future admin panel can
@@ -79,6 +81,8 @@
   };
 
   let student = loadStudent();
+  let account = loadAccount();
+  let registrationMode = 'self';
   let deferredInstallPrompt = null;
 
   function loadStudent() {
@@ -87,6 +91,22 @@
       return saved ? { ...defaultStudent, ...saved } : { ...defaultStudent };
     } catch (error) {
       return { ...defaultStudent };
+    }
+  }
+
+  function loadAccount() {
+    try {
+      return JSON.parse(localStorage.getItem(ACCOUNT_STORAGE_KEY));
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function saveAccount() {
+    try {
+      localStorage.setItem(ACCOUNT_STORAGE_KEY, JSON.stringify(account));
+    } catch (error) {
+      // The app remains usable if local storage is unavailable.
     }
   }
 
@@ -100,6 +120,126 @@
 
   function byId(id) { return document.getElementById(id); }
   function all(selector) { return Array.from(document.querySelectorAll(selector)); }
+
+  function normalizeMobile(value) {
+    return (value || '').toString().replace(/[০-৯]/g, digit => '০১২৩৪৫৬৭৮৯'.indexOf(digit)).replace(/[^0-9]/g, '');
+  }
+
+  function normalizeAnswer(value) {
+    return (value || '').toString().trim().replace(/\s+/g, ' ').toLowerCase();
+  }
+
+  function setAuthMessage(message, success = false) {
+    const element = byId('authMessage');
+    if (!element) return;
+    element.textContent = message;
+    element.classList.toggle('success', success);
+    element.hidden = !message;
+  }
+
+  function switchAuthTab(tab) {
+    all('[data-auth-tab]').forEach(trigger => {
+      if (trigger.classList.contains('auth-tab')) {
+        const active = trigger.dataset.authTab === tab;
+        trigger.classList.toggle('active', active);
+        trigger.setAttribute('aria-selected', active ? 'true' : 'false');
+      }
+    });
+    all('[data-auth-panel]').forEach(panel => {
+      const active = panel.dataset.authPanel === tab;
+      panel.classList.toggle('active', active);
+      panel.hidden = !active;
+    });
+    setAuthMessage('');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function setRegistrationMode(mode) {
+    registrationMode = mode;
+    all('[data-registration-mode]').forEach(button => button.classList.toggle('active', button.dataset.registrationMode === mode));
+    const hint = byId('modeHint');
+    if (hint) hint.textContent = mode === 'staff'
+      ? 'শিক্ষক বা এডমিন তথ্য তৈরি করে দিলে এখানে সেই মোবাইল ও PIN ব্যবহার হবে।'
+      : 'তোমার নিজের মোবাইল নম্বর ও PIN দিয়ে অ্যাকাউন্ট তৈরি হবে।';
+  }
+
+  function toggleMajorField() {
+    const className = byId('regClass')?.value || '';
+    const isHonours = className.includes('অনার্স');
+    const field = byId('majorField');
+    if (field) field.hidden = !isHonours;
+    const major = byId('major');
+    if (major) major.required = isHonours;
+  }
+
+  function generateStudentId(className) {
+    const now = new Date();
+    const year = now.getFullYear().toString().slice(-2);
+    const month = (now.getMonth() + 1).toString().padStart(2, '0');
+    const classCodes = {
+      'অষ্টম শ্রেণি': '8', 'নবম শ্রেণি': '9', 'দশম শ্রেণি': '0',
+      'একাদশ শ্রেণি': '1', 'দ্বাদশ শ্রেণি': '2', 'ডিগ্রি ১ম বর্ষ': '3',
+      'ডিগ্রি ২য় বর্ষ': '4', 'ডিগ্রি ৩য় বর্ষ': '5', 'অনার্স ১ম বর্ষ': '6',
+      'অনার্স ২য় বর্ষ': '7', 'অনার্স ৩য় বর্ষ': '8', 'অনার্স ৪র্থ বর্ষ': '9'
+    };
+    let sequence = 1;
+    try {
+      sequence = Number(localStorage.getItem('active-plus-id-sequence') || '0') + 1;
+      localStorage.setItem('active-plus-id-sequence', String(sequence));
+    } catch (error) { /* use first sequence when storage is unavailable */ }
+    return `${year}${month}${classCodes[className] || '0'}${sequence.toString().padStart(3, '0')}`;
+  }
+
+  function openStudentApp() {
+    const auth = byId('authScreen');
+    const app = byId('appShell');
+    if (auth) auth.hidden = true;
+    if (app) {
+      app.hidden = false;
+      app.classList.toggle('is-pending', account?.status === 'pending');
+    }
+    if (account?.status === 'pending' && byId('pendingStudentId')) {
+      byId('pendingStudentId').textContent = toBanglaNumber(account.studentId || student.id);
+    }
+    renderStudent();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function showAuthScreen() {
+    const auth = byId('authScreen');
+    const app = byId('appShell');
+    if (auth) auth.hidden = false;
+    if (app) {
+      app.hidden = true;
+      app.classList.remove('is-pending');
+    }
+    switchAuthTab('login');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function persistSession(remember = true) {
+    try {
+      if (remember) localStorage.setItem(SESSION_STORAGE_KEY, '1');
+      else sessionStorage.setItem(SESSION_STORAGE_KEY, '1');
+    } catch (error) { /* no-op */ }
+  }
+
+  function hasSession() {
+    try {
+      return localStorage.getItem(SESSION_STORAGE_KEY) === '1' || sessionStorage.getItem(SESSION_STORAGE_KEY) === '1';
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function logout() {
+    try {
+      localStorage.removeItem(SESSION_STORAGE_KEY);
+      sessionStorage.removeItem(SESSION_STORAGE_KEY);
+    } catch (error) { /* no-op */ }
+    showAuthScreen();
+    setAuthMessage('লগআউট হয়েছে। আবার প্রবেশ করতে মোবাইল নম্বর ও PIN দিন।');
+  }
 
   function renderStudent() {
     const firstName = student.name.trim().split(/\s+/)[0] || 'শিক্ষার্থী';
@@ -176,9 +316,16 @@
   }
 
   function populateClassOptions() {
-    const select = byId('classInput');
-    if (!select) return;
-    select.innerHTML = enabledClasses.map(className => `<option value="${className}">${className}</option>`).join('');
+    const options = enabledClasses.map(className => `<option value="${className}">${className}</option>`).join('');
+    ['classInput', 'regClass'].forEach(id => {
+      const select = byId(id);
+      if (!select) return;
+      if (id === 'classInput') {
+        select.innerHTML = options;
+      } else {
+        select.insertAdjacentHTML('beforeend', options);
+      }
+    });
   }
 
   function openProfileEditor() {
@@ -236,6 +383,160 @@
     await deferredInstallPrompt.userChoice;
     deferredInstallPrompt = null;
     byId('installToast').hidden = true;
+  }
+
+  function setupAuth() {
+    all('[data-auth-tab]').forEach(trigger => {
+      trigger.addEventListener('click', () => switchAuthTab(trigger.dataset.authTab));
+    });
+    all('[data-registration-mode]').forEach(button => {
+      button.addEventListener('click', () => setRegistrationMode(button.dataset.registrationMode));
+    });
+
+    byId('regClass')?.addEventListener('change', toggleMajorField);
+    all('[data-toggle-pin]').forEach(button => {
+      button.addEventListener('click', () => {
+        const input = byId(button.dataset.togglePin);
+        if (!input) return;
+        input.type = input.type === 'password' ? 'text' : 'password';
+      });
+    });
+
+    byId('loginForm')?.addEventListener('submit', event => {
+      event.preventDefault();
+      const form = new FormData(event.currentTarget);
+      const mobile = normalizeMobile(form.get('mobile'));
+      const pin = (form.get('pin') || '').toString();
+      if (!mobile || pin.length < 4) {
+        setAuthMessage('মোবাইল নম্বর ও ৪–৬ সংখ্যার PIN সঠিকভাবে দিন।');
+        return;
+      }
+      if (!account) {
+        setAuthMessage('এই ডিভাইসে কোনো অ্যাকাউন্ট নেই। আগে রেজিস্ট্রেশন করুন।');
+        return;
+      }
+      if (mobile !== account.mobile || pin !== account.pin) {
+        setAuthMessage('মোবাইল নম্বর অথবা PIN সঠিক নয়। আবার চেষ্টা করুন।');
+        return;
+      }
+      student = { ...student, ...account.student };
+      saveStudent();
+      persistSession(byId('rememberMe')?.checked !== false);
+      openStudentApp();
+    });
+
+    byId('registrationForm')?.addEventListener('submit', event => {
+      event.preventDefault();
+      const formElement = event.currentTarget;
+      if (!formElement.checkValidity()) {
+        formElement.reportValidity();
+        return;
+      }
+      const form = new FormData(formElement);
+      const mobile = normalizeMobile(form.get('mobile'));
+      const pin = (form.get('pin') || '').toString();
+      const pinConfirm = (form.get('pinConfirm') || '').toString();
+      if (mobile.length < 10) {
+        setAuthMessage('সঠিক মোবাইল নম্বর দিন।');
+        return;
+      }
+      if (!/^\d{4,6}$/.test(pin)) {
+        setAuthMessage('PIN অবশ্যই ৪ থেকে ৬ সংখ্যার হতে হবে।');
+        return;
+      }
+      if (pin !== pinConfirm) {
+        setAuthMessage('দুটি PIN এক নয়। আবার মিলিয়ে দিন।');
+        return;
+      }
+      if (account) {
+        setAuthMessage('এই ডিভাইসে ইতিমধ্যে একটি অ্যাকাউন্ট আছে। লগইন করুন অথবা এডমিনের সাহায্য নিন।');
+        return;
+      }
+
+      const className = (form.get('className') || '').toString();
+      const studentId = generateStudentId(className);
+      const studentData = {
+        name: (form.get('nameBn') || '').toString().trim(),
+        nameBn: (form.get('nameBn') || '').toString().trim(),
+        nameEn: (form.get('nameEn') || '').toString().trim(),
+        className,
+        group: (form.get('group') || '').toString(),
+        id: studentId,
+        fatherName: (form.get('fatherName') || '').toString().trim(),
+        motherName: (form.get('motherName') || '').toString().trim(),
+        guardianName: (form.get('guardianName') || '').toString().trim(),
+        birthDate: (form.get('birthDate') || '').toString(),
+        gender: (form.get('gender') || '').toString(),
+        studentMobile: normalizeMobile(form.get('studentMobile')),
+        guardianMobile: normalizeMobile(form.get('guardianMobile')),
+        address: (form.get('address') || '').toString().trim(),
+        major: (form.get('major') || '').toString().trim(),
+        institution: (form.get('institution') || '').toString().trim(),
+        roll: (form.get('roll') || '').toString().trim(),
+        registrationNo: (form.get('registrationNo') || '').toString().trim()
+      };
+      account = {
+        mobile,
+        pin,
+        securityQuestion: (form.get('securityQuestion') || '').toString(),
+        securityAnswer: normalizeAnswer(form.get('securityAnswer')),
+        student: studentData,
+        studentId,
+        createdBy: registrationMode,
+        status: 'pending',
+        createdAt: new Date().toISOString()
+      };
+      student = { ...student, ...studentData };
+      saveAccount();
+      saveStudent();
+      formElement.reset();
+      toggleMajorField();
+      switchAuthTab('login');
+      byId('loginMobile').value = mobile;
+      byId('pendingStudentId').textContent = toBanglaNumber(studentId);
+      setAuthMessage(`রেজিস্ট্রেশন সফল। তোমার ইউনিক Student ID: ${studentId}`, true);
+    });
+
+    byId('forgotPinButton')?.addEventListener('click', () => openModal('recoveryModal'));
+    byId('demoLoginButton')?.addEventListener('click', () => {
+      account = { mobile: '01700000000', pin: '123456', status: 'active', student: { ...defaultStudent } };
+      student = { ...defaultStudent };
+      openStudentApp();
+      showFeedback('প্রিভিউ ড্যাশবোর্ড খোলা হয়েছে');
+    });
+
+    byId('recoveryForm')?.addEventListener('submit', event => {
+      event.preventDefault();
+      const formElement = event.currentTarget;
+      if (!formElement.checkValidity()) {
+        formElement.reportValidity();
+        return;
+      }
+      if (!account) {
+        closeModal('recoveryModal');
+        setAuthMessage('এই ডিভাইসে কোনো রেজিস্টার্ড অ্যাকাউন্ট পাওয়া যায়নি।');
+        return;
+      }
+      const form = new FormData(formElement);
+      const mobile = normalizeMobile(form.get('mobile'));
+      const answer = normalizeAnswer(form.get('answer'));
+      const pin = (form.get('pin') || '').toString();
+      if (mobile !== account.mobile || form.get('question') !== account.securityQuestion || answer !== account.securityAnswer) {
+        showFeedback('মোবাইল নম্বর, প্রশ্ন বা উত্তর সঠিক নয়');
+        return;
+      }
+      if (!/^\d{4,6}$/.test(pin)) {
+        showFeedback('নতুন PIN ৪ থেকে ৬ সংখ্যার হতে হবে');
+        return;
+      }
+      account.pin = pin;
+      saveAccount();
+      closeModal('recoveryModal');
+      byId('loginMobile').value = mobile;
+      setAuthMessage('নতুন PIN সংরক্ষণ হয়েছে। এখন লগইন করুন।', true);
+    });
+
+    byId('pendingLogout')?.addEventListener('click', logout);
   }
 
   function handleAction(action) {
@@ -341,8 +642,16 @@
   renderRoutine();
   updateConnectionStatus();
   bindEvents();
+  setupAuth();
   setupInstallPrompt();
   registerServiceWorker();
+
+  if (account && hasSession()) {
+    student = { ...student, ...(account.student || {}) };
+    openStudentApp();
+  } else {
+    showAuthScreen();
+  }
 
   // PWA shortcuts can open the app with a section hash.
   const hashView = window.location.hash.replace('#', '');
