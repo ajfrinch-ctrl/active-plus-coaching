@@ -1,13 +1,37 @@
-const CACHE_NAME = 'active-plus-student-v2';
+const CACHE_NAME = 'active-plus-student-v3';
 const APP_SHELL = [
   './',
   './index.html',
   './styles.css',
-  './app.js',
   './manifest.json',
   './logo.svg',
   './icon-192.png',
-  './icon-512.png'
+  './icon-512.png',
+  './css/tokens.css',
+  './css/pending.css',
+  './css/shell.css',
+  './css/dashboard.css',
+  './css/routine.css',
+  './css/courses.css',
+  './css/results.css',
+  './css/profile.css',
+  './css/navigation.css',
+  './css/overlays.css',
+  './css/auth.css',
+  './css/responsive.css',
+  './js/config.js',
+  './js/storage.js',
+  './js/ui.js',
+  './js/shell.js',
+  './js/routine.js',
+  './js/profile.js',
+  './js/auth.js',
+  './js/navigation.js',
+  './js/modals.js',
+  './js/install.js',
+  './js/connectivity.js',
+  './js/service-worker.js',
+  './js/main.js'
 ];
 
 self.addEventListener('install', event => {
@@ -44,9 +68,7 @@ self.addEventListener('fetch', event => {
         }
         return response;
       }).catch(() => {
-        if (event.request.mode === 'navigate') {
-          return caches.match('./index.html');
-        }
+        if (event.request.mode === 'navigate') return caches.match('./index.html');
         return new Response('', { status: 503, statusText: 'Offline' });
       });
     })

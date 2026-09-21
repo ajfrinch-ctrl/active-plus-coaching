@@ -21,9 +21,40 @@ Active Plus Coaching-এর মোবাইল-ফার্স্ট Progressive
 - PWA install prompt এবং service worker cache
 - অষ্টম শ্রেণি থেকে অনার্স ৪র্থ বর্ষ পর্যন্ত ক্লাস কনফিগারেশনের ভিত্তি
 
-## অফলাইন নকশা
+## অফলাইন নকশা ও মডিউল কাঠামো
 
-`index.html`, `styles.css`, `app.js`, `manifest.json`, `logo.svg` এবং `sw.js`-এর বাইরে কোনো external font, CDN বা remote API ব্যবহার করা হয়নি। ভবিষ্যতে Admin Panel-এর **শিক্ষার্থী অ্যাপ ম্যানেজমেন্ট** অংশ থেকে enabled class, routine, course, notice ও result data নিয়ন্ত্রণ করার জন্য local data structure আলাদা রাখা হয়েছে।
+কোনো external font, CDN বা remote API ব্যবহার করা হয়নি। HTML শুধু page structure রাখে; feature logic ও style আলাদা module-এ ভাগ করা হয়েছে।
+
+```text
+index.html              page structure and SVG icon sprite
+styles.css              CSS entry point (feature imports)
+css/
+  tokens.css            design tokens and reset
+  auth.css              login, registration and recovery
+  dashboard.css         student home dashboard
+  routine.css           routine timeline
+  courses.css           courses and progress
+  results.css           results cards
+  profile.css           profile and settings
+  shell.css             app header and shell
+  navigation.css        bottom navigation
+  overlays.css          modals, install and toast
+  responsive.css        responsive rules
+js/
+  main.js               application composition root
+  auth.js               login, registration and PIN recovery
+  storage.js            localStorage/sessionStorage adapter
+  routine.js            routine rendering and day tabs
+  profile.js            profile editing
+  navigation.js         page/action routing
+  install.js            PWA install prompt
+  connectivity.js       offline status indicator
+  service-worker.js     service worker registration
+  config.js             classes, schedule and local defaults
+  ui.js                 shared DOM and feedback helpers
+```
+
+ভবিষ্যতে Admin Panel-এর **শিক্ষার্থী অ্যাপ ম্যানেজমেন্ট** অংশ থেকে enabled class, routine, course, notice ও result data নিয়ন্ত্রণ করার জন্য config ও storage adapter আলাদা রাখা হয়েছে। API যুক্ত করার সময় মূল UI feature files বদলানোর প্রয়োজন হবে না।
 
 ## লোকালি চালানো
 
