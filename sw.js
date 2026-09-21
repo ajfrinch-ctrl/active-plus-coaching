@@ -1,4 +1,4 @@
-const CACHE_NAME = 'active-plus-student-v14';
+const CACHE_NAME = 'active-plus-student-v15';
 const APP_SHELL = [
   './',
   './index.html',

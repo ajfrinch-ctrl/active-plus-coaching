@@ -42,6 +42,15 @@ function initPinVisibility() {
   });
 }
 
+function initFixedContactMobile() {
+  const loginMobile = $('#regMobile');
+  const contactMobile = $('#studentMobile');
+  if (!loginMobile || !contactMobile) return;
+  const sync = () => { contactMobile.value = loginMobile.value; };
+  loginMobile.addEventListener('input', sync);
+  sync();
+}
+
 function handleLogin(event, state, onAuthenticated) {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
@@ -195,6 +204,7 @@ function handleRecovery(event, state) {
 export function initAuth({ state, onAuthenticated, onLogout, onDemo }) {
   populateRegistrationClasses();
   initPinVisibility();
+  initFixedContactMobile();
   const registrationSteps = initRegistrationSteps();
 
   $$('[data-auth-tab]').forEach(trigger => trigger.addEventListener('click', () => {
