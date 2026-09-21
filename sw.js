@@ -1,4 +1,4 @@
-const CACHE_NAME = 'active-plus-student-v11';
+const CACHE_NAME = 'active-plus-student-v12';
 const APP_SHELL = [
   './',
   './index.html',
@@ -19,6 +19,7 @@ const APP_SHELL = [
   './css/overlays.css',
   './css/auth.css',
   './css/responsive.css',
+  './css/glass.css',
   './js/config.js',
   './js/storage.js',
   './js/ui.js',
