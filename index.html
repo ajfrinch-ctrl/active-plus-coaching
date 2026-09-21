@@ -19,13 +19,11 @@
   <!-- Authentication comes first. Credentials and registration data stay on this device. -->
   <section class="auth-screen" id="authScreen" aria-labelledby="authTitle">
     <div class="auth-topbar">
-      <div class="auth-brand"><img src="logo.svg" alt="" width="34" height="34"><span><strong>Active Plus</strong><small>Coaching</small></span></div>
-      <span class="secure-label"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg> অফলাইন নিরাপদ</span>
+      <div class="auth-brand"><img src="logo.svg" alt="" width="34" height="34"><span><strong>Active Plus</strong><small>শিক্ষার্থী অ্যাপ</small></span></div>
     </div>
     <div class="auth-hero">
-      <span class="auth-kicker">STUDENT PORTAL</span>
       <h1 id="authTitle" class="auth-tagline" data-fixed-tagline aria-label="শিখতে থাকো, এগিয়ে যাও">শিখতে থাকো,<br><em>এগিয়ে যাও</em></h1>
-      <p>তোমার ক্লাস, রুটিন ও ফলাফল এক জায়গায়।</p>
+      <p>তোমার অ্যাকাউন্টে প্রবেশ করুন</p>
     </div>
     <div class="auth-card">
       <div class="auth-tabs" role="tablist" aria-label="অ্যাকাউন্ট অপশন">
@@ -34,7 +32,7 @@
       </div>
 
       <div class="auth-panel active" id="loginPanel" data-auth-panel="login">
-        <div class="auth-panel-heading"><div><p class="eyebrow">আবার স্বাগতম</p><h2>অ্যাকাউন্টে প্রবেশ করুন</h2></div><span class="panel-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-user"></use></svg></span></div>
+        <div class="auth-panel-heading"><div><h2>শিক্ষার্থী লগইন</h2><p>মোবাইল নম্বর ও PIN দিয়ে প্রবেশ করুন</p></div></div>
         <form id="loginForm" novalidate>
           <label for="loginMobile">মোবাইল নম্বর</label>
           <div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-phone"></use></svg><input id="loginMobile" name="mobile" type="tel" inputmode="numeric" autocomplete="tel" placeholder="০১XXXXXXXXX" required></div>
@@ -43,13 +41,11 @@
           <div class="form-row"><label class="remember-label"><input type="checkbox" id="rememberMe" checked><span class="fake-check"></span>এই ডিভাইসে মনে রাখুন</label><button type="button" class="link-button" id="forgotPinButton">PIN ভুলে গেছেন?</button></div>
           <button class="auth-submit" type="submit">লগইন করুন <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg></button>
         </form>
-        <div class="auth-divider"><span>অথবা</span></div>
-        <button class="demo-button" type="button" id="demoLoginButton"><span class="demo-dot"></span> প্রিভিউ হিসেবে ড্যাশবোর্ড দেখুন</button>
-        <p class="auth-footnote">অ্যাকাউন্ট নেই? <button type="button" class="inline-link" data-auth-tab="register">এখনই রেজিস্ট্রেশন করুন</button></p>
+        <p class="auth-footnote">অ্যাকাউন্ট নেই? <button type="button" class="inline-link" data-auth-tab="register">রেজিস্ট্রেশন করুন</button></p>
       </div>
 
       <div class="auth-panel" id="registerPanel" data-auth-panel="register" hidden>
-        <div class="auth-panel-heading"><div><p class="eyebrow">শুরু করি</p><h2>শিক্ষার্থী রেজিস্ট্রেশন</h2></div><span class="panel-icon coral"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-edit"></use></svg></span></div>
+        <div class="auth-panel-heading"><div><h2>শিক্ষার্থী রেজিস্ট্রেশন</h2><p>অ্যাকাউন্ট তৈরি করতে তথ্য দিন</p></div></div>
         <p class="register-intro">নিজে অ্যাকাউন্ট তৈরি করো, অথবা শিক্ষক/এডমিন তৈরি করে দিলে সেই তথ্য দিয়ে রেজিস্ট্রেশন সম্পন্ন করো।</p>
         <div class="registration-mode" role="tablist" aria-label="রেজিস্ট্রেশনের ধরন"><button type="button" class="mode-button active" data-registration-mode="self">নিজে করব</button><button type="button" class="mode-button" data-registration-mode="staff">শিক্ষক / এডমিন করবেন</button></div>
         <p class="mode-hint" id="modeHint">তোমার নিজের মোবাইল নম্বর ও PIN দিয়ে অ্যাকাউন্ট তৈরি হবে।</p>
@@ -97,14 +93,13 @@
       </div>
     </div>
     <p class="auth-message" id="authMessage" role="status" hidden></p>
-    <p class="auth-bottom-note"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-wifi-off"></use></svg> এই রেজিস্ট্রেশন তথ্য অফলাইনে এই ডিভাইসেই সংরক্ষিত হবে</p>
   </section>
 
   <!-- A compact, mobile-first app shell. All content is local and works without a network. -->
   <div class="app-shell" id="appShell" hidden>
     <section class="pending-screen" id="pendingScreen" aria-labelledby="pendingTitle">
       <div class="pending-logo"><img src="logo.svg" alt="" width="54" height="54"></div>
-      <span class="auth-kicker">ACCOUNT RECEIVED</span>
+      <span class="pending-kicker">ACCOUNT RECEIVED</span>
       <h1 id="pendingTitle">রেজিস্ট্রেশন সফল হয়েছে</h1>
       <p>তোমার তথ্য কোচিংয়ে জমা হয়েছে। অনুমোদন না হওয়া পর্যন্ত অ্যাপের ফিচারগুলো বন্ধ থাকবে।</p>
       <div class="pending-id"><small>তোমার ইউনিক স্টুডেন্ট ID</small><strong id="pendingStudentId">২৬০৯০০১</strong></div>

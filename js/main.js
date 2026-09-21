@@ -1,6 +1,6 @@
 /* Application composition root. Feature modules can be replaced independently. */
 import { APP_TAGLINE } from './config.js';
-import { loadStudent, loadAccount, hasSession, persistSession, saveStudent } from './storage.js';
+import { loadStudent, loadAccount, hasSession, saveStudent } from './storage.js';
 import { $, setAuthMessage, showFeedback } from './ui.js';
 import { renderStudent, openStudentApp, showAuthScreen, logout, setView } from './shell.js';
 import { switchAuthTab, initAuth } from './auth.js';
@@ -77,11 +77,6 @@ registerServiceWorker();
 initAuth({
   state,
   onAuthenticated: enterApp,
-  onDemo: () => {
-    persistSession(false);
-    enterApp();
-    showFeedback('প্রিভিউ ড্যাশবোর্ড খোলা হয়েছে');
-  },
   onLogout: leaveApp
 });
 

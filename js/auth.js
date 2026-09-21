@@ -1,6 +1,6 @@
 /* Authentication feature: login, registration, PIN recovery and pending access. */
 import { $, $$, normalizeMobile, normalizeAnswer, setAuthMessage, showFeedback, openModal, closeModal } from './ui.js';
-import { enabledClasses, defaultStudent } from './config.js';
+import { enabledClasses } from './config.js';
 import { saveAccount, saveStudent, generateStudentId, persistSession } from './storage.js';
 
 export function switchAuthTab(tab) {
@@ -161,7 +161,7 @@ function handleRecovery(event, state) {
   setAuthMessage('নতুন PIN সংরক্ষণ হয়েছে। এখন লগইন করুন।', true);
 }
 
-export function initAuth({ state, onAuthenticated, onDemo, onLogout }) {
+export function initAuth({ state, onAuthenticated, onLogout }) {
   populateRegistrationClasses();
   setRegistrationMode('self');
   initPinVisibility();
@@ -177,9 +177,4 @@ export function initAuth({ state, onAuthenticated, onDemo, onLogout }) {
   $('#recoveryForm')?.addEventListener('submit', event => handleRecovery(event, state));
   $('#forgotPinButton')?.addEventListener('click', () => openModal('recoveryModal'));
   $('#pendingLogout')?.addEventListener('click', () => onLogout?.());
-  $('#demoLoginButton')?.addEventListener('click', () => {
-    state.account = { mobile: '01700000000', pin: '123456', status: 'active', student: { ...defaultStudent } };
-    state.student = { ...defaultStudent };
-    onDemo?.();
-  });
 }
