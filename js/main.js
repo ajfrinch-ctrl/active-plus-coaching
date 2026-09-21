@@ -12,7 +12,7 @@ import { initInstallPrompt, installApp } from './install.js';
 import { initConnectivity } from './connectivity.js';
 import { registerServiceWorker } from './service-worker.js';
 
-document.querySelector('[data-fixed-tagline]')?.setAttribute('aria-label', APP_TAGLINE);
+document.querySelectorAll('[data-fixed-tagline]').forEach(tagline => tagline.setAttribute('aria-label', APP_TAGLINE));
 
 const state = {
   student: loadStudent(),
