@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#006b43">
+  <meta name="description" content="Active Plus Coaching ডামি এডমিন প্যানেল — এক ক্লিকে প্রবেশ, সব ডেটা লোকাল ডেমো।">
+  <meta name="robots" content="noindex">
+  <title>Active Plus | ডামি এডমিন প্যানেল</title>
+  <link rel="icon" type="image/png" href="assets/icons/app-logo.png">
+  <link rel="stylesheet" href="css/admin.css">
+  <link rel="preload" href="assets/fonts/NotoSansBengali-Variable.ttf" as="font" type="font/ttf" crossorigin>
+</head>
+<body>
+  <!-- One-click entry screen: no password, no PIN. A single tap opens the dummy Admin Panel. -->
+  <section class="admin-entry" id="adminEntry" aria-label="ডামি এডমিন প্যানেলে এক ক্লিকে প্রবেশ">
+    <div class="admin-entry-topbar">
+      <div class="admin-brand">
+        <img src="assets/icons/app-logo.png" alt="Active Plus Coaching logo" width="38" height="38">
+        <span><strong>Active Plus Coaching</strong><small>শিখতে থাকো, এগিয়ে যাও</small></span>
+      </div>
+    </div>
+    <div class="admin-entry-body">
+      <article class="admin-entry-card">
+        <span class="entry-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-shield"></use></svg></span>
+        <span class="entry-kicker">ADMIN PANEL • DEMO</span>
+        <h1>এক ক্লিকে এডমিন প্যানেলে প্রবেশ</h1>
+        <p>পাসওয়ার্ড বা PIN লাগবে না। নিচের বাটনে একবার চাপ দিলেই ডামি এডমিন প্যানেলে ঢুকে যাওয়া যাবে।</p>
+        <button class="entry-enter" id="adminEnterButton" type="button">
+          <span class="entry-pulse" aria-hidden="true"></span>
+          এক ক্লিকে প্যানেলে ঢুকুন
+          <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg>
+        </button>
+        <div class="entry-note">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-info"></use></svg>
+          <span>ডেমো মোড: সব তথ্য নকল ডেটা, শুধু এই ডিভাইসে থাকে। ভবিষ্যতে আসল API ও নিরাপদ লগইন যুক্ত হবে।</span>
+        </div>
+        <a class="entry-back" href="index.html">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-left"></use></svg>
+          শিক্ষার্থী অ্যাপে ফিরে যান
+        </a>
+      </article>
+    </div>
+  </section>
+
+  <!-- Admin panel shell: hidden until the one-click entry is used. -->
+  <div class="admin-shell" id="adminShell" hidden>
+    <header class="admin-topbar">
+      <div class="admin-topbar-inner">
+        <a class="admin-brand" href="admin.html" aria-label="এডমিন প্যানেল">
+          <img src="assets/icons/app-logo.png" alt="" width="38" height="38">
+          <span><strong>এডমিন প্যানেল</strong><small>Active Plus Coaching • ডেমো</small></span>
+        </a>
+        <div class="admin-topbar-actions">
+          <span class="admin-demo-badge"><span class="demo-dot"></span>ডেমো মোড</span>
+          <a class="admin-app-link" href="index.html" title="শিক্ষার্থী অ্যাপ">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-smartphone"></use></svg>
+            <span>শিক্ষার্থী অ্যাপ</span>
+          </a>
+          <button class="admin-exit" id="adminExitButton" type="button">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-logout"></use></svg>
+            <span>প্রস্থান</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <nav class="admin-side" aria-label="এডমিন নেভিগেশন">
+      <button class="admin-nav-item active" type="button" data-admin-view="dashboard">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-home"></use></svg>
+        <span>ড্যাশবোর্ড</span>
+      </button>
+      <button class="admin-nav-item" type="button" data-admin-view="students">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-users"></use></svg>
+        <span>শিক্ষার্থী</span>
+        <em class="side-badge" id="sidePendingBadge">৩</em>
+      </button>
+      <button class="admin-nav-item" type="button" data-admin-view="notices">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-megaphone"></use></svg>
+        <span>নোটিশ</span>
+      </button>
+      <button class="admin-nav-item" type="button" data-admin-view="routine">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-calendar"></use></svg>
+        <span>ক্লাস রুটিন</span>
+      </button>
+      <button class="admin-nav-item" type="button" data-admin-view="classes">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-sliders"></use></svg>
+        <span>ক্লাস সেটিংস</span>
+      </button>
+      <div class="admin-side-foot">
+        <a class="admin-app-link" href="index.html">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-smartphone"></use></svg>
+          <span>শিক্ষার্থী অ্যাপ খুলুন</span>
+        </a>
+      </div>
+    </nav>
+
+    <main class="admin-main">
+      <!-- Dashboard -->
+      <section class="admin-view active" data-view-panel="dashboard" aria-labelledby="dashTitle">
+        <div class="page-intro">
+          <div><p class="eyebrow">এক নজরে</p><h1 id="dashTitle">ড্যাশবোর্ড</h1></div>
+          <span class="page-date" id="adminTodayDate">শনিবার, ২১ সেপ্টেম্বর ২০২৬৬</span>
+        </div>
+
+        <div class="admin-stats">
+          <article class="admin-stat">
+            <span class="admin-stat-icon mint" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-users"></use></svg></span>
+            <div><strong id="dashStudentCount">—</strong><small>মোট শিক্ষার্থী</small></div>
+          </article>
+          <article class="admin-stat">
+            <span class="admin-stat-icon amber" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-clipboard"></use></svg></span>
+            <div><strong id="dashPendingCount">—</strong><small>অনুমোদনের অপেক্ষায়</small></div>
+          </article>
+          <article class="admin-stat">
+            <span class="admin-stat-icon blue" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-book"></use></svg></span>
+            <div><strong id="dashClassCount">—</strong><small>চলমান ক্লাস</small></div>
+          </article>
+          <article class="admin-stat">
+            <span class="admin-stat-icon lilac" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-megaphone"></use></svg></span>
+            <div><strong id="dashNoticeCount">—</strong><small>প্রকাশিত নোটিশ</small></div>
+          </article>
+        </div>
+
+        <div class="admin-duo">
+          <article class="admin-card">
+            <header class="admin-card-head">
+              <div><p class="eyebrow">আগামতি</p><h2>অনুমোদনের অপেক্ষায়</h2></div>
+              <button class="text-link" type="button" data-admin-view="students">সব দেখুন →</button>
+            </header>
+            <div class="pending-list" id="dashPendingList"></div>
+          </article>
+          <article class="admin-card">
+            <header class="admin-card-head">
+              <div><p class="eyebrow">আজ</p><h2>আজকের ক্লাস</h2></div>
+            </header>
+            <div class="today-list" id="dashTodayList"></div>
+          </article>
+        </div>
+
+        <article class="admin-card" style="margin-top: 14px;">
+          <header class="admin-card-head">
+            <div><p class="eyebrow">এনরোলমেন্ট</p><h2>ক্লাসভিত্তিক শিক্ষার্থী</h2></div>
+          </header>
+          <div class="enrollment" id="dashEnrollment"></div>
+        </article>
+      </section>
+
+      <!-- Students -->
+      <section class="admin-view" data-view-panel="students" aria-labelledby="studentsTitle">
+        <div class="page-intro">
+          <div><p class="eyebrow">Student Management</p><h1 id="studentsTitle">শিক্ষার্থী ব্যবস্থাপনা</h1></div>
+        </div>
+        <div class="student-toolbar">
+          <label class="student-search">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-search"></use></svg>
+            <input id="studentSearch" type="search" placeholder="নাম, Student ID বা মোবাইল দিয়ে খুঁজুন" autocomplete="off">
+          </label>
+          <div class="chip-row" id="studentFilterChips" aria-label="স্ট্যাটাস ফিল্টার">
+            <button class="chip active" type="button" data-student-filter="all">সব</button>
+            <button class="chip" type="button" data-student-filter="pending">অপেক্ষমাণ</button>
+            <button class="chip" type="button" data-student-filter="approved">অনুমোদিত</button>
+            <button class="chip" type="button" data-student-filter="rejected">বাতিল</button>
+          </div>
+        </div>
+        <div class="student-list" id="studentList"></div>
+      </section>
+
+      <!-- Notices -->
+      <section class="admin-view" data-view-panel="notices" aria-labelledby="noticesTitle">
+        <div class="page-intro">
+          <div><p class="eyebrow">Announcements</p><h1 id="noticesTitle">নোটিশ বোর্ড</h1></div>
+        </div>
+        <div class="admin-duo">
+          <article class="admin-card">
+            <header class="admin-card-head">
+              <div><p class="eyebrow">Publish</p><h2>নতুন নোটিশ</h2></div>
+            </header>
+            <form id="noticeForm" class="notice-form" novalidate>
+              <label for="noticeTitle">নোটিশের শিরোনাম</label>
+              <input id="noticeTitle" name="title" type="text" placeholder="যেমন: পরীক্ষার সময়সূচি" required>
+              <label for="noticeBody">বিস্তারিত</label>
+              <textarea id="noticeBody" name="body" rows="4" placeholder="নোটিশের পূর্ণ বিবরণ লিখুন" required></textarea>
+              <label for="noticeAudience">কে দেখবে</label>
+              <select id="noticeAudience" name="audience">
+                <option>সব শিক্ষার্থী</option>
+                <option>দশম শ্রেণি</option>
+                <option>বিজ্ঞান বিভাগ</option>
+                <option>মানবিক বিভাগ</option>
+              </select>
+              <button class="admin-btn primary" type="submit">
+                <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-plus"></use></svg>
+                প্রকাশ করুন
+              </button>
+            </form>
+          </article>
+          <article class="admin-card">
+            <header class="admin-card-head">
+              <div><p class="eyebrow">Published</p><h2>প্রকাশিত নোটিশ</h2></div>
+            </header>
+            <div class="notice-list" id="noticeList"></div>
+          </article>
+        </div>
+      </section>
+
+      <!-- Routine -->
+      <section class="admin-view" data-view-panel="routine" aria-labelledby="routineTitle">
+        <div class="page-intro">
+          <div><p class="eyebrow">Weekly Schedule</p><h1 id="routineTitle">ক্লাস রুটিন</h1></div>
+        </div>
+        <div class="day-tabs" id="routineDayTabs" aria-label="দিন নির্বাচন"></div>
+        <article class="admin-card">
+          <header class="admin-card-head">
+            <div><p class="eyebrow">Add Class</p><h2 id="addRoutineHeading">নতুন ক্লাস যোগ করুন</h2></div>
+          </header>
+          <form id="addRoutineForm" class="routine-form" novalidate>
+            <div class="routine-form-grid">
+              <label>বিষয়
+                <input id="routineSubject" type="text" placeholder="যেমন: উচ্চতর গণিত" required>
+              </label>
+              <label>শিক্ষক
+                <input id="routineTeacher" type="text" placeholder="শিক্ষকের নাম" required>
+              </label>
+              <label>রুম
+                <input id="routineRoom" type="text" placeholder="যেমন: রুম ২০৩" required>
+              </label>
+              <label>সময়
+                <input id="routineTime" type="time" value="18:00" required>
+              </label>
+            </div>
+            <button class="admin-btn primary" type="submit">
+              <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-plus"></use></svg>
+              রুটিনে যোগ করুন
+            </button>
+          </form>
+        </article>
+        <div class="routine-list" id="routineList"></div>
+      </section>
+
+      <!-- Classes -->
+      <section class="admin-view" data-view-panel="classes" aria-labelledby="classesTitle">
+        <div class="page-intro">
+          <div><p class="eyebrow">Settings</p><h1 id="classesTitle">ক্লাস সেটিংস</h1></div>
+        </div>
+        <article class="admin-card">
+          <header class="admin-card-head">
+            <div><p class="eyebrow">Class Management</p><h2>চলমান ক্লাস</h2></div>
+            <span class="classes-count" id="classesCount"></span>
+          </header>
+          <div class="class-list" id="classList"></div>
+        </article>
+      </section>
+    </main>
+
+    <nav class="admin-bottom" aria-label="এডমিন মোবাইল নেভিগেশন">
+      <button class="admin-bottom-item active" type="button" data-admin-view="dashboard">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-home"></use></svg>
+        <span>ড্যাশবোর্ড</span>
+      </button>
+      <button class="admin-bottom-item" type="button" data-admin-view="students">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-users"></use></svg>
+        <span>শিক্ষার্থী</span>
+      </button>
+      <button class="admin-bottom-item" type="button" data-admin-view="notices">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-megaphone"></use></svg>
+        <span>নোটিশ</span>
+      </button>
+      <button class="admin-bottom-item" type="button" data-admin-view="routine">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-calendar"></use></svg>
+        <span>রুটিন</span>
+      </button>
+      <button class="admin-bottom-item" type="button" data-admin-view="classes">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-sliders"></use></svg>
+        <span>ক্লাস</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- Generic modal (student detail / PIN reset) -->
+  <div class="admin-modal-backdrop" id="adminModalBackdrop" hidden>
+    <section class="admin-modal" role="dialog" aria-modal="true" aria-labelledby="adminModalTitle">
+      <div class="admin-modal-header">
+        <div><p class="eyebrow" id="adminModalKicker">Details</p><h2 id="adminModalTitle">—</h2></div>
+        <button class="admin-modal-close" type="button" id="adminModalClose" aria-label="বন্ধ করুন">×</button>
+      </div>
+      <div class="admin-modal-body" id="adminModalBody"></div>
+    </section>
+  </div>
+
+  <!-- Reusable SVG icon sprite. No external assets are required for offline use. -->
+  <svg class="icon-sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="icon-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V10Z"/><path d="M9 21v-6h6v6"/></symbol>
+    <symbol id="icon-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.7a3.5 3.5 0 0 1 0 6.6M21.5 20a6.5 6.5 0 0 0-4.4-6.1"/></symbol>
+    <symbol id="icon-megaphone" viewBox="0 0 24 24"><path d="m3 11 13-5v12L3 14v-3ZM16 10h3a2 2 0 0 1 0 4h-3M6 15l1.5 5H11l-1.5-5"/></symbol>
+    <symbol id="icon-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></symbol>
+    <symbol id="icon-sliders" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16M8 4v4M15 10v4M11 16v4"/></symbol>
+    <symbol id="icon-book" viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5v-16Z"/><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M8 7h8M8 11h6"/></symbol>
+    <symbol id="icon-clipboard" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4.5V3h6v1.5M9 10h6M9 14h4"/></symbol>
+    <symbol id="icon-shield" viewBox="0 0 24 24"><path d="M12 3 5 6v5.2c0 4.8 3 8 7 9.8 4-1.8 7-5 7-9.8V6l-7-3Z"/><path d="m9 12 2 2 4-4.5"/></symbol>
+    <symbol id="icon-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
+    <symbol id="icon-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m16 16 5 5"/></symbol>
+    <symbol id="icon-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="icon-trash" viewBox="0 0 24 24"><path d="M4 7h16M9.5 7V5h5v2M6.5 7l1 13.5h9l1-13.5M10 11v5.5M14 11v5.5"/></symbol>
+    <symbol id="icon-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+    <symbol id="icon-arrow-left" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></symbol>
+    <symbol id="icon-smartphone" viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M10 18h4"/></symbol>
+    <symbol id="icon-logout" viewBox="0 0 24 24"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></symbol>
+  </svg>
+  <script type="module" src="js/admin.js"></script>
+</body>
+</html>
