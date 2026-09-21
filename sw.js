@@ -1,12 +1,11 @@
-const CACHE_NAME = 'active-plus-student-v25';
+const CACHE_NAME = 'active-plus-student-v26';
 const APP_SHELL = [
   './',
   './index.html',
   './styles.css',
   './manifest.json',
-  './logo.svg',
-  './icon-192.png',
-  './icon-512.png',
+  './file_000000004124820892547d9c69ac732e.png',
+  './file_0000000069108208a2f51456ff2bfbc5.png',
   './css/tokens.css',
   './css/pending.css',
   './css/shell.css',

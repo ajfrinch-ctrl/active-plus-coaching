@@ -14,21 +14,15 @@
   "dir": "ltr",
   "icons": [
     {
-      "src": "icon-192.png",
-      "sizes": "192x192",
+      "src": "file_0000000069108208a2f51456ff2bfbc5.png",
+      "sizes": "1254x1254",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "icon-512.png",
-      "sizes": "512x512",
+      "src": "file_000000004124820892547d9c69ac732e.png",
+      "sizes": "1254x1254",
       "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "logo.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
       "purpose": "any"
     }
   ],
@@ -38,13 +32,13 @@
       "name": "ক্লাস রুটিন",
       "short_name": "রুটিন",
       "url": "./#routine",
-      "icons": [{ "src": "logo.svg", "sizes": "any" }]
+      "icons": [{ "src": "file_000000004124820892547d9c69ac732e.png", "sizes": "1254x1254", "type": "image/png" }]
     },
     {
       "name": "ফলাফল",
       "short_name": "ফলাফল",
       "url": "./#results",
-      "icons": [{ "src": "logo.svg", "sizes": "any" }]
+      "icons": [{ "src": "file_000000004124820892547d9c69ac732e.png", "sizes": "1254x1254", "type": "image/png" }]
     }
   ]
 }
