@@ -15,9 +15,13 @@ export const enabledClasses = Object.freeze([
 
 export const defaultStudent = Object.freeze({
   name: 'রাইসা ইসলাম',
+  nameBn: 'রাইসা ইসলাম',
+  nameEn: 'Raisa Islam',
   className: 'দশম শ্রেণি',
   group: 'বিজ্ঞান বিভাগ',
-  id: 'AP-1024'
+  id: 'AP-1024',
+  studentMobile: '01700000000',
+  guardianMobile: '01800000000'
 });
 
 export const subjectInitials = Object.freeze({

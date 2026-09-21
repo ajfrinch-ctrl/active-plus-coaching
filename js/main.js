@@ -5,7 +5,7 @@ import { renderStudent, openStudentApp, showAuthScreen, logout, setView } from '
 import { switchAuthTab, initAuth } from './auth.js';
 import { initNavigation } from './navigation.js';
 import { initModals } from './modals.js';
-import { initProfile, openProfileEditor } from './profile.js';
+import { initProfile, openProfileEditor, shareStudentOnWhatsApp } from './profile.js';
 import { initRoutine } from './routine.js';
 import { initInstallPrompt, installApp } from './install.js';
 import { initConnectivity } from './connectivity.js';
@@ -31,6 +31,9 @@ function handleAction(action) {
       break;
     case 'show-offline':
       showFeedback('তোমার তথ্য এই ডিভাইসেই নিরাপদে সংরক্ষিত আছে');
+      break;
+    case 'whatsapp-share':
+      shareStudentOnWhatsApp(state.student);
       break;
     case 'class-details':
       setView('routine');

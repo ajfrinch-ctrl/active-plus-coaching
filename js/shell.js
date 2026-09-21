@@ -1,5 +1,5 @@
 /* App shell lifecycle and student identity rendering. */
-import { $, $$, scrollToTop } from './ui.js';
+import { $, $$, scrollToTop, toBanglaNumber } from './ui.js';
 import { clearSession } from './storage.js';
 
 export function renderStudent(student) {
@@ -14,6 +14,9 @@ export function renderStudent(student) {
   $('#profileMeta') && ($('#profileMeta').textContent = meta);
   $('#routineClass') && ($('#routineClass').textContent = meta);
   $('#studentId') && ($('#studentId').textContent = student.id);
+  $('#studentMobileValue') && ($('#studentMobileValue').textContent = toBanglaNumber(student.studentMobile || 'নম্বর নেই'));
+  $('#guardianMobileValue') && ($('#guardianMobileValue').textContent = toBanglaNumber(student.guardianMobile || 'নম্বর নেই'));
+  if ($('#editStudentId')) $('#editStudentId').value = student.id || '';
 }
 
 export function openStudentApp(state) {

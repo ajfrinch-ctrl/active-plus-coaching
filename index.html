@@ -266,6 +266,7 @@
       <section class="view" id="profileView" data-view-panel="profile" aria-labelledby="profileTitle">
         <div class="page-intro profile-intro"><p class="eyebrow">তোমার তথ্য</p><h1 id="profileTitle">প্রোফাইল</h1><p>তোমার শিক্ষার্থী অ্যাকাউন্টের তথ্য।</p></div>
         <article class="profile-card"><div class="profile-avatar" id="profileAvatar">র</div><div><h2 id="profileName">রাইসা ইসলাম</h2><p id="profileMeta">দশম শ্রেণি · বিজ্ঞান বিভাগ</p><span class="student-id">ID: <b id="studentId">AP-1024</b></span></div><button class="edit-button" type="button" data-action="edit-profile" aria-label="প্রোফাইল সম্পাদনা"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-edit"></use></svg></button></article>
+        <article class="contact-card"><div class="contact-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-phone"></use></svg></div><div class="contact-copy"><span>শিক্ষার্থীর মোবাইল</span><strong id="studentMobileValue">০১৭০০০০০০০০</strong><small>অভিভাবক · <b id="guardianMobileValue">০১৮০০০০০০০০</b></small></div><button class="whatsapp-button" type="button" data-action="whatsapp-share" aria-label="WhatsApp-এ তথ্য শেয়ার করুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-whatsapp"></use></svg><span>WhatsApp</span></button></article>
         <div class="profile-section"><p class="eyebrow">অ্যাকাউন্ট</p><div class="settings-list"><button type="button" data-action="edit-profile"><span class="settings-icon mint"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-user"></use></svg></span><span><strong>ব্যক্তিগত তথ্য</strong><small>নাম, ক্লাস ও বিভাগ</small></span><svg class="setting-arrow" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-chevron-right"></use></svg></button><button type="button" data-action="show-offline"><span class="settings-icon green"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-download"></use></svg></span><span><strong>অফলাইন ডেটা</strong><small>সব ডেটা এই ফোনেই সংরক্ষিত</small></span><span class="saved-tag">সংরক্ষিত</span></button><button type="button" data-action="install"><span class="settings-icon purple"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-smartphone"></use></svg></span><span><strong>অ্যাপ ইনস্টল করুন</strong><small>হোম স্ক্রিন থেকে দ্রুত খুলুন</small></span><svg class="setting-arrow" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-chevron-right"></use></svg></button></div></div>
         <div class="profile-section"><p class="eyebrow">সহায়তা</p><div class="help-card"><span class="help-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-help"></use></svg></span><div><strong>কিছু জানার আছে?</strong><p>তোমার শিক্ষক বা অফিসে যোগাযোগ করো।</p></div><button type="button" data-action="help" aria-label="সহায়তা"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg></button></div></div>
         <p class="app-version">Active Plus Coaching · v1.0.0 · <span>অফলাইন সংস্করণ</span></p>
@@ -290,7 +291,28 @@
   </div>
 
   <div class="modal-backdrop" id="editModal" hidden>
-    <section class="modal edit-modal" role="dialog" aria-modal="true" aria-labelledby="editModalTitle"><div class="modal-header"><div><p class="eyebrow">অফলাইনে সংরক্ষণ</p><h2 id="editModalTitle">ব্যক্তিগত তথ্য</h2></div><button type="button" class="modal-close" data-close-modal="editModal" aria-label="বন্ধ করুন">×</button></div><form id="profileForm"><label for="nameInput">পুরো নাম</label><input id="nameInput" name="name" type="text" required><label for="classInput">শ্রেণি / বর্ষ</label><select id="classInput" name="className"></select><label for="groupInput">বিভাগ</label><input id="groupInput" name="group" type="text" required><button class="modal-action" type="submit">তথ্য সংরক্ষণ করুন</button></form><p class="form-note"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg> এই তথ্য এই ডিভাইসেই থাকবে।</p></section>
+    <section class="modal edit-modal" role="dialog" aria-modal="true" aria-labelledby="editModalTitle"><div class="modal-header"><div><p class="eyebrow">অফলাইনে সংরক্ষণ</p><h2 id="editModalTitle">প্রোফাইল সম্পাদনা</h2></div><button type="button" class="modal-close" data-close-modal="editModal" aria-label="বন্ধ করুন">×</button></div><form id="profileForm">
+      <div class="readonly-id"><label for="editStudentId">Student ID</label><div class="locked-input"><input id="editStudentId" type="text" readonly disabled><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg></div><small>Student ID পরিবর্তন করা যাবে না</small></div>
+      <div class="field-grid edit-field-grid">
+        <div class="field"><label for="editNameBn">নাম (বাংলা)</label><input id="editNameBn" name="nameBn" type="text" required></div>
+        <div class="field"><label for="editNameEn">নাম (English)</label><input id="editNameEn" name="nameEn" type="text"></div>
+        <div class="field"><label for="editFatherName">পিতার নাম</label><input id="editFatherName" name="fatherName" type="text"></div>
+        <div class="field"><label for="editMotherName">মাতার নাম</label><input id="editMotherName" name="motherName" type="text"></div>
+        <div class="field full"><label for="editGuardianName">অভিভাবকের নাম</label><input id="editGuardianName" name="guardianName" type="text"></div>
+        <div class="field"><label for="editBirthDate">জন্মতারিখ</label><input id="editBirthDate" name="birthDate" type="date"></div>
+        <div class="field"><label for="editGender">লিঙ্গ</label><select id="editGender" name="gender"><option value="">নির্বাচন করুন</option><option>পুরুষ</option><option>নারী</option><option>অন্যান্য</option></select></div>
+        <div class="field"><label for="editStudentMobile">শিক্ষার্থীর মোবাইল</label><input id="editStudentMobile" name="studentMobile" type="tel" inputmode="numeric"></div>
+        <div class="field"><label for="editGuardianMobile">অভিভাবকের মোবাইল</label><input id="editGuardianMobile" name="guardianMobile" type="tel" inputmode="numeric"></div>
+        <div class="field full"><label for="editAddress">সম্পূর্ণ ঠিকানা</label><textarea id="editAddress" name="address" rows="3"></textarea></div>
+        <div class="field"><label for="classInput">শ্রেণি / বর্ষ</label><select id="classInput" name="className" required></select></div>
+        <div class="field"><label for="editGroup">বিভাগ / গ্রুপ</label><input id="editGroup" name="group" type="text" required></div>
+        <div class="field full"><label for="editMajor">বিষয় / বিভাগ</label><input id="editMajor" name="major" type="text"></div>
+        <div class="field"><label for="editInstitution">শিক্ষা প্রতিষ্ঠান</label><input id="editInstitution" name="institution" type="text"></div>
+        <div class="field"><label for="editRoll">রোল নম্বর</label><input id="editRoll" name="roll" type="text"></div>
+        <div class="field full"><label for="editRegistrationNo">রেজিস্ট্রেশন নম্বর</label><input id="editRegistrationNo" name="registrationNo" type="text"></div>
+      </div>
+      <button class="modal-action" type="submit">তথ্য সংরক্ষণ করুন</button>
+    </form><p class="form-note"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg> Student ID সিস্টেম থেকে তৈরি হয়, তাই এটি অপরিবর্তনযোগ্য।</p></section>
   </div>
 
   <div class="modal-backdrop" id="recoveryModal" hidden>
@@ -306,6 +328,7 @@
     <symbol id="icon-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
     <symbol id="icon-bell" viewBox="0 0 24 24"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></symbol>
     <symbol id="icon-phone" viewBox="0 0 24 24"><path d="M6 3h3l2 5-2 1.5a12 12 0 0 0 5.5 5.5L16 13l5 2v3a2 2 0 0 1-2 2C10.7 20 4 13.3 4 5a2 2 0 0 1 2-2Z"/></symbol>
+    <symbol id="icon-whatsapp" viewBox="0 0 24 24"><path d="M20 11.5a8 8 0 0 1-11.9 7L4 20l1.5-4.1A8 8 0 1 1 20 11.5Z"/><path d="M8.5 8.2c.2-.4.4-.4.7-.4h.5c.2 0 .3.1.4.4l.6 1.4c.1.2.1.4-.1.6l-.5.6c.5 1 1.3 1.7 2.3 2.2l.6-.5c.2-.2.4-.2.6-.1l1.4.6c.3.1.4.3.3.6-.1.5-.4 1-.8 1.2-.4.2-1.2.1-2-.2-2.3-.9-4-2.5-4.9-4.8-.3-.8-.4-1.6-.1-2.1Z"/></symbol>
     <symbol id="icon-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 6.5 12 6.5 21.5 12 21.5 12 18 17.5 12 17.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="2.5"/></symbol>
     <symbol id="icon-wifi-off" viewBox="0 0 24 24"><path d="m1 1 22 22M5 9.5A11 11 0 0 1 12 7c1.8 0 3.5.4 5 1.2M8.5 13.5A6 6 0 0 1 12 12c1.1 0 2.1.3 3 .8M12 18h.01"/></symbol>
     <symbol id="icon-check-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/></symbol>
