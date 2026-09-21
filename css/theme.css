@@ -1,0 +1,91 @@
+/* Light nature theme — time and weather change the atmosphere, never the readability. */
+html[data-time-theme="morning"] body {
+  background: linear-gradient(145deg, #e7f5ed 0%, #fff4dd 55%, #e4f1f4 100%);
+}
+html[data-time-theme="day"] body {
+  background: linear-gradient(145deg, #e1f3f3 0%, #fffbed 54%, #e5f0fb 100%);
+}
+html[data-time-theme="evening"] body {
+  background: linear-gradient(145deg, #fae9e2 0%, #f6e9ee 52%, #e5e9f8 100%);
+}
+html[data-time-theme="night"] body {
+  background: linear-gradient(145deg, #e8eef8 0%, #ececf8 54%, #e3f0f1 100%);
+}
+
+.app-shell, .auth-screen {
+  position: relative;
+  background: linear-gradient(145deg, rgba(255,255,255,.82), rgba(243,248,245,.64));
+}
+.app-shell::before, .auth-screen::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  top: 76px;
+  right: -64px;
+  width: 190px;
+  height: 190px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 224, 153, .62) 0 18%, rgba(255, 238, 194, .22) 42%, transparent 68%);
+  filter: blur(2px);
+  pointer-events: none;
+}
+.app-shell::after, .auth-screen::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  top: 156px;
+  left: -84px;
+  width: 230px;
+  height: 75px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.48);
+  filter: blur(20px);
+  pointer-events: none;
+}
+.app-shell .app-main, .auth-screen .auth-card, .auth-screen .auth-message, .auth-screen .auth-footnote { position: relative; z-index: 1; }
+
+html[data-time-theme="morning"] .app-shell::before,
+html[data-time-theme="morning"] .auth-screen::before {
+  background: radial-gradient(circle, rgba(255, 216, 125, .7) 0 19%, rgba(255, 231, 177, .2) 43%, transparent 69%);
+}
+html[data-time-theme="day"] .app-shell::before,
+html[data-time-theme="day"] .auth-screen::before {
+  background: radial-gradient(circle, rgba(255, 238, 174, .74) 0 18%, rgba(255, 247, 205, .18) 44%, transparent 69%);
+}
+html[data-time-theme="evening"] .app-shell::before,
+html[data-time-theme="evening"] .auth-screen::before {
+  background: radial-gradient(circle, rgba(247, 180, 149, .56) 0 17%, rgba(244, 210, 207, .2) 44%, transparent 69%);
+}
+html[data-time-theme="night"] .app-shell::before,
+html[data-time-theme="night"] .auth-screen::before {
+  background: radial-gradient(circle, rgba(192, 207, 240, .62) 0 10%, rgba(213, 223, 246, .25) 34%, transparent 69%);
+}
+
+/* Rain and cloud states remain light, with only a cool tint. */
+html[data-weather="cloudy"] .app-shell,
+html[data-weather="cloudy"] .auth-screen { background: linear-gradient(145deg, rgba(251,253,253,.82), rgba(235,241,244,.64)); }
+html[data-weather="rain"] .app-shell,
+html[data-weather="rain"] .auth-screen { background: linear-gradient(145deg, rgba(241,250,252,.82), rgba(231,237,248,.64)); }
+html[data-weather="rain"] .app-shell::after,
+html[data-weather="rain"] .auth-screen::after {
+  width: 300px;
+  height: 110px;
+  background: rgba(145, 194, 219, .17);
+  filter: blur(24px);
+  transform: rotate(-14deg);
+}
+
+/* The larger feature cards keep a calm accent for hierarchy on the light canvas. */
+html[data-time-theme="morning"] .progress-card { background: linear-gradient(135deg, #347f6d, #4e9a90); }
+html[data-time-theme="day"] .progress-card { background: linear-gradient(135deg, #2d7d77, #4c93b2); }
+html[data-time-theme="evening"] .progress-card { background: linear-gradient(135deg, #936d76, #7183a1); }
+html[data-time-theme="night"] .progress-card { background: linear-gradient(135deg, #607a9f, #7181ac); }
+html[data-time-theme="evening"] .course-summary { background: linear-gradient(135deg, #cf8d69, #9a7dab); }
+html[data-time-theme="night"] .course-summary { background: linear-gradient(135deg, #7893b5, #9489bd); }
+html[data-time-theme="night"] .result-hero { background: linear-gradient(135deg, #6f88ae, #9085b9); }
+html[data-time-theme="night"] .profile-card { background: linear-gradient(135deg, #3d7d78, #668caf); }
+
+.weather-pill { border-color: rgba(255,255,255,.78); }
+html[data-weather="clear"] .weather-pill { color: #a96c38; background: rgba(255, 239, 192, .68); }
+html[data-weather="cloudy"] .weather-pill { color: #5d7591; background: rgba(222, 233, 247, .68); }
+html[data-weather="rain"] .weather-pill { color: #39738f; background: rgba(205, 232, 248, .72); }

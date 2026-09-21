@@ -1,0 +1,51 @@
+/* Design tokens and global reset */
+/* Active Plus Coaching — mobile-first student app */
+:root {
+  --ink: #192c29;
+  --muted: #70807b;
+  --muted-2: #98a5a0;
+  --forest: #154d42;
+  --forest-dark: #0f3d34;
+  --mint: #e8f3ed;
+  --mint-strong: #cbe8d9;
+  --cream: #fcfaf6;
+  --white: #ffffff;
+  --line: #edf0ed;
+  --orange: #f4a35e;
+  --coral: #f47764;
+  --purple: #8d82d6;
+  --blue: #74a8db;
+  --shadow: 0 16px 45px rgba(36, 74, 64, .09);
+  --soft-shadow: 0 5px 18px rgba(36, 74, 64, .07);
+  --radius-lg: 22px;
+  --radius-md: 15px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { min-height: 100%; background: #e6efeb; scroll-behavior: smooth; }
+body {
+  min-width: 320px;
+  min-height: 100%;
+  color: var(--ink);
+  background: #e6efeb;
+  font-family: "Noto Sans Bengali", "Nirmala UI", "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+button, input, select { font: inherit; }
+button { color: inherit; cursor: pointer; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid rgba(244, 119, 100, .35); outline-offset: 2px; }
+svg { display: block; }
+
+.app-shell {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  min-height: 100vh;
+  margin: 0 auto;
+  background: var(--cream);
+  overflow: hidden;
+}

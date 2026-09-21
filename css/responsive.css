@@ -1,0 +1,29 @@
+/* Shared responsive rules */
+@media (min-width: 520px) {
+  body { padding: 20px 0; }
+  .app-shell, .auth-screen { height: calc(100vh - 40px); min-height: calc(100vh - 40px); border-radius: 26px; box-shadow: 0 18px 70px rgba(35, 77, 66, .13); }
+  .topbar { border-radius: 26px 26px 0 0; }
+}
+
+@media (max-width: 480px) {
+  html, body { width: 100%; min-width: 0; overflow-x: hidden; }
+  .app-shell, .auth-screen { max-width: none; width: 100%; border-radius: 0; box-shadow: none; }
+  .topbar, .auth-topbar { width: 100%; }
+}
+
+@media (max-width: 360px) {
+  .app-main { padding-left: 16px; padding-right: 16px; }
+  .topbar-inner { padding-left: 0; padding-right: 0; }
+  .progress-card h2 { font-size: 15px; }
+  .progress-copy { font-size: 9px; }
+  .progress-ring { flex-basis: 68px; width: 68px; height: 68px; }
+  .quick-card { gap: 6px; padding-left: 7px; padding-right: 7px; }
+  .quick-card strong { font-size: 10px; }
+  .weather-pill { max-width: 28px; padding: 6px; }
+  .weather-pill span { display: none; }
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}

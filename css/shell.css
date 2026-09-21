@@ -1,0 +1,58 @@
+/* App header and shell */
+.topbar {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  z-index: 20;
+  display: flex;
+  width: min(100%, 480px);
+  height: calc(64px + env(safe-area-inset-top, 0px));
+  padding: env(safe-area-inset-top, 0px) 16px 0;
+  border-bottom: 1px solid rgba(233, 237, 232, .9);
+  background: rgba(252, 250, 246, .96);
+  box-shadow: 0 4px 18px rgba(36, 74, 64, .05);
+  transform: translateX(-50%);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+.topbar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 100%;
+}
+.brand-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+.brand-mark { display: grid; place-items: center; flex: 0 0 38px; width: 38px; height: 38px; }
+.brand-mark img { width: 38px; height: 38px; }
+.brand-copy { display: flex; min-width: 0; flex-direction: column; line-height: 1.1; }
+.brand-copy strong { color: var(--forest); font-family: Georgia, serif; font-size: 16px; letter-spacing: -.2px; }
+.brand-copy .institution-name { max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.brand-copy .student-topbar-name { max-width: 132px; overflow: hidden; font-family: var(--app-font); font-size: 14px; letter-spacing: -.1px; text-overflow: ellipsis; white-space: nowrap; }
+.brand-copy small { margin-top: 3px; color: var(--coral); font-size: 9px; font-weight: 800; letter-spacing: .1px; }
+.topbar-actions { display: flex; align-items: center; gap: 7px; }
+.weather-pill { display: inline-flex; align-items: center; gap: 4px; max-width: 94px; padding: 6px 7px; overflow: hidden; border: 1px solid rgba(255,255,255,.7); border-radius: 10px; color: #ba744b; background: rgba(255,242,222,.62); font-size: 8px; font-weight: 800; white-space: nowrap; text-overflow: ellipsis; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+.weather-pill svg { width: 14px; height: 14px; flex: 0 0 14px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.icon-button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid #e9eeea;
+  border-radius: 13px;
+  background: var(--white);
+  box-shadow: 0 3px 12px rgba(26, 67, 56, .04);
+}
+.icon-button svg { width: 20px; height: 20px; fill: none; stroke: var(--ink); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.notification-dot { position: absolute; top: 8px; right: 8px; width: 6px; height: 6px; border: 1.5px solid var(--white); border-radius: 50%; background: var(--coral); }
+
