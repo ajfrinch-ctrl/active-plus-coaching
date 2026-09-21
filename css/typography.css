@@ -127,3 +127,32 @@ body { font-size: 15.5px; }
   .auth-panel input, .auth-panel select, .auth-panel textarea { font-size: 14px; }
   .field input, .field select, .field textarea { font-size: 13.5px; }
 }
+
+.exam-card-title strong { font-size: 13px; }
+.exam-card-title small { font-size: 11px; }
+.exam-meta { font-size: 10px; }
+.exam-attempt { font-size: 11px; }
+.exam-attempt b { font-size: 12px; }
+.exam-draft, .exam-hint, .exam-locked { font-size: 10px; }
+.exam-tab { font-size: 11px; }
+.exam-primary, .exam-ghost { font-size: 11px; }
+.exam-summary-hero h2 { font-size: 18px; }
+.exam-summary-hero p, .exam-summary-score small { font-size: 11px; }
+.exam-summary-stats small { font-size: 10px; }
+.exam-summary-stats strong { font-size: 18px; }
+.exam-empty { font-size: 12px; }
+.exam-runner-id h2 { font-size: 15px; }
+.exam-timer strong { font-size: 13px; }
+.exam-progress-meta { font-size: 10px; }
+.exam-question-marks { font-size: 10px; }
+.exam-question-text { font-size: 16px; }
+.exam-option-text { font-size: 13px; }
+.exam-option-key { font-size: 12px; }
+.exam-written, .exam-assess-answer { font-size: 13px; }
+.exam-checklist, .exam-check, .exam-selfassess-note, .exam-modal-copy { font-size: 11px; }
+.exam-checklist-title { font-size: 11px; }
+.exam-clear { font-size: 10px; }
+.exam-review-item h4 { font-size: 12px; }
+.exam-review-answer, .exam-review-explain, .exam-modal-list { font-size: 11px; }
+.exam-score-hero p { font-size: 11px; }
+.exam-pending-tag { font-size: 10px; }

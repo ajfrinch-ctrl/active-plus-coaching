@@ -2,7 +2,7 @@
   "id": "./",
   "name": "Active Plus Coaching — শিক্ষার্থী অ্যাপ",
   "short_name": "Active Plus",
-  "description": "Active Plus Coaching-এর অফলাইন শিক্ষার্থী অ্যাপ। রুটিন, কোর্স, ফলাফল ও নোটিশ এক জায়গায়।",
+  "description": "Active Plus Coaching-এর অফলাইন শিক্ষার্থী অ্যাপ। রুটিন, কোর্স, পরীক্ষা, ফলাফল ও নোটিশ এক জায়গায়।",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -28,6 +28,13 @@
   ],
   "categories": ["education"],
   "shortcuts": [
+    {
+      "name": "পরীক্ষা",
+      "short_name": "পরীক্ষা",
+      "url": "./#exams",
+      "description": "খোলা পরীক্ষা দেখো ও উত্তর দাও",
+      "icons": [{ "src": "assets/icons/app-logo.png", "sizes": "1254x1254", "type": "image/png" }]
+    },
     {
       "name": "ক্লাস রুটিন",
       "short_name": "রুটিন",

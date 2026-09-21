@@ -11,6 +11,7 @@ import { initNavigation } from './navigation.js';
 import { initModals } from './modals.js';
 import { initProfile, openProfileEditor, shareStudentOnWhatsApp } from './profile.js';
 import { initRoutine } from './routine.js';
+import { initExams, openExamCatalogue, renderDeviceResults } from './exams.js';
 import { initInstallPrompt, installApp } from './install.js';
 import { initConnectivity } from './connectivity.js';
 import { registerServiceWorker } from './service-worker.js';
@@ -47,7 +48,10 @@ function handleAction(action) {
       showFeedback('আজকের ক্লাস রুটিন দেখানো হচ্ছে');
       break;
     case 'all-results':
-      showFeedback('সব ফলাফল খুব শিগগির যুক্ত হবে');
+      openExamCatalogue('done');
+      break;
+    case 'exams':
+      openExamCatalogue('all');
       break;
     case 'help':
       showFeedback('অফিসে যোগাযোগের জন্য অ্যাপের নোটিশ দেখুন');
@@ -62,6 +66,7 @@ function handleAction(action) {
 
 function enterApp() {
   openStudentApp(state);
+  renderDeviceResults();
 }
 
 function leaveApp() {
@@ -79,6 +84,10 @@ initProfile({
   onStudentChange: student => renderStudent(student)
 });
 initRoutine();
+initExams({
+  // A pending account may open the app but must not sit an exam.
+  canUseFeatures: () => state.account?.status !== 'pending'
+});
 initConnectivity();
 initDynamicTheme();
 initScrollHeader();
@@ -110,8 +119,8 @@ if (state.account && hasSession()) {
 }
 
 const hashView = window.location.hash.replace('#', '');
-if (['home', 'routine', 'courses', 'results', 'profile'].includes(hashView) && !$('#authScreen')?.hidden) {
+if (['home', 'routine', 'courses', 'exams', 'results', 'profile'].includes(hashView) && !$('#authScreen')?.hidden) {
   // Keep auth as the first screen; a shortcut is applied after login by the normal shell.
-} else if (['home', 'routine', 'courses', 'results', 'profile'].includes(hashView)) {
+} else if (['home', 'routine', 'courses', 'exams', 'results', 'profile'].includes(hashView)) {
   setView(hashView);
 }

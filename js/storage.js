@@ -56,6 +56,68 @@ export function clearSession() {
   } catch { /* no-op */ }
 }
 
+/* ===== Exam attempts and in-progress drafts (single localStorage key) ===== */
+function readExamStore() {
+  const stored = readJSON(STORAGE_KEYS.exams, null);
+  return {
+    attempts: stored && typeof stored.attempts === 'object' ? stored.attempts : {},
+    drafts: stored && typeof stored.drafts === 'object' ? stored.drafts : {}
+  };
+}
+
+function writeExamStore(store) {
+  return writeJSON(STORAGE_KEYS.exams, {
+    attempts: store.attempts || {},
+    drafts: store.drafts || {}
+  });
+}
+
+export function loadExamAttempts() {
+  return readExamStore().attempts;
+}
+
+export function loadExamAttempt(examId) {
+  return readExamStore().attempts[examId] || null;
+}
+
+/* A submit always replaces the stored attempt; `tries` keeps the retake count. */
+export function saveExamAttempt(examId, attempt) {
+  const store = readExamStore();
+  const previous = store.attempts[examId];
+  store.attempts[examId] = {
+    ...attempt,
+    examId,
+    tries: (previous?.tries || 0) + 1,
+    firstSubmittedAt: previous?.firstSubmittedAt || attempt.submittedAt
+  };
+  delete store.drafts[examId];
+  return writeExamStore(store);
+}
+
+/* Teacher-free follow-ups such as the written self-assessment merge into a record. */
+export function updateExamAttempt(examId, patch) {
+  const store = readExamStore();
+  if (!store.attempts[examId]) return false;
+  store.attempts[examId] = { ...store.attempts[examId], ...patch };
+  return writeExamStore(store);
+}
+
+export function loadExamDraft(examId) {
+  return readExamStore().drafts[examId] || null;
+}
+
+export function saveExamDraft(examId, draft) {
+  const store = readExamStore();
+  store.drafts[examId] = draft;
+  return writeExamStore(store);
+}
+
+export function clearExamDraft(examId) {
+  const store = readExamStore();
+  delete store.drafts[examId];
+  return writeExamStore(store);
+}
+
 export function generateStudentId(className) {
   const now = new Date();
   const year = String(now.getFullYear()).slice(-2);

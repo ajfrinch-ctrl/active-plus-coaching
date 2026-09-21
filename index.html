@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#006b43">
-  <meta name="description" content="Active Plus Coaching শিক্ষার্থী অ্যাপ — অফলাইনে রুটিন, ক্লাস, ফলাফল ও নোটিশ দেখুন।">
+  <meta name="description" content="Active Plus Coaching শিক্ষার্থী অ্যাপ — অফলাইনে রুটিন, ক্লাস, পরীক্ষা, ফলাফল ও নোটিশ দেখুন।">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -211,6 +211,10 @@
             <span class="quick-icon purple"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-award"></use></svg></span>
             <span><strong>ফলাফল</strong><small>সর্বশেষ মডেল টেস্ট</small></span><b>→</b>
           </button>
+          <button class="quick-card quick-card-wide" type="button" data-view="exams">
+            <span class="quick-icon purple"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-clipboard"></use></svg></span>
+            <span><strong>পরীক্ষা</strong><small>নিজের ফোনেই উত্তর দাও, সঙ্গে সঙ্গে ফল দেখো</small></span><b>→</b>
+          </button>
           <button class="quick-card" type="button" id="noticeShortcut">
             <span class="quick-icon blue"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-bell"></use></svg></span>
             <span><strong>নোটিশ</strong><small>২টি নতুন নোটিশ</small></span><b>→</b>
@@ -266,9 +270,24 @@
         </div>
       </section>
 
+      <!-- EXAMS -->
+      <section class="view" id="examsView" data-view-panel="exams" aria-labelledby="examsTitle">
+        <div class="page-intro"><p class="eyebrow">অনলাইন পরীক্ষা</p><h1 id="examsTitle">পরীক্ষা</h1><p>নিজের ফোনেই পরীক্ষা দাও — উত্তর ও নম্বর শুধু এই ডিভাইসেই সংরক্ষিত থাকে।</p></div>
+        <div class="exam-summary" id="examSummary"></div>
+        <div class="exam-filter" role="tablist" aria-label="পরীক্ষার তালিকা ফিল্টার">
+          <button class="exam-tab active" type="button" role="tab" aria-selected="true" data-exam-filter="all">সব</button>
+          <button class="exam-tab" type="button" role="tab" aria-selected="false" data-exam-filter="open">খোলা আছে</button>
+          <button class="exam-tab" type="button" role="tab" aria-selected="false" data-exam-filter="progress">চলমান</button>
+          <button class="exam-tab" type="button" role="tab" aria-selected="false" data-exam-filter="upcoming">আসন্ন</button>
+          <button class="exam-tab" type="button" role="tab" aria-selected="false" data-exam-filter="done">সম্পন্ন</button>
+        </div>
+        <div class="exam-list" id="examList"></div>
+        <p class="exam-empty" id="examEmpty" hidden></p>
+      </section>
+
       <!-- RESULTS -->
       <section class="view" id="resultsView" data-view-panel="results" aria-labelledby="resultsTitle">
-        <div class="page-intro"><p class="eyebrow">তোমার পারফরম্যান্স</p><h1 id="resultsTitle">ফলাফল</h1><p>পরিশ্রমের ফলাফল, এক নজরে।</p></div>
+        <div class="page-intro"><p class="eyebrow">তোমার পারফরম্যান্স</p><h1 id="resultsTitle">ফলাফল</h1><p>পরিশ্রমের ফলাফল, এক নজরে।</p><button type="button" class="text-button" data-view="exams">পরীক্ষা সেকশন →</button></div>
         <div class="result-hero"><div><span class="card-eyebrow">সর্বশেষ মডেল টেস্ট</span><h2>মোট স্কোর <strong>৮৬%</strong></h2><p>তোমার অবস্থান: <b>১২তম</b> · মোট শিক্ষার্থী ৪৮ জন</p></div><span class="trophy"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-award"></use></svg></span></div>
         <div class="result-stats"><div><small>মোট পরীক্ষা</small><strong>০৮</strong></div><div><small>সর্বোচ্চ স্কোর</small><strong>৯৪%</strong></div><div><small>উন্নতি</small><strong class="up">+৮%</strong></div></div>
         <div class="section-heading section-heading-spaced"><div><p class="eyebrow">সাম্প্রতিক</p><h2>পরীক্ষার ফলাফল</h2></div><button type="button" class="text-button" data-action="all-results">সব দেখুন</button></div>
@@ -278,6 +297,11 @@
           <article class="result-row"><span class="result-badge orange">গ</span><div><strong>গণিত সাপ্তাহিক পরীক্ষা</strong><small>২৮ আগস্ট ২০২৬</small></div><b>৯২<small>%</small></b><span class="result-arrow">→</span></article>
         </div>
       </section>
+
+        <div id="deviceResultsSection" hidden>
+          <div class="section-heading section-heading-spaced"><div><p class="eyebrow">এই ডিভাইস</p><h2>আমার দেওয়া পরীক্ষা</h2></div><button type="button" class="text-button" data-view="exams">পরীক্ষা দিই</button></div>
+          <div class="results-list" id="deviceResults"></div>
+        </div>
 
       <!-- PROFILE -->
       <section class="view" id="profileView" data-view-panel="profile" aria-labelledby="profileTitle">
@@ -294,9 +318,51 @@
       <button class="bottom-link active" type="button" data-view="home"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-home"></use></svg><span>হোম</span></button>
       <button class="bottom-link" type="button" data-view="routine"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-calendar"></use></svg><span>রুটিন</span></button>
       <button class="bottom-link" type="button" data-view="courses"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-book"></use></svg><span>কোর্স</span></button>
+      <button class="bottom-link" type="button" data-view="exams"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-clipboard"></use></svg><span>পরীক্ষা</span></button>
       <button class="bottom-link" type="button" data-view="results"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-award"></use></svg><span>ফলাফল</span></button>
       <button class="bottom-link" type="button" data-view="profile"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-user"></use></svg><span>প্রোফাইল</span></button>
     </nav>
+
+    <!-- Exam runner: a focused full-screen surface, keyboard and touch friendly. -->
+    <section class="exam-runner" id="examRunner" role="dialog" aria-modal="true" aria-labelledby="examRunnerTitle" hidden>
+      <header class="exam-runner-top">
+        <div class="exam-runner-id"><p class="eyebrow" id="examRunnerSubject">Active Plus</p><h2 id="examRunnerTitle">পরীক্ষা</h2></div>
+        <div class="exam-timer" id="examTimer" role="timer" aria-label="বাকি সময়"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-clock"></use></svg><strong id="examTimeLeft">০০:০০</strong></div>
+        <button class="exam-exit" type="button" data-exam="exit" aria-label="পরীক্ষা বন্ধ করুন">×</button>
+      </header>
+      <div class="exam-progress"><i id="examProgressFill"></i></div>
+      <div class="exam-progress-meta"><span id="examProgressLabel">প্রশ্ন ১/১</span><span id="examAnsweredLabel">০টি উত্তর দেওয়া হয়েছে</span></div>
+      <div class="exam-scroll"><div class="exam-question" id="examQuestion"></div></div>
+      <footer class="exam-runner-foot">
+        <div class="exam-palette" id="examPalette" aria-hidden="true"></div>
+        <div class="exam-foot-actions">
+          <button class="exam-ghost" type="button" id="examPrev" data-exam-nav="prev">আগের প্রশ্ন</button>
+          <button class="exam-primary" type="button" id="examNext" data-exam-nav="next">পরের প্রশ্ন</button>
+        </div>
+      </footer>
+    </section>
+
+    <!-- Score, per-question review and the written self assessment. -->
+    <section class="exam-review" id="examReview" role="dialog" aria-modal="true" aria-labelledby="examReviewTitle" hidden>
+      <header class="exam-runner-top">
+        <div class="exam-runner-id"><p class="eyebrow">ফলাফল পর্যালোচনা</p><h2 id="examReviewTitle">তোমার উত্তর</h2></div>
+        <button class="exam-exit" type="button" data-exam="review-close" aria-label="বন্ধ করুন">×</button>
+      </header>
+      <div class="exam-scroll" id="examReviewBody"></div>
+    </section>
+
+    <div class="modal-backdrop" id="examSubmitModal" hidden>
+      <section class="modal" role="dialog" aria-modal="true" aria-labelledby="examSubmitTitle">
+        <div class="modal-header"><div><p class="eyebrow">শেষ ধাপ</p><h2 id="examSubmitTitle">উত্তর জমা দেবে?</h2></div><button type="button" class="modal-close" data-close-modal="examSubmitModal" aria-label="বন্ধ করুন">×</button></div>
+        <p class="exam-modal-copy" id="examSubmitInfo"></p>
+        <ul class="exam-modal-list">
+          <li>জমার পর উত্তর বদলানো যাবে না, তবে প্রতিটি প্রশ্নের রিভিউ দেখতে পারবে।</li>
+          <li>বাকি সময় ফিরে পাবে না — সময় শেষ হলে উত্তর স্বয়ংক্রিয়ভাবে জমা হয়।</li>
+        </ul>
+        <button class="modal-action" type="button" data-exam="confirm-submit">হ্যাঁ, জমা দাও</button>
+        <button class="modal-action secondary" type="button" data-exam="cancel-submit">আরও দেখি</button>
+      </section>
+    </div>
   </div>
 
   <div class="install-toast" id="installToast" hidden>
@@ -371,6 +437,7 @@
     <symbol id="icon-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
     <symbol id="icon-logout" viewBox="0 0 24 24"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></symbol>
   </svg>
+    <symbol id="icon-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3.2 2"/></symbol>
   <script type="module" src="js/main.js"></script>
 </body>
 </html>
