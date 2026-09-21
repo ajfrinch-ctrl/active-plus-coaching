@@ -32,15 +32,6 @@ function toggleMajorField() {
   if ($('#major')) $('#major').required = isHonours;
 }
 
-function setRegistrationMode(mode) {
-  $$('[data-registration-mode]').forEach(button => button.classList.toggle('active', button.dataset.registrationMode === mode));
-  const hint = $('#modeHint');
-  if (hint) hint.textContent = mode === 'staff'
-    ? 'শিক্ষক বা এডমিন তথ্য তৈরি করে দিলে এখানে সেই মোবাইল ও PIN ব্যবহার হবে।'
-    : 'তোমার নিজের মোবাইল নম্বর ও PIN দিয়ে অ্যাকাউন্ট তৈরি হবে।';
-  return mode;
-}
-
 function initPinVisibility() {
   $$('[data-toggle-pin]').forEach(button => {
     button.addEventListener('click', () => {
@@ -120,7 +111,6 @@ function handleRegistration(event, state) {
     securityAnswer: normalizeAnswer(form.get('securityAnswer')),
     student: studentData,
     studentId,
-    createdBy: state.registrationMode || 'self',
     status: 'pending',
     createdAt: new Date().toISOString()
   };
@@ -163,14 +153,9 @@ function handleRecovery(event, state) {
 
 export function initAuth({ state, onAuthenticated, onLogout }) {
   populateRegistrationClasses();
-  setRegistrationMode('self');
   initPinVisibility();
 
   $$('[data-auth-tab]').forEach(trigger => trigger.addEventListener('click', () => switchAuthTab(trigger.dataset.authTab)));
-  $$('[data-registration-mode]').forEach(button => button.addEventListener('click', () => {
-    state.registrationMode = button.dataset.registrationMode;
-    setRegistrationMode(state.registrationMode);
-  }));
   $('#regClass')?.addEventListener('change', toggleMajorField);
   $('#loginForm')?.addEventListener('submit', event => handleLogin(event, state, onAuthenticated));
   $('#registrationForm')?.addEventListener('submit', event => handleRegistration(event, state));

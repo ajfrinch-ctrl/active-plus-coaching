@@ -16,8 +16,7 @@ document.querySelectorAll('[data-fixed-tagline]').forEach(tagline => tagline.set
 
 const state = {
   student: loadStudent(),
-  account: loadAccount(),
-  registrationMode: 'self'
+  account: loadAccount()
 };
 
 function handleAction(action) {
