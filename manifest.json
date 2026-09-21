@@ -1,27 +1,50 @@
 {
-  "name": "Active Plus Coaching",
+  "id": "./",
+  "name": "Active Plus Coaching — শিক্ষার্থী অ্যাপ",
   "short_name": "Active Plus",
-  "description": "Active Plus Coaching - আপনার সফলতার পথপ্রদর্শক। A+ রেজাল্টের জন্য সেরা কোচিং।",
-  "start_url": "/",
+  "description": "Active Plus Coaching-এর অফলাইন শিক্ষার্থী অ্যাপ। রুটিন, কোর্স, ফলাফল ও নোটিশ এক জায়গায়।",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#006400",
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#fcfaf6",
+  "theme_color": "#154d42",
   "orientation": "portrait-primary",
   "lang": "bn",
+  "dir": "ltr",
   "icons": [
     {
-      "src": "logo.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any"
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "logo.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "maskable"
+      "purpose": "any"
     }
   ],
-  "categories": ["education", "lifestyle"],
-  "screenshots": []
+  "categories": ["education"],
+  "shortcuts": [
+    {
+      "name": "ক্লাস রুটিন",
+      "short_name": "রুটিন",
+      "url": "./#routine",
+      "icons": [{ "src": "logo.svg", "sizes": "any" }]
+    },
+    {
+      "name": "ফলাফল",
+      "short_name": "ফলাফল",
+      "url": "./#results",
+      "icons": [{ "src": "logo.svg", "sizes": "any" }]
+    }
+  ]
 }

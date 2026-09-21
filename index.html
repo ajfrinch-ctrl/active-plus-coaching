@@ -2,190 +2,227 @@
 <html lang="bn">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#006400">
-  <meta name="description" content="Active Plus Coaching - আপনার সফলতার পথপ্রদর্শক">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#154d42">
+  <meta name="description" content="Active Plus Coaching শিক্ষার্থী অ্যাপ — অফলাইনে রুটিন, ক্লাস, ফলাফল ও নোটিশ দেখুন।">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Active Plus">
-  
-  <title>Active Plus Coaching</title>
-  
+  <title>Active Plus | শিক্ষার্থী অ্যাপ</title>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/svg+xml" href="logo.svg">
   <link rel="apple-touch-icon" href="logo.svg">
-  
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <!-- Header -->
-  <header class="header">
-    <div class="container header-content">
-      <div class="logo-area">
-        <img src="logo.svg" alt="Active Plus Coaching Logo" class="logo" width="48" height="48">
-        <div class="brand">
-          <h1>Active Plus</h1>
-          <span class="tagline">Coaching</span>
-        </div>
+  <!-- A compact, mobile-first app shell. All content is local and works without a network. -->
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="topbar-inner">
+        <button class="brand-button" type="button" data-view="home" aria-label="হোমে ফিরে যান">
+          <span class="brand-mark"><img src="logo.svg" alt="" width="36" height="36"></span>
+          <span class="brand-copy">
+            <strong>Active Plus</strong>
+            <small>শিক্ষার্থী অ্যাপ</small>
+          </span>
+        </button>
+        <button class="icon-button notification-button" id="notificationButton" type="button" aria-label="নোটিশ দেখুন" aria-haspopup="dialog">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-bell"></use></svg>
+          <span class="notification-dot"></span>
+        </button>
       </div>
-      <nav class="nav" id="nav">
-        <a href="#home" class="nav-link active">হোম</a>
-        <a href="#courses" class="nav-link">কোর্স</a>
-        <a href="#about" class="nav-link">আমাদের সম্পর্কে</a>
-        <a href="#contact" class="nav-link">যোগাযোগ</a>
-      </nav>
-      <button class="menu-btn" id="menuBtn" aria-label="মেনু">
-        <span></span><span></span><span></span>
-      </button>
-    </div>
-  </header>
+    </header>
 
-  <!-- Hero Section -->
-  <section id="home" class="hero">
-    <div class="container hero-content">
-      <div class="hero-text">
-        <h2>আপনার <span class="highlight">A+</span> সফলতার শুরু এখানে</h2>
-        <p>Active Plus Coaching-এ আমরা শিক্ষার্থীদের স্বপ্ন পূরণে সাহায্য করি। অভিজ্ঞ শিক্ষক, আধুনিক পদ্ধতি এবং ব্যক্তিগত মনোযোগ।</p>
-        <div class="hero-buttons">
-          <a href="#courses" class="btn btn-primary">কোর্স দেখুন</a>
-          <a href="#contact" class="btn btn-outline">যোগাযোগ করুন</a>
-        </div>
-      </div>
-      <div class="hero-logo">
-        <img src="logo.svg" alt="A+ Logo" class="big-logo">
-      </div>
-    </div>
-  </section>
-
-  <!-- Courses Section -->
-  <section id="courses" class="section courses">
-    <div class="container">
-      <h2 class="section-title">আমাদের <span class="highlight">কোর্সসমূহ</span></h2>
-      <p class="section-desc">বিভিন্ন স্তরের শিক্ষার্থীদের জন্য বিশেষভাবে ডিজাইন করা কোর্স</p>
-      
-      <div class="course-grid">
-        <div class="course-card">
-          <div class="course-icon">📚</div>
-          <h3>এসএসসি প্রস্তুতি</h3>
-          <p>সব বিষয়ের সম্পূর্ণ প্রস্তুতি ও মডেল টেস্ট</p>
-          <ul>
-            <li>বিষয়ভিত্তিক ক্লাস</li>
-            <li>নিয়মিত পরীক্ষা</li>
-            <li>ব্যক্তিগত গাইডেন্স</li>
-          </ul>
-        </div>
-        <div class="course-card">
-          <div class="course-icon">🎓</div>
-          <h3>এইচএসসি প্রস্তুতি</h3>
-          <p>কলেজ পর্যায়ের সেরা প্রস্তুতি</p>
-          <ul>
-            <li>সাইন্স / কমার্স / আর্টস</li>
-            <li>বোর্ড প্রশ্ন বিশ্লেষণ</li>
-            <li>অনলাইন সাপোর্ট</li>
-          </ul>
-        </div>
-        <div class="course-card">
-          <div class="course-icon">🏆</div>
-          <h3>ভর্তি পরীক্ষা</h3>
-          <p>মেডিকেল, ইঞ্জিনিয়ারিং ও বিশ্ববিদ্যালয়</p>
-          <ul>
-            <li>মডেল টেস্ট সিরিজ</li>
-            <li>স্পেশাল ক্লাস</li>
-            <li>র‍্যাঙ্ক প্রেডিকশন</li>
-          </ul>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- About Section -->
-  <section id="about" class="section about">
-    <div class="container">
-      <h2 class="section-title">কেন <span class="highlight">Active Plus</span>?</h2>
-      <div class="about-grid">
-        <div class="about-item">
-          <div class="about-number">01</div>
-          <h3>অভিজ্ঞ শিক্ষক</h3>
-          <p>বহু বছরের অভিজ্ঞতাসম্পন্ন শিক্ষকদের টিম</p>
-        </div>
-        <div class="about-item">
-          <div class="about-number">02</div>
-          <h3>ছোট ব্যাচ</h3>
-          <p>প্রতিটি শিক্ষার্থীর প্রতি ব্যক্তিগত মনোযোগ</p>
-        </div>
-        <div class="about-item">
-          <div class="about-number">03</div>
-          <h3>আধুনিক পদ্ধতি</h3>
-          <p>স্মার্ট ক্লাসরুম ও ডিজিটাল কন্টেন্ট</p>
-        </div>
-        <div class="about-item">
-          <div class="about-number">04</div>
-          <h3>রেজাল্ট গ্যারান্টি</h3>
-          <p>নিয়মিত অগ্রগতি পর্যবেক্ষণ ও ফলাফল নিশ্চিতকরণ</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Contact Section -->
-  <section id="contact" class="section contact">
-    <div class="container">
-      <h2 class="section-title">যোগাযোগ <span class="highlight">করুন</span></h2>
-      <div class="contact-wrapper">
-        <div class="contact-info">
-          <div class="info-item">
-            <strong>📍 ঠিকানা</strong>
-            <p>আপনার ঠিকানা এখানে লিখুন</p>
+    <main class="app-main" id="appMain">
+      <!-- HOME -->
+      <section class="view active" id="homeView" data-view-panel="home" aria-labelledby="homeTitle">
+        <div class="welcome-row">
+          <div>
+            <p class="eyebrow">শুভ সকাল</p>
+            <h1 id="homeTitle"><span id="studentName">রাইসা</span> <span class="wave">✦</span></h1>
+            <p class="muted">আজকের শেখা হোক আরও গোছানো।</p>
           </div>
-          <div class="info-item">
-            <strong>📞 ফোন</strong>
-            <p>০১XXXXXXXXX</p>
-          </div>
-          <div class="info-item">
-            <strong>✉️ ইমেইল</strong>
-            <p>info@activepluscoaching.com</p>
-          </div>
-          <div class="info-item">
-            <strong>🕒 সময়</strong>
-            <p>শনি – বৃহস্পতি: সকাল ৯টা – রাত ৯টা</p>
-          </div>
+          <button class="avatar" type="button" data-view="profile" aria-label="প্রোফাইল খুলুন"><span id="avatarInitial">র</span></button>
         </div>
-        <form class="contact-form" id="contactForm">
-          <input type="text" placeholder="আপনার নাম" required>
-          <input type="tel" placeholder="মোবাইল নম্বর" required>
-          <select required>
-            <option value="">কোর্স নির্বাচন করুন</option>
-            <option value="ssc">এসএসসি প্রস্তুতি</option>
-            <option value="hsc">এইচএসসি প্রস্তুতি</option>
-            <option value="admission">ভর্তি পরীক্ষা</option>
-          </select>
-          <textarea placeholder="আপনার বার্তা..." rows="4"></textarea>
-          <button type="submit" class="btn btn-primary">পাঠান</button>
-        </form>
-      </div>
-    </div>
-  </section>
 
-  <!-- Footer -->
-  <footer class="footer">
-    <div class="container">
-      <div class="footer-content">
-        <div class="footer-brand">
-          <img src="logo.svg" alt="Logo" width="40" height="40">
-          <span>Active Plus Coaching</span>
+        <div class="offline-pill" id="connectionPill">
+          <span class="status-dot"></span>
+          <span id="connectionText">অফলাইনেও সব ঠিকঠাক চলছে</span>
+          <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-wifi-off"></use></svg>
         </div>
-        <p>© 2026 Active Plus Coaching. সর্বস্বত্ব সংরক্ষিত।</p>
-      </div>
-    </div>
-  </footer>
 
-  <!-- Install Prompt (for PWA) -->
-  <div class="install-banner" id="installBanner" hidden>
-    <p>অ্যাপ হিসেবে ইনস্টল করুন</p>
-    <button id="installBtn" class="btn btn-primary">ইনস্টল</button>
-    <button id="closeBanner" class="close-btn">✕</button>
+        <article class="progress-card">
+          <div class="progress-card-top">
+            <div>
+              <p class="card-eyebrow">এই সপ্তাহের অগ্রগতি</p>
+              <h2>তুমি দারুণ এগিয়ে যাচ্ছ!</h2>
+              <p class="progress-copy">আরও ২টি কাজ শেষ করলেই সাপ্তাহিক লক্ষ্য পূর্ণ হবে।</p>
+            </div>
+            <div class="progress-ring" aria-label="সাপ্তাহিক অগ্রগতি ৬৮ শতাংশ">
+              <div><strong>৬৮</strong><span>%</span></div>
+            </div>
+          </div>
+          <div class="progress-track"><span style="width: 68%"></span></div>
+          <div class="progress-footer"><span>৪ / ৬ কাজ সম্পন্ন</span><button type="button" class="text-button" data-action="continue">চালিয়ে যাও <span>→</span></button></div>
+        </article>
+
+        <div class="stats-grid" aria-label="শিক্ষার্থীর পরিসংখ্যান">
+          <article class="stat-card">
+            <span class="stat-icon mint"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-check-circle"></use></svg></span>
+            <strong>৯২<small>%</small></strong>
+            <span>উপস্থিতি</span>
+          </article>
+          <article class="stat-card">
+            <span class="stat-icon peach"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-trending"></use></svg></span>
+            <strong>৮৬<small>%</small></strong>
+            <span>গড় ফলাফল</span>
+          </article>
+          <article class="stat-card">
+            <span class="stat-icon lilac"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-clipboard"></use></svg></span>
+            <strong>০৩</strong>
+            <span>বাকি কাজ</span>
+          </article>
+        </div>
+
+        <div class="section-heading">
+          <div><p class="eyebrow">এক নজরে</p><h2>দ্রুত মেনু</h2></div>
+        </div>
+        <div class="quick-grid">
+          <button class="quick-card" type="button" data-view="routine">
+            <span class="quick-icon green"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-calendar"></use></svg></span>
+            <span><strong>ক্লাস রুটিন</strong><small>আজ ৩টি ক্লাস</small></span><b>→</b>
+          </button>
+          <button class="quick-card" type="button" data-view="courses">
+            <span class="quick-icon orange"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-book"></use></svg></span>
+            <span><strong>আমার কোর্স</strong><small>৫টি বিষয়</small></span><b>→</b>
+          </button>
+          <button class="quick-card" type="button" data-view="results">
+            <span class="quick-icon purple"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-award"></use></svg></span>
+            <span><strong>ফলাফল</strong><small>সর্বশেষ মডেল টেস্ট</small></span><b>→</b>
+          </button>
+          <button class="quick-card" type="button" id="noticeShortcut">
+            <span class="quick-icon blue"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-bell"></use></svg></span>
+            <span><strong>নোটিশ</strong><small>২টি নতুন নোটিশ</small></span><b>→</b>
+          </button>
+        </div>
+
+        <div class="section-heading section-heading-spaced">
+          <div><p class="eyebrow">আজ, ২১ সেপ্টেম্বর</p><h2>পরবর্তী ক্লাস</h2></div>
+          <button type="button" class="text-button" data-view="routine">সব দেখুন</button>
+        </div>
+        <div class="next-class-card">
+          <div class="class-time"><strong>০৪:৩০</strong><span>বিকেল</span></div>
+          <div class="class-divider"></div>
+          <div class="class-detail"><span class="live-label"><i></i> পরবর্তী ক্লাস</span><strong>উচ্চতর গণিত</strong><span>মো. সাইফুল ইসলাম <b>•</b> রুম ২০৩</span></div>
+          <button class="round-arrow" type="button" data-action="class-details" aria-label="ক্লাসের বিস্তারিত"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg></button>
+        </div>
+
+        <button class="notice-strip" type="button" id="noticeStrip">
+          <span class="notice-bell"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-megaphone"></use></svg></span>
+          <span><strong>নতুন নোটিশ এসেছে</strong><small>আগামীকালের ক্লাস টেস্টের সময় পরিবর্তন হয়েছে</small></span>
+          <b>→</b>
+        </button>
+      </section>
+
+      <!-- ROUTINE -->
+      <section class="view" id="routineView" data-view-panel="routine" aria-labelledby="routineTitle">
+        <div class="page-intro"><p class="eyebrow">সপ্তাহের পরিকল্পনা</p><h1 id="routineTitle">ক্লাস রুটিন</h1><p>তোমার ক্লাসগুলো এক জায়গায়, একদম সহজে।</p></div>
+        <div class="class-context"><span class="mini-avatar">দ</span><span><small>বর্তমান ক্লাস</small><strong id="routineClass">দশম শ্রেণি · বিজ্ঞান</strong></span><button type="button" data-view="profile" aria-label="ক্লাসের প্রোফাইল দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-chevron-right"></use></svg></button></div>
+        <div class="day-tabs" role="tablist" aria-label="সপ্তাহের দিন">
+          <button class="day-tab active" type="button" data-day="sat" role="tab"><small>শনি</small><strong>২১</strong></button>
+          <button class="day-tab" type="button" data-day="sun" role="tab"><small>রবি</small><strong>২২</strong></button>
+          <button class="day-tab" type="button" data-day="mon" role="tab"><small>সোম</small><strong>২৩</strong></button>
+          <button class="day-tab" type="button" data-day="tue" role="tab"><small>মঙ্গল</small><strong>২৪</strong></button>
+          <button class="day-tab" type="button" data-day="wed" role="tab"><small>বুধ</small><strong>২৫</strong></button>
+          <button class="day-tab" type="button" data-day="thu" role="tab"><small>বৃহস্পতি</small><strong>২৬</strong></button>
+        </div>
+        <div class="routine-date"><span class="calendar-dot"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-calendar"></use></svg></span><span id="routineDate">শনিবার, ২১ সেপ্টেম্বর ২০২৬</span><span class="class-count" id="classCount">৩টি ক্লাস</span></div>
+        <div class="routine-list" id="routineList"></div>
+        <div class="empty-routine" id="emptyRoutine" hidden><span>☕</span><strong>আজ কোনো ক্লাস নেই</strong><p>এই দিনটি নিজের পড়াশোনার জন্য কাজে লাগাও।</p></div>
+      </section>
+
+      <!-- COURSES -->
+      <section class="view" id="coursesView" data-view-panel="courses" aria-labelledby="coursesTitle">
+        <div class="page-intro"><p class="eyebrow">চলমান পড়াশোনা</p><h1 id="coursesTitle">আমার কোর্স</h1><p>প্রতিটি বিষয়ে নিজের অগ্রগতি দেখে নাও।</p></div>
+        <div class="course-summary"><div><span class="card-eyebrow">এই টার্মের অগ্রগতি</span><strong>৭৪%</strong><span>আরও একটু নিয়মিত হলেই সেরা ফলাফল!</span></div><div class="summary-bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+        <div class="course-filter"><span>সকল বিষয়</span><button type="button" class="filter-button" aria-label="বিষয় ফিল্টার"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-sliders"></use></svg></button></div>
+        <div class="course-list">
+          <article class="course-item"><span class="subject-icon subject-green">গ</span><div><strong>উচ্চতর গণিত</strong><small>সাইফুল ইসলাম · ১২টি অধ্যায়</small><div class="mini-progress"><i style="width: 82%"></i></div></div><b>৮২<small>%</small></b></article>
+          <article class="course-item"><span class="subject-icon subject-blue">প</span><div><strong>পদার্থবিজ্ঞান</strong><small>তানভীর আহমেদ · ১০টি অধ্যায়</small><div class="mini-progress"><i style="width: 70%"></i></div></div><b>৭০<small>%</small></b></article>
+          <article class="course-item"><span class="subject-icon subject-yellow">র</span><div><strong>রসায়ন</strong><small>ফারহানা ইয়াসমিন · ০৮টি অধ্যায়</small><div class="mini-progress"><i style="width: ৬৪%"></i></div></div><b>৬৪<small>%</small></b></article>
+          <article class="course-item"><span class="subject-icon subject-purple">ব</span><div><strong>বাংলা</strong><small>মাহমুদা আক্তার · ১৪টি অধ্যায়</small><div class="mini-progress"><i style="width: 76%"></i></div></div><b>৭৬<small>%</small></b></article>
+          <article class="course-item"><span class="subject-icon subject-coral">ই</span><div><strong>ইংরেজি</strong><small>নুসরাত জাহান · ১১টি অধ্যায়</small><div class="mini-progress"><i style="width: 61%"></i></div></div><b>৬১<small>%</small></b></article>
+        </div>
+      </section>
+
+      <!-- RESULTS -->
+      <section class="view" id="resultsView" data-view-panel="results" aria-labelledby="resultsTitle">
+        <div class="page-intro"><p class="eyebrow">তোমার পারফরম্যান্স</p><h1 id="resultsTitle">ফলাফল</h1><p>পরিশ্রমের ফলাফল, এক নজরে।</p></div>
+        <div class="result-hero"><div><span class="card-eyebrow">সর্বশেষ মডেল টেস্ট</span><h2>মোট স্কোর <strong>৮৬%</strong></h2><p>তোমার অবস্থান: <b>১২তম</b> · মোট শিক্ষার্থী ৪৮ জন</p></div><span class="trophy"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-award"></use></svg></span></div>
+        <div class="result-stats"><div><small>মোট পরীক্ষা</small><strong>০৮</strong></div><div><small>সর্বোচ্চ স্কোর</small><strong>৯৪%</strong></div><div><small>উন্নতি</small><strong class="up">+৮%</strong></div></div>
+        <div class="section-heading section-heading-spaced"><div><p class="eyebrow">সাম্প্রতিক</p><h2>পরীক্ষার ফলাফল</h2></div><button type="button" class="text-button" data-action="all-results">সব দেখুন</button></div>
+        <div class="results-list">
+          <article class="result-row"><span class="result-badge green">ম</span><div><strong>মাসিক পরীক্ষা · সেপ্টেম্বর</strong><small>০৮ সেপ্টেম্বর ২০২৬</small></div><b>৮৬<small>%</small></b><span class="result-arrow">→</span></article>
+          <article class="result-row"><span class="result-badge blue">প</span><div><strong>পদার্থবিজ্ঞান অধ্যায় ৪</strong><small>০২ সেপ্টেম্বর ২০২৬</small></div><b>৮৮<small>%</small></b><span class="result-arrow">→</span></article>
+          <article class="result-row"><span class="result-badge orange">গ</span><div><strong>গণিত সাপ্তাহিক পরীক্ষা</strong><small>২৮ আগস্ট ২০২৬</small></div><b>৯২<small>%</small></b><span class="result-arrow">→</span></article>
+        </div>
+      </section>
+
+      <!-- PROFILE -->
+      <section class="view" id="profileView" data-view-panel="profile" aria-labelledby="profileTitle">
+        <div class="page-intro profile-intro"><p class="eyebrow">তোমার তথ্য</p><h1 id="profileTitle">প্রোফাইল</h1><p>তোমার শিক্ষার্থী অ্যাকাউন্টের তথ্য।</p></div>
+        <article class="profile-card"><div class="profile-avatar" id="profileAvatar">র</div><div><h2 id="profileName">রাইসা ইসলাম</h2><p id="profileMeta">দশম শ্রেণি · বিজ্ঞান বিভাগ</p><span class="student-id">ID: <b id="studentId">AP-1024</b></span></div><button class="edit-button" type="button" data-action="edit-profile" aria-label="প্রোফাইল সম্পাদনা"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-edit"></use></svg></button></article>
+        <div class="profile-section"><p class="eyebrow">অ্যাকাউন্ট</p><div class="settings-list"><button type="button" data-action="edit-profile"><span class="settings-icon mint"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-user"></use></svg></span><span><strong>ব্যক্তিগত তথ্য</strong><small>নাম, ক্লাস ও বিভাগ</small></span><svg class="setting-arrow" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-chevron-right"></use></svg></button><button type="button" data-action="show-offline"><span class="settings-icon green"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-download"></use></svg></span><span><strong>অফলাইন ডেটা</strong><small>সব ডেটা এই ফোনেই সংরক্ষিত</small></span><span class="saved-tag">সংরক্ষিত</span></button><button type="button" data-action="install"><span class="settings-icon purple"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-smartphone"></use></svg></span><span><strong>অ্যাপ ইনস্টল করুন</strong><small>হোম স্ক্রিন থেকে দ্রুত খুলুন</small></span><svg class="setting-arrow" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-chevron-right"></use></svg></button></div></div>
+        <div class="profile-section"><p class="eyebrow">সহায়তা</p><div class="help-card"><span class="help-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-help"></use></svg></span><div><strong>কিছু জানার আছে?</strong><p>তোমার শিক্ষক বা অফিসে যোগাযোগ করো।</p></div><button type="button" data-action="help" aria-label="সহায়তা"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg></button></div></div>
+        <p class="app-version">Active Plus Coaching · v1.0.0 · <span>অফলাইন সংস্করণ</span></p>
+      </section>
+    </main>
+
+    <nav class="bottom-nav" aria-label="প্রধান নেভিগেশন">
+      <button class="bottom-link active" type="button" data-view="home"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-home"></use></svg><span>হোম</span></button>
+      <button class="bottom-link" type="button" data-view="routine"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-calendar"></use></svg><span>রুটিন</span></button>
+      <button class="bottom-link" type="button" data-view="courses"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-book"></use></svg><span>কোর্স</span></button>
+      <button class="bottom-link" type="button" data-view="results"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-award"></use></svg><span>ফলাফল</span></button>
+      <button class="bottom-link" type="button" data-view="profile"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-user"></use></svg><span>প্রোফাইল</span></button>
+    </nav>
   </div>
 
+  <div class="install-toast" id="installToast" hidden>
+    <span class="install-toast-icon"><img src="logo.svg" alt="" width="30" height="30"></span><span><strong>অ্যাপ হিসেবে ব্যবহার করুন</strong><small>হোম স্ক্রিনে Active Plus যোগ করুন</small></span><button type="button" id="installButton">ইনস্টল</button><button type="button" class="dismiss-button" id="dismissInstall" aria-label="বন্ধ করুন">×</button>
+  </div>
+
+  <div class="modal-backdrop" id="noticeModal" hidden>
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="noticeModalTitle"><div class="modal-header"><div><p class="eyebrow">Active Plus আপডেট</p><h2 id="noticeModalTitle">নোটিশ</h2></div><button type="button" class="modal-close" data-close-modal="noticeModal" aria-label="বন্ধ করুন">×</button></div><article class="notice-detail unread"><span class="notice-detail-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-megaphone"></use></svg></span><div><span class="notice-time">আজ · ১০:৩০ সকাল</span><h3>আগামীকালের ক্লাস টেস্ট</h3><p>আগামীকাল উচ্চতর গণিতের ক্লাস টেস্ট বিকেল ৪:৩০ মিনিটে অনুষ্ঠিত হবে। সবাইকে সময়মতো উপস্থিত থাকার জন্য অনুরোধ করা হচ্ছে।</p></div></article><article class="notice-detail"><span class="notice-detail-icon light"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-info"></use></svg></span><div><span class="notice-time">১৮ সেপ্টেম্বর ২০২৬</span><h3>মাসিক পরীক্ষার ফলাফল</h3><p>সেপ্টেম্বর মাসের পরীক্ষার ফলাফল এখন ফলাফল সেকশনে দেখা যাচ্ছে।</p></div></article><button class="modal-action" type="button" data-close-modal="noticeModal">বুঝেছি</button></section>
+  </div>
+
+  <div class="modal-backdrop" id="editModal" hidden>
+    <section class="modal edit-modal" role="dialog" aria-modal="true" aria-labelledby="editModalTitle"><div class="modal-header"><div><p class="eyebrow">অফলাইনে সংরক্ষণ</p><h2 id="editModalTitle">ব্যক্তিগত তথ্য</h2></div><button type="button" class="modal-close" data-close-modal="editModal" aria-label="বন্ধ করুন">×</button></div><form id="profileForm"><label for="nameInput">পুরো নাম</label><input id="nameInput" name="name" type="text" required><label for="classInput">শ্রেণি / বর্ষ</label><select id="classInput" name="className"></select><label for="groupInput">বিভাগ</label><input id="groupInput" name="group" type="text" required><button class="modal-action" type="submit">তথ্য সংরক্ষণ করুন</button></form><p class="form-note"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg> এই তথ্য এই ডিভাইসেই থাকবে।</p></section>
+  </div>
+
+  <!-- Reusable SVG icon sprite. No external fonts or assets are required for offline use. -->
+  <svg class="icon-sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="icon-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V10Z"/><path d="M9 21v-6h6v6"/></symbol>
+    <symbol id="icon-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></symbol>
+    <symbol id="icon-book" viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5v-16Z"/><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M8 7h8M8 11h6"/></symbol>
+    <symbol id="icon-award" viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="m8.5 12.5-1 8 4.5-2.5 4.5 2.5-1-8M9.5 8 11 9.5 14.5 6"/></symbol>
+    <symbol id="icon-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+    <symbol id="icon-bell" viewBox="0 0 24 24"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></symbol>
+    <symbol id="icon-wifi-off" viewBox="0 0 24 24"><path d="m1 1 22 22M5 9.5A11 11 0 0 1 12 7c1.8 0 3.5.4 5 1.2M8.5 13.5A6 6 0 0 1 12 12c1.1 0 2.1.3 3 .8M12 18h.01"/></symbol>
+    <symbol id="icon-check-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/></symbol>
+    <symbol id="icon-trending" viewBox="0 0 24 24"><path d="m4 16 5-5 4 3 6-7M14 7h5v5"/></symbol>
+    <symbol id="icon-clipboard" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4.5V3h6v1.5M9 10h6M9 14h4"/></symbol>
+    <symbol id="icon-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+    <symbol id="icon-chevron-right" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+    <symbol id="icon-megaphone" viewBox="0 0 24 24"><path d="m3 11 13-5v12L3 14v-3ZM16 10h3a2 2 0 0 1 0 4h-3M6 15l1.5 5H11l-1.5-5"/></symbol>
+    <symbol id="icon-sliders" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16M8 4v4M15 10v4M11 16v4"/></symbol>
+    <symbol id="icon-edit" viewBox="0 0 24 24"><path d="m4 16-.8 4.8L8 20l11-11a2.8 2.8 0 0 0-4-4L4 16Z"/><path d="m13.5 6.5 4 4"/></symbol>
+    <symbol id="icon-download" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4 20h16"/></symbol>
+    <symbol id="icon-smartphone" viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M10 18h4"/></symbol>
+    <symbol id="icon-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.6 2.6 0 1 1 4.2 2c-1.1.8-1.7 1.2-1.7 2.5M12 17h.01"/></symbol>
+    <symbol id="icon-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
+    <symbol id="icon-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
+  </svg>
   <script src="app.js"></script>
 </body>
 </html>

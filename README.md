@@ -1,29 +1,40 @@
-# Active Plus Coaching
+# Active Plus Coaching — শিক্ষার্থী অ্যাপ
 
-**Active Plus Coaching** - আপনার সফলতার পথপ্রদর্শক।
+Active Plus Coaching-এর মোবাইল-ফার্স্ট Progressive Web App (PWA)। Chrome থেকে ইনস্টল করে অ্যাপের মতো ব্যবহার করা যায়। এই ধাপে শিক্ষার্থী অংশটি তৈরি করা হয়েছে এবং সব ডেটা লোকাল ডিভাইসে থাকে—কোনো সার্ভার বা API-এর উপর নির্ভর করে না।
 
-এটি একটি Progressive Web App (PWA)। Chrome বা অন্যান্য মডার্ন ব্রাউজারে খুলে **Install** করে অ্যাপের মতো ব্যবহার করা যায়।
+## এই ধাপে যা আছে
 
-## Features
-- 📱 মোবাইল ও ডেস্কটপ ফ্রেন্ডলি
-- 🌐 অফলাইন সাপোর্ট (Service Worker)
-- 🎨 সুন্দর UI (সবুজ + লাল থিম)
-- 📲 Chrome-এ ইনস্টল করা যায়
+- শিক্ষার্থীর অফলাইন হোম ড্যাশবোর্ড
+- সাপ্তাহিক অগ্রগতি, উপস্থিতি, গড় ফলাফল ও বাকি কাজ
+- ক্লাস রুটিন — দিনভিত্তিক ফিল্টারসহ
+- চলমান কোর্স ও অধ্যায়ভিত্তিক অগ্রগতি
+- সাম্প্রতিক পরীক্ষার ফলাফল
+- নোটিশ দেখার জন্য অফলাইন মডাল
+- ব্যক্তিগত তথ্য লোকালস্টোরেজে সম্পাদনা ও সংরক্ষণ
+- PWA install prompt এবং service worker cache
+- অষ্টম শ্রেণি থেকে অনার্স ৪র্থ বর্ষ পর্যন্ত ক্লাস কনফিগারেশনের ভিত্তি
 
-## Live Preview
-GitHub Pages চালু করলে লাইভ দেখা যাবে।
+## অফলাইন নকশা
 
-## How to Install as App
-1. Chrome-এ সাইটটি খুলুন
-2. অ্যাড্রেস বারে **Install** আইকন দেখাবে
-3. অথবা মেনু → "Install Active Plus..."
+`index.html`, `styles.css`, `app.js`, `manifest.json`, `logo.svg` এবং `sw.js`-এর বাইরে কোনো external font, CDN বা remote API ব্যবহার করা হয়নি। ভবিষ্যতে Admin Panel-এর **শিক্ষার্থী অ্যাপ ম্যানেজমেন্ট** অংশ থেকে enabled class, routine, course, notice ও result data নিয়ন্ত্রণ করার জন্য local data structure আলাদা রাখা হয়েছে।
 
-## Local Development
-Simply open `index.html` in a browser, or use a local server:
+## লোকালি চালানো
+
+Service worker চালানোর জন্য একটি static server ব্যবহার করুন:
 
 ```bash
-npx serve .
+python3 -m http.server 4173
 ```
 
----
-© 2026 Active Plus Coaching
+তারপর Chrome-এ `http://localhost:4173` খুলুন। PWA install এবং offline cache দেখতে প্রথমে একবার পেজ লোড করে Chrome DevTools-এর Application → Service Workers থেকে পরীক্ষা করা যায়।
+
+GitHub Pages-এ প্রকাশ করলেও relative asset path ব্যবহার করা হয়েছে, তাই repository subpath থেকেও অ্যাপটি চলবে।
+
+## ব্যবহার
+
+1. Chrome-এ পেজটি খুলুন।
+2. Chrome-এর install icon বা অ্যাপের install prompt চাপুন।
+3. ইনস্টল হওয়ার পর হোম স্ক্রিন থেকে **Active Plus** খুলুন।
+4. প্রোফাইল থেকে নাম, শ্রেণি ও বিভাগ বদলালে তথ্য এই ডিভাইসেই সংরক্ষিত থাকবে।
+
+পরবর্তী ধাপে একই offline data model ব্যবহার করে শিক্ষক ও Admin Panel যোগ করা যাবে।
