@@ -48,6 +48,7 @@ css/
   glass.css             translucent glass visual layer
   theme.css             time and weather visual states
   typography.css        local font and mobile reading sizes
+  scroll-header.css      scroll-aware topbar transition
 assets/fonts/
   NotoSansBengali-Variable.ttf  offline UI/PDF-ready Bengali font
 js/
@@ -61,6 +62,8 @@ js/
   connectivity.js       offline status indicator
   service-worker.js     service worker registration
   config.js             classes, schedule and local defaults
+  theme.js              time and weather visual states
+  scroll-header.js      scroll-aware student name in topbar
   ui.js                 shared DOM and feedback helpers
 ```
 

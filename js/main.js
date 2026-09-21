@@ -12,6 +12,7 @@ import { initInstallPrompt, installApp } from './install.js';
 import { initConnectivity } from './connectivity.js';
 import { registerServiceWorker } from './service-worker.js';
 import { initDynamicTheme } from './theme.js';
+import { initScrollHeader } from './scroll-header.js';
 
 document.querySelectorAll('[data-fixed-tagline]').forEach(tagline => tagline.setAttribute('aria-label', APP_TAGLINE));
 
@@ -73,6 +74,7 @@ initProfile({
 initRoutine();
 initConnectivity();
 initDynamicTheme();
+initScrollHeader();
 initInstallPrompt();
 registerServiceWorker();
 initAuth({

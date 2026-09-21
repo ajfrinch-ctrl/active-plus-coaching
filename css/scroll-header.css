@@ -1,0 +1,36 @@
+/* Scroll-aware topbar identity */
+.topbar .student-topbar-name,
+.topbar .brand-copy small {
+  overflow: hidden;
+  transition: max-width .24s ease, opacity .2s ease, transform .24s ease, margin .24s ease;
+}
+.topbar .student-topbar-name {
+  max-width: 0;
+  opacity: 0;
+  transform: translateY(4px);
+}
+.topbar:not(.is-scrolled) .brand-copy small {
+  max-width: 160px;
+  opacity: 1;
+}
+.topbar.is-scrolled .student-topbar-name {
+  max-width: 150px;
+  opacity: 1;
+  transform: translateY(0);
+}
+.topbar.is-scrolled .brand-copy small {
+  max-width: 0;
+  margin-top: 0;
+  opacity: 0;
+  transform: translateY(-4px);
+}
+.topbar.is-scrolled {
+  background: rgba(255, 255, 255, .72) !important;
+  box-shadow: 0 10px 28px rgba(36, 74, 64, .1), inset 0 1px 0 rgba(255,255,255,.88);
+}
+html[data-time-theme="night"] .topbar.is-scrolled {
+  background: rgba(12, 35, 44, .86) !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .topbar .student-topbar-name, .topbar .brand-copy small { transition: none; }
+}
