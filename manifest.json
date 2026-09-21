@@ -1,0 +1,27 @@
+{
+  "name": "Active Plus Coaching",
+  "short_name": "Active Plus",
+  "description": "Active Plus Coaching - আপনার সফলতার পথপ্রদর্শক। A+ রেজাল্টের জন্য সেরা কোচিং।",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#006400",
+  "orientation": "portrait-primary",
+  "lang": "bn",
+  "icons": [
+    {
+      "src": "logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["education", "lifestyle"],
+  "screenshots": []
+}
