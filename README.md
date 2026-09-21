@@ -23,6 +23,7 @@ Active Plus Coaching-এর মোবাইল-ফার্স্ট Progressive
 - নোটিশ দেখার জন্য অফলাইন মডাল
 - ব্যক্তিগত তথ্য লোকালস্টোরেজে সম্পাদনা ও সংরক্ষণ
 - PWA install prompt এবং service worker cache
+- local time ও offline weather profile অনুযায়ী nature theme পরিবর্তন
 - অষ্টম শ্রেণি থেকে অনার্স ৪র্থ বর্ষ পর্যন্ত ক্লাস কনফিগারেশনের ভিত্তি
 
 ## অফলাইন নকশা ও মডিউল কাঠামো
@@ -45,7 +46,6 @@ css/
   overlays.css          modals, install and toast
   responsive.css        responsive rules
   glass.css             translucent glass visual layer
-  colorful.css          colorful accent palette
   theme.css             time and weather visual states
   typography.css        local font and mobile reading sizes
 assets/fonts/
