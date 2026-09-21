@@ -6,7 +6,8 @@ export const STORAGE_KEYS = Object.freeze({
   account: 'active-plus-account-v1',
   session: 'active-plus-session-v1',
   installDismissed: 'active-plus-install-dismissed',
-  idSequence: 'active-plus-id-sequence'
+  idSequence: 'active-plus-id-sequence',
+  weather: 'active-plus-weather-v1'
 });
 
 export const enabledClasses = Object.freeze([

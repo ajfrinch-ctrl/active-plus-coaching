@@ -1,0 +1,60 @@
+/* Time-of-day and weather color states. */
+html[data-time-theme="morning"] body {
+  background: linear-gradient(135deg, #d8f2e6, #fff1df 54%, #dcecf7);
+}
+html[data-time-theme="day"] body {
+  background: linear-gradient(135deg, #d7f0ef, #fff8e7 50%, #dceaf8);
+}
+html[data-time-theme="evening"] body {
+  background: linear-gradient(135deg, #f6ded7, #f7e5ef 50%, #d9dff3);
+}
+html[data-time-theme="night"] {
+  --ink: #edf8f4;
+  --muted: #b0c8c3;
+  --muted-2: #8eaaa4;
+  --cream: #122d33;
+  --line: rgba(214, 239, 232, .15);
+}
+html[data-time-theme="night"] body {
+  background: radial-gradient(circle at 80% 10%, rgba(90, 126, 190, .36), transparent 28%), linear-gradient(145deg, #0b222d, #172d3e 55%, #202647);
+}
+html[data-time-theme="night"] .app-shell,
+html[data-time-theme="night"] .auth-screen {
+  background: radial-gradient(circle at 10% 12%, rgba(54, 117, 127, .28), transparent 28%), linear-gradient(145deg, rgba(12, 43, 49, .86), rgba(25, 36, 69, .72));
+}
+html[data-time-theme="night"] .topbar,
+html[data-time-theme="night"] .auth-topbar,
+html[data-time-theme="night"] .bottom-nav {
+  background: rgba(12, 35, 44, .72) !important;
+  border-color: rgba(196, 231, 226, .18) !important;
+}
+html[data-time-theme="night"] .auth-card,
+html[data-time-theme="night"] .stat-card,
+html[data-time-theme="night"] .quick-card,
+html[data-time-theme="night"] .next-class-card,
+html[data-time-theme="night"] .class-context,
+html[data-time-theme="night"] .routine-body,
+html[data-time-theme="night"] .course-item,
+html[data-time-theme="night"] .result-stats > div,
+html[data-time-theme="night"] .result-row,
+html[data-time-theme="night"] .settings-list > button,
+html[data-time-theme="night"] .contact-card {
+  background: rgba(19, 52, 58, .66) !important;
+  border-color: rgba(196, 231, 226, .2) !important;
+}
+html[data-time-theme="night"] .auth-panel input,
+html[data-time-theme="night"] .auth-panel select,
+html[data-time-theme="night"] .auth-panel textarea,
+html[data-time-theme="night"] .edit-modal input,
+html[data-time-theme="night"] .edit-modal select,
+html[data-time-theme="night"] .edit-modal textarea {
+  color: var(--ink);
+  background: rgba(12, 39, 47, .68);
+  border-color: rgba(196, 231, 226, .22);
+}
+
+html[data-weather="clear"] .weather-pill { color: #b97540; background: rgba(255, 239, 192, .7); }
+html[data-weather="cloudy"] .weather-pill { color: #5e7599; background: rgba(222, 233, 247, .7); }
+html[data-weather="rain"] .weather-pill { color: #3f7898; background: rgba(205, 232, 248, .72); }
+html[data-weather="cloudy"] body { background-image: radial-gradient(circle at 80% 8%, rgba(177, 196, 215, .32), transparent 28%), linear-gradient(135deg, #d9e6e7, #eef0ee 50%, #dce6ef); }
+html[data-weather="rain"] body { background-image: radial-gradient(circle at 88% 12%, rgba(108, 164, 211, .35), transparent 27%), linear-gradient(135deg, #cfe5ec, #e4e8f4 52%, #cadce9); }

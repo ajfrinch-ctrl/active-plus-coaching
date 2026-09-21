@@ -132,10 +132,13 @@
             <small data-fixed-tagline aria-label="শিখতে থাকো, এগিয়ে যাও">শিখতে থাকো, এগিয়ে যাও</small>
           </span>
         </button>
-        <button class="icon-button notification-button" id="notificationButton" type="button" aria-label="নোটিশ দেখুন" aria-haspopup="dialog">
-          <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-bell"></use></svg>
-          <span class="notification-dot"></span>
-        </button>
+        <div class="topbar-actions">
+          <span class="weather-pill" id="weatherStatus" aria-label="আজকের আবহাওয়া"><svg id="weatherIcon" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-sun"></use></svg><span id="weatherLabel">স্বচ্ছ আকাশ</span></span>
+          <button class="icon-button notification-button" id="notificationButton" type="button" aria-label="নোটিশ দেখুন" aria-haspopup="dialog">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-bell"></use></svg>
+            <span class="notification-dot"></span>
+          </button>
+        </div>
       </div>
     </header>
 
@@ -144,7 +147,7 @@
       <section class="view active" id="homeView" data-view-panel="home" aria-labelledby="homeTitle">
         <div class="welcome-row">
           <div>
-            <p class="eyebrow">শুভ সকাল</p>
+            <p class="eyebrow" id="dayGreeting">শুভ সকাল</p>
             <h1 id="homeTitle"><span id="studentName">রাইসা</span> <span class="wave">✦</span></h1>
             <p class="muted">আজকের শেখা হোক আরও গোছানো।</p>
           </div>
@@ -339,6 +342,10 @@
     <symbol id="icon-award" viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="m8.5 12.5-1 8 4.5-2.5 4.5 2.5-1-8M9.5 8 11 9.5 14.5 6"/></symbol>
     <symbol id="icon-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
     <symbol id="icon-bell" viewBox="0 0 24 24"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></symbol>
+    <symbol id="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"/></symbol>
+    <symbol id="icon-cloud" viewBox="0 0 24 24"><path d="M6.5 18h10a4 4 0 0 0 .5-8 5.5 5.5 0 0 0-10.6 1.5A3.3 3.3 0 0 0 6.5 18Z"/></symbol>
+    <symbol id="icon-rain" viewBox="0 0 24 24"><path d="M6.5 15h10a4 4 0 0 0 .5-8 5.5 5.5 0 0 0-10.6 1.5A3.3 3.3 0 0 0 6.5 15Z"/><path d="m8 18-1 2M12 18l-1 2M16 18l-1 2"/></symbol>
+    <symbol id="icon-moon" viewBox="0 0 24 24"><path d="M20 15.5A8.5 8.5 0 0 1 8.5 4 8.5 8.5 0 1 0 20 15.5Z"/></symbol>
     <symbol id="icon-phone" viewBox="0 0 24 24"><path d="M6 3h3l2 5-2 1.5a12 12 0 0 0 5.5 5.5L16 13l5 2v3a2 2 0 0 1-2 2C10.7 20 4 13.3 4 5a2 2 0 0 1 2-2Z"/></symbol>
     <symbol id="icon-whatsapp" viewBox="0 0 24 24"><path d="M20 11.5a8 8 0 0 1-11.9 7L4 20l1.5-4.1A8 8 0 1 1 20 11.5Z"/><path d="M8.5 8.2c.2-.4.4-.4.7-.4h.5c.2 0 .3.1.4.4l.6 1.4c.1.2.1.4-.1.6l-.5.6c.5 1 1.3 1.7 2.3 2.2l.6-.5c.2-.2.4-.2.6-.1l1.4.6c.3.1.4.3.3.6-.1.5-.4 1-.8 1.2-.4.2-1.2.1-2-.2-2.3-.9-4-2.5-4.9-4.8-.3-.8-.4-1.6-.1-2.1Z"/></symbol>
     <symbol id="icon-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 6.5 12 6.5 21.5 12 21.5 12 18 17.5 12 17.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="2.5"/></symbol>
