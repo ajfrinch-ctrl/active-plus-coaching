@@ -25,6 +25,21 @@ Active Plus Coaching-এর মোবাইল-ফার্স্ট Progressive
 - PWA install prompt এবং service worker cache
 - local time ও offline weather profile অনুযায়ী nature theme পরিবর্তন
 - অষ্টম শ্রেণি থেকে অনার্স ৪র্থ বর্ষ পর্যন্ত ক্লাস কনফিগারেশনের ভিত্তি
+- ডামি এডমিন প্যানেল — পাসওয়ার্ড/PIN ছাড়া এক ক্লিকে প্রবেশ (`admin.html`)
+
+## ডামি এডমিন প্যানেল (এক ক্লিকে প্রবেশ)
+
+`admin.html` খুললেই এডমিন এন্ট্রি স্ক্রিন দেখা যায় — পাসওয়ার্ড বা PIN লাগে না, “এক ক্লিকে প্যানেলে ঢুকুন” বাটনে একবার চাপ দিলেই প্যানেলে ঢুকে যাওয়া যায়। শিক্ষার্থী অ্যাপের লগইন পেইজের নিচ থেকেও এই প্যানেলে সরাসরি যেতে পারা যায়।
+
+প্যানেলে আছে (সব ডেটা লোকাল ডেমো):
+
+- **ড্যাশবোর্ড** — মোট শিক্ষার্থী, অনুমোদনের অপেক্ষমাণ, চলমান ক্লাস ও প্রকাশিত নোটিশের সংখ্যা; অপেক্ষমাণ রেজিস্ট্রেশন দ্রুত অনুমোদন/বাতিল, আজকের ক্লাস ও ক্লাসভিত্তিক এনরোলমেন্ট চার্ট
+- **শিক্ষার্থী** — নাম/ID/মোবাইল দিয়ে সার্চ, স্ট্যাটাস ফিল্টার, রেকর্ড দেখা, PIN রিসেট (নতুন PIN ডেমোভাবে দেখায়)
+- **নোটিশ** — শিরোনাম, বিবরণ ও প্রাপক নির্বাচন করে নতুন নোটিশ প্রকাশ ও পুরনো নোটিশ মুছে ফেলা
+- **ক্লাস রুটিন** — দিনভিত্তিক রুটিন দেখা, নতুন ক্লাস যোগ ও মুছে ফেলা
+- **ক্লাস সেটিংস** — `config.js`-এর enabled class তালিকা থেকে ক্লাস চালু/বন্ধ করা
+
+এটি ডেমো: কোনো সার্ভার বা API নেই, তথ্য পেজ রিফ্রেশে রিসেট হয়। ভবিষ্যতে আসল API যুক্ত করার সময় `js/admin-data.js`-এর ডেটাসেট বদলে দিলেই হবে, UI feature files বদলাতে হবে না।
 
 ## অফলাইন নকশা ও মডিউল কাঠামো
 
@@ -32,8 +47,10 @@ Active Plus Coaching-এর মোবাইল-ফার্স্ট Progressive
 
 ```text
 index.html              page structure and SVG icon sprite
+admin.html              dummy Admin Panel — এক ক্লিকে প্রবেশের entry screen + panel
 styles.css              CSS entry point (feature imports)
 css/
+  admin.css             Admin Panel styles (entry screen, sidebar, cards, modal)
   tokens.css            design tokens and reset
   auth.css              login, registration and recovery
   dashboard.css         student home dashboard
@@ -73,6 +90,8 @@ js/
   theme.js              time and weather visual states
   scroll-header.js      scroll-aware student name in topbar
   ui.js                 shared DOM and feedback helpers
+  admin.js              Admin Panel UI: views, actions, modals
+  admin-data.js         dummy student/notice/enrollment dataset
 ```
 
 ভবিষ্যতে Admin Panel-এর **শিক্ষার্থী অ্যাপ ম্যানেজমেন্ট** অংশ থেকে enabled class, routine, course, notice ও result data নিয়ন্ত্রণ করার জন্য config ও storage adapter আলাদা রাখা হয়েছে। API যুক্ত করার সময় মূল UI feature files বদলানোর প্রয়োজন হবে না।
@@ -86,6 +105,8 @@ python3 -m http.server 4173
 ```
 
 তারপর Chrome-এ `http://localhost:4173` খুলুন। PWA install এবং offline cache দেখতে প্রথমে একবার পেজ লোড করে Chrome DevTools-এর Application → Service Workers থেকে পরীক্ষা করা যায়।
+
+ডামি এডমিন প্যানেল দেখতে `http://localhost:4173/admin.html` খুলুন — পাসওয়ার্ড লাগবে না, এক ক্লিকেই প্যানেলে ঢুকে যাওয়া যাবে।
 
 GitHub Pages-এ প্রকাশ করলেও relative asset path ব্যবহার করা হয়েছে, তাই repository subpath থেকেও অ্যাপটি চলবে।
 

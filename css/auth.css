@@ -13,3 +13,9 @@
 .recovery-copy { margin: -7px 0 13px; color: var(--muted); font-size: 10px; line-height: 1.6; }.admin-reset-note { display: flex; align-items: flex-start; gap: 6px; margin-top: 14px; padding: 9px; border-radius: 9px; color: #9b775e; background: #fff6eb; font-size: 8px; line-height: 1.55; }.admin-reset-note svg { flex: 0 0 14px; width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 
 @media (max-width: 360px) { .auth-screen { padding-left: 12px; padding-right: 12px; }.auth-card { padding-left: 11px; padding-right: 11px; }.field-grid { gap: 0 6px; }.field input, .field select { font-size: 10px; padding-left: 7px; padding-right: 7px; } }
+
+/* One-click link to the dummy Admin Panel (coaching office) */
+.admin-entry-link-wrap { margin: 14px auto 0; text-align: center; }
+.admin-entry-link { display: inline-flex; align-items: center; gap: 6px; color: #4879a7; font-size: 10px; font-weight: 800; text-decoration: none; }
+.admin-entry-link:hover { text-decoration: underline; }
+.admin-entry-link svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }

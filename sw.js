@@ -2,7 +2,9 @@ const CACHE_NAME = 'active-plus-student-v28';
 const APP_SHELL = [
   './',
   './index.html',
+  './admin.html',
   './styles.css',
+  './css/admin.css',
   './manifest.json',
   './assets/icons/app-logo.png',
   './assets/icons/install-icon.png',
@@ -40,7 +42,9 @@ const APP_SHELL = [
   './js/service-worker.js',
   './js/theme.js',
   './js/scroll-header.js',
-  './js/main.js'
+  './js/main.js',
+  './js/admin.js',
+  './js/admin-data.js'
 ];
 
 self.addEventListener('install', event => {
