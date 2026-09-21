@@ -51,13 +51,21 @@ css/
   scroll-header.css      scroll-aware topbar transition
 assets/fonts/
   NotoSansBengali-Variable.ttf  offline UI/PDF-ready Bengali font
+assets/icons/
+  app-logo.png         in-app logo + browser favicon (green ring, black A, red +)
+  install-icon.png     PWA install/app icon (same mark, notched ring)
+  legacy-*             previous logo.svg / icon-192 / icon-512 kept for reference
 js/
   main.js               application composition root
-  auth.js               login, registration and PIN recovery
+  login.js              login (mobile + PIN) and auth tab switching
+  register.js           step-by-step registration and Student ID
+  recovery.js           PIN recovery via security question
+  logout.js             logout confirmation modal and session clearing
   storage.js            localStorage/sessionStorage adapter
   routine.js            routine rendering and day tabs
   profile.js            profile editing
   navigation.js         page/action routing
+  modals.js             notice and modal triggers
   install.js            PWA install prompt
   connectivity.js       offline status indicator
   service-worker.js     service worker registration
