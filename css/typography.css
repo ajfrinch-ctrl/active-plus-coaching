@@ -1,0 +1,107 @@
+/* Local typography layer. The font ships with the app for reliable offline UI and future PDF export. */
+@font-face {
+  font-family: 'Active Plus Bengali';
+  src: url('../assets/fonts/NotoSansBengali-Variable.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+:root { --app-font: 'Active Plus Bengali', 'Noto Sans Bengali', 'Nirmala UI', 'Segoe UI', system-ui, sans-serif; }
+html, body, button, input, select, textarea { font-family: var(--app-font); }
+body { font-size: 15px; line-height: 1.6; }
+
+/* Comfortable reading sizes for a phone held at arm's length. */
+.eyebrow { font-size: 11px; letter-spacing: .8px; }
+.welcome-row h1 { font-size: 29px; }
+.welcome-row .muted { font-size: 13px; }
+.offline-pill { font-size: 11px; }
+.progress-card h2 { font-size: 19px; }
+.progress-copy { font-size: 12px; }
+.progress-footer { font-size: 11px; }
+.stat-card strong { font-size: 20px; }
+.stat-card > span:last-child { font-size: 10px; }
+.section-heading h2 { font-size: 19px; }
+.quick-card strong { font-size: 13px; }
+.quick-card small { font-size: 10px; }
+.class-time strong { font-size: 18px; }
+.class-time span, .class-detail > span:last-child { font-size: 10px; }
+.live-label { font-size: 9px; }
+.class-detail > strong { font-size: 13px; }
+.notice-strip strong { font-size: 11px; }
+.notice-strip small { font-size: 9px; }
+
+.page-intro h1 { font-size: 29px; }
+.page-intro > p:last-child { font-size: 13px; }
+.class-context small { font-size: 10px; }
+.class-context strong { font-size: 13px; }
+.routine-date { font-size: 12px; }
+.class-count { font-size: 10px; }
+.routine-time { font-size: 11px; }
+.routine-time strong { font-size: 13px; }
+.routine-time small { font-size: 9px; }
+.routine-body strong { font-size: 13px; }
+.routine-body small { font-size: 10px; }
+.routine-tag { font-size: 8px; }
+.empty-routine strong { font-size: 15px; }
+.empty-routine p { font-size: 11px; }
+
+.course-summary strong { font-size: 27px; }
+.course-summary > div:first-child > span:last-child { font-size: 10px; }
+.course-filter { font-size: 12px; }
+.course-item > div > strong { font-size: 13px; }
+.course-item > div > small { font-size: 10px; }
+.course-item > b { font-size: 14px; }
+.result-hero h2 { font-size: 15px; }
+.result-hero h2 strong { font-size: 26px; }
+.result-hero p { font-size: 10px; }
+.result-stats small { font-size: 9px; }
+.result-stats strong { font-size: 18px; }
+.result-row strong { font-size: 12px; }
+.result-row div small { font-size: 9px; }
+.result-row > b { font-size: 14px; }
+
+.profile-card h2 { font-size: 16px; }
+.profile-card p { font-size: 10px; }
+.contact-copy > span { font-size: 9px; }
+.contact-copy strong { font-size: 14px; }
+.contact-copy small { font-size: 9px; }
+.whatsapp-button { font-size: 9px; }
+.settings-list strong { font-size: 12px; }
+.settings-list small { font-size: 9px; }
+.help-card strong { font-size: 11px; }
+.help-card p { font-size: 9px; }
+
+.bottom-link span { font-size: 9px; }
+.weather-pill { font-size: 9px; }
+.auth-brand strong { font-size: 17px; }
+.auth-brand small { font-size: 10px; }
+.auth-tab { font-size: 12px; }
+.auth-panel-heading h2 { font-size: 21px; }
+.auth-panel label, .edit-modal label { font-size: 11px; }
+.auth-panel input, .auth-panel select, .auth-panel textarea { font-size: 14px; }
+.auth-submit, .step-next, .step-back { font-size: 12px; }
+.auth-footnote, .auth-footnote .inline-link { font-size: 11px; }
+.auth-message { font-size: 10px; }
+.register-intro { font-size: 12px; }
+.mode-hint, .fixed-field-note { font-size: 9px; }
+.form-section-title strong { font-size: 12px; }
+.form-section-title small { font-size: 9px; }
+.field label { font-size: 11px; }
+.field input, .field select, .field textarea { font-size: 13px; }
+.terms-label { font-size: 10px !important; }
+
+.modal h2 { font-size: 22px; }
+.notice-detail h3 { font-size: 13px; }
+.notice-detail p, .recovery-copy { font-size: 11px; }
+.modal-action { font-size: 12px; }
+.form-note { font-size: 9px; }
+
+@media (max-width: 360px) {
+  body { font-size: 14px; }
+  .welcome-row h1 { font-size: 27px; }
+  .progress-card h2 { font-size: 18px; }
+  .quick-card strong { font-size: 12px; }
+  .page-intro h1 { font-size: 27px; }
+  .auth-panel input, .auth-panel select, .auth-panel textarea { font-size: 13px; }
+}

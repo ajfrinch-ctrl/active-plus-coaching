@@ -7,6 +7,7 @@ Active Plus Coaching-এর মোবাইল-ফার্স্ট Progressive
 ## এই ধাপে যা আছে
 
 - অফলাইন লগইন পেজ — মোবাইল নম্বর ও ৪–৬ সংখ্যার PIN
+- স্থানীয় Noto Sans Bengali variable font; অ্যাপেই preload ও offline cache করা আছে, ভবিষ্যতের offline PDF export-এর জন্য প্রস্তুত
 - ধাপে ধাপে শিক্ষার্থী self-registration; শিক্ষক ও এডমিন account management পরবর্তী Admin Panel-এ থাকবে
 - Login-এর মোবাইল নম্বরই যোগাযোগের নম্বর হিসেবে fixed থাকে এবং registration-এর যোগাযোগ ধাপে read-only দেখায়
 - বাংলা ও ইংরেজি নাম, অভিভাবক, জন্মতারিখ, লিঙ্গ, মোবাইল, পূর্ণ ঠিকানা, ক্লাস, গ্রুপ ও ঐচ্ছিক শিক্ষা তথ্য
@@ -43,6 +44,12 @@ css/
   navigation.css        bottom navigation
   overlays.css          modals, install and toast
   responsive.css        responsive rules
+  glass.css             translucent glass visual layer
+  colorful.css          colorful accent palette
+  theme.css             time and weather visual states
+  typography.css        local font and mobile reading sizes
+assets/fonts/
+  NotoSansBengali-Variable.ttf  offline UI/PDF-ready Bengali font
 js/
   main.js               application composition root
   auth.js               login, registration and PIN recovery
