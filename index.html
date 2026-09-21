@@ -40,6 +40,7 @@
           <button class="auth-submit" type="submit">লগইন করুন <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg></button>
         </form>
         <button class="demo-button" type="button" id="demoLoginButton"><span class="demo-dot"></span> ডামি অ্যাকাউন্টে এক ক্লিকে প্রবেশ</button>
+        <button class="demo-button demo-button-admin" type="button" id="demoAdminButton" data-admin-act="open"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-sliders"></use></svg> ডেমো এডমিন প্যানেল — এক ক্লিকে</button>
         <p class="auth-footnote">অ্যাকাউন্ট নেই? <button type="button" class="inline-link" data-auth-tab="register">রেজিস্ট্রেশন করুন</button></p>
       </div>
 
@@ -113,6 +114,27 @@
     </div>
   </section>
 
+  <!-- Demo admin panel. Structure only; js/admin.js renders every section. -->
+  <section class="app-shell admin-shell" id="adminScreen" hidden aria-label="Active Plus ডেমো এডমিন প্যানেল">
+    <header class="admin-bar">
+      <span class="admin-mark"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-sliders"></use></svg></span>
+      <div class="admin-bar-copy">
+        <strong>Active Plus · এডমিন</strong>
+        <small>ডেমো মোড — সব ডেটা এই ডিভাইসেই</small>
+      </div>
+      <button class="admin-exit" type="button" data-admin-act="exit"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-logout"></use></svg>শিক্ষার্থী অ্যাপে ফেরো</button>
+    </header>
+    <nav class="admin-tabs" id="adminTabs" role="tablist" aria-label="এডমিন সেকশন">
+      <button class="admin-tab" type="button" role="tab" data-admin-act="tab" data-admin-tab="overview">সারসংক্ষেপ</button>
+      <button class="admin-tab" type="button" role="tab" data-admin-act="tab" data-admin-tab="bank">প্রশ্নব্যাংক</button>
+      <button class="admin-tab" type="button" role="tab" data-admin-act="tab" data-admin-tab="builder">পরীক্ষা বানাও</button>
+      <button class="admin-tab" type="button" role="tab" data-admin-act="tab" data-admin-tab="attempts">নম্বর দাও</button>
+      <button class="admin-tab" type="button" role="tab" data-admin-act="tab" data-admin-tab="approvals">অনুমোদন</button>
+      <button class="admin-tab" type="button" role="tab" data-admin-act="tab" data-admin-tab="notices">নোটিশ</button>
+    </nav>
+    <main class="admin-body" id="adminBody"></main>
+  </section>
+
   <!-- A compact, mobile-first app shell. All content is local and works without a network. -->
   <div class="app-shell" id="appShell" hidden>
     <section class="pending-screen" id="pendingScreen" aria-labelledby="pendingTitle">
@@ -136,6 +158,9 @@
         </button>
         <div class="topbar-actions">
           <span class="weather-pill" id="weatherStatus" aria-label="আজকের আবহাওয়া"><svg id="weatherIcon" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-sun"></use></svg><span id="weatherLabel">স্বচ্ছ আকাশ</span></span>
+          <button class="icon-button admin-shortcut" id="adminShortcut" type="button" data-admin-act="open" aria-label="এডমিন প্যানেল" hidden>
+            <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-sliders"></use></svg>
+          </button>
           <button class="icon-button notification-button" id="notificationButton" type="button" aria-label="নোটিশ দেখুন" aria-haspopup="dialog">
             <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-bell"></use></svg>
             <span class="notification-dot"></span>
@@ -217,7 +242,7 @@
           </button>
           <button class="quick-card" type="button" id="noticeShortcut">
             <span class="quick-icon blue"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-bell"></use></svg></span>
-            <span><strong>নোটিশ</strong><small>২টি নতুন নোটিশ</small></span><b>→</b>
+            <span><strong>নোটিশ</strong><small id="noticeShortcutCount">২টি নতুন নোটিশ</small></span><b>→</b>
           </button>
         </div>
 
@@ -234,7 +259,7 @@
 
         <button class="notice-strip" type="button" id="noticeStrip">
           <span class="notice-bell"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-megaphone"></use></svg></span>
-          <span><strong>নতুন নোটিশ এসেছে</strong><small>আগামীকালের ক্লাস টেস্টের সময় পরিবর্তন হয়েছে</small></span>
+          <span><strong>নতুন নোটিশ এসেছে</strong><small id="noticeStripText">আগামীকালের ক্লাস টেস্টের সময় পরিবর্তন হয়েছে</small></span>
           <b>→</b>
         </button>
       </section>
@@ -370,7 +395,7 @@
   </div>
 
   <div class="modal-backdrop" id="noticeModal" hidden>
-    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="noticeModalTitle"><div class="modal-header"><div><p class="eyebrow">Active Plus আপডেট</p><h2 id="noticeModalTitle">নোটিশ</h2></div><button type="button" class="modal-close" data-close-modal="noticeModal" aria-label="বন্ধ করুন">×</button></div><article class="notice-detail unread"><span class="notice-detail-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-megaphone"></use></svg></span><div><span class="notice-time">আজ · ১০:৩০ সকাল</span><h3>আগামীকালের ক্লাস টেস্ট</h3><p>আগামীকাল উচ্চতর গণিতের ক্লাস টেস্ট বিকেল ৪:৩০ মিনিটে অনুষ্ঠিত হবে। সবাইকে সময়মতো উপস্থিত থাকার জন্য অনুরোধ করা হচ্ছে।</p></div></article><article class="notice-detail"><span class="notice-detail-icon light"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-info"></use></svg></span><div><span class="notice-time">১৮ সেপ্টেম্বর ২০২৬</span><h3>মাসিক পরীক্ষার ফলাফল</h3><p>সেপ্টেম্বর মাসের পরীক্ষার ফলাফল এখন ফলাফল সেকশনে দেখা যাচ্ছে।</p></div></article><button class="modal-action" type="button" data-close-modal="noticeModal">বুঝেছি</button></section>
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="noticeModalTitle"><div class="modal-header"><div><p class="eyebrow">Active Plus আপডেট</p><h2 id="noticeModalTitle">নোটিশ</h2></div><button type="button" class="modal-close" data-close-modal="noticeModal" aria-label="বন্ধ করুন">×</button></div><div id="noticeList"></div><article class="notice-detail unread"><span class="notice-detail-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-megaphone"></use></svg></span><div><span class="notice-time">আজ · ১০:৩০ সকাল</span><h3>আগামীকালের ক্লাস টেস্ট</h3><p>আগামীকাল উচ্চতর গণিতের ক্লাস টেস্ট বিকেল ৪:৩০ মিনিটে অনুষ্ঠিত হবে। সবাইকে সময়মতো উপস্থিত থাকার জন্য অনুরোধ করা হচ্ছে।</p></div></article><article class="notice-detail"><span class="notice-detail-icon light"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-info"></use></svg></span><div><span class="notice-time">১৮ সেপ্টেম্বর ২০২৬</span><h3>মাসিক পরীক্ষার ফলাফল</h3><p>সেপ্টেম্বর মাসের পরীক্ষার ফলাফল এখন ফলাফল সেকশনে দেখা যাচ্ছে।</p></div></article><button class="modal-action" type="button" data-close-modal="noticeModal">বুঝেছি</button></section>
   </div>
 
   <div class="modal-backdrop" id="logoutModal" hidden>

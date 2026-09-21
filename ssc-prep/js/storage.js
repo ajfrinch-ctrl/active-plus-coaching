@@ -7,7 +7,8 @@ const KEYS = Object.freeze({
   results: 'ssc-prep-results-v1',
   cq: 'ssc-prep-cq-v1',
   draft: 'ssc-prep-draft-v1',
-  theme: 'ssc-prep-theme-v1'
+  theme: 'ssc-prep-theme-v1',
+  bank: 'ssc-prep-bank-v1'
 });
 
 const MAX_HISTORY = 40;
@@ -98,6 +99,57 @@ export function clearDraft(setId) {
   const drafts = readDrafts();
   delete drafts[setId];
   write(KEYS.draft, drafts);
+}
+
+/* ---------- admin overlay (device-local question-bank edits) ---------- */
+
+const BANK_KINDS = ['mcq', 'cq', 'sets'];
+
+function readOverlay() {
+  const stored = read(KEYS.bank, null);
+  const overlay = isObject(stored) ? stored : {};
+  const clean = { version: 1, updatedAt: overlay.updatedAt || null };
+  BANK_KINDS.forEach(kind => {
+    clean[kind] = isObject(overlay[kind]) ? overlay[kind] : {};
+  });
+  return clean;
+}
+
+export function loadBankOverlay() {
+  const overlay = readOverlay();
+  return BANK_KINDS.some(kind => Object.keys(overlay[kind]).length) ? overlay : null;
+}
+
+/** `patch` is a partial entry, or `{ removed: true }` to hide an entry. */
+export function saveBankPatch(kind, id, patch) {
+  if (!BANK_KINDS.includes(kind) || !id) return false;
+  const overlay = readOverlay();
+  overlay[kind][id] = patch;
+  overlay.updatedAt = Date.now();
+  return write(KEYS.bank, overlay);
+}
+
+/** Undo a single admin edit: the shipped JSON entry shows through again. */
+export function dropBankPatch(kind, id) {
+  if (!BANK_KINDS.includes(kind) || !id) return false;
+  const overlay = readOverlay();
+  delete overlay[kind][id];
+  overlay.updatedAt = Date.now();
+  const empty = BANK_KINDS.every(item => !Object.keys(overlay[item]).length);
+  if (empty) {
+    try { window.localStorage.removeItem(KEYS.bank); } catch { /* no-op */ }
+    return true;
+  }
+  return write(KEYS.bank, overlay);
+}
+
+export function replaceBankOverlay(overlay) {
+  if (!isObject(overlay)) return false;
+  return write(KEYS.bank, overlay);
+}
+
+export function clearBankOverlay() {
+  try { window.localStorage.removeItem(KEYS.bank); return true; } catch { return false; }
 }
 
 /* ---------- prefs ---------- */

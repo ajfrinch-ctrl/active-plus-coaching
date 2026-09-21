@@ -4,13 +4,15 @@
  * all persistence in storage.js — so each piece can be tested or replaced alone.
  */
 import {
-  buildResult, chapterBreakdown, examDeadline, formatSeconds, linePath, pickQuestions, remainingSeconds,
-  scoreCQ, shuffledOptions, shouldAutoSubmit, summarize, toBn, verdictFor, windowState
+  blankCq, blankMcq, blankSet, buildResult, CQ_SKILLS, chapterBreakdown, countEdits, diffBank, examDeadline, formatSeconds,
+  linePath, mergeBank, minimalDiff, pickQuestions, remainingSeconds, scoreCQ, shuffledOptions, shouldAutoSubmit, summarize,
+  toBn, toLocalInput, validateBank, validateCq, validateMcq, validateSet, verdictFor, windowState
 } from './exam-logic.js';
 import { closeModal, esc, onAction, onChange, onInput, onKey, openModal, toast, $ } from './ui-kit.js';
 import {
-  clearAllData, clearDraft, clearResults, loadCqSubmissions, loadDraft, loadResults, loadTheme, saveCqSubmission,
-  saveDraft, saveResult, saveTheme
+  clearAllData, clearBankOverlay, clearDraft, clearResults, dropBankPatch, loadBankOverlay, loadCqSubmissions,
+  loadDraft, loadResults, loadTheme, replaceBankOverlay, saveBankPatch, saveCqSubmission, saveDraft, saveResult,
+  saveTheme
 } from './storage.js';
 
 const DATA_URL = window.SSC_DATA_URL || 'data/questions.json';
@@ -18,6 +20,8 @@ const VIEWS = ['dashboard', 'practice', 'tests', 'cq'];
 
 const state = {
   data: null,
+  base: null,
+  admin: { tab: 'mcq', form: null, error: null, overlay: null },
   view: 'dashboard',
   practice: { chapterId: '', difficulty: '', size: 5, order: [], index: 0, answers: {}, feedback: {} },
   session: null,
@@ -31,7 +35,9 @@ const state = {
 export async function initApp() {
   const root = $('#app');
   try {
-    state.data = await loadData();
+    state.base = await loadData();
+    state.admin.overlay = loadBankOverlay();
+    state.data = mergeBank(state.base, state.admin.overlay);
   } catch (error) {
     root.innerHTML = fatalNotice(error);
     return;
@@ -123,7 +129,8 @@ function render() {
     tests: viewTests,
     runner: viewRunner,
     result: viewResult,
-    cq: viewCQ
+    cq: viewCQ,
+    admin: viewAdmin
   }[state.view]();
 
   $$nav().forEach(button => {
@@ -169,6 +176,11 @@ function topbar() {
           <p class="truncate text-xs text-slate-500 dark:text-slate-400">${esc(state.data?.meta?.board || 'ঢাকা')} বোর্ড · ${toBn(state.data?.meta?.year || '')} · MCQ + CQ + মডেল টেস্ট</p>
         </div>
         ${streak ? `<span class="hidden items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800 dark:bg-amber-400/15 dark:text-amber-200 sm:inline-flex">🔥 ${toBn(streak)} দিন</span>` : ''}
+        <button type="button" data-action="admin-open" aria-label="এক ক্লিকে ডেমো এডমিন প্যানেল"
+          class="relative rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-bold text-slate-600 transition hover:border-slate-300 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
+          এডমিন<span class="sr-only"> প্যানেল</span>
+          ${countEdits(state.admin.overlay) ? '<span class="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-amber-400" title="এই ডিভাইসে প্রশ্নব্যাংকে পরিবর্তন আছে"></span>' : ''}
+        </button>
         <button class="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800" type="button" data-action="theme" aria-label="থিম বদলান">
           <span class="hidden dark:inline">☀️</span><span class="dark:hidden">🌙</span>
         </button>
@@ -593,6 +605,13 @@ function viewTests() {
       </section>` : ''}`);
 }
 
+const timerLabel = remaining => (remaining === null ? '∞' : formatSeconds(remaining));
+const timerIsLow = remaining => remaining !== null && remaining <= 60;
+
+const runnerEyebrow = kind => (kind === 'live'
+  ? '🔴 লাইভ এক্সাম · ট্যাব বদলানো যাবে না'
+  : kind === 'practice' ? 'প্র্যাকটিস সেট · নিজের গতিতে' : 'টাইড মডেল টেস্ট');
+
 const formatCountdown = ms => {
   const total = Math.max(0, Math.floor(ms / 1000));
   const hours = Math.floor(total / 3600);
@@ -614,13 +633,13 @@ function viewRunner() {
     <div class="rounded-3xl border ${session.set.kind === 'live' ? 'border-rose-200 dark:border-rose-500/30' : 'border-slate-200 dark:border-slate-800'} bg-white p-5 shadow-sm dark:bg-slate-900">
       <header class="flex flex-wrap items-center justify-between gap-3">
         <div class="min-w-0">
-          <p class="truncate text-[11px] font-bold uppercase tracking-wider ${session.set.kind === 'live' ? 'text-rose-600' : 'text-indigo-600'}">${session.set.kind === 'live' ? '🔴 লাইভ এক্সাম · ট্যাব বদলানো যাবে না' : 'টাইড মডেল টেস্ট'}</p>
+          <p class="truncate text-[11px] font-bold uppercase tracking-wider ${session.set.kind === 'live' ? 'text-rose-600' : 'text-indigo-600'}">${runnerEyebrow(session.set.kind)}</p>
           <h2 class="mt-0.5 truncate text-lg font-black text-slate-900 dark:text-white">${esc(session.set.title)}</h2>
         </div>
         <div class="flex items-center gap-2">
-          <div id="timerBox" class="rounded-2xl border px-4 py-2 text-right tabular-nums ${session.remaining <= 60 ? 'border-rose-300 bg-rose-50 dark:border-rose-500/40 dark:bg-rose-500/10' : 'border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-950/40'}" role="timer" aria-live="off">
-            <p class="text-[10px] font-bold uppercase text-slate-400">বাকি সময়</p>
-            <p id="timerValue" class="text-2xl font-black leading-none ${session.remaining <= 60 ? 'text-rose-600' : 'text-slate-900 dark:text-white'}">${formatSeconds(session.remaining)}</p>
+          <div id="timerBox" class="rounded-2xl border px-4 py-2 text-right tabular-nums ${timerIsLow(session.remaining) ? 'border-rose-300 bg-rose-50 dark:border-rose-500/40 dark:bg-rose-500/10' : 'border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-950/40'}" role="timer" aria-live="off">
+            <p class="text-[10px] font-bold uppercase text-slate-400">${session.remaining === null ? 'সময়সীমা নেই' : 'বাকি সময়'}</p>
+            <p id="timerValue" class="text-2xl font-black leading-none ${timerIsLow(session.remaining) ? 'text-rose-600' : 'text-slate-900 dark:text-white'}">${timerLabel(session.remaining)}</p>
           </div>
           <button type="button" data-action="exit-runner" class="rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-bold text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800">সেভ করে বের হও</button>
           <button type="button" data-action="flag" class="rounded-xl border px-3 py-2.5 text-xs font-bold ${session.flags[question.id] ? 'border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-200' : 'border-slate-200 text-slate-500 hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800'}" aria-pressed="${Boolean(session.flags[question.id])}">${session.flags[question.id] ? '✓ ফ্ল্যাগ করা' : '⚑ ফ্ল্যাগ'}</button>
@@ -878,6 +897,8 @@ let ticker = null;
 
 function startTicker() {
   stopTicker();
+  // An untimed set has no deadline to count down to; answers still autosave.
+  if (state.session && state.session.deadline === null) return;
   ticker = window.setInterval(() => {
     const session = state.session;
     if (!session) return stopTicker();
@@ -898,8 +919,8 @@ function stopTicker() {
 function paintTicker(session) {
   const value = $('#timerValue');
   const box = $('#timerBox');
-  if (value) value.textContent = formatSeconds(session.remaining);
-  if (box) box.classList.toggle('border-rose-300', session.remaining <= 60);
+  if (value) value.textContent = timerLabel(session.remaining);
+  if (box) box.classList.toggle('border-rose-300', timerIsLow(session.remaining));
 }
 
 function persistDraft(session) {
@@ -1165,6 +1186,644 @@ const actions = {
 
 /* ---------- flows ---------- */
 
+/* ---------- view: demo admin (question bank + sets) ---------- */
+
+const ADMIN_TABS = [
+  { key: 'mcq', label: 'MCQ ব্যাংক' },
+  { key: 'cq', label: 'সৃজনশীল' },
+  { key: 'sets', label: 'টেস্ট সেট' },
+  { key: 'review', label: 'ফলাফল পর্যবেক্ষণ' },
+  { key: 'tools', label: 'JSON · ইমপোর্ট' }
+];
+
+const adminList = kind => (kind === 'mcq' ? allMcq() : kind === 'cq' ? allCq() : state.data?.sets || []);
+
+const blankFor = (kind, chapterId) => (kind === 'mcq' ? blankMcq(chapterId) : kind === 'cq' ? blankCq(chapterId) : blankSet(chapterId));
+
+function hiddenIds(kind) {
+  const patches = state.admin.overlay?.[kind] || {};
+  return Object.keys(patches).filter(id => patches[id]?.removed);
+}
+
+function adminHiddenStrip(kind) {
+  const ids = hiddenIds(kind);
+  if (!ids.length) return '';
+  return `
+    <div class="mt-3 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-900/60">
+      <p class="text-xs font-bold text-slate-500">লুকানো এন্ট্রি (${toBn(ids.length)}) — JSON-এ মুছে যায়নি, শুধু এই ডিভাইসে বন্ধ</p>
+      <div class="mt-2 flex flex-wrap gap-2">
+        ${ids.map(id => `
+          <span class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-mono dark:border-slate-700 dark:bg-slate-900">${esc(id)}
+            <button type="button" data-action="admin-hide" data-kind="${kind}" data-id="${esc(id)}" data-hidden="no" class="font-sans font-bold text-emerald-700 hover:underline dark:text-emerald-400">চালু করো</button>
+            <button type="button" data-action="admin-delete" data-kind="${kind}" data-id="${esc(id)}" class="font-sans font-bold text-rose-600 hover:underline">সরিয়ে দাও</button>
+          </span>`).join('')}
+      </div>
+    </div>`;
+}
+
+function adminEntry(kind, id) {
+  return adminList(kind).find(entry => entry.id === id) || null;
+}
+
+/** True when this id does not exist in the shipped JSON at all. */
+function isAdminCreated(kind, id) {
+  const base = state.base || {};
+  const list = kind === 'mcq' ? base.questions?.mcq : kind === 'cq' ? base.questions?.cq : base.sets;
+  return !(list || []).some(entry => entry.id === id);
+}
+
+function adminTabButton(tab) {
+  const active = state.admin.tab === tab.key;
+  return `<button type="button" data-action="admin-tab" data-tab="${tab.key}"
+    class="shrink-0 rounded-xl px-3 py-2 text-xs font-bold transition ${active ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'border border-slate-200 bg-white text-slate-600 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'}">${esc(tab.label)}</button>`;
+}
+
+function adminRowActions(kind, id) {
+  const hidden = Boolean(state.admin.overlay?.[kind]?.[id]?.removed);
+  const created = isAdminCreated(kind, id);
+  return `
+    <div class="flex shrink-0 flex-wrap items-center gap-1.5">
+      <button type="button" data-action="admin-edit" data-kind="${kind}" data-id="${esc(id)}" class="rounded-lg border border-slate-200 px-2.5 py-1 text-[11px] font-bold hover:border-emerald-400 dark:border-slate-700">সম্পাদনা</button>
+      ${created ? `<button type="button" data-action="admin-delete" data-kind="${kind}" data-id="${esc(id)}" class="rounded-lg border border-rose-200 px-2.5 py-1 text-[11px] font-bold text-rose-600 hover:bg-rose-50 dark:border-rose-500/30">মুছে ফেলো</button>`
+      : `<button type="button" data-action="admin-hide" data-kind="${kind}" data-id="${esc(id)}" data-hidden="${hidden ? 'no' : 'yes'}" class="rounded-lg border border-slate-200 px-2.5 py-1 text-[11px] font-bold text-slate-500 hover:bg-slate-100 dark:border-slate-700">${hidden ? 'আবার দেখাও' : 'লুকিয়ে রাখো'}</button>`}
+      ${hidden || created ? '' : `<button type="button" data-action="admin-revert" data-kind="${kind}" data-id="${esc(id)}" class="rounded-lg border border-slate-200 px-2.5 py-1 text-[11px] font-bold text-slate-500 hover:bg-slate-100 dark:border-slate-700" title="শিপ করা JSON-এর মান ফিরিয়ে আনো">ফেরত</button>`}
+    </div>`;
+}
+
+function adminMcqTable() {
+  const rows = adminList('mcq');
+  if (!rows.length) return `<p class="rounded-xl border border-dashed p-5 text-center text-sm text-slate-500">এখনো কোনো MCQ নেই — নতুন প্রশ্ন যোগ করো।</p>`;
+  return `
+    <div class="overflow-x-auto rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+      <table class="w-full min-w-[640px] text-left text-sm">
+        <thead class="bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500 dark:bg-slate-800/60">
+          <tr><th class="px-4 py-2.5">প্রশ্ন</th><th class="px-3 py-2.5">অধ্যায়</th><th class="px-3 py-2.5">টপিক</th><th class="px-3 py-2.5">উত্তর</th><th class="px-3 py-2.5">নম্বর</th><th class="px-3 py-2.5"></th></tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+          ${rows.map(question => `
+            <tr>
+              <td class="px-4 py-2.5">
+                <p class="line-clamp-2 max-w-[22rem] font-semibold">${esc(question.stem)}</p>
+                <p class="mt-0.5 font-mono text-[10px] text-slate-400">${esc(question.id)} · ${esc(question.difficulty)}</p>
+              </td>
+              <td class="px-3 py-2.5 text-xs">${esc(chapterById(question.chapterId)?.name || '—')}</td>
+              <td class="px-3 py-2.5 text-xs">${esc(question.topic || '—')}</td>
+              <td class="px-3 py-2.5 text-xs font-bold text-emerald-700 dark:text-emerald-300">${esc(question.answer)}</td>
+              <td class="px-3 py-2.5 text-xs tabular-nums">${toBn(question.marks)}</td>
+              <td class="px-3 py-2.5">${adminRowActions('mcq', question.id)}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function adminCqTable() {
+  const rows = adminList('cq');
+  if (!rows.length) return `<p class="rounded-xl border border-dashed p-5 text-center text-sm text-slate-500">সৃজনশীল প্রশ্ন নেই।</p>`;
+  return `
+    <div class="space-y-2">
+      ${rows.map(question => {
+    const total = (question.parts || []).reduce((sum, part) => sum + (Number(part.marks) || 0), 0);
+    return `
+        <div class="rounded-2xl border border-slate-200 bg-white p-3.5 dark:border-slate-800 dark:bg-slate-900">
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <div class="min-w-0">
+              <p class="text-sm font-bold">${esc(question.id)}</p>
+              <p class="mt-0.5 line-clamp-2 text-xs text-slate-500">${esc(question.stimulus)}</p>
+              <p class="mt-1 text-[11px] text-slate-400">${esc(chapterById(question.chapterId)?.name || '—')} · ${(question.parts || []).length} অংশ · ${toBn(total)} নম্বর</p>
+            </div>
+            ${adminRowActions('cq', question.id)}
+          </div>
+        </div>`;
+  }).join('')}
+    </div>`;
+}
+
+function adminSetTable() {
+  const rows = adminList('sets');
+  if (!rows.length) return `<p class="rounded-xl border border-dashed p-5 text-center text-sm text-slate-500">কোনো সেট নেই।</p>`;
+  const kindLabel = { practice: 'প্র্যাকটিস', model: 'মডেল টেস্ট', live: 'লাইভ' };
+  return `
+    <div class="space-y-2">
+      ${rows.map(set => `
+        <div class="rounded-2xl border border-slate-200 bg-white p-3.5 dark:border-slate-800 dark:bg-slate-900">
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <div class="min-w-0">
+              <p class="text-sm font-bold">${esc(set.title)}
+                <span class="ml-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">${kindLabel[set.kind] || set.kind}</span>
+              </p>
+              <p class="mt-1 text-[11px] text-slate-500">
+                ${toBn((set.questionIds || []).length)}টি প্রশ্ন · ${toBn(set.durationMin)} মিনিট · নেগেটিভ −${toBn(set.negativePerWrong)} · পাস ${toBn(set.passPercent)}%
+                ${set.kind === 'live' && set.window ? ` · উইন্ডো ${esc(set.window.opensAt?.slice(0, 16) || '')} → ${esc(set.window.closesAt?.slice(0, 16) || '')}` : ''}
+              </p>
+              <p class="mt-0.5 font-mono text-[10px] text-slate-400">${esc(set.id)}</p>
+            </div>
+            ${adminRowActions('sets', set.id)}
+          </div>
+        </div>`).join('')}
+    </div>`;
+}
+
+function adminMcqForm(entry, isNew) {
+  const chapterOptions = (state.data?.chapters || []).map(chapter => `<option value="${esc(chapter.id)}" ${chapter.id === entry.chapterId ? 'selected' : ''}>${esc(chapter.name)}</option>`).join('');
+  const optionRow = option => `
+    <div class="flex items-center gap-2">
+      <span class="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-slate-100 text-xs font-black dark:bg-slate-800">${esc(option.id)}</span>
+      <input id="adm-opt-${option.id}" value="${esc(option.text)}" placeholder="অপশন ${esc(option.id)}" class="w-full rounded-lg border border-slate-200 px-2.5 py-2 text-sm outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-900">
+    </div>`;
+  return `
+    <div class="grid gap-3 sm:grid-cols-3">
+      <label class="text-xs font-bold text-slate-500">আইডি
+        <input id="adm-mcq-id" value="${esc(entry.id)}" ${isNew ? '' : 'readonly'} placeholder="mcq-new-001" class="mt-1 w-full rounded-lg border border-slate-200 px-2.5 py-2 font-mono text-sm outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-900">
+      </label>
+      <label class="text-xs font-bold text-slate-500">অধ্যায়
+        <select id="adm-mcq-chapter" class="mt-1 w-full rounded-lg border border-slate-200 px-2.5 py-2 text-sm outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-900">${chapterOptions}</select>
+      </label>
+      <label class="text-xs font-bold text-slate-500">কঠিনতা
+        <select id="adm-mcq-difficulty" class="mt-1 w-full rounded-lg border border-slate-200 px-2.5 py-2 text-sm outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-900">
+          ${['easy', 'medium', 'hard'].map(level => `<option ${entry.difficulty === level ? 'selected' : ''}>${level}</option>`).join('')}
+        </select>
+      </label>
+    </div>
+    <div class="mt-3 grid gap-3 sm:grid-cols-3">
+      <label class="text-xs font-bold text-slate-500">টপিক
+        <input id="adm-mcq-topic" value="${esc(entry.topic)}" placeholder="যেমন: ত্রিকোণমিতি" class="mt-1 w-full rounded-lg border border-slate-200 px-2.5 py-2 text-sm outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-900">
+      </label>
+      <label class="text-xs font-bold text-slate-500">নম্বর
+        <input id="adm-mcq-marks" type="number" min="1" step="0.5" value="${toBn(entry.marks).replace(/[^0-9.]/g, '') || entry.marks}" class="mt-1 w-full rounded-lg border border-slate-200 px-2.5 py-2 text-sm outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-900">
+      </label>
+      <label class="text-xs font-bold text-slate-500">সঠিক অপশন
+        <select id="adm-mcq-answer" class="mt-1 w-full rounded-lg border border-slate-200 px-2.5 py-2 text-sm outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-900">
+          ${['A', 'B', 'C', 'D'].map(letter => `<option ${entry.answer === letter ? 'selected' : ''}>${letter}</option>`).join('')}
+        </select>
+      </label>
+    </div>
+    <label class="mt-3 block text-xs font-bold text-slate-500">প্রশ্ন
+      <textarea id="adm-mcq-stem" rows="2" class="mt-1 w-full rounded-lg border border-slate-200 px-2.5 py-2 text-sm outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-900">${esc(entry.stem)}</textarea>
+    </label>
+    <div class="mt-3 grid gap-2 sm:grid-cols-2">${entry.options.map(optionRow).join('')}</div>
+    <label class="mt-3 block text-xs font-bold text-slate-500">ব্যাখ্যা
+      <textarea id="adm-mcq-explain" rows="2" class="mt-1 w-full rounded-lg border border-slate-200 px-2.5 py-2 text-sm outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-900">${esc(entry.explanation)}</textarea>
+    </label>`;
+}
+
+function adminCqForm(entry, isNew) {
+  const chapterOptions = (state.data?.chapters || []).map(chapter => `<option value="${esc(chapter.id)}" ${chapter.id === entry.chapterId ? 'selected' : ''}>${esc(chapter.name)}</option>`).join('');
+  const skills = CQ_SKILLS;
+  const partRow = (part, index) => `
+    <div class="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="grid h-7 w-7 place-items-center rounded-lg bg-indigo-100 text-xs font-black text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200">${esc(part.label)}</span>
+        <label class="text-[11px] font-bold text-slate-500">নম্বর
+          <input id="adm-cq-marks-${index}" type="number" min="1" step="0.5" value="${part.marks}" class="ml-1 w-16 rounded-lg border border-slate-200 px-2 py-1 text-sm outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-900">
+        </label>
+        <label class="text-[11px] font-bold text-slate-500">স্কিল
+          <select id="adm-cq-skill-${index}" class="ml-1 rounded-lg border border-slate-200 px-2 py-1 text-sm outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-900">
+            ${skills.map(skill => `<option ${part.skill === skill ? 'selected' : ''}>${skill}</option>`).join('')}
+          </select>
+        </label>
+      </div>
+      <textarea id="adm-cq-question-${index}" rows="2" placeholder="${esc(part.label)} অংশের প্রশ্ন" class="mt-2 w-full rounded-lg border border-slate-200 px-2.5 py-2 text-sm outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-900">${esc(part.question)}</textarea>
+      <textarea id="adm-cq-model-${index}" rows="2" placeholder="মডেল উত্তর" class="mt-2 w-full rounded-lg border border-indigo-200 bg-indigo-50/40 px-2.5 py-2 text-sm outline-none focus:border-indigo-400 dark:border-indigo-500/30 dark:bg-indigo-500/5">${esc(part.modelAnswer)}</textarea>
+      <input id="adm-cq-hint-${index}" value="${esc(part.hint)}" placeholder="ইশারা (ঐচ্ছিক)" class="mt-2 w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-900">
+    </div>`;
+  return `
+    <div class="grid gap-3 sm:grid-cols-3">
+      <label class="text-xs font-bold text-slate-500">আইডি
+        <input id="adm-cq-id" value="${esc(entry.id)}" ${isNew ? '' : 'readonly'} placeholder="cq-new-001" class="mt-1 w-full rounded-lg border border-slate-200 px-2.5 py-2 font-mono text-sm outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-900">
+      </label>
+      <label class="text-xs font-bold text-slate-500">অধ্যায়
+        <select id="adm-cq-chapter" class="mt-1 w-full rounded-lg border border-slate-200 px-2.5 py-2 text-sm outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-900">${chapterOptions}</select>
+      </label>
+      <label class="text-xs font-bold text-slate-500">কঠিনতা
+        <select id="adm-cq-difficulty" class="mt-1 w-full rounded-lg border border-slate-200 px-2.5 py-2 text-sm outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-900">
+          ${['easy', 'medium', 'hard'].map(level => `<option ${entry.difficulty === level ? 'selected' : ''}>${level}</option>`).join('')}
+        </select>
+      </label>
+    </div>
+    <label class="mt-3 block text-xs font-bold text-slate-500">উদ্দীপক
+      <textarea id="adm-cq-stimulus" rows="3" class="mt-1 w-full rounded-lg border border-slate-200 px-2.5 py-2 text-sm outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-900">${esc(entry.stimulus)}</textarea>
+    </label>
+    <div class="mt-3 grid gap-2">${(entry.parts || []).map(partRow).join('')}</div>`;
+}
+
+function adminSetForm(entry, isNew) {
+  const chapterOptions = ['<option value="">সব অধ্যায়</option>']
+    .concat((state.data?.chapters || []).map(chapter => `<option value="${esc(chapter.id)}" ${chapter.id === entry.chapterId ? 'selected' : ''}>${esc(chapter.name)}</option>`)).join('');
+  const bank = allMcq();
+  const chosen = new Set(entry.questionIds || []);
+  return `
+    <div class="grid gap-3 sm:grid-cols-3">
+      <label class="text-xs font-bold text-slate-500">সেট আইডি
+        <input id="adm-set-id" value="${esc(entry.id)}" ${isNew ? '' : 'readonly'} placeholder="set-new-01" class="mt-1 w-full rounded-lg border border-slate-200 px-2.5 py-2 font-mono text-sm outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-900">
+      </label>
+      <label class="text-xs font-bold text-slate-500">ধরন
+        <select id="adm-set-kind" class="mt-1 w-full rounded-lg border border-slate-200 px-2.5 py-2 text-sm outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-900">
+          ${['practice', 'model', 'live'].map(kind => `<option ${entry.kind === kind ? 'selected' : ''}>${kind}</option>`).join('')}
+        </select>
+      </label>
+      <label class="text-xs font-bold text-slate-500">অধ্যায় (খালি = সব)
+        <select id="adm-set-chapter" class="mt-1 w-full rounded-lg border border-slate-200 px-2.5 py-2 text-sm outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-900">${chapterOptions}</select>
+      </label>
+    </div>
+    <label class="mt-3 block text-xs font-bold text-slate-500">শিরোনাম
+      <input id="adm-set-title" value="${esc(entry.title)}" class="mt-1 w-full rounded-lg border border-slate-200 px-2.5 py-2 text-sm outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-900">
+    </label>
+    <div class="mt-3 grid gap-3 sm:grid-cols-4">
+      <label class="text-xs font-bold text-slate-500">সময় (মিনিট)
+        <input id="adm-set-duration" type="number" min="1" value="${entry.durationMin}" class="mt-1 w-full rounded-lg border border-slate-200 px-2.5 py-2 text-sm outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-900">
+      </label>
+      <label class="text-xs font-bold text-slate-500">নেগেটিভ / ভুল
+        <input id="adm-set-negative" type="number" min="0" step="0.25" value="${entry.negativePerWrong}" class="mt-1 w-full rounded-lg border border-slate-200 px-2.5 py-2 text-sm outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-900">
+      </label>
+      <label class="text-xs font-bold text-slate-500">পাস (%)
+        <input id="adm-set-pass" type="number" min="0" max="100" value="${entry.passPercent}" class="mt-1 w-full rounded-lg border border-slate-200 px-2.5 py-2 text-sm outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-900">
+      </label>
+      <div class="flex flex-col justify-end gap-1 text-[11px] font-bold text-slate-500">
+        <label class="flex items-center gap-1.5"><input id="adm-set-shuffle-q" type="checkbox" ${entry.shuffle?.questions ? 'checked' : ''} class="rounded border-slate-300">প্রশ্ন এলোমেলো</label>
+        <label class="flex items-center gap-1.5"><input id="adm-set-shuffle-o" type="checkbox" ${entry.shuffle?.options ? 'checked' : ''} class="rounded border-slate-300">অপশন এলোমেলো</label>
+      </div>
+    </div>
+    <div id="adm-set-live" class="mt-3 grid gap-3 sm:grid-cols-2 ${entry.kind === 'live' ? '' : 'hidden'}">
+      <label class="text-xs font-bold text-slate-500">লাইভ শুরু
+        <input id="adm-set-opens" type="datetime-local" value="${esc(toLocalInput(entry.window?.opensAt))}" class="mt-1 w-full rounded-lg border border-slate-200 px-2.5 py-2 text-sm outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-900">
+      </label>
+      <label class="text-xs font-bold text-slate-500">লাইভ শেষ
+        <input id="adm-set-closes" type="datetime-local" value="${esc(toLocalInput(entry.window?.closesAt))}" class="mt-1 w-full rounded-lg border border-slate-200 px-2.5 py-2 text-sm outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-900">
+      </label>
+    </div>
+    <label class="mt-3 block text-xs font-bold text-slate-500">নির্দেশনা / বিবরণ
+      <textarea id="adm-set-desc" rows="2" class="mt-1 w-full rounded-lg border border-slate-200 px-2.5 py-2 text-sm outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-900">${esc(entry.description)}</textarea>
+    </label>
+    <div class="mt-3">
+      <p class="text-xs font-bold text-slate-500">প্রশ্ন বাছাই (${toBn(chosen.size)}টি নির্বাচিত)</p>
+      <div class="mt-1 grid max-h-56 gap-1 overflow-y-auto rounded-xl border border-slate-200 p-2 dark:border-slate-700">
+        ${bank.map(question => `
+          <label class="flex items-start gap-2 rounded-lg px-1.5 py-1 text-xs hover:bg-slate-50 dark:hover:bg-slate-800/60">
+            <input type="checkbox" class="adm-qbox mt-0.5 rounded border-slate-300" value="${esc(question.id)}" ${chosen.has(question.id) ? 'checked' : ''}>
+            <span class="min-w-0 flex-1"><b class="font-mono text-[10px] text-slate-400">${esc(question.id)}</b> ${esc(question.stem)}</span>
+          </label>`).join('') || '<p class="p-2 text-xs text-slate-500">ব্যাংক খালি — আগে MCQ যোগ করো।</p>'}
+      </div>
+    </div>`;
+}
+
+function adminForm() {
+  const form = state.admin.form;
+  if (!form) return '';
+  const entry = form.isNew ? blankFor(form.kind, form.chapterId || '') : adminEntry(form.kind, form.id);
+  if (!entry) return '';
+  const title = form.isNew ? 'নতুন এন্ট্রি' : `সম্পাদনা · ${entry.id}`;
+  const body = form.kind === 'mcq' ? adminMcqForm(entry, form.isNew)
+    : form.kind === 'cq' ? adminCqForm(entry, form.isNew) : adminSetForm(entry, form.isNew);
+
+  return `
+    <div class="mb-4 rounded-2xl border-2 border-emerald-300 bg-emerald-50/40 p-4 dark:border-emerald-500/40 dark:bg-emerald-500/5">
+      <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h3 class="text-sm font-black text-slate-900 dark:text-white">${esc(title)}</h3>
+        ${state.admin.error ? `<p class="text-[11px] font-bold text-rose-600">${esc(state.admin.error)}</p>` : ''}
+      </div>
+      ${body}
+      <div class="mt-4 flex flex-wrap gap-2">
+        <button type="button" data-action="admin-save" data-kind="${form.kind}" class="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700">সংরক্ষণ করো</button>
+        <button type="button" data-action="admin-form-cancel" class="rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold text-slate-600 hover:bg-white dark:border-slate-700 dark:text-slate-300">বাতিল</button>
+      </div>
+    </div>`;
+}
+
+function adminReviewTab() {
+  const attempts = loadResults();
+  const submissions = loadCqSubmissions();
+  const problems = validateBank(state.data);
+  return `
+    ${problems.length ? `
+      <div class="mb-3 rounded-2xl border border-amber-300 bg-amber-50 p-3.5 text-sm text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100">
+        <p class="font-bold">ব্যাংকে ${toBn(problems.length)}টি সমস্যা</p>
+        <ul class="mt-1 space-y-0.5 text-xs">${problems.slice(0, 12).map(problem => `<li><b>${esc(problem.id)}</b> · ${esc(problem.message)}</li>`).join('')}</ul>
+      </div>` : ''}
+    <div class="grid gap-3 sm:grid-cols-2">
+      ${statCard({ label: 'এই ডিভাইসের টেস্ট', value: toBn(attempts.length), hint: 'সব attempt লোকালস্টোরেজে' })}
+      ${statCard({ label: 'সৃজনশীল স্ব-মূল্যায়ন', value: toBn(submissions.length), hint: 'সংরক্ষিত CQ খাতা' })}
+    </div>
+    <div class="mt-3 overflow-x-auto rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+      ${attempts.length ? `
+        <table class="w-full min-w-[560px] text-left text-sm">
+          <thead class="bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500 dark:bg-slate-800/60">
+            <tr><th class="px-4 py-2.5">টেস্ট</th><th><span class="sr-only">ধরন</span></th><th class="px-3 py-2.5">স্কোর</th><th class="px-3 py-2.5">জমা</th><th class="px-4 py-2.5"></th></tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+            ${attempts.map(attempt => `
+              <tr>
+                <td class="px-4 py-2.5 font-semibold">${esc(attempt.title)}<p class="font-mono text-[10px] font-normal text-slate-400">${esc(attempt.setId || '')}</p></td>
+                <td class="px-3 py-2.5 text-xs">${esc(attempt.kind || '')}</td>
+                <td class="px-3 py-2.5 text-xs font-bold">${toBn(attempt.score.percent)}% · GPA ${toBn(attempt.score.gpa?.toFixed(2))}</td>
+                <td class="px-3 py-2.5 text-xs text-slate-500">${esc(attempt.submittedAt ? new Date(attempt.submittedAt).toLocaleString('bn-BD', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—')}</td>
+                <td class="px-4 py-2.5 text-right"><button type="button" data-action="open-result" data-id="${esc(attempt.id)}" class="rounded-lg border border-slate-200 px-2.5 py-1 text-[11px] font-bold hover:bg-slate-100 dark:border-slate-700">দেখো</button></td>
+              </tr>`).join('')}
+          </tbody>
+        </table>` : '<p class="p-5 text-center text-sm text-slate-500">এই ডিভাইসে এখনো কোনো টেস্ট দেওয়া হয়নি।</p>'}
+    </div>`;
+}
+
+function adminToolsTab() {
+  const json = JSON.stringify(state.data, null, 2);
+  return `
+    <div class="grid gap-3 lg:grid-cols-2">
+      <div class="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+        <h3 class="text-sm font-black">রপ্তানি</h3>
+        <p class="mt-1 text-xs text-slate-500">বর্তমান ব্যাংক (শিপ করা JSON + এই ডিভাইসের পরিবর্তন) এক ফাইলে। <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">data/questions.json</code>-এ বসিয়ে দিলে সবার জন্য একই হয়ে যাবে।</p>
+        <textarea id="admExport" readonly rows="12" class="mt-3 w-full rounded-xl border border-slate-200 bg-slate-50 p-3 font-mono text-[11px] outline-none dark:border-slate-700 dark:bg-slate-950">${esc(json)}</textarea>
+        <div class="mt-2 flex flex-wrap gap-2">
+          <button type="button" data-action="admin-download" class="rounded-xl bg-slate-900 px-3.5 py-2 text-xs font-bold text-white dark:bg-white dark:text-slate-900">questions.json ডাউনলোড</button>
+          <button type="button" data-action="admin-copy" class="rounded-xl border border-slate-200 px-3.5 py-2 text-xs font-bold dark:border-slate-700">কপি করো</button>
+        </div>
+      </div>
+      <div class="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+        <h3 class="text-sm font-black">ইমপোর্ট</h3>
+        <p class="mt-1 text-xs text-slate-500">পুরো payload বা শুধু <code class="rounded bg-slate-100 px-1 dark:bg-slate-800">{ questions, sets }</code> — যাচাই করে মিলিয়ে নেওয়া হবে। যে key পাঠাবে, সেই তালিকাটাই চূড়ান্ত ধরা হবে (না থাকলে লুকানো হবে, JSON-এ মুছে যাবে না)।</p>
+        <textarea id="admImport" rows="12" placeholder='{"questions":{"mcq":[…]}}' class="mt-3 w-full rounded-xl border border-slate-200 p-3 font-mono text-[11px] outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-950"></textarea>
+        <div class="mt-2 flex flex-wrap gap-2">
+          <button type="button" data-action="admin-import" class="rounded-xl bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-emerald-700">যাচাই করে ইমপোর্ট</button>
+          <button type="button" data-action="admin-reset-bank" class="rounded-xl border border-rose-200 px-3.5 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 dark:border-rose-500/30">শিপ করা JSON-এ ফেরত যাও</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function viewAdmin() {
+  const overlay = state.admin.overlay;
+  const edits = countEdits(overlay);
+  const tab = state.admin.tab;
+  const counts = { mcq: allMcq().length, cq: allCq().length, sets: (state.data?.sets || []).length };
+
+  const content = tab === 'tools' ? adminToolsTab()
+    : tab === 'review' ? adminReviewTab()
+      : adminForm() + (tab === 'mcq' ? adminMcqTable() + adminHiddenStrip('mcq')
+        : tab === 'cq' ? adminCqTable() + adminHiddenStrip('cq') : adminSetTable() + adminHiddenStrip('sets'));
+
+  return shell(`
+    ${sectionTitle('ডেমো এডমিন', 'প্রশ্নব্যাংক ও টেস্ট সেট ব্যবস্থাপনা', `
+      <button type="button" data-action="admin-exit" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900">শিক্ষার্থী ভিউতে ফিরে যাও</button>`)}
+    <div class="mb-3 rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <p class="text-xs text-slate-500">
+          ব্যাংকে <b class="text-slate-900 dark:text-white">${toBn(counts.mcq)}</b> MCQ ·
+          <b class="text-slate-900 dark:text-white">${toBn(counts.cq)}</b> সৃজনশীল ·
+          <b class="text-slate-900 dark:text-white">${toBn(counts.sets)}</b> সেট
+          ${edits ? ` · এই ডিভাইসে ${toBn(edits)}টি পরিবর্তন সংরক্ষিত` : ''}
+        </p>
+        <div class="flex flex-wrap gap-2">
+          <button type="button" data-action="admin-new" data-kind="mcq" class="rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700">+ MCQ</button>
+          <button type="button" data-action="admin-new" data-kind="cq" class="rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold hover:bg-slate-100 dark:border-slate-700">+ সৃজনশীল</button>
+          <button type="button" data-action="admin-new" data-kind="sets" class="rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold hover:bg-slate-100 dark:border-slate-700">+ সেট</button>
+        </div>
+      </div>
+      <div class="mt-3 flex gap-1.5 overflow-x-auto pb-1">${ADMIN_TABS.map(adminTabButton).join('')}</div>
+    </div>
+    ${edits ? `<p class="mb-3 rounded-xl bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">পরিবর্তন শুধু এই ব্রাউজারের localStorage-এ — রিপো-র <code>data/questions.json</code> অটুট আছে। “JSON · ইমপোর্ট” ট্যাব থেকে ফাইল নামিয়ে নিয়ে রিপোতে কমিট করো।</p>` : ''}
+    ${content}
+  `);
+}
+
+/* ---------- admin actions ---------- */
+
+function adminValue(id) {
+  const el = $(`#${id}`);
+  return el ? String(el.value).trim() : '';
+}
+
+function adminNumber(id, fallback = 0) {
+  const raw = adminValue(id).replace(/[০-৯]/g, digit => '০১২৩৪৫৬৭৮৯'.indexOf(digit));
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : fallback;
+}
+
+function collectMcqForm() {
+  const chapterId = adminValue('adm-mcq-chapter');
+  const question = {
+    id: adminValue('adm-mcq-id'),
+    chapterId,
+    subjectId: chapterById(chapterId)?.subjectId || '',
+    difficulty: adminValue('adm-mcq-difficulty'),
+    topic: adminValue('adm-mcq-topic'),
+    marks: adminNumber('adm-mcq-marks', 1),
+    stem: adminValue('adm-mcq-stem'),
+    options: ['A', 'B', 'C', 'D'].map(letter => ({ id: letter, text: adminValue(`adm-opt-${letter}`) })),
+    answer: adminValue('adm-mcq-answer'),
+    explanation: adminValue('adm-mcq-explain')
+  };
+  return question;
+}
+
+function collectCqForm() {
+  const chapterId = adminValue('adm-cq-chapter');
+  return {
+    id: adminValue('adm-cq-id'),
+    chapterId,
+    subjectId: chapterById(chapterId)?.subjectId || '',
+    difficulty: adminValue('adm-cq-difficulty'),
+    stimulus: adminValue('adm-cq-stimulus'),
+    parts: ['ক', 'খ', 'গ', 'ঘ']
+      .map((label, index) => ({
+        label,
+        skill: adminValue(`adm-cq-skill-${index}`),
+        marks: adminNumber(`adm-cq-marks-${index}`, 1),
+        question: adminValue(`adm-cq-question-${index}`),
+        modelAnswer: adminValue(`adm-cq-model-${index}`),
+        hint: adminValue(`adm-cq-hint-${index}`)
+      }))
+      .filter(part => part.question || part.modelAnswer || part.hint)
+  };
+}
+
+function collectSetForm() {
+  const kind = adminValue('adm-set-kind');
+  const opens = adminValue('adm-set-opens');
+  const closes = adminValue('adm-set-closes');
+  const set = {
+    id: adminValue('adm-set-id'),
+    kind,
+    title: adminValue('adm-set-title'),
+    chapterId: adminValue('adm-set-chapter'),
+    durationMin: adminNumber('adm-set-duration', 10),
+    negativePerWrong: adminNumber('adm-set-negative', 0),
+    passPercent: adminNumber('adm-set-pass', 40),
+    shuffle: { questions: Boolean($('#adm-set-shuffle-q')?.checked), options: Boolean($('#adm-set-shuffle-o')?.checked) },
+    questionIds: [...document.querySelectorAll('.adm-qbox:checked')].map(box => box.value),
+    description: adminValue('adm-set-desc')
+  };
+  if (kind === 'live') {
+    set.window = { opensAt: opens ? new Date(opens).toISOString() : null, closesAt: closes ? new Date(closes).toISOString() : null };
+    set.proctoring = 'একজন প্রস্টক্টর কক্ষ থেকে পর্যবেক্ষণ করবেন (ডেমো)';
+  } else {
+    delete set.window;
+    delete set.proctoring;
+  }
+  if (!set.description) delete set.description;
+  return set;
+}
+
+function saveAdminEntry(kind) {
+  const form = state.admin.form;
+  if (!form) return;
+  const entry = kind === 'mcq' ? collectMcqForm() : kind === 'cq' ? collectCqForm() : collectSetForm();
+  const chapterIds = new Set((state.data?.chapters || []).map(chapter => chapter.id));
+  const mcqIds = new Set(allMcq().map(question => question.id));
+  const errors = kind === 'mcq' ? validateMcq(entry, chapterIds)
+    : kind === 'cq' ? validateCq(entry) : validateSet(entry, mcqIds);
+
+  if (errors.length) {
+    state.admin.error = errors.join(' · ');
+    render();
+    toast('প্রশ্নে কিছু ত্রুটি আছে — লাল লাইনটি দেখো', 'bad');
+    return;
+  }
+
+  const isNew = form.isNew;
+  const baseList = kind === 'mcq' ? state.base?.questions?.mcq : kind === 'cq' ? state.base?.questions?.cq : state.base?.sets;
+  const baseEntry = (baseList || []).find(item => item.id === entry.id) || null;
+  const patch = baseEntry ? minimalDiff(baseEntry, entry) : entry;
+  if (baseEntry && !Object.keys(patch).length) {
+    state.admin.form = null;
+    state.admin.error = null;
+    render();
+    toast(`${entry.id}-ে কিছু বদলায়নি`, 'neutral');
+    return;
+  }
+  saveBankPatch(kind, entry.id, patch);
+  reloadBank();
+  state.admin.form = null;
+  state.admin.error = null;
+  state.admin.tab = kind;
+  state.admin.overlay = loadBankOverlay();
+  render();
+  toast(isNew ? `${entry.id} যোগ হয়েছে — ${kind === 'sets' ? `সেট তালিকায় এখন ${toBn(adminList('sets').length)}টি` : `ব্যাংকে এখন ${toBn(kind === 'mcq' ? allMcq().length : allCq().length)}টি`}` : `${entry.id} আপডেট হয়েছে`, 'good');
+}
+
+function reloadBank() {
+  state.data = mergeBank(state.base, loadBankOverlay());
+}
+
+const adminActions = {
+  'admin-open': () => {
+    state.admin.overlay = loadBankOverlay();
+    state.admin.form = null;
+    state.admin.error = null;
+    state.view = 'admin';
+    render();
+    toast('ডেমো এডমিন প্যানেল — কোনো লগইন লাগবে না, পরিবর্তন এই ব্রাউজারেই থাকে', 'neutral');
+  },
+  'admin-exit': () => {
+    reloadBank();
+    state.view = 'dashboard';
+    state.admin.form = null;
+    render();
+  },
+  'admin-tab': dataset => {
+    state.admin.tab = dataset.tab;
+    state.admin.form = null;
+    state.admin.error = null;
+    render();
+  },
+  'admin-new': dataset => {
+    state.admin.tab = dataset.kind;
+    state.admin.error = null;
+    state.admin.form = { kind: dataset.kind, id: null, isNew: true, chapterId: (state.data?.chapters || [])[0]?.id || '' };
+    render();
+  },
+  'admin-edit': dataset => {
+    state.admin.tab = dataset.kind;
+    state.admin.error = null;
+    state.admin.form = { kind: dataset.kind, id: dataset.id, isNew: false };
+    render();
+    $('#adm-mcq-id, #adm-cq-id, #adm-set-id')?.focus();
+  },
+  'admin-form-cancel': () => {
+    state.admin.form = null;
+    state.admin.error = null;
+    render();
+  },
+  'admin-save': dataset => saveAdminEntry(dataset.kind),
+  'admin-hide': dataset => {
+    const hiding = dataset.hidden === 'yes';
+    if (hiding) saveBankPatch(dataset.kind, dataset.id, { removed: true });
+    else dropBankPatch(dataset.kind, dataset.id);
+    reloadBank();
+    state.admin.overlay = loadBankOverlay();
+    render();
+    toast(hiding ? `${dataset.id} লুকানো হয়েছে (JSON অটুট)` : `${dataset.id} আবার চালু`, 'neutral');
+  },
+  'admin-delete': dataset => {
+    dropBankPatch(dataset.kind, dataset.id);
+    reloadBank();
+    state.admin.overlay = loadBankOverlay();
+    render();
+    toast(`${dataset.id} মুছে ফেলা হয়েছে`, 'good');
+  },
+  'admin-revert': dataset => {
+    dropBankPatch(dataset.kind, dataset.id);
+    reloadBank();
+    state.admin.overlay = loadBankOverlay();
+    render();
+    toast(`${dataset.id} — শিপ করা JSON-এর মান ফিরে এসেছে`, 'neutral');
+  },
+  'admin-copy': async () => {
+    const text = adminValue('admExport');
+    try {
+      await navigator.clipboard.writeText(text);
+      toast('ব্যাংক JSON কপি হয়েছে', 'good');
+    } catch {
+      toast('কপি করা যায়নি — টেক্সটএরিয়া থেকে ম্যানুয়ালি নাও', 'warn');
+    }
+  },
+  'admin-download': () => {
+    const blob = new Blob([JSON.stringify(state.data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'questions.json';
+    document.body.append(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 2000);
+  },
+  'admin-import': () => {
+    const raw = adminValue('admImport');
+    if (!raw) {
+      toast('ইমপোর্ট করার জন্য JSON পেস্ট করো', 'warn');
+      return;
+    }
+    let incoming;
+    try {
+      incoming = JSON.parse(raw);
+    } catch (error) {
+      toast(`JSON পার্স হয়নি: ${error.message}`, 'bad');
+      return;
+    }
+    const candidate = { ...state.base, ...incoming, questions: { ...state.base.questions, ...(incoming.questions || {}) } };
+    const problems = validateBank(candidate);
+    if (problems.length) {
+      toast(`${toBn(problems.length)}টি সমস্যা — প্রথমটি: ${problems[0].id} · ${problems[0].message}`, 'bad');
+      return;
+    }
+    replaceBankOverlay(diffBank(state.base, candidate));
+    reloadBank();
+    state.admin.overlay = loadBankOverlay();
+    state.admin.form = null;
+    render();
+    toast('ইমপোর্ট সম্পন্ন — এই ডিভাইসের ওভারলে আপডেট হয়েছে', 'good');
+  },
+  'admin-reset-bank': () => {
+    clearBankOverlay();
+    state.data = state.base;
+    state.admin.overlay = null;
+    state.admin.form = null;
+    render();
+    toast('শিপ করা প্রশ্নব্যাংকে ফিরে গেছি', 'good');
+  }
+};
+
+Object.assign(actions, adminActions);
+
 function availableCount(chapterId, difficulty) {
   return allMcq().filter(question => (!chapterId || question.chapterId === chapterId) && (!difficulty || question.difficulty === difficulty)).length;
 }
@@ -1276,7 +1935,8 @@ function resumeSet(setId) {
   };
   state.view = 'runner';
   render();
-  if (shouldAutoSubmit(state.session.remaining)) autoSubmit('সংরক্ষিত উত্তরের সময় শেষ — জমা দেওয়া হয়েছে');
+  if (shouldAutoSubmit(state.session.remaining)) return autoSubmit('সংরক্ষিত উত্তরের সময় শেষ — জমা দেওয়া হয়েছে');
+  toast('যেখানে থামিয়েছিলে সেখান থেকে চালিয়ে যাচ্ছ', 'neutral');
 }
 
 function blockClipboard(event) {

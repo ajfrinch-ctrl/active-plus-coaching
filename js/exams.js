@@ -1,7 +1,8 @@
 /* Exam feature: catalogue, offline runner, local scoring and answer review.
  * Attempts never leave the device — see js/storage.js for the stored shape. */
-import { exams, examSubjectTones, subjectInitials } from './config.js';
+import { exams as shippedExams, examSubjectTones, subjectInitials } from './config.js';
 import { loadExamAttempt, loadExamAttempts, saveExamAttempt, updateExamAttempt, loadExamDraft, saveExamDraft, clearExamDraft } from './storage.js';
+import { effectiveExams, teacherMarks } from './admin-data.js';
 import { $, $$, showFeedback, toBanglaNumber, openModal, closeModal } from './ui.js';
 import { isCorrectAnswer } from './exam-hash.js';
 import { setView } from './shell.js';
@@ -65,8 +66,13 @@ export function examStatus(exam, now = Date.now()) {
   };
 }
 
+/* Shipped defaults plus whatever the (demo) admin panel published on this device. */
+function examList() {
+  return effectiveExams(shippedExams);
+}
+
 function findExam(examId) {
-  return exams.find(exam => exam.id === examId) || null;
+  return examList().find(exam => exam.id === examId) || null;
 }
 
 function gradeAttempt(exam, answers, checks) {
@@ -123,6 +129,22 @@ function gradeAttempt(exam, answers, checks) {
 
 /* ---------- exams view ---------- */
 
+/* A teacher's final mark outranks the auto-scored one; until then the local score stands. */
+function publishedLine(exam, attempt) {
+  const published = teacherMarks(exam.id);
+  if (!published) return '';
+  const total = Number(published.marks);
+  const available = Number(published.total) || totalMarks(exam);
+  const percent = available ? Math.round((total / available) * 100) : 0;
+  return `
+    <p class="exam-published">
+      <span>শিক্ষকের চূড়ান্ত নম্বর</span>
+      <b>${formatMarks(total)}/${formatMarks(available)}</b>
+      <em>${toBanglaNumber(percent)}%</em>
+      ${published.note ? `<small>${escapeText(published.note)}</small>` : ''}
+    </p>`;
+}
+
 function examCard(exam) {
   const status = examStatus(exam);
   const attempt = loadExamAttempt(exam.id);
@@ -149,18 +171,19 @@ function examCard(exam) {
       </div>
       ${attempt ? `<p class="exam-attempt">সর্বশেষ ফল <b>${formatMarks(attempt.marks.total)}/${formatMarks(attempt.marks.available)}</b> · ${toBanglaNumber(attempt.marks.percent)}% · ${attempt.marks.passed ? 'উত্তীর্ণ' : 'আরও অনুশীলন দরকার'}${attempt.tries > 1 ? ` · ${toBanglaNumber(attempt.tries)} বার চেষ্টা` : ''}</p>` : ''}
       ${draft && status.key === 'open' ? `<p class="exam-draft">অসম্পন্ন উত্তর সংরক্ষিত আছে — ${toBanglaNumber(countAnswered(exam, draft.answers || {}))}/${toBanglaNumber(exam.questions.length)}টি প্রশ্নে উত্তর দিয়েছ, ${formatClock(draft.remaining || 0)} সময় বাকি।</p>` : ''}
+      ${publishedLine(exam, attempt)}
       ${!attempt && !draft ? `<p class="exam-hint">${exam.teacher} · ${status.note}</p>` : ''}
       <div class="exam-card-actions">${actions.join('') || `<p class="exam-locked">${status.note}</p>`}</div>
     </article>
   `;
 }
 
-function renderExams() {
+export function renderExams() {
   const list = $('#examList');
   if (!list) return;
 
   const attempts = loadExamAttempts();
-  const rows = exams.filter(exam => {
+  const rows = examList().filter(exam => {
     if (filter === 'all') return true;
     if (filter === 'done') return Boolean(attempts[exam.id]);
     if (filter === 'progress') return Boolean(loadExamDraft(exam.id));
@@ -169,12 +192,12 @@ function renderExams() {
 
   const summary = $('#examSummary');
   if (summary) {
-    const openCount = exams.filter(exam => examStatus(exam).key === 'open').length;
+    const openCount = examList().filter(exam => examStatus(exam).key === 'open').length;
     const finished = Object.values(attempts);
     const average = finished.length
       ? Math.round(finished.reduce((sum, item) => sum + (item.marks?.percent || 0), 0) / finished.length)
       : null;
-    const pending = exams.filter(exam => loadExamDraft(exam.id)).length;
+    const pending = examList().filter(exam => loadExamDraft(exam.id)).length;
 
     summary.innerHTML = `
       <div class="exam-summary-hero">
@@ -182,7 +205,7 @@ function renderExams() {
         <div class="exam-summary-score"><small>গড় ফল</small><strong>${average === null ? '—' : `${toBanglaNumber(average)}<small>%</small>`}</strong></div>
       </div>
       <div class="exam-summary-stats">
-        <div><small>মোট পরীক্ষা</small><strong>${toBanglaNumber(exams.length)}</strong></div>
+        <div><small>মোট পরীক্ষা</small><strong>${toBanglaNumber(examList().length)}</strong></div>
         <div><small>জমা দিয়েছ</small><strong>${toBanglaNumber(finished.length)}</strong></div>
         <div><small>অসম্পন্ন খসড়া</small><strong>${toBanglaNumber(pending)}</strong></div>
       </div>
@@ -523,11 +546,18 @@ export function renderDeviceResults() {
       const exam = findExam(attempt.examId);
       if (!exam) return '';
       const tone = BADGE_TONES[examSubjectTones[exam.subject]] ?? '';
+      const published = teacherMarks(attempt.examId);
+      let shown = attempt.marks;
+      if (published) {
+        const available = Number(published.total) || attempt.marks.available;
+        const total = Number(published.marks);
+        shown = { total, available, percent: available ? Math.round((total / available) * 100) : 0 };
+      }
       return `
         <article class="result-row">
           <span class="result-badge ${tone}">${subjectInitials[exam.subject] || 'পর'}</span>
-          <div><strong>${exam.title}</strong><small>${exam.date} · এই ডিভাইসে জমা · ${formatMarks(attempt.marks.total)}/${formatMarks(attempt.marks.available)}</small></div>
-          <b>${toBanglaNumber(attempt.marks.percent || 0)}<small>%</small></b>
+          <div><strong>${exam.title}</strong><small>${exam.date} · ${published ? 'শিক্ষকের দেওয়া নম্বর' : 'এই ডিভাইসে জমা'} · ${formatMarks(shown.total)}/${formatMarks(shown.available)}</small></div>
+          <b>${toBanglaNumber(shown.percent || 0)}<small>%</small></b>
           <button type="button" class="result-arrow" data-exam-review="${exam.id}" aria-label="${exam.title} বিস্তারিত দেখুন">→</button>
         </article>
       `;

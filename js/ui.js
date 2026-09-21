@@ -16,6 +16,13 @@ export function normalizeAnswer(value) {
   return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
+const ENTITIES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+
+/** Anything typed by a student or an admin goes through this before innerHTML. */
+export function escapeText(value) {
+  return String(value ?? '').replace(/[&<>"']/g, char => ENTITIES[char]);
+}
+
 export function showFeedback(message) {
   $('.feedback-toast')?.remove();
   const toast = document.createElement('div');

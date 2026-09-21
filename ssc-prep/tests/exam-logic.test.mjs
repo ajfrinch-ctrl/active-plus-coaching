@@ -7,14 +7,16 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 import {
-  buildResult, chapterBreakdown, examDeadline, gradeFor, linePath, pickQuestions, remainingSeconds,
-  scoreCQ, scoreMCQ, seededShuffle, shouldAutoSubmit, summarize, toBn, verdictFor, windowState
+  buildResult, chapterBreakdown, countEdits, diffBank, examDeadline, gradeFor, linePath, mergeBank, minimalDiff,
+  pickQuestions,
+  remainingSeconds, scoreCQ, scoreMCQ, seededShuffle, shouldAutoSubmit, summarize, toBn, toLocalInput, validateBank,
+  validateCq, validateMcq, validateSet, verdictFor, windowState
 } from '../js/exam-logic.js';
 
 const data = JSON.parse(readFileSync(new URL('../data/questions.json', import.meta.url), 'utf8'));
 const mcq = data.questions.mcq;
 const q = (stem, answer, extra = {}) => ({
-  id: extra.id || stem, stem, answer, marks: 1, chapterId: 'c1', topic: 'টপিক',
+  id: extra.id || stem, stem, answer, marks: 1, chapterId: 'c1', topic: 'টপিক', difficulty: 'medium',
   options: [{ id: 'A', text: 'a' }, { id: 'B', text: 'b' }, { id: 'C', text: 'c' }, { id: 'D', text: 'd' }],
   ...extra
 });
@@ -260,4 +262,118 @@ test('Bangla numerals render everywhere the student looks', () => {
   assert.equal(toBn('Score 42/50'), 'Score ৪২/৫০');
   assert.equal(toBn(0), '০');
   assert.equal(toBn(null), '');
+});
+
+/* ---------- admin overlay ---------- */
+
+const tinyBank = () => ({
+  chapters: [{ id: 'c1', subjectId: 'math', number: 1, name: 'সেট' }],
+  questions: {
+    mcq: [q('১+১', 'A', { id: 'm1', topic: 'যোগ' }), q('২+২', 'B', { id: 'm2', topic: 'যোগ' })],
+    cq: [{
+      id: 'x1', chapterId: 'c1', difficulty: 'easy', stimulus: 'উদ্দীপক',
+      parts: [
+        { label: 'ক', marks: 1, question: 'গাও', modelAnswer: '২', skill: 'জ্ঞান' },
+        { label: 'খ', marks: 2, question: 'ব্যাখ্যা করো', modelAnswer: 'কারণ…', skill: 'বোধগ' }
+      ]
+    }]
+  },
+  sets: [{ id: 's1', kind: 'practice', title: 'প্র্যাকটিস', durationMin: 5, negativePerWrong: 0, passPercent: 40, questionIds: ['m1', 'm2'] }]
+});
+
+test('mergeBank overrides, appends and hides without touching the base', () => {
+  const base = tinyBank();
+  const snapshot = JSON.stringify(base);
+  const merged = mergeBank(base, {
+    mcq: { m1: { topic: 'নতুন টপিক', answer: 'C' }, fresh: { id: 'fresh', chapterId: 'c1', topic: 'নতুন', marks: 1, difficulty: 'easy', stem: 'নতুন প্রশ্ন', options: [{ id: 'A', text: 'a' }, { id: 'B', text: 'b' }, { id: 'C', text: 'c' }, { id: 'D', text: 'd' }], answer: 'A' }, m2: { removed: true } },
+    sets: { s1: { questionIds: ['m1', 'm2', 'fresh'] } }
+  });
+
+  assert.equal(JSON.stringify(base), snapshot, 'the shipped payload must never be mutated');
+  assert.equal(merged.questions.mcq.length, 2, 'm2 hidden, fresh appended');
+  assert.deepEqual(merged.questions.mcq.map(item => item.id), ['m1', 'fresh']);
+  assert.equal(merged.questions.mcq[0].topic, 'নতুন টপিক');
+  assert.equal(merged.questions.mcq[0].answer, 'C');
+  assert.equal(merged.questions.mcq[0].stem, '১+১', 'untouched fields survive a partial patch');
+  assert.deepEqual(merged.sets[0].questionIds, ['m1', 'm2', 'fresh']);
+  assert.deepEqual(merged.questions.cq, base.questions.cq, 'kinds without patches are passed through');
+  assert.equal(mergeBank(base, null), base, 'no overlay means the base bank');
+});
+
+test('diffBank round-trips a full payload into patches and back', () => {
+  const base = tinyBank();
+  const incoming = tinyBank();
+  incoming.questions.mcq[0].stem = '১+২';
+  incoming.questions.mcq = incoming.questions.mcq.filter(item => item.id !== 'm2');
+  incoming.questions.mcq.push(q('৩+৩', 'D', { id: 'm3' }));
+
+  const overlay = diffBank(base, incoming);
+  assert.deepEqual(Object.keys(overlay.mcq).sort(), ['m1', 'm2', 'm3']);
+  assert.equal(overlay.mcq.m2.removed, true);
+  assert.equal(overlay.mcq.m1.stem, '১+২');
+
+  const merged = mergeBank(base, overlay);
+  assert.equal(merged.questions.mcq.length, 2);
+  assert.deepEqual(merged.questions.mcq.map(item => item.id), ['m1', 'm3']);
+  assert.equal(merged.questions.mcq[0].stem, '১+২');
+  assert.equal(countEdits(overlay), 3);
+  assert.equal(countEdits(null), 0);
+});
+
+test('bank validators catch the mistakes an admin actually makes', () => {
+  const chapters = new Set(['c1']);
+  const base = tinyBank();
+
+  assert.equal(validateMcq(base.questions.mcq[0], chapters).length, 0);
+  assert.ok(validateMcq({ ...base.questions.mcq[0], answer: 'E' }, chapters).includes('সঠিক অপশনটি (A–D) বাছতে হবে'));
+  assert.ok(validateMcq({ ...base.questions.mcq[0], options: [] }, chapters).includes('চারটি অপশন লাগবে'));
+  assert.ok(validateMcq({ ...base.questions.mcq[0], chapterId: 'nope' }, chapters).includes('অধ্যায় নির্বাচন করা হয়নি'));
+  assert.ok(validateMcq({ ...base.questions.mcq[0], marks: 0 }, chapters).includes('নম্বর ০-এর বেশি হতে হবে'));
+
+  assert.equal(validateCq(base.questions.cq[0]).length, 0);
+  assert.ok(validateCq({ ...base.questions.cq[0], stimulus: '  ' }).includes('উদ্দীপক খালি'));
+  assert.ok(validateCq({ ...base.questions.cq[0], parts: [{ label: 'ক', marks: 1, question: 'ক', modelAnswer: '' }, { label: 'খ', marks: 1, question: 'খ', modelAnswer: 'ক' }] }).includes('ক অংশের মডেল উত্তর খালি'));
+  assert.ok(validateCq({ ...base.questions.cq[0], parts: [] }).includes('কমপক্ষে একটি অংশ (ক …) লাগবে'));
+  assert.deepEqual(validateCq({ ...base.questions.cq[0], parts: [base.questions.cq[0].parts[0]] }), [], 'a one-part short question is legal');
+  assert.deepEqual(validateCq({ ...base.questions.cq[0], parts: [base.questions.cq[0].parts[0], { label: 'খ', marks: 1, question: '', modelAnswer: '' }] }), [], 'a wholly blank part is ignored');
+  assert.ok(validateCq({ ...base.questions.cq[0], parts: [{ label: 'ক', marks: 1, question: 'গাও', modelAnswer: '' }, base.questions.cq[0].parts[1]] }).includes('ক অংশের মডেল উত্তর খালি'), 'a half-filled part is not dropped');
+
+  const ids = new Set(['m1', 'm2']);
+  assert.deepEqual(validateSet(base.sets[0], ids), []);
+  assert.ok(validateSet({ ...base.sets[0], questionIds: ['ghost'] }, ids).some(message => message.includes('ghost')));
+  assert.ok(validateSet({ ...base.sets[0], kind: 'live', window: { opensAt: '2026-01-02T09:00', closesAt: '2026-01-01T09:00' } }, ids).includes('শেষ সময় শুরু সময়ের পরে হতে হবে'));
+  assert.ok(validateSet({ ...base.sets[0], kind: 'live' }, ids).length > 0, 'a live set needs a window');
+
+  assert.deepEqual(validateBank(base), [], 'the fixture bank is valid');
+  const broken = mergeBank(base, { mcq: { m1: { answer: 'Z' } } });
+  assert.equal(validateBank(broken)[0].id, 'm1');
+});
+
+test('the shipped question bank validates with the same rules the admin form uses', () => {
+  assert.deepEqual(validateBank(data), [], JSON.stringify(validateBank(data).slice(0, 4)));
+});
+
+test('toLocalInput keeps a wall-clock window from drifting across timezones', () => {
+  assert.equal(toLocalInput('2026-09-22T09:30'), '2026-09-22T09:30');
+  assert.equal(toLocalInput(null), '');
+  assert.equal(toLocalInput(undefined), '');
+  const local = new Date(2026, 0, 2, 18, 5).getTime();
+  assert.equal(toLocalInput(local), '2026-01-02T18:05');
+});
+
+test('minimalDiff keeps an override to what changed', () => {
+  const base = { id: 'm1', stem: 'প্রশ্ন', marks: 1, topic: 'যোগ', options: [{ id: 'A', text: 'a' }] };
+  assert.deepEqual(minimalDiff(base, { ...base, marks: 5 }), { marks: 5 });
+  assert.deepEqual(minimalDiff(base, base), {}, 'no edits, no patch');
+  assert.deepEqual(minimalDiff(null, base), base, 'a new entry is stored whole');
+  assert.equal(minimalDiff(base, { ...base, options: [{ id: 'A', text: 'b' }] }).options[0].text, 'b', 'nested changes are compared by value');
+});
+
+test('an untimed practice set has no deadline and can never auto-submit', () => {
+  assert.equal(examDeadline({ startedAt: 1_000_000, durationMin: 0, closesAt: null }), null);
+  assert.equal(examDeadline({ startedAt: 1_000_000, durationMin: undefined }), null);
+  assert.equal(remainingSeconds(null), null);
+  assert.equal(shouldAutoSubmit(null), false, 'no clock means no auto-submit');
+  assert.equal(shouldAutoSubmit(0), true);
+  assert.equal(remainingSeconds(examDeadline({ startedAt: 1_000_000, durationMin: 15 }), 1_000_000), 900);
 });

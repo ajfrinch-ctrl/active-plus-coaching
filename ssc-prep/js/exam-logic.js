@@ -85,19 +85,26 @@ export function windowState(exam, now = Date.now()) {
   return { key: 'open', canStart: true, opensInMs: 0, closesInMs, secondsLeft: closesInMs === null ? null : Math.floor(closesInMs / 1000), label: 'চলছে এখন' };
 }
 
-/** Deadline = min(exam end, start + duration). Auto-submit fires when it passes. */
-export function examDeadline({ startedAt, durationMin, closesAt }, now = Date.now()) {
-  const byDuration = startedAt + (durationMin || 0) * 60000;
-  const byWindow = closesAt ? Date.parse(closesAt) : Infinity;
-  return Math.min(byDuration, Number.isFinite(byWindow) ? byWindow : Infinity);
+/**
+ * Deadline = min(exam end, start + duration). `null` means untimed — an
+ * untimed practice set must never auto-submit, so callers keep the two apart.
+ */
+export function examDeadline({ startedAt, durationMin, closesAt }) {
+  const minutes = Number(durationMin) || 0;
+  const byDuration = minutes > 0 ? startedAt + minutes * 60000 : Number.POSITIVE_INFINITY;
+  const parsed = closesAt ? Date.parse(closesAt) : Number.POSITIVE_INFINITY;
+  const byWindow = Number.isFinite(parsed) ? parsed : Number.POSITIVE_INFINITY;
+  const value = Math.min(byDuration, byWindow);
+  return Number.isFinite(value) ? value : null;
 }
 
 export function remainingSeconds(deadlineMs, nowMs = Date.now()) {
+  if (deadlineMs === null || deadlineMs === undefined) return null;
   return Math.max(0, Math.round((deadlineMs - nowMs) / 1000));
 }
 
 export function shouldAutoSubmit(remainingSec) {
-  return remainingSec <= 0;
+  return typeof remainingSec === 'number' && remainingSec <= 0;
 }
 
 /* ---------- grading ---------- */
@@ -406,4 +413,220 @@ export function scoreCQ(parts, ratings = {}) {
     percent: max ? Math.round((earned / max) * 100) : 0,
     answered: Object.keys(ratings).length
   };
+}
+
+/* ---------- admin overlay: local edits on top of the shipped JSON ---------- */
+
+export const BANK_KINDS = Object.freeze(['mcq', 'cq', 'sets']);
+const RESERVED = ['removed'];
+
+function stripReserved({ removed, ...rest }) {
+  void removed;
+  return rest;
+}
+
+function applyPatches(list, patches) {
+  const source = Array.isArray(list) ? list : [];
+  const map = patches && typeof patches === 'object' ? patches : {};
+  const out = [];
+
+  source.forEach(entry => {
+    const patch = map[entry?.id];
+    if (!patch) {
+      out.push(entry);
+    } else if (patch.removed) {
+      // hidden by the admin — it simply stops existing for every view
+    } else {
+      out.push({ ...entry, ...stripReserved(patch) });
+    }
+  });
+
+  const known = new Set(source.map(entry => entry?.id));
+  Object.entries(map).forEach(([id, patch]) => {
+    if (!patch || patch.removed || known.has(id)) return;
+    out.push({ ...stripReserved(patch), id });
+  });
+
+  return out;
+}
+
+/**
+ * Merges a device-local overlay ({ mcq: {id: patch}, cq: {}, sets: {} }) into the
+ * shipped payload. Unknown ids become new entries, `removed: true` hides an entry,
+ * and everything else is a shallow override — the base object is never mutated.
+ */
+export function mergeBank(base, overlay) {
+  if (!overlay || typeof overlay !== 'object') return base;
+  const questions = base?.questions || {};
+  return {
+    ...base,
+    questions: {
+      ...questions,
+      mcq: applyPatches(questions.mcq, overlay.mcq),
+      cq: applyPatches(questions.cq, overlay.cq)
+    },
+    sets: applyPatches(base?.sets, overlay.sets)
+  };
+}
+
+/** Patch shape for `incoming` relative to `base` — what an import/JSON save needs. */
+export function diffBank(base, incoming) {
+  const overlay = { version: 1, updatedAt: Date.now(), mcq: {}, cq: {}, sets: {} };
+  const lists = {
+    mcq: [base?.questions?.mcq || [], incoming?.questions?.mcq || []],
+    cq: [base?.questions?.cq || [], incoming?.questions?.cq || []],
+    sets: [base?.sets || [], incoming?.sets || []]
+  };
+
+  Object.entries(lists).forEach(([kind, [before, after]]) => {
+    const previous = new Map(before.map(entry => [entry.id, JSON.stringify(entry)]));
+    const next = new Map(after.map(entry => [entry.id, entry]));
+    next.forEach((entry, id) => {
+      if (previous.get(id) !== JSON.stringify(entry)) overlay[kind][id] = entry;
+    });
+    before.forEach(entry => {
+      if (!next.has(entry.id)) overlay[kind][entry.id] = { removed: true };
+    });
+  });
+
+  return overlay;
+}
+
+/** Only the fields that actually differ — the overlay stays readable and revert works. */
+export function minimalDiff(baseEntry, nextEntry) {
+  if (!baseEntry) return { ...nextEntry };
+  const patch = {};
+  Object.keys(nextEntry).forEach(key => {
+    if (key === 'id') return;
+    if (JSON.stringify(baseEntry[key]) !== JSON.stringify(nextEntry[key])) patch[key] = nextEntry[key];
+  });
+  return patch;
+}
+
+export function countEdits(overlay) {
+  if (!overlay) return 0;
+  return BANK_KINDS.reduce((sum, kind) => sum + Object.keys(overlay[kind] || {}).length, 0);
+}
+
+/* ---------- bank validation, shared by the admin forms and the importer ---------- */
+
+export function validateMcq(question, chapterIds) {
+  const errors = [];
+  if (!question.id || !/^[a-z0-9][a-z0-9._-]{1,}$/i.test(String(question.id))) errors.push('আইডি অন্তত ২ অক্ষরের (অক্ষর, সংখ্যা, ড্যাশ)');
+  if (!String(question.stem || '').trim()) errors.push('প্রশ্নের টেক্সট খালি');
+  if (!chapterIds.has(question.chapterId)) errors.push('অধ্যায় নির্বাচন করা হয়নি');
+  if (!(Number(question.marks) > 0)) errors.push('নম্বর ০-এর বেশি হতে হবে');
+  if (!['easy', 'medium', 'hard'].includes(question.difficulty)) errors.push('কঠিনতা ঠিক নেই');
+
+  const options = Array.isArray(question.options) ? question.options : [];
+  if (options.length !== 4) errors.push('চারটি অপশন লাগবে');
+  if (options.some(option => !String(option.text || '').trim())) errors.push('প্রতিটি অপশনে টেক্সট লাগবে');
+  if (!options.some(option => option.id === question.answer)) errors.push('সঠিক অপশনটি (A–D) বাছতে হবে');
+  return errors;
+}
+
+export function validateCq(question) {
+  const errors = [];
+  if (!question.id || !/^[a-z0-9][a-z0-9._-]{1,}$/i.test(String(question.id))) errors.push('আইডি অন্তত ২ অক্ষরের হতে হবে');
+  if (!String(question.stimulus || '').trim()) errors.push('উদ্দীপক খালি');
+  const parts = (Array.isArray(question.parts) ? question.parts : [])
+    // An admin may leave the গ/ঘ slots empty; the form drops untouched parts.
+    .filter(part => String(part.question || '').trim() || String(part.modelAnswer || '').trim());
+  if (!parts.length) errors.push('কমপক্ষে একটি অংশ (ক …) লাগবে');
+  parts.forEach((part, index) => {
+    if (!String(part.question || '').trim()) errors.push(`${part.label || index + 1} অংশের প্রশ্ন খালি`);
+    if (!(Number(part.marks) > 0)) errors.push(`${part.label || index + 1} অংশের নম্বর ০-এর বেশি হতে হবে`);
+    if (!String(part.modelAnswer || '').trim()) errors.push(`${part.label || index + 1} অংশের মডেল উত্তর খালি`);
+  });
+  return errors;
+}
+
+export function validateSet(set, mcqIds) {
+  const errors = [];
+  if (!set.id || !/^[a-z0-9][a-z0-9._-]{1,}$/i.test(String(set.id))) errors.push('সেট আইডি অন্তত ২ অক্ষরের হতে হবে');
+  if (!String(set.title || '').trim()) errors.push('সেটের নাম খালি');
+  if (!['practice', 'model', 'live'].includes(set.kind)) errors.push('সেটের ধরন ঠিক নেই');
+  if (set.kind !== 'practice' && !(Number(set.durationMin) > 0)) errors.push('টাইড সেটে সময় (মিনিট) ০-এর বেশি হতে হবে');
+  if (!(Number(set.negativePerWrong) >= 0)) errors.push('নেগেটিভ মার্কিং ঋণাত্মক হতে পারে না');
+  if (!(Number(set.passPercent) >= 0 && Number(set.passPercent) <= 100)) errors.push('পাস শতাংশ ০–১০০ হতে হবে');
+
+  const ids = Array.isArray(set.questionIds) ? set.questionIds : [];
+  if (!ids.length) errors.push('কমপক্ষে একটি প্রশ্ন বেছে নাও');
+  const missing = ids.filter(id => !mcqIds.has(id));
+  if (missing.length) errors.push(`ব্যাংকে নেই এমন প্রশ্ন: ${missing.join(', ')}`);
+
+  if (set.kind === 'live') {
+    const opens = Date.parse(set.window?.opensAt || '');
+    const closes = Date.parse(set.window?.closesAt || '');
+    if (!Number.isFinite(opens) || !Number.isFinite(closes)) errors.push('লাইভ পরীক্ষার শুরু/শেষ সময় ঠিকমতো দাও');
+    else if (closes <= opens) errors.push('শেষ সময় শুরু সময়ের পরে হতে হবে');
+  }
+  return errors;
+}
+
+/** Every problem that would break a view, as [{ kind, id, message }] */
+export function validateBank(data) {
+  const problems = [];
+  const chapterIds = new Set((data?.chapters || []).map(chapter => chapter.id));
+  const mcqIds = new Set((data?.questions?.mcq || []).map(question => question.id));
+
+  (data?.questions?.mcq || []).forEach(question => {
+    validateMcq(question, chapterIds).forEach(message => problems.push({ kind: 'mcq', id: question.id, message }));
+  });
+  (data?.questions?.cq || []).forEach(question => {
+    validateCq(question).forEach(message => problems.push({ kind: 'cq', id: question.id, message }));
+  });
+  (data?.sets || []).forEach(set => {
+    validateSet(set, mcqIds).forEach(message => problems.push({ kind: 'sets', id: set.id, message }));
+  });
+
+  return problems;
+}
+
+export function blankMcq(chapterId = '') {
+  return {
+    id: '',
+    chapterId,
+    subjectId: '',
+    difficulty: 'medium',
+    topic: '',
+    marks: 1,
+    stem: '',
+    options: [
+      { id: 'A', text: '' }, { id: 'B', text: '' }, { id: 'C', text: '' }, { id: 'D', text: '' }
+    ],
+    answer: 'A',
+    explanation: ''
+  };
+}
+
+export const CQ_SKILLS = Object.freeze(['জ্ঞান', 'বোধগ', 'প্রয়োগ', 'উচ্চতর দক্ষতা']);
+
+export function blankCq(chapterId = '') {
+  return {
+    id: '',
+    chapterId,
+    subjectId: '',
+    difficulty: 'medium',
+    stimulus: '',
+    parts: ['ক', 'খ', 'গ', 'ঘ'].map((label, index) => ({
+      label, skill: CQ_SKILLS[index] || CQ_SKILLS[2], marks: index + 1, question: '', modelAnswer: '', hint: ''
+    }))
+  };
+}
+
+export function blankSet(chapterId = '') {
+  return {
+    id: '', kind: 'practice', title: '', chapterId, durationMin: 10, negativePerWrong: 0,
+    passPercent: 40, shuffle: { questions: false, options: false }, questionIds: [], description: ''
+  };
+}
+
+/** `datetime-local` needs a local-time string; Date#toISOString would shift the window. */
+export function toLocalInput(value) {
+  const time = typeof value === 'number' ? value : Date.parse(value || '');
+  if (!Number.isFinite(time)) return '';
+  const date = new Date(time);
+  const pad = number => String(number).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }

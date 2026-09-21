@@ -12,6 +12,9 @@ import { initModals } from './modals.js';
 import { initProfile, openProfileEditor, shareStudentOnWhatsApp } from './profile.js';
 import { initRoutine } from './routine.js';
 import { initExams, openExamCatalogue, renderDeviceResults } from './exams.js';
+import { initAdmin, openAdminPanel, syncAdminShortcut } from './admin.js';
+import { isAdminSession } from './admin-data.js';
+import { initNotices, renderNotices } from './notices.js';
 import { initInstallPrompt, installApp } from './install.js';
 import { initConnectivity } from './connectivity.js';
 import { registerServiceWorker } from './service-worker.js';
@@ -67,10 +70,13 @@ function handleAction(action) {
 function enterApp() {
   openStudentApp(state);
   renderDeviceResults();
+  renderNotices();
+  syncAdminShortcut();
 }
 
 function leaveApp() {
   clearSession();
+  renderNotices();
   switchAuthTab('login');
   showAuthScreen();
   setAuthMessage('লগআউট হয়েছে। আবার প্রবেশ করতে মোবাইল নম্বর ও PIN দিন।');
@@ -105,11 +111,23 @@ initLogin({
 initRegister({ state });
 initRecovery({ state });
 initLogout({ onLoggedOut: leaveApp });
+initNotices();
+// Leaving the demo panel returns to whichever screen this session belongs to.
+initAdmin({
+  state,
+  onExit: () => {
+    if (state.account && hasSession()) enterApp();
+    else showAuthScreen();
+  }
+});
 
 // Pending-account screen is the only other place a student can leave the app.
 $('#pendingLogout')?.addEventListener('click', leaveApp);
 
-if (state.account && hasSession()) {
+// A demo admin session survives a refresh, so the panel is where you land back.
+if (isAdminSession()) {
+  openAdminPanel('overview');
+} else if (state.account && hasSession()) {
   state.student = { ...state.student, ...(state.account.student || {}) };
   saveStudent(state.student);
   enterApp();
