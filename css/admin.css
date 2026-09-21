@@ -83,6 +83,22 @@
 .admin-option input[type="radio"] { width: 14px; height: 14px; accent-color: var(--forest); }
 .admin-option input[type="text"], .admin-option input:not([type]) { flex: 1; min-width: 0; }
 
+.admin-tabs-inner { margin-bottom: 10px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--white); padding: 7px; }
+.admin-toolbar-right { margin-left: auto; display: flex; align-items: center; gap: 5px; }
+.admin-editor { padding: 11px; margin-bottom: 10px; border: 1px solid rgba(21, 77, 66, .35); border-radius: var(--radius-md); background: #f4faf6; }
+.admin-editor-head { display: flex; align-items: baseline; gap: 7px; margin-bottom: 7px; }
+.admin-editor-head h3 { font-size: 11px; }
+.admin-editor-head small { color: var(--muted); font-size: 8px; }
+.admin-checks { display: flex; gap: 12px; margin-top: 8px; color: var(--muted); font-size: 9px; font-weight: 700; }
+.admin-pick { max-height: 190px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; margin-top: 6px; padding: 7px; border: 1px solid var(--line); border-radius: 10px; background: #fbfcfb; }
+.admin-pick-row { display: flex; align-items: flex-start; gap: 6px; padding: 3px 4px; border-radius: 7px; font-size: 9px; line-height: 1.5; }
+.admin-pick-row:hover { background: var(--mint); }
+.admin-pick-row b { font-family: "SFMono-Regular", Consolas, monospace; font-size: 8px; color: var(--muted); }
+.admin-textarea { width: 100%; margin-top: 8px; padding: 8px; border: 1px solid #dbe4dc; border-radius: 9px; background: #fbfcfb; color: var(--ink); font-family: "SFMono-Regular", Consolas, monospace; font-size: 8px; line-height: 1.55; }
+.admin-note, .admin-sub { margin-top: 8px; color: var(--muted); font-size: 8px; line-height: 1.6; }
+.admin-sub { margin-top: 12px; }
+a.admin-btn { display: inline-flex; align-items: center; text-decoration: none; }
+
 .admin-hidden { margin-top: 12px; padding: 11px; border: 1px dashed #d7e1d8; border-radius: var(--radius-md); background: #f7f9f7; }
 .admin-hidden p { color: var(--muted); font-size: 9px; font-weight: 700; }
 .admin-hidden-inner { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 8px; }

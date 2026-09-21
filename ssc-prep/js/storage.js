@@ -101,55 +101,19 @@ export function clearDraft(setId) {
   write(KEYS.draft, drafts);
 }
 
-/* ---------- admin overlay (device-local question-bank edits) ---------- */
+/* ---------- question-bank overlay (read-only here) ---------- */
 
-const BANK_KINDS = ['mcq', 'cq', 'sets'];
-
-function readOverlay() {
-  const stored = read(KEYS.bank, null);
-  const overlay = isObject(stored) ? stored : {};
-  const clean = { version: 1, updatedAt: overlay.updatedAt || null };
-  BANK_KINDS.forEach(kind => {
-    clean[kind] = isObject(overlay[kind]) ? overlay[kind] : {};
-  });
-  return clean;
-}
+/*
+ * `ssc-prep-bank-v1` holds device-local patches on top of data/questions.json:
+ *   { version, updatedAt, mcq: { id: partialEntry | {removed:true} }, cq: {}, sets: {} }
+ * The app only ever READS it and merges it in js/exam-logic.js#mergeBank.
+ * Writing is done in exactly one place — "শিক্ষার্থী এপ ম্যানেজমেন্ট" in the main app
+ * (../js/admin-ssc.js) — so there is never a second editor to keep in sync.
+ */
 
 export function loadBankOverlay() {
-  const overlay = readOverlay();
-  return BANK_KINDS.some(kind => Object.keys(overlay[kind]).length) ? overlay : null;
-}
-
-/** `patch` is a partial entry, or `{ removed: true }` to hide an entry. */
-export function saveBankPatch(kind, id, patch) {
-  if (!BANK_KINDS.includes(kind) || !id) return false;
-  const overlay = readOverlay();
-  overlay[kind][id] = patch;
-  overlay.updatedAt = Date.now();
-  return write(KEYS.bank, overlay);
-}
-
-/** Undo a single admin edit: the shipped JSON entry shows through again. */
-export function dropBankPatch(kind, id) {
-  if (!BANK_KINDS.includes(kind) || !id) return false;
-  const overlay = readOverlay();
-  delete overlay[kind][id];
-  overlay.updatedAt = Date.now();
-  const empty = BANK_KINDS.every(item => !Object.keys(overlay[item]).length);
-  if (empty) {
-    try { window.localStorage.removeItem(KEYS.bank); } catch { /* no-op */ }
-    return true;
-  }
-  return write(KEYS.bank, overlay);
-}
-
-export function replaceBankOverlay(overlay) {
-  if (!isObject(overlay)) return false;
-  return write(KEYS.bank, overlay);
-}
-
-export function clearBankOverlay() {
-  try { window.localStorage.removeItem(KEYS.bank); return true; } catch { return false; }
+  const stored = read(KEYS.bank, null);
+  return isObject(stored) ? stored : null;
 }
 
 /* ---------- prefs ---------- */

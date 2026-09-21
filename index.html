@@ -40,7 +40,7 @@
           <button class="auth-submit" type="submit">লগইন করুন <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg></button>
         </form>
         <button class="demo-button" type="button" id="demoLoginButton"><span class="demo-dot"></span> ডামি অ্যাকাউন্টে এক ক্লিকে প্রবেশ</button>
-        <button class="demo-button demo-button-admin" type="button" id="demoAdminButton" data-admin-act="open"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-sliders"></use></svg> ডেমো এডমিন প্যানেল — এক ক্লিকে</button>
+        <button class="demo-button demo-button-admin" type="button" id="demoAdminButton" data-admin-act="open"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-sliders"></use></svg"> শিক্ষার্থী এপ ম্যানেজমেন্ট — এক ক্লিকে (ডেমো)</button>
         <p class="auth-footnote">অ্যাকাউন্ট নেই? <button type="button" class="inline-link" data-auth-tab="register">রেজিস্ট্রেশন করুন</button></p>
       </div>
 
@@ -115,12 +115,12 @@
   </section>
 
   <!-- Demo admin panel. Structure only; js/admin.js renders every section. -->
-  <section class="app-shell admin-shell" id="adminScreen" hidden aria-label="Active Plus ডেমো এডমিন প্যানেল">
+  <section class="app-shell admin-shell" id="adminScreen" hidden aria-label="শিক্ষার্থী এপ ম্যানেজমেন্ট">
     <header class="admin-bar">
       <span class="admin-mark"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-sliders"></use></svg></span>
       <div class="admin-bar-copy">
-        <strong>Active Plus · এডমিন</strong>
-        <small>ডেমো মোড — সব ডেটা এই ডিভাইসেই</small>
+        <strong>শিক্ষার্থী এপ ম্যানেজমেন্ট</strong>
+        <small>ডেমো মোড — Active Plus পরীক্ষা ও SSC প্রস্তুতি, এক জায়গায়</small>
       </div>
       <button class="admin-exit" type="button" data-admin-act="exit"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-logout"></use></svg>শিক্ষার্থী অ্যাপে ফেরো</button>
     </header>
@@ -131,6 +131,7 @@
       <button class="admin-tab" type="button" role="tab" data-admin-act="tab" data-admin-tab="attempts">নম্বর দাও</button>
       <button class="admin-tab" type="button" role="tab" data-admin-act="tab" data-admin-tab="approvals">অনুমোদন</button>
       <button class="admin-tab" type="button" role="tab" data-admin-act="tab" data-admin-tab="notices">নোটিশ</button>
+      <button class="admin-tab" type="button" role="tab" data-admin-act="tab" data-admin-tab="ssc">SSC প্রস্তুতি</button>
     </nav>
     <main class="admin-body" id="adminBody"></main>
   </section>
@@ -158,7 +159,7 @@
         </button>
         <div class="topbar-actions">
           <span class="weather-pill" id="weatherStatus" aria-label="আজকের আবহাওয়া"><svg id="weatherIcon" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-sun"></use></svg><span id="weatherLabel">স্বচ্ছ আকাশ</span></span>
-          <button class="icon-button admin-shortcut" id="adminShortcut" type="button" data-admin-act="open" aria-label="এডমিন প্যানেল" hidden>
+          <button class="icon-button admin-shortcut" id="adminShortcut" type="button" data-admin-act="open" aria-label="শিক্ষার্থী এপ ম্যানেজমেন্ট" hidden>
             <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-sliders"></use></svg>
           </button>
           <button class="icon-button notification-button" id="notificationButton" type="button" aria-label="নোটিশ দেখুন" aria-haspopup="dialog">

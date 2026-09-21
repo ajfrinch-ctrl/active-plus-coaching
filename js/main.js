@@ -13,7 +13,7 @@ import { initProfile, openProfileEditor, shareStudentOnWhatsApp } from './profil
 import { initRoutine } from './routine.js';
 import { initExams, openExamCatalogue, renderDeviceResults } from './exams.js';
 import { initAdmin, openAdminPanel, syncAdminShortcut } from './admin.js';
-import { isAdminSession } from './admin-data.js';
+import { isAdminSession, startDemoAdmin } from './admin-data.js';
 import { initNotices, renderNotices } from './notices.js';
 import { initInstallPrompt, installApp } from './install.js';
 import { initConnectivity } from './connectivity.js';
@@ -125,7 +125,16 @@ initAdmin({
 $('#pendingLogout')?.addEventListener('click', leaveApp);
 
 // A demo admin session survives a refresh, so the panel is where you land back.
-if (isAdminSession()) {
+const manageParams = new URLSearchParams(window.location.search);
+if (manageParams.get('manage')) {
+  startDemoAdmin();
+  syncAdminShortcut();
+  openAdminPanel(manageParams.get('tab') || 'overview');
+  // the demo flag is one-shot: a later refresh lands in the student app again
+  if (window.history && window.history.replaceState) {
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+} else if (isAdminSession()) {
   openAdminPanel('overview');
 } else if (state.account && hasSession()) {
   state.student = { ...state.student, ...(state.account.student || {}) };

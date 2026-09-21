@@ -454,6 +454,9 @@ function applyPatches(list, patches) {
  * Merges a device-local overlay ({ mcq: {id: patch}, cq: {}, sets: {} }) into the
  * shipped payload. Unknown ids become new entries, `removed: true` hides an entry,
  * and everything else is a shallow override — the base object is never mutated.
+ *
+ * The overlay is written by "শিক্ষার্থী এপ ম্যানেজমেন্ট" (../js/admin-ssc.js); this
+ * module only reads and merges, so both apps share one logic layer and one editor.
  */
 export function mergeBank(base, overlay) {
   if (!overlay || typeof overlay !== 'object') return base;

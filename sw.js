@@ -1,4 +1,4 @@
-const CACHE_NAME = 'active-plus-student-v30';
+const CACHE_NAME = 'active-plus-student-v31';
 const APP_SHELL = [
   './',
   './index.html',
@@ -33,6 +33,9 @@ const APP_SHELL = [
   './js/exam-hash.js',
   './js/exams.js',
   './js/admin-data.js',
+  './js/admin-ssc.js',
+  './ssc-prep/js/exam-logic.js',
+  './ssc-prep/data/questions.json',
   './js/admin.js',
   './js/notices.js',
   './js/profile.js',

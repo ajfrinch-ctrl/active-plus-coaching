@@ -10,6 +10,7 @@ import { exams as shippedExams, examSubjectTones, subjectInitials } from './conf
 import { loadExamAttempts } from './storage.js';
 import { renderExams, renderDeviceResults } from './exams.js';
 import { renderNotices } from './notices.js';
+
 import {
   authoredExam, clearAdminData, hiddenExams, clearTeacherMarks, deleteAuthoredExam, deleteNotice, effectiveExams,
   endAdminSession, examIsHidden, isAdminSession, isAuthored, patchShippedExam, publishNotice, publishedNotices,
@@ -24,10 +25,27 @@ const TABS = [
   { key: 'builder', label: 'পরীক্ষা বানাও' },
   { key: 'attempts', label: 'নম্বর দাও' },
   { key: 'approvals', label: 'অনুমোদন' },
-  { key: 'notices', label: 'নোটিশ' }
+  { key: 'notices', label: 'নোটিশ' },
+  { key: 'ssc', label: 'SSC প্রস্তুতি' }
 ];
 
 let tab = 'overview';
+/* The SSC scope is loaded lazily: a deployment without the ssc-prep/ folder must
+ * still open the management panel, just without that tab's content. */
+let sscScope = null;
+let sscUnavailable = false;
+
+function ensureSscScope() {
+  if (sscScope || sscUnavailable) return Promise.resolve();
+  return import('./admin-ssc.js')
+    .then(async module => {
+      sscScope = module;
+      await module.initSscAdmin();
+    })
+    .catch(() => {
+      sscUnavailable = true;
+    });
+}
 let draft = null;
 let flash = null;
 let onExit = null;
@@ -35,7 +53,8 @@ let onExit = null;
 /* ---------- open / close ---------- */
 
 export function openAdminPanel(nextTab = 'overview') {
-  tab = nextTab;
+  // the tab may come from a URL (?manage=1&tab=…), so an unknown key must not reach renderPanel
+  tab = TABS.some(item => item.key === nextTab) ? nextTab : 'overview';
   const auth = $('#authScreen');
   const shell = $('#appShell');
   const panel = $('#adminScreen');
@@ -110,7 +129,7 @@ function panelOverview() {
   return `
     ${flashNote()}
     <div class="admin-lede">
-      <h2>এক ক্লিকে ডেমো এডমিন</h2>
+      <h2>শিক্ষার্থী এপ ম্যানেজমেন্ট</h2>
       <p>এই প্যানেলটি কোনো সার্ভারে যায় না — যা যা সেভ করো সব এই ব্রাউজারের localStorage-এ থাকে, আর সঙ্গে সঙ্গে শিক্ষার্থীর অ্যাপে দেখা যায়। আসল অ্যাপে এডমিন প্যানেল যুক্ত হলে একই ডেটা শেপ সার্ভার থেকে আসবে।</p>
     </div>
     <div class="admin-stats">
@@ -131,12 +150,13 @@ function panelOverview() {
         ${adminButton('নতুন পরীক্ষা', 'new-exam', '', 'primary')}
       </div>
     </div>
+    ${scopeCard()}
     <div class="admin-card admin-danger">
       <h3>লোকাল ডেটা</h3>
-      <p>শিপ করা <code>js/config.js</code> কখনো বদলায় না। ${num(overrides)}টি ওভাররাইড ও ${num(authored)}টি লোকাল পরীক্ষা এই ডিভাইসে সংরক্ষিত।</p>
+      <p>শিপ করা <code>js/config.js</code> আর <code>ssc-prep/data/questions.json</code> কখনো বদলায় না। ${num(overrides)}টি ওভাররাইড ও ${num(authored)}টি লোকাল পরীক্ষা এই ডিভাইসে সংরক্ষিত; রিসেট চাপলে SSC প্রস্তুতির লোকাল এডিটও মুছে যাবে।</p>
       <div class="row-actions admin-row-actions">
         ${adminButton('JSON এক্সপোর্ট', 'export')}
-        ${adminButton('এডমিন ডেটা রিসেট', 'clear-data', '', 'danger')}
+        ${adminButton('দুটো স্কোপই রিসেট', 'clear-data', '', 'danger')}
       </div>
       <pre class="admin-export" id="adminExport" hidden></pre>
     </div>`;
@@ -166,6 +186,22 @@ function rosterAuthored() {
     if (isAuthored(exam.id)) authored[exam.id] = exam;
   });
   return authored;
+}
+
+function scopeCard() {
+  const ssc = sscScope ? sscScope.sscOverviewLine() : { ready: false, text: sscUnavailable ? 'ssc-prep/ ফোল্ডারটি এই সার্ভারে নেই — ম্যানেজমেন্ট প্যানেল শুধু Active Plus স্কোপ দেখাচ্ছে' : 'SSC স্কোপ লোড হচ্ছে…' };
+  return `
+    <div class="admin-card">
+      <h3>স্কোপ</h3>
+      <p>এই প্যানেলটি দুটো অ্যাপ একসাথে ম্যানেজ করে — <b>Active Plus</b> পরীক্ষা (এই ট্যাবগুলো) ও <b>SSC প্রস্তুতি</b> (<code>ssc-prep/</code>)।</p>
+      <ul class="admin-steps">
+        <li>${ssc.ready ? escapeText(ssc.text) : escapeText(ssc.text)}${ssc.problems ? ` · ${num(ssc.problems)}টি ব্যাংক ত্রুটি` : ''}</li>
+      </ul>
+      <div class="admin-row-actions">
+        ${adminButton('SSC প্রশ্নব্যাংক ম্যানেজ করুন', 'tab', 'data-admin-tab="ssc"', 'primary')}
+        <a class="admin-btn" href="ssc-prep/" target="_blank" rel="noopener">ssc-prep অ্যাপ খুলুন</a>
+      </div>
+    </div>`;
 }
 
 function panelBank() {
@@ -535,13 +571,18 @@ function refreshStudentViews() {
 function renderPanel() {
   const body = $('#adminBody');
   if (!body) return;
+  if (tab === 'ssc' && !sscScope && !sscUnavailable) {
+    ensureSscScope().then(() => renderPanel());
+    return;
+  }
   body.innerHTML = {
     overview: panelOverview,
     bank: panelBank,
     builder: panelBuilder,
     attempts: panelAttempts,
     approvals: panelApprovals,
-    notices: panelNotices
+    notices: panelNotices,
+    ssc: () => (sscScope ? sscScope.renderSscBank() : '<p class="admin-empty">ssc-prep/ ফোল্ডারটি এই সার্ভারে পাওয়া যায়নি।</p>')
   }[tab]();
 
   $$('#adminTabs [data-admin-tab]').forEach(button => {
@@ -670,12 +711,13 @@ const ACTIONS = {
   },
   'clear-data': () => {
     clearAdminData();
+    sscScope?.resetSscEdits?.();
     draft = null;
     refreshStudentViews();
     startDemoAdmin();
     syncAdminShortcut();
     tab = 'overview';
-    announce('এডমিন ডেটা মুছে ফেলা হয়েছে — শিপ করা config.js আবার একমাত্র উৎস', 'neutral');
+    announce('ম্যানেজমেন্ট ডেটা মুছে ফেলা হয়েছে — শিপ করা config.js ও questions.json আবার একমাত্র উৎস', 'neutral');
   }
 };
 
@@ -684,6 +726,14 @@ export function initAdmin({ state, onExit: exitHandler } = {}) {
   const body = $('#adminBody');
 
   document.addEventListener('click', event => {
+    const sscTrigger = event.target.closest('[data-ssc-act]');
+    if (sscTrigger) {
+      event.preventDefault();
+      const handled = sscScope?.handleSscAction(sscTrigger);
+      if (handled && typeof handled.then === 'function') handled.then(() => renderPanel());
+      else if (handled) renderPanel();
+      return;
+    }
     const trigger = event.target.closest('[data-admin-act]');
     if (!trigger) return;
     event.preventDefault();
@@ -694,6 +744,7 @@ export function initAdmin({ state, onExit: exitHandler } = {}) {
 
   // The builder keeps its own in-memory draft so typing never fights a re-render.
   body.addEventListener('input', event => {
+    if (tab === 'ssc') sscScope?.handleSscInput(event);
     const target = event.target;
     if (target.dataset.meta && draft) {
       draft.meta[target.dataset.meta] = target.type === 'number' ? Number(target.value) || 0 : target.value;
