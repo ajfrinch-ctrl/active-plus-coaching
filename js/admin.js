@@ -161,14 +161,28 @@ function visibleStudents() {
     if (!matchesFilter) return false;
     if (!rawQuery) return true;
 
-    // Check name (Bangla & English)
-    const nameBn = (student.name || '').toLowerCase();
-    const nameEn = (student.nameEn || '').toLowerCase();
-    if (nameBn.includes(rawQuery) || nameEn.includes(rawQuery)) {
+    // 1. Check Student ID (ID string, numeric digits, Bangla numerals)
+    const idStr = String(student.id || '').toLowerCase();
+    const idDigits = normalizeDigitsOnly(student.id);
+    const idBn = toBanglaNumber(student.id).toLowerCase();
+
+    if (
+      idStr.includes(rawQuery) ||
+      (digitQuery && idDigits.includes(digitQuery)) ||
+      idBn.includes(rawQuery)
+    ) {
       return true;
     }
 
-    // Check mobile and guardian mobile (both English digits & Bangla digits)
+    // 2. Check Name (Bangla & English) and Father's Name
+    const nameBn = (student.name || '').toLowerCase();
+    const nameEn = (student.nameEn || '').toLowerCase();
+    const fatherName = (student.fatherName || '').toLowerCase();
+    if (nameBn.includes(rawQuery) || nameEn.includes(rawQuery) || fatherName.includes(rawQuery)) {
+      return true;
+    }
+
+    // 3. Check Mobile and Guardian Mobile (both English digits & Bangla digits)
     const mobileNorm = normalizeDigitsOnly(student.mobile);
     const guardianMobileNorm = normalizeDigitsOnly(student.guardianMobile);
     const mobileBn = toBanglaNumber(student.mobile);
@@ -176,7 +190,7 @@ function visibleStudents() {
 
     if (
       (digitQuery && (mobileNorm.includes(digitQuery) || guardianMobileNorm.includes(digitQuery))) ||
-      student.mobile.toLowerCase().includes(rawQuery) ||
+      (student.mobile && student.mobile.toLowerCase().includes(rawQuery)) ||
       (student.guardianMobile && student.guardianMobile.toLowerCase().includes(rawQuery)) ||
       mobileBn.includes(rawQuery) ||
       guardianMobileBn.includes(rawQuery)
@@ -184,16 +198,10 @@ function visibleStudents() {
       return true;
     }
 
-    // Check Student ID
-    const idStr = (student.id || '').toLowerCase();
-    const idDigits = normalizeDigitsOnly(student.id);
-    const idBn = toBanglaNumber(student.id);
-
-    if (
-      idStr.includes(rawQuery) ||
-      (digitQuery && idDigits.includes(digitQuery)) ||
-      idBn.includes(rawQuery)
-    ) {
+    // 4. Check Class & Group
+    const className = (student.className || '').toLowerCase();
+    const group = (student.group || '').toLowerCase();
+    if (className.includes(rawQuery) || group.includes(rawQuery)) {
       return true;
     }
 
