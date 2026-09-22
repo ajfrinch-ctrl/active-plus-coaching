@@ -12,34 +12,56 @@
   <link rel="preload" href="assets/fonts/NotoSansBengali-Variable.ttf" as="font" type="font/ttf" crossorigin>
 </head>
 <body>
-  <!-- One-click entry screen: no password, no PIN. A single tap opens the dummy Admin Panel. -->
-  <section class="admin-entry" id="adminEntry" aria-label="ডামি এডমিন প্যানেলে এক ক্লিকে প্রবেশ">
-    <div class="admin-entry-topbar">
-      <div class="admin-brand">
+  <!-- Admin Login Screen (matching student dummy login layout) -->
+  <section class="auth-screen admin-auth-screen" id="adminEntry" aria-label="Active Plus এডমিন লগইন">
+    <div class="auth-topbar">
+      <div class="auth-brand">
         <img src="assets/icons/app-logo.png" alt="Active Plus Coaching logo" width="38" height="38">
-        <span><strong>Active Plus Coaching</strong><small>শিখতে থাকো, এগিয়ে যাও</small></span>
+        <span><strong>Active Plus Coaching</strong><small data-fixed-tagline aria-label="শিখতে থাকো, এগিয়ে যাও">শিখতে থাকো, এগিয়ে যাও</small></span>
       </div>
     </div>
-    <div class="admin-entry-body">
-      <article class="admin-entry-card">
-        <span class="entry-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-shield"></use></svg></span>
-        <span class="entry-kicker">ADMIN PANEL • DEMO</span>
-        <h1>এক ক্লিকে এডমিন প্যানেলে প্রবেশ</h1>
-        <p>পাসওয়ার্ড বা PIN লাগবে না। নিচের বাটনে একবার চাপ দিলেই ডামি এডমিন প্যানেলে ঢুকে যাওয়া যাবে।</p>
-        <button class="entry-enter" id="adminEnterButton" type="button">
-          <span class="entry-pulse" aria-hidden="true"></span>
-          এক ক্লিকে প্যানেলে ঢুকুন
-          <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg>
-        </button>
-        <div class="entry-note">
-          <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-info"></use></svg>
-          <span>ডেমো মোড: সব তথ্য নকল ডেটা, শুধু এই ডিভাইসে থাকে। ভবিষ্যতে আসল API ও নিরাপদ লগইন যুক্ত হবে।</span>
+    <div class="auth-card">
+      <div class="auth-tabs" role="tablist" aria-label="অ্যাকাউন্ট অপশন">
+        <button class="auth-tab active" type="button" data-auth-tab="login" role="tab" aria-selected="true">এডমিন লগইন</button>
+      </div>
+
+      <div class="auth-panel active" id="adminLoginPanel" data-auth-panel="login">
+        <div class="auth-panel-heading">
+          <div>
+            <h2>এডমিন লগইন</h2>
+          </div>
         </div>
-        <a class="entry-back" href="index.html">
-          <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-left"></use></svg>
-          শিক্ষার্থী অ্যাপে ফিরে যান
-        </a>
-      </article>
+        <form id="adminLoginForm" novalidate>
+          <label for="adminLoginUser">মোবাইল নম্বর বা ইউজার আইডি</label>
+          <div class="input-wrap">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-phone"></use></svg>
+            <input id="adminLoginUser" name="username" type="text" placeholder="০১XXXXXXXXX" value="01700000000" required>
+          </div>
+          <label for="adminLoginPin">পাসকোড / PIN</label>
+          <div class="input-wrap">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg>
+            <input id="adminLoginPin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="6" autocomplete="current-password" placeholder="৪–৬ সংখ্যার PIN" value="1234" required>
+            <button class="show-pin" type="button" data-toggle-pin="adminLoginPin" aria-label="PIN দেখুন">
+              <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg>
+            </button>
+          </div>
+          <div class="form-row">
+            <label class="remember-label">
+              <input type="checkbox" id="rememberAdmin" checked>
+              <span class="fake-check"></span>এই ডিভাইসে মনে রাখুন
+            </label>
+          </div>
+          <button class="auth-submit" type="submit">
+            লগইন করুন <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg>
+          </button>
+        </form>
+        <button class="demo-button" type="button" id="adminEnterButton">
+          <span class="demo-dot"></span> ডামি অ্যাকাউন্টে এক ক্লিকে প্রবেশ
+        </button>
+        <p class="auth-footnote">
+          <a class="inline-link" href="index.html">← শিক্ষার্থী অ্যাপে ফিরে যান</a>
+        </p>
+      </div>
     </div>
   </section>
 
@@ -676,6 +698,9 @@
     <symbol id="icon-wallet" viewBox="0 0 24 24"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h3v-4h-3z"/></symbol>
     <symbol id="icon-printer" viewBox="0 0 24 24"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></symbol>
     <symbol id="icon-receipt" viewBox="0 0 24 24"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M8 7h8M8 11h8M8 15h5"/></symbol>
+    <symbol id="icon-phone" viewBox="0 0 24 24"><path d="M6 3h3l2 5-2 1.5a12 12 0 0 0 5.5 5.5L16 13l5 2v3a2 2 0 0 1-2 2C10.7 20 4 13.3 4 5a2 2 0 0 1 2-2Z"/></symbol>
+    <symbol id="icon-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
+    <symbol id="icon-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 6.5 12 6.5 21.5 12 21.5 12 18 17.5 12 17.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="2.5"/></symbol>
     <symbol id="icon-check-circle" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></symbol>
   </svg>
   <script type="module" src="js/admin.js"></script>

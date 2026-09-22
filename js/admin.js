@@ -61,7 +61,7 @@ function enterPanel() {
   $('#adminShell').hidden = false;
   renderAll();
   window.scrollTo(0, 0);
-  toast('এক ক্লিকে ডামি এডমিন প্যানেলে প্রবেশ করা হয়েছে');
+  toast('এডমিন প্যানেলে সফলভাবে প্রবেশ করা হয়েছে');
 }
 
 function exitPanel() {
@@ -901,8 +901,20 @@ function renderAll() {
 
 /* ---------- Wiring ---------- */
 
-$('#adminEnterButton').addEventListener('click', enterPanel);
-$('#adminExitButton').addEventListener('click', exitPanel);
+$('#adminLoginForm')?.addEventListener('submit', event => {
+  event.preventDefault();
+  enterPanel();
+});
+$('#adminEnterButton')?.addEventListener('click', enterPanel);
+$('#adminExitButton')?.addEventListener('click', exitPanel);
+
+$$('[data-toggle-pin]').forEach(button => {
+  button.addEventListener('click', () => {
+    const input = $(`#${button.dataset.togglePin}`);
+    if (!input) return;
+    input.type = input.type === 'password' ? 'text' : 'password';
+  });
+});
 
 $$('.admin-nav-item, .admin-bottom-item').forEach(item => {
   item.addEventListener('click', () => setView(item.dataset.adminView));
