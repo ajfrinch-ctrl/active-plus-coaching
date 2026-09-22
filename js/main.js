@@ -1,7 +1,7 @@
 /* Application composition root. Feature modules can be replaced independently.
    Updated: don't ask security check every time - auto-login for trusted devices. */
 import { APP_TAGLINE } from './config.js';
-import { loadStudent, loadAccount, hasSession, persistSession, saveStudent, clearSession, isSecurityCheckDisabled, isTrustedDevice } from './storage.js';
+import { loadStudent, loadAccount, hasSession, persistSession, saveStudent, clearSession, isSecurityCheckDisabled, isTrustedDevice, loadAppConfig } from './storage.js';
 import { $, setAuthMessage, showFeedback } from './ui.js';
 import { renderStudent, openStudentApp, showAuthScreen, setView } from './shell.js';
 import { switchAuthTab, initLogin } from './login.js';
@@ -18,7 +18,80 @@ import { registerServiceWorker } from './service-worker.js';
 import { initDynamicTheme } from './theme.js';
 import { initScrollHeader } from './scroll-header.js';
 
-document.querySelectorAll('[data-fixed-tagline]').forEach(tagline => tagline.setAttribute('aria-label', APP_TAGLINE));
+const appConfig = loadAppConfig();
+
+function applyAppConfig(cfg) {
+  if (!cfg) return;
+
+  // 1. Tagline
+  const taglineText = cfg.tagline || APP_TAGLINE;
+  document.querySelectorAll('[data-fixed-tagline]').forEach(tagline => {
+    tagline.setAttribute('aria-label', taglineText);
+    tagline.textContent = taglineText;
+  });
+
+  // 2. Broadcast / Emergency Alert Banner on Student Home
+  const noticeStrip = $('#noticeStrip') || $('.notice-strip');
+  if (noticeStrip) {
+    if (cfg.broadcastAlert && cfg.broadcastMessage) {
+      noticeStrip.hidden = false;
+      const copyEl = noticeStrip.querySelector('strong');
+      const smallEl = noticeStrip.querySelector('small');
+      if (copyEl) copyEl.textContent = 'জরুরি ঘোষণা';
+      if (smallEl) smallEl.textContent = cfg.broadcastMessage;
+      noticeStrip.dataset.tone = cfg.broadcastTone || 'green';
+    } else if (cfg.broadcastAlert === false) {
+      noticeStrip.hidden = true;
+    }
+  }
+
+  // 3. Maintenance Mode
+  if (cfg.maintenanceMode) {
+    let maintBanner = $('#appMaintenanceBanner');
+    if (!maintBanner) {
+      maintBanner = document.createElement('div');
+      maintBanner.id = 'appMaintenanceBanner';
+      maintBanner.className = 'maintenance-alert-box';
+      maintBanner.innerHTML = `
+        <div style="margin:10px 14px 0;padding:12px 14px;border-radius:14px;background:#fff0eb;border:1px solid #fbdad0;color:#9b4436;font-size:11px;line-height:1.5;">
+          <strong style="display:block;margin-bottom:2px;font-size:12px;">⚠️ সিস্টেম রক্ষণাবেক্ষণ চলছে</strong>
+          <span>${cfg.maintenanceMessage || 'বর্তমানে অ্যাপে আপডেট কাজ চলছে।'}</span>
+        </div>`;
+      $('#authScreen')?.prepend(maintBanner);
+      $('#appShell')?.prepend(maintBanner.cloneNode(true));
+    }
+  }
+
+  // 4. Registration Permission
+  if (cfg.allowRegistration === false) {
+    const regTab = $('[data-auth-tab="register"]');
+    if (regTab) {
+      regTab.disabled = true;
+      regTab.style.opacity = '0.5';
+      regTab.title = 'বর্তমানে নতুন রেজিস্ট্রেশন বন্ধ রয়েছে';
+    }
+  }
+
+  // 5. Module Toggles
+  if (cfg.modules) {
+    if (cfg.modules.routine === false) {
+      $('.bottom-link[data-view="routine"]')?.classList.add('disabled-nav');
+    }
+    if (cfg.modules.courses === false) {
+      $('.bottom-link[data-view="courses"]')?.classList.add('disabled-nav');
+    }
+    if (cfg.modules.results === false) {
+      $('.bottom-link[data-view="results"]')?.classList.add('disabled-nav');
+    }
+  }
+
+  // 6. Theme Mode Override
+  if (cfg.themeMode && cfg.themeMode !== 'auto') {
+    document.documentElement.dataset.timeTheme = cfg.themeMode;
+  }
+}
+
+applyAppConfig(appConfig);
 
 const state = {
   student: loadStudent(),

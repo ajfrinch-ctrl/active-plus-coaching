@@ -2,9 +2,10 @@
    No password, no PIN: a single tap on the entry button opens the panel.
    All data is local demo data from js/admin-data.js — future API work can
    replace the dataset without changing this UI. */
-import { enabledClasses, schedule } from './config.js';
+import { enabledClasses, schedule, DEFAULT_APP_SETTINGS } from './config.js';
 import { toBanglaNumber } from './ui.js';
 import { adminStudents, adminNotices, classEnrollment, classCodes, dayNames, feeCategories, paymentMethods, initialTransactions } from './admin-data.js';
+import { loadAppConfig, saveAppConfig } from './storage.js';
 
 const bn = toBanglaNumber;
 const $ = selector => document.querySelector(selector);
@@ -27,6 +28,7 @@ const state = {
     ])
   ),
   enabled: new Set(enabledClasses),
+  appConfig: loadAppConfig(),
   activeView: 'dashboard',
   activeDay: 'sat',
   activeFinanceTab: 'collection',
@@ -127,6 +129,20 @@ function renderDashboard() {
         </div>
       </div>`).join('')
     : '<p class="admin-empty">আজ কোনো ক্লাস নেই।</p>';
+
+  const cfg = state.appConfig || loadAppConfig();
+  if ($('#dashAppLiveState')) {
+    $('#dashAppLiveState').textContent = cfg.maintenanceMode ? '🔴 রক্ষণাবেক্ষণ মোড' : '🟢 লাইভ চালু';
+  }
+  if ($('#dashAppBroadcastState')) {
+    $('#dashAppBroadcastState').textContent = cfg.broadcastAlert !== false ? 'সক্রিয়' : 'বন্ধ';
+  }
+  if ($('#dashAppRegState')) {
+    $('#dashAppRegState').textContent = cfg.allowRegistration !== false ? 'অনুমোদিত' : 'স্থগিত';
+  }
+  if ($('#dashAppTaglineState')) {
+    $('#dashAppTaglineState').textContent = cfg.tagline || 'শিখতে থাকো, এগিয়ে যাও';
+  }
 }
 
 /* ---------- Students ---------- */
@@ -872,6 +888,109 @@ function renderFinance() {
   renderReportGenerator();
 }
 
+/* ---------- Student App Management ---------- */
+
+function renderAppManagement() {
+  const cfg = state.appConfig || loadAppConfig();
+
+  // Status & Access
+  if ($('#cfgMaintenanceMode')) $('#cfgMaintenanceMode').checked = !!cfg.maintenanceMode;
+  if ($('#cfgMaintenanceMsg')) $('#cfgMaintenanceMsg').value = cfg.maintenanceMessage || '';
+  if ($('#cfgAllowRegistration')) $('#cfgAllowRegistration').checked = cfg.allowRegistration !== false;
+  if ($('#cfgSkipSecurity')) $('#cfgSkipSecurity').checked = cfg.skipSecurityCheck !== false;
+  if ($('#appStatusLiveBadge')) {
+    $('#appStatusLiveBadge').textContent = cfg.maintenanceMode ? '🔴 রক্ষণাবেক্ষণ মোড' : '🟢 অ্যাপ লাইভ';
+    $('#appStatusLiveBadge').className = `badge ${cfg.maintenanceMode ? 'badge-rejected' : 'badge-approved'}`;
+  }
+
+  // Broadcast
+  if ($('#cfgBroadcastAlert')) $('#cfgBroadcastAlert').checked = cfg.broadcastAlert !== false;
+  if ($('#cfgBroadcastMsg')) $('#cfgBroadcastMsg').value = cfg.broadcastMessage || '';
+  if ($('#cfgBroadcastTone')) $('#cfgBroadcastTone').value = cfg.broadcastTone || 'green';
+  if ($('#cfgBroadcastBadge')) {
+    $('#cfgBroadcastBadge').textContent = cfg.broadcastAlert !== false ? 'সক্রিয়' : 'নিষ্ক্রিয়';
+    $('#cfgBroadcastBadge').className = `badge ${cfg.broadcastAlert !== false ? 'badge-approved' : 'badge-pending'}`;
+  }
+
+  // Modules
+  if ($('#cfgModRoutine')) $('#cfgModRoutine').checked = cfg.modules?.routine !== false;
+  if ($('#cfgModCourses')) $('#cfgModCourses').checked = cfg.modules?.courses !== false;
+  if ($('#cfgModResults')) $('#cfgModResults').checked = cfg.modules?.results !== false;
+  if ($('#cfgModInstall')) $('#cfgModInstall').checked = cfg.modules?.installPrompt !== false;
+
+  // Branding & Contacts
+  if ($('#cfgTagline')) $('#cfgTagline').value = cfg.tagline || 'শিখতে থাকো, এগিয়ে যাও';
+  if ($('#cfgHelpline')) $('#cfgHelpline').value = cfg.helplineMobile || '01700000000';
+  if ($('#cfgWhatsapp')) $('#cfgWhatsapp').value = cfg.whatsappNumber || '01700000000';
+  if ($('#cfgEmail')) $('#cfgEmail').value = cfg.officialEmail || 'activeplus.coaching@gmail.com';
+  if ($('#cfgAddress')) $('#cfgAddress').value = cfg.campusAddress || 'দিনাজপুর সদর, দিনাজপুর';
+
+  // Theme Mode
+  if ($('#cfgThemeMode')) $('#cfgThemeMode').value = cfg.themeMode || 'auto';
+}
+
+function saveAppSettingsFromForm() {
+  const maintenanceMode = $('#cfgMaintenanceMode')?.checked || false;
+  const maintenanceMessage = $('#cfgMaintenanceMsg')?.value.trim() || DEFAULT_APP_SETTINGS.maintenanceMessage;
+  const allowRegistration = $('#cfgAllowRegistration')?.checked !== false;
+  const skipSecurityCheck = $('#cfgSkipSecurity')?.checked !== false;
+
+  const broadcastAlert = $('#cfgBroadcastAlert')?.checked !== false;
+  const broadcastMessage = $('#cfgBroadcastMsg')?.value.trim() || DEFAULT_APP_SETTINGS.broadcastMessage;
+  const broadcastTone = $('#cfgBroadcastTone')?.value || 'green';
+
+  const routine = $('#cfgModRoutine')?.checked !== false;
+  const courses = $('#cfgModCourses')?.checked !== false;
+  const results = $('#cfgModResults')?.checked !== false;
+  const installPrompt = $('#cfgModInstall')?.checked !== false;
+
+  const tagline = $('#cfgTagline')?.value.trim() || DEFAULT_APP_SETTINGS.tagline;
+  const helplineMobile = $('#cfgHelpline')?.value.trim() || DEFAULT_APP_SETTINGS.helplineMobile;
+  const whatsappNumber = $('#cfgWhatsapp')?.value.trim() || DEFAULT_APP_SETTINGS.whatsappNumber;
+  const officialEmail = $('#cfgEmail')?.value.trim() || DEFAULT_APP_SETTINGS.officialEmail;
+  const campusAddress = $('#cfgAddress')?.value.trim() || DEFAULT_APP_SETTINGS.campusAddress;
+
+  const themeMode = $('#cfgThemeMode')?.value || 'auto';
+
+  state.appConfig = {
+    maintenanceMode,
+    maintenanceMessage,
+    allowRegistration,
+    skipSecurityCheck,
+    broadcastAlert,
+    broadcastMessage,
+    broadcastTone,
+    tagline,
+    helplineMobile,
+    whatsappNumber,
+    officialEmail,
+    campusAddress,
+    themeMode,
+    modules: {
+      routine,
+      courses,
+      results,
+      installPrompt
+    }
+  };
+
+  saveAppConfig(state.appConfig);
+  renderAppManagement();
+  renderDashboard();
+  toast('শিক্ষার্থী অ্যাপের সকল কনফিগারেশন সফলভাবে সংরক্ষিত ও সক্রিয় করা হয়েছে');
+}
+
+function resetAppSettingsToDefault() {
+  state.appConfig = {
+    ...DEFAULT_APP_SETTINGS,
+    modules: { ...DEFAULT_APP_SETTINGS.modules }
+  };
+  saveAppConfig(state.appConfig);
+  renderAppManagement();
+  renderDashboard();
+  toast('শিক্ষার্থী অ্যাপের ডিফল্ট সেটিংস সফলভাবে প্রয়োগ করা হয়েছে');
+}
+
 /* ---------- Render everything ---------- */
 
 function renderAll() {
@@ -881,10 +1000,31 @@ function renderAll() {
   renderRoutine();
   renderClasses();
   renderFinance();
+  renderAppManagement();
   updatePendingBadge();
 }
 
 /* ---------- Wiring ---------- */
+
+$('#btnSaveAppSettings')?.addEventListener('click', saveAppSettingsFromForm);
+$('#btnSaveTopAppSettings')?.addEventListener('click', saveAppSettingsFromForm);
+$('#btnResetAppSettings')?.addEventListener('click', resetAppSettingsToDefault);
+
+$('#cfgMaintenanceMode')?.addEventListener('change', event => {
+  const isMaint = event.target.checked;
+  if ($('#appStatusLiveBadge')) {
+    $('#appStatusLiveBadge').textContent = isMaint ? '🔴 রক্ষণাবেক্ষণ মোড' : '🟢 অ্যাপ লাইভ';
+    $('#appStatusLiveBadge').className = `badge ${isMaint ? 'badge-rejected' : 'badge-approved'}`;
+  }
+});
+
+$('#cfgBroadcastAlert')?.addEventListener('change', event => {
+  const isAlert = event.target.checked;
+  if ($('#cfgBroadcastBadge')) {
+    $('#cfgBroadcastBadge').textContent = isAlert ? 'সক্রিয়' : 'নিষ্ক্রিয়';
+    $('#cfgBroadcastBadge').className = `badge ${isAlert ? 'badge-approved' : 'badge-pending'}`;
+  }
+});
 
 $('#adminLoginForm')?.addEventListener('submit', event => {
   event.preventDefault();

@@ -831,6 +831,175 @@ body {
   }
 }
 
+/* ---------- Student App Management ---------- */
+
+.app-control-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: 16px;
+}
+@media (max-width: 600px) {
+  .app-control-grid { grid-template-columns: 1fr; }
+}
+
+.app-setting-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+
+.app-toggle-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 1px solid rgba(233, 238, 233, .95);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .5);
+  cursor: pointer;
+  transition: background .18s ease, border-color .18s ease;
+}
+.app-toggle-item:hover {
+  background: rgba(255, 255, 255, .8);
+  border-color: rgba(188, 224, 203, .9);
+}
+
+.app-toggle-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+.app-toggle-copy strong {
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 800;
+}
+.app-toggle-copy small {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.app-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.app-field label {
+  color: var(--ink);
+  font-size: 10.5px;
+  font-weight: 800;
+}
+.app-field input,
+.app-field select,
+.app-field textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid rgba(209, 225, 215, .72);
+  border-radius: 10px;
+  color: var(--ink);
+  background: rgba(255, 255, 255, .6);
+  font-size: 12px;
+  outline: 0;
+  transition: border-color .18s, background .18s;
+}
+.app-field input, .app-field select { height: 40px; }
+.app-field input:focus,
+.app-field select:focus,
+.app-field textarea:focus {
+  border-color: var(--forest);
+  background: rgba(255, 255, 255, .95);
+}
+
+.app-field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+@media (max-width: 500px) {
+  .app-field-row { grid-template-columns: 1fr; }
+}
+
+.app-action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+/* Dashboard App Status row */
+.dash-app-status-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+  padding: 14px 16px;
+}
+.dash-app-status-item {
+  padding: 10px 12px;
+  border: 1px solid rgba(233, 238, 233, .9);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .5);
+}
+.dash-app-status-item span {
+  display: block;
+  color: var(--muted);
+  font-size: 9.5px;
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+.dash-app-status-item strong {
+  display: block;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Toggle switch standard styles */
+.toggle-switch {
+  position: relative;
+  flex: 0 0 42px;
+  width: 42px;
+  height: 24px;
+}
+.toggle-switch input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.toggle-switch i {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: #d9e2db;
+  transition: background .22s;
+}
+.toggle-switch i::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--white);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .18);
+  transition: transform .22s;
+}
+.toggle-switch input:checked + i {
+  background: var(--forest);
+}
+.toggle-switch input:checked + i::after {
+  transform: translateX(18px);
+}
+
 /* ---------- Classes ---------- */
 
 .classes-count { color: var(--forest); font-size: 11px; font-weight: 900; white-space: nowrap; }
