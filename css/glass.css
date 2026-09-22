@@ -1,76 +1,60 @@
-/* Glass visual layer — a modern translucent interface without external assets. */
+/* Flat card layer — ShopLedGer-style solid white cards with hairline borders.
+   This file used to be the translucent "glass" layer; the home redesign moved the
+   whole app to the flat ShopLedGer look, so the same hooks now apply solid cards. */
 :root {
-  --glass: rgba(255, 255, 255, .56);
-  --glass-strong: rgba(255, 255, 255, .74);
-  --glass-soft: rgba(255, 255, 255, .38);
-  --glass-border: rgba(255, 255, 255, .72);
-  --glass-shadow: 0 18px 45px rgba(36, 74, 64, .11), inset 0 1px 0 rgba(255,255,255,.7);
+  --glass: #ffffff;
+  --glass-strong: #ffffff;
+  --glass-soft: #ffffff;
+  --glass-border: #e4ece8;
+  --glass-shadow: 0 8px 28px rgba(4, 121, 90, .07), 0 1px 2px rgba(20, 33, 28, .04);
 }
 
-html, body { background: #dce9e4; }
-body {
-  background:
-    radial-gradient(circle at 7% 8%, rgba(255, 255, 255, .9) 0 4%, transparent 27%),
-    radial-gradient(circle at 92% 22%, rgba(246, 202, 167, .38) 0 3%, transparent 25%),
-    linear-gradient(135deg, #dcece5 0%, #f2eee6 52%, #dce8ef 100%);
-  background-attachment: fixed;
-}
+html, body { background: #f4f7f6; }
+body { background: #f4f7f6; }
 
-.app-shell, .auth-screen {
-  background:
-    radial-gradient(circle at 4% 12%, rgba(255,255,255,.68), transparent 26%),
-    radial-gradient(circle at 94% 28%, rgba(245, 192, 157, .2), transparent 25%),
-    linear-gradient(145deg, rgba(249,253,250,.78), rgba(235,245,240,.52));
-  isolation: isolate;
-}
+.app-shell, .auth-screen { background: #f4f7f6; isolation: isolate; }
 
 .topbar, .auth-topbar, .bottom-nav {
-  border-color: var(--glass-border) !important;
-  background: rgba(255, 255, 255, .46) !important;
-  box-shadow: 0 8px 26px rgba(36, 74, 64, .06), inset 0 1px 0 rgba(255,255,255,.85);
-  backdrop-filter: blur(24px) saturate(1.25);
-  -webkit-backdrop-filter: blur(24px) saturate(1.25);
+  border-color: var(--line) !important;
+  background: rgba(255, 255, 255, .95) !important;
+  box-shadow: 0 4px 20px rgba(4, 79, 58, .05);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
 
-.auth-card, .stat-card, .quick-card, .next-class-card, .class-context,
+.auth-card, .class-context,
 .routine-body, .course-item, .result-stats > div, .result-row,
 .settings-list > button, .contact-card {
   border-color: var(--glass-border) !important;
   background: var(--glass) !important;
   box-shadow: var(--glass-shadow) !important;
-  backdrop-filter: blur(18px) saturate(1.12);
-  -webkit-backdrop-filter: blur(18px) saturate(1.12);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
-.auth-card { background: rgba(255,255,255,.6) !important; }
+.auth-card { background: #ffffff !important; }
 .progress-card, .course-summary, .result-hero, .profile-card {
-  border: 1px solid rgba(255,255,255,.22);
-  box-shadow: 0 18px 34px rgba(21, 77, 66, .18), inset 0 1px 0 rgba(255,255,255,.16);
+  border: 1px solid var(--line);
+  box-shadow: var(--glass-shadow);
 }
-.notice-strip, .help-card { border-color: rgba(255,255,255,.8); box-shadow: var(--glass-shadow); }
-.notice-strip { background: rgba(255, 248, 239, .58); }
-.help-card { background: rgba(255, 248, 238, .56); }
+.notice-strip, .help-card { border-color: var(--line); box-shadow: var(--glass-shadow); }
+.notice-strip { background: #fff7ed; }
+.help-card { background: #ffffff; }
 
-.auth-tabs, .registration-mode { background: rgba(224, 235, 228, .48); border: 1px solid rgba(255,255,255,.45); }
-.auth-tab.active, .mode-button.active { background: rgba(255,255,255,.72); box-shadow: 0 4px 12px rgba(36,74,64,.08); }
+.auth-tabs, .registration-mode { background: #eef3f0; border: 1px solid var(--line); }
+.auth-tab.active, .mode-button.active { background: #ffffff; box-shadow: 0 2px 8px rgba(4, 79, 58, .08); }
 .auth-panel input, .auth-panel select, .auth-panel textarea,
 .edit-modal input, .edit-modal select, .edit-modal textarea {
-  border-color: rgba(209, 225, 215, .72);
-  background: rgba(255,255,255,.48);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  border-color: var(--line);
+  background: #ffffff;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 .auth-panel input:focus, .auth-panel select:focus, .auth-panel textarea:focus,
 .edit-modal input:focus, .edit-modal select:focus, .edit-modal textarea:focus {
-  background: rgba(255,255,255,.8);
-  box-shadow: 0 0 0 3px rgba(102, 169, 128, .12);
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(4, 121, 90, .12);
 }
 
-.step-next, .auth-submit, .modal-action, .pending-logout { box-shadow: 0 8px 18px rgba(21,77,66,.17), inset 0 1px 0 rgba(255,255,255,.16); }
-.step-back, .filter-button, .class-context button, .modal-close { border-color: rgba(255,255,255,.74); background: rgba(255,255,255,.42); }
-
-@supports not (backdrop-filter: blur(1px)) {
-  .topbar, .auth-topbar, .bottom-nav, .auth-card, .stat-card, .quick-card,
-  .next-class-card, .class-context, .routine-body, .course-item, .result-row,
-  .settings-list > button, .contact-card { background: rgba(255,255,255,.9) !important; }
-}
+.step-next, .auth-submit, .modal-action, .pending-logout { box-shadow: 0 6px 16px rgba(4, 121, 90, .18); }
+.step-back, .filter-button, .class-context button, .modal-close { border-color: var(--line); background: #ffffff; }

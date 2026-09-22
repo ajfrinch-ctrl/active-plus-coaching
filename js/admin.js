@@ -98,6 +98,7 @@ function renderDashboard() {
   $('#adminTodayDate').textContent = state.routine.sat.date;
 
   const pending = pendingStudents();
+  $('#dashPendingCount').classList.toggle('has-pending', pending.length > 0);
   $('#dashPendingList').innerHTML = pending.length
     ? pending.map(student => `
       <div class="pending-row">

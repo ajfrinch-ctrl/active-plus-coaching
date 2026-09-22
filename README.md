@@ -15,7 +15,8 @@ Active Plus Coaching-এর মোবাইল-ফার্স্ট Progressive
 - ৮ম শ্রেণি থেকে অনার্স ৪র্থ বর্ষ পর্যন্ত enabled class তালিকা
 - রেজিস্ট্রেশনের পরে স্বয়ংক্রিয় ইউনিক Student ID — বছর, মাস, class code ও sequence
 - অনুমোদনের আগেও লগইন করা যাবে, কিন্তু pending account-এ শিক্ষার্থী ফিচার ব্যবহার করতে পারবে না
-- শিক্ষার্থীর অফলাইন হোম ড্যাশবোর্ড
+- শিক্ষার্থীর অফলাইন হোম ড্যাশবোর্ড — ShopLedGer স্টাইলে নতুন ডিজাইন: ফ্ল্যাট ব্যাকগ্রাউন্ড, সাদা কার্ড, গ্রিন প্রাইমারি, স্বাগত কার্ড, "আজকের পড়াশোনা" স্ট্যাট কার্ড, দ্রুত কাজ গ্রিড ও লিস্ট রো
+- লাইভ টপবার — ব্র্যান্ড সারির নিচে আজকের বার-তারিখ ও চলমান ঘড়ি; সময় অনুযায়ী স্ট্রিপের রঙ বদলায়
 - সাপ্তাহিক অগ্রগতি, উপস্থিতি, গড় ফলাফল ও বাকি কাজ
 - ক্লাস রুটিন — দিনভিত্তিক ফিল্টারসহ
 - চলমান কোর্স ও অধ্যায়ভিত্তিক অগ্রগতি
@@ -23,7 +24,7 @@ Active Plus Coaching-এর মোবাইল-ফার্স্ট Progressive
 - নোটিশ দেখার জন্য অফলাইন মডাল
 - ব্যক্তিগত তথ্য লোকালস্টোরেজে সম্পাদনা ও সংরক্ষণ
 - PWA install prompt এবং service worker cache
-- local time ও offline weather profile অনুযায়ী nature theme পরিবর্তন
+- local time অনুযায়ী টপবার স্ট্রিপের হালকা টিন্ট পরিবর্তন; offline weather profile টপবারের আবহাওয়া চিপে দেখা যায়
 - অষ্টম শ্রেণি থেকে অনার্স ৪র্থ বর্ষ পর্যন্ত ক্লাস কনফিগারেশনের ভিত্তি
 - ডামি এডমিন প্যানেল — পাসওয়ার্ড/PIN ছাড়া এক ক্লিকে প্রবেশ (`admin.html`)
 
@@ -33,7 +34,7 @@ Active Plus Coaching-এর মোবাইল-ফার্স্ট Progressive
 
 প্যানেলে আছে (সব ডেটা লোকাল ডেমো):
 
-- **ড্যাশবোর্ড** — মোট শিক্ষার্থী, অনুমোদনের অপেক্ষমাণ, চলমান ক্লাস ও প্রকাশিত নোটিশের সংখ্যা; অপেক্ষমাণ রেজিস্ট্রেশন দ্রুত অনুমোদন/বাতিল ও আজকের ক্লাস
+- **ড্যাশবোর্ড** — "আজকের হিসাব" হিরো কার্ডে মোট শিক্ষার্থী, চলমান ক্লাস ও প্রকাশিত নোটিশের টাইল, নিচে অনুমোদনের অপেক্ষমাণ সারাংশ; অপেক্ষমাণ রেজিস্ট্রেশন দ্রুত অনুমোদন/বাতিল, আজকের ক্লাস ও ক্লাসভিত্তিক এনরোলমেন্ট চার্ট (ShopLedGer স্টাইল)
 - **ইউনিক আইডি ও অডিট ট্র্যাকিং** — প্রতিটি এন্ট্রি (শিক্ষার্থী ID, ট্রানজেকশন ID, রসিদ ভাউচার, নোটিশ স্মারক, রুটিন ক্লাস কোড, কোর্স কোড ও স্টেটমেন্ট মেমো)-তে স্ট্যান্ডার্ড ইউনিক অডিট কোড সংরক্ষণ
 - **শিক্ষার্থী** — নাম/ID/মোবাইল দিয়ে স্মার্ট সার্চ, লাইভ অটো-হাইড, স্ট্যাটাস ফিল্টার, রেকর্ড দেখা, PIN রিসেট (নতুন PIN ডেমোভাবে দেখায়)
 - **অর্থব্যবস্থাপনা ও ফি কালেকশন** — মোট ফি আদায়, চলতি মাসের কালেকশন ও বকেয়া হিসাবের ড্যাশবোর্ড; নতুন ফি গ্রহণ (নগদ/বিকাশ/নগদ/রকেট), অফিশিয়াল মানি রসিদ তৈরি ও প্রিন্ট; শিক্ষার্থী লেজার এবং মাস/শ্রেণি/ফি ধরনভিত্তিক ফিল্টারযোগ্য প্রতিষ্ঠান প্যাড আর্থিক স্টেটমেন্ট ও প্রিন্ট/PDF এক্সপোর্ট
@@ -52,20 +53,20 @@ index.html              page structure and SVG icon sprite
 admin.html              dummy Admin Panel — এক ক্লিকে প্রবেশের entry screen + panel
 styles.css              CSS entry point (feature imports)
 css/
-  admin.css             Admin Panel styles (entry screen, sidebar, cards, modal)
-  tokens.css            design tokens and reset
+  admin.css             Admin Panel styles (entry screen, sidebar, hero card, modal)
+  tokens.css            design tokens and reset (ShopLedGer palette)
   auth.css              login, registration and recovery
-  dashboard.css         student home dashboard
+  dashboard.css         student home dashboard (ShopLedGer-style home)
   routine.css           routine timeline
   courses.css           courses and progress
   results.css           results cards
   profile.css           profile and settings
-  shell.css             app header and shell
-  navigation.css        bottom navigation
+  shell.css             app header (two-row topbar) and shell
+  navigation.css        bottom navigation (mint icon chips)
   overlays.css          modals, install and toast
   responsive.css        responsive rules
-  glass.css             translucent glass visual layer
-  theme.css             time and weather visual states
+  glass.css             flat solid-card layer (formerly translucent glass)
+  theme.css             time-of-day topbar strip tint
   typography.css        local font and mobile reading sizes
   scroll-header.css      scroll-aware topbar transition
 assets/fonts/

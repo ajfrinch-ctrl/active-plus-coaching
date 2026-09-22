@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#006b43">
+  <meta name="theme-color" content="#04795a">
   <meta name="description" content="Active Plus Coaching শিক্ষার্থী অ্যাপ — অফলাইনে রুটিন, ক্লাস, ফলাফল ও নোটিশ দেখুন।">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -128,7 +128,7 @@
     <header class="topbar">
       <div class="topbar-inner">
         <button class="brand-button" type="button" data-view="home" aria-label="হোমে ফিরে যান">
-          <span class="brand-mark"><img src="assets/icons/app-logo.png" alt="" width="36" height="36"></span>
+          <span class="brand-mark"><img src="assets/icons/app-logo.png" alt="" width="40" height="40"></span>
           <span class="brand-copy">
             <strong class="institution-name">Active Plus Coaching</strong>
             <strong id="topbarStudentName" class="student-topbar-name">রাইসা ইসলাম</strong>
@@ -143,97 +143,128 @@
           </button>
         </div>
       </div>
+      <div class="topbar-strip">
+        <span class="strip-date"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-calendar"></use></svg><span><strong id="todayDay">সোমবার</strong>, <span id="todayDate">২১ সেপ্টেম্বর ২০২৬</span></span></span>
+        <span class="strip-clock"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-clock"></use></svg><time id="currentTime">০৪:৩০ বিকেল</time></span>
+      </div>
     </header>
 
     <main class="app-main" id="appMain">
-      <!-- HOME -->
+      <!-- HOME — ShopLedGer-style home: welcome card, today card, quick actions, list rows -->
       <section class="view active" id="homeView" data-view-panel="home" aria-labelledby="homeTitle">
-        <div class="welcome-row">
-          <div>
-            <p class="eyebrow" id="dayGreeting">শুভ সকাল</p>
-            <h1 id="homeTitle"><span id="studentName">রাইসা</span> <span class="wave">✦</span></h1>
-            <p class="muted" id="dailyAdvice">আজকের শেখা হোক আরও গোছানো।</p>
+        <article class="welcome-card">
+          <div class="welcome-copy">
+            <p class="welcome-greeting" id="dayGreeting">শুভ সকাল</p>
+            <h1 id="homeTitle"><span id="studentName">রাইসা</span></h1>
+            <p class="welcome-advice" id="dailyAdvice">আজকের শেখা হোক আরও গোছানো।</p>
           </div>
-          <button class="avatar" type="button" data-view="profile" aria-label="প্রোফাইল খুলুন"><span id="avatarInitial">র</span></button>
-        </div>
-
-        <div class="day-time-card" aria-label="আজকের দিন তারিখ ও সময়">
-          <span class="day-time-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-calendar"></use></svg></span>
-          <span class="day-time-copy"><strong id="todayDay">সোমবার</strong><small id="todayDate">২১ সেপ্টেম্বর ২০২৬</small></span>
-          <time id="currentTime">০৪:৩০ বিকেল</time>
-        </div>
-
-        <article class="progress-card">
-          <div class="progress-card-top">
-            <div>
-              <p class="card-eyebrow">এই সপ্তাহের অগ্রগতি</p>
-              <h2>তুমি দারুণ এগিয়ে যাচ্ছ!</h2>
-              <p class="progress-copy">আরও ২টি কাজ শেষ করলেই সাপ্তাহিক লক্ষ্য পূর্ণ হবে।</p>
-            </div>
-            <div class="progress-ring" aria-label="সাপ্তাহিক অগ্রগতি ৬৮ শতাংশ">
-              <div><strong>৬৮</strong><span>%</span></div>
-            </div>
-          </div>
-          <div class="progress-track"><span style="width: 68%"></span></div>
-          <div class="progress-footer"><span>৪ / ৬ কাজ সম্পন্ন</span><button type="button" class="text-button" data-action="continue">চালিয়ে যাও <span>→</span></button></div>
+          <button class="welcome-avatar" type="button" data-view="profile" aria-label="প্রোফাইল খুলুন"><span id="avatarInitial">র</span></button>
         </article>
 
-        <div class="stats-grid" aria-label="শিক্ষার্থীর পরিসংখ্যান">
-          <article class="stat-card">
-            <span class="stat-icon mint"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-check-circle"></use></svg></span>
-            <strong>৯২<small>%</small></strong>
-            <span>উপস্থিতি</span>
-          </article>
-          <article class="stat-card">
-            <span class="stat-icon peach"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-trending"></use></svg></span>
-            <strong>৮৬<small>%</small></strong>
-            <span>গড় ফলাফল</span>
-          </article>
-          <article class="stat-card">
-            <span class="stat-icon lilac"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-clipboard"></use></svg></span>
-            <strong>০৩</strong>
-            <span>বাকি কাজ</span>
-          </article>
-        </div>
+        <article class="home-hero">
+          <div class="home-hero-head">
+            <div class="home-hero-title">
+              <span class="home-hero-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-trending"></use></svg></span>
+              <h2>আজকের পড়াশোনা</h2>
+            </div>
+            <span class="home-date-pill" id="homeScheduleDate">আজ, ২১ সেপ্টেম্বর</span>
+          </div>
+          <div class="home-stats" aria-label="শিক্ষার্থীর পরিসংখ্যান">
+            <div class="home-stat tone-mint">
+              <span class="home-stat-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-check-circle"></use></svg></span>
+              <p class="home-stat-label">উপস্থিতি</p>
+              <p class="home-stat-value">৯২%</p>
+              <p class="home-stat-sub">এই মাসে</p>
+            </div>
+            <div class="home-stat tone-blue">
+              <span class="home-stat-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-trending"></use></svg></span>
+              <p class="home-stat-label">গড় ফলাফল</p>
+              <p class="home-stat-value">৮৬%</p>
+              <p class="home-stat-sub">সর্বশেষ পরীক্ষা</p>
+            </div>
+            <div class="home-stat tone-amber">
+              <span class="home-stat-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-clipboard"></use></svg></span>
+              <p class="home-stat-label">বাকি কাজ</p>
+              <p class="home-stat-value">০৩টি</p>
+              <p class="home-stat-sub">এই সপ্তাহে</p>
+            </div>
+          </div>
+          <div class="home-hero-foot">
+            <span class="home-hero-track" aria-hidden="true"><i style="width: 68%"></i></span>
+            <div class="home-hero-foot-copy">
+              <span class="home-hero-foot-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-clipboard"></use></svg></span>
+              <span>
+                <p class="home-hero-foot-label">সাপ্তাহিক অগ্রগতি</p>
+                <p class="home-hero-foot-sub">৪ / ৬ কাজ সম্পন্ন</p>
+              </span>
+            </div>
+            <div class="home-hero-foot-side">
+              <strong>৬৮%</strong>
+              <button type="button" class="home-hero-link" data-action="continue">চালিয়ে যাও <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg></button>
+            </div>
+          </div>
+        </article>
 
-        <div class="section-heading">
-          <div><p class="eyebrow">এক নজরে</p><h2>দ্রুত মেনু</h2></div>
-        </div>
-        <div class="quick-grid">
-          <button class="quick-card" type="button" data-view="routine">
-            <span class="quick-icon green"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-calendar"></use></svg></span>
-            <span><strong>ক্লাস রুটিন</strong><small>আজ ৩টি ক্লাস</small></span><b>→</b>
-          </button>
-          <button class="quick-card" type="button" data-view="courses">
-            <span class="quick-icon orange"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-book"></use></svg></span>
-            <span><strong>আমার কোর্স</strong><small>৫টি বিষয়</small></span><b>→</b>
-          </button>
-          <button class="quick-card" type="button" data-view="results">
-            <span class="quick-icon purple"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-award"></use></svg></span>
-            <span><strong>ফলাফল</strong><small>সর্বশেষ মডেল টেস্ট</small></span><b>→</b>
-          </button>
-          <button class="quick-card" type="button" id="noticeShortcut">
-            <span class="quick-icon blue"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-bell"></use></svg></span>
-            <span><strong>নোটিশ</strong><small>২টি নতুন নোটিশ</small></span><b>→</b>
-          </button>
-        </div>
+        <section class="home-section">
+          <div class="home-section-head">
+            <h3>দ্রুত কাজ</h3>
+            <span class="home-count-pill">৪টি অপশন</span>
+          </div>
+          <div class="quick-wrap">
+            <button class="quick-tile" type="button" data-view="routine">
+              <span class="quick-tile-btn qt-green"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-calendar"></use></svg></span>
+              <span>ক্লাস রুটিন</span>
+            </button>
+            <button class="quick-tile" type="button" data-view="courses">
+              <span class="quick-tile-btn qt-blue"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-book"></use></svg></span>
+              <span>আমার কোর্স</span>
+            </button>
+            <button class="quick-tile" type="button" data-view="results">
+              <span class="quick-tile-btn qt-amber"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-award"></use></svg></span>
+              <span>ফলাফল</span>
+            </button>
+            <button class="quick-tile" type="button" id="noticeShortcut">
+              <span class="quick-tile-btn qt-red"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-bell"></use></svg></span>
+              <span>নোটিশ</span>
+            </button>
+          </div>
+        </section>
 
-        <div class="section-heading section-heading-spaced">
-          <div><p class="eyebrow" id="homeScheduleDate">আজ, ২১ সেপ্টেম্বর</p><h2>পরবর্তী ক্লাস</h2></div>
-          <button type="button" class="text-button" data-view="routine">সব দেখুন</button>
-        </div>
-        <div class="next-class-card">
-          <div class="class-time"><strong>০৪:৩০</strong><span>বিকেল</span></div>
-          <div class="class-divider"></div>
-          <div class="class-detail"><span class="live-label"><i></i> পরবর্তী ক্লাস</span><strong>উচ্চতর গণিত</strong><span>মো. সাইফুল ইসলাম <b>•</b> রুম ২০৩</span></div>
-          <button class="round-arrow" type="button" data-action="class-details" aria-label="ক্লাসের বিস্তারিত"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg></button>
-        </div>
+        <section class="home-section">
+          <div class="home-section-head">
+            <h3><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-calendar"></use></svg> পরবর্তী ক্লাস</h3>
+            <button type="button" class="home-link-pill" data-view="routine">সব দেখুন <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg></button>
+          </div>
+          <div class="home-list-card">
+            <button class="home-row" type="button" data-action="class-details">
+              <span class="home-row-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-book"></use></svg></span>
+              <span class="home-row-copy">
+                <small>পরবর্তী ক্লাস • আজ</small>
+                <strong>উচ্চতর গণিত</strong>
+                <small class="sub">মো. সাইফুল ইসলাম • রুম ২০৩</small>
+              </span>
+              <span class="home-row-side"><strong>০৪:৩০</strong><small>বিকেল</small></span>
+            </button>
+          </div>
+        </section>
 
-        <button class="notice-strip" type="button" id="noticeStrip">
-          <span class="notice-bell"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-megaphone"></use></svg></span>
-          <span><strong>নতুন নোটিশ এসেছে</strong><small>আগামীকালের ক্লাস টেস্টের সময় পরিবর্তন হয়েছে</small></span>
-          <b>→</b>
-        </button>
+        <section class="home-section">
+          <div class="home-section-head">
+            <h3><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-megaphone"></use></svg> নোটিশ</h3>
+            <button type="button" class="home-link-pill js-notice-open">সব দেখুন <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg></button>
+          </div>
+          <div class="home-list-card">
+            <button class="home-row" type="button" id="noticeStrip">
+              <span class="home-row-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-megaphone"></use></svg></span>
+              <span class="home-row-copy">
+                <small>আজ • ১০:৩০ সকাল</small>
+                <strong>নতুন নোটিশ এসেছে</strong>
+                <small class="sub">আগামীকালের ক্লাস টেস্টের সময় পরিবর্তন হয়েছে</small>
+              </span>
+              <span class="home-row-side"><strong>২টি</strong><small>নতুন</small></span>
+            </button>
+          </div>
+        </section>
       </section>
 
       <!-- ROUTINE -->
@@ -297,11 +328,11 @@
     </main>
 
     <nav class="bottom-nav" aria-label="প্রধান নেভিগেশন">
-      <button class="bottom-link active" type="button" data-view="home"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-home"></use></svg><span>হোম</span></button>
-      <button class="bottom-link" type="button" data-view="routine"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-calendar"></use></svg><span>রুটিন</span></button>
-      <button class="bottom-link" type="button" data-view="courses"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-book"></use></svg><span>কোর্স</span></button>
-      <button class="bottom-link" type="button" data-view="results"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-award"></use></svg><span>ফলাফল</span></button>
-      <button class="bottom-link" type="button" data-view="profile"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-user"></use></svg><span>প্রোফাইল</span></button>
+      <button class="bottom-link active" type="button" data-view="home"><span class="nav-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-home"></use></svg></span><span>হোম</span></button>
+      <button class="bottom-link" type="button" data-view="routine"><span class="nav-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-calendar"></use></svg></span><span>রুটিন</span></button>
+      <button class="bottom-link" type="button" data-view="courses"><span class="nav-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-book"></use></svg></span><span>কোর্স</span></button>
+      <button class="bottom-link" type="button" data-view="results"><span class="nav-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-award"></use></svg></span><span>ফলাফল</span></button>
+      <button class="bottom-link" type="button" data-view="profile"><span class="nav-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-user"></use></svg></span><span>প্রোফাইল</span></button>
     </nav>
   </div>
 
@@ -349,6 +380,7 @@
   <!-- Reusable SVG icon sprite. No external fonts or assets are required for offline use. -->
   <svg class="icon-sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
     <symbol id="icon-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V10Z"/><path d="M9 21v-6h6v6"/></symbol>
+    <symbol id="icon-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
     <symbol id="icon-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></symbol>
     <symbol id="icon-book" viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5v-16Z"/><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M8 7h8M8 11h6"/></symbol>
     <symbol id="icon-award" viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="m8.5 12.5-1 8 4.5-2.5 4.5 2.5-1-8M9.5 8 11 9.5 14.5 6"/></symbol>
