@@ -7,3 +7,11 @@
 .settings-list .logout-button { border-color: #f7dfdd; }
 .settings-list .logout-button strong { color: #b23a34; }
 .settings-list .logout-button small { color: #cc8a85; }
+.settings-toggle { display: flex; align-items: center; gap: 9px; width: 100%; padding: 11px 9px; border: 1px solid #edf0eb; border-radius: 13px; background: var(--white); text-align: left; cursor: pointer; }
+.settings-toggle > span:nth-child(2) { display: flex; min-width: 0; flex: 1; flex-direction: column; }
+.toggle-switch { position: relative; flex: 0 0 42px; width: 42px; height: 24px; }
+.toggle-switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+.toggle-switch i { position: absolute; inset: 0; border-radius: 999px; background: #d9e2db; transition: background .22s; }
+.toggle-switch i::after { content: ""; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: var(--white); box-shadow: 0 1px 4px rgba(0,0,0,.18); transition: transform .22s; }
+.toggle-switch input:checked + i { background: var(--forest); }
+.toggle-switch input:checked + i::after { transform: translateX(18px); }

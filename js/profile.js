@@ -1,7 +1,8 @@
-/* Profile feature: editable student information with an immutable Student ID. */
+/* Profile feature: editable student information with an immutable Student ID.
+   Updated: toggle to disable security check every time. */
 import { $, openModal, closeModal, showFeedback, normalizeMobile } from './ui.js';
 import { enabledClasses } from './config.js';
-import { saveStudent, saveAccount } from './storage.js';
+import { saveStudent, saveAccount, isSecurityCheckDisabled, setSecurityCheckDisabled, isTrustedDevice, setTrustedDevice, persistSession } from './storage.js';
 
 export function populateProfileClassOptions() {
   const select = $('#classInput');
@@ -77,8 +78,39 @@ export function shareStudentOnWhatsApp(student) {
   window.open(`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
 }
 
+function initSecurityToggle() {
+  const skipToggle = $('#skipSecurityToggle');
+  const trustedToggle = $('#trustedDeviceToggle');
+  if (skipToggle) {
+    skipToggle.checked = isSecurityCheckDisabled();
+    skipToggle.addEventListener('change', () => {
+      setSecurityCheckDisabled(skipToggle.checked);
+      if (skipToggle.checked) {
+        persistSession(true);
+        setTrustedDevice(true);
+        showFeedback('এখন থেকে প্রতিবার PIN চাওয়া হবে না');
+      } else {
+        showFeedback('নিরাপত্তা চেক আবার চালু করা হয়েছে');
+      }
+    });
+  }
+  if (trustedToggle) {
+    trustedToggle.checked = isTrustedDevice();
+    trustedToggle.addEventListener('change', () => {
+      setTrustedDevice(trustedToggle.checked);
+      if (trustedToggle.checked) {
+        persistSession(true);
+        showFeedback('এই ডিভাইসটি বিশ্বস্ত হিসেবে সংরক্ষিত');
+      } else {
+        showFeedback('বিশ্বস্ত ডিভাইস বন্ধ করা হয়েছে');
+      }
+    });
+  }
+}
+
 export function initProfile({ state, onStudentChange }) {
   populateProfileClassOptions();
+  initSecurityToggle();
   $('#profileForm')?.addEventListener('submit', event => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);

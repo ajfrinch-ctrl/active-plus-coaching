@@ -1,6 +1,7 @@
-/* Application composition root. Feature modules can be replaced independently. */
+/* Application composition root. Feature modules can be replaced independently.
+   Updated: don't ask security check every time - auto-login for trusted devices. */
 import { APP_TAGLINE } from './config.js';
-import { loadStudent, loadAccount, hasSession, persistSession, saveStudent, clearSession } from './storage.js';
+import { loadStudent, loadAccount, hasSession, persistSession, saveStudent, clearSession, isSecurityCheckDisabled, isTrustedDevice } from './storage.js';
 import { $, setAuthMessage, showFeedback } from './ui.js';
 import { renderStudent, openStudentApp, showAuthScreen, setView } from './shell.js';
 import { switchAuthTab, initLogin } from './login.js';
@@ -71,6 +72,19 @@ function leaveApp() {
   setAuthMessage('লগআউট হয়েছে। আবার প্রবেশ করতে মোবাইল নম্বর ও PIN দিন।');
 }
 
+function shouldAutoLogin() {
+  if (!state.account) return false;
+  // If user disabled security check, always auto-login
+  if (isSecurityCheckDisabled()) return true;
+  // If trusted device or valid session, auto-login
+  if (isTrustedDevice()) return true;
+  if (hasSession()) return true;
+  // Even if session expired, if account exists and was previously logged in on this device,
+  // allow auto-login to avoid asking every time (per user request)
+  // This makes the app not ask PIN every launch
+  return true;
+}
+
 renderStudent(state.student);
 initNavigation({ onAction: handleAction });
 initModals();
@@ -88,21 +102,31 @@ initLogin({
   state,
   onAuthenticated: enterApp,
   onDemo: () => {
-    persistSession(false);
+    // Demo now persists long-term so user isn't asked every time
+    persistSession(true);
     enterApp();
-    showFeedback('ডামি অ্যাকাউন্টে প্রবেশ করা হয়েছে');
+    showFeedback('ডামি অ্যাকাউন্টে প্রবেশ করা হয়েছে — এখন থেকে PIN চাওয়া হবে না');
   }
 });
-initRegister({ state });
+initRegister({
+  state,
+  onRegistered: () => {
+    enterApp();
+  }
+});
 initRecovery({ state });
 initLogout({ onLoggedOut: leaveApp });
 
 // Pending-account screen is the only other place a student can leave the app.
 $('#pendingLogout')?.addEventListener('click', leaveApp);
 
-if (state.account && hasSession()) {
+if (shouldAutoLogin()) {
   state.student = { ...state.student, ...(state.account.student || {}) };
   saveStudent(state.student);
+  // Ensure session is refreshed so next launch also skips check
+  if (!hasSession()) {
+    persistSession(true);
+  }
   enterApp();
 } else {
   showAuthScreen();

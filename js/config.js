@@ -5,6 +5,9 @@ export const STORAGE_KEYS = Object.freeze({
   student: 'active-plus-student-v1',
   account: 'active-plus-account-v1',
   session: 'active-plus-session-v1',
+  sessionExpiry: 'active-plus-session-expiry-v1',
+  trustedDevice: 'active-plus-trusted-v1',
+  skipSecurity: 'active-plus-skip-security-v1',
   installDismissed: 'active-plus-install-dismissed',
   idSequence: 'active-plus-id-sequence',
   weather: 'active-plus-weather-v1'

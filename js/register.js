@@ -1,7 +1,8 @@
-/* Registration feature: step-by-step student self-registration with auto Student ID. */
-import { $, $$, normalizeMobile, normalizeAnswer, setAuthMessage } from './ui.js';
+/* Registration feature: step-by-step student self-registration with auto Student ID.
+   Updated: auto-login after registration so PIN check isn't needed immediately. */
+import { $, $$, normalizeMobile, normalizeAnswer, setAuthMessage, showFeedback } from './ui.js';
 import { enabledClasses } from './config.js';
-import { saveAccount, saveStudent, generateStudentId } from './storage.js';
+import { saveAccount, saveStudent, generateStudentId, persistSession, setTrustedDevice } from './storage.js';
 import { switchAuthTab } from './login.js';
 
 function populateRegistrationClasses() {
@@ -26,7 +27,7 @@ function initFixedContactMobile() {
   sync();
 }
 
-function handleRegistration(event, state) {
+function handleRegistration(event, state, onRegistered) {
   event.preventDefault();
   const formElement = event.currentTarget;
   if (!formElement.checkValidity()) {
@@ -78,12 +79,19 @@ function handleRegistration(event, state) {
   state.student = { ...state.student, ...studentData };
   saveAccount(state.account);
   saveStudent(state.student);
+  persistSession(true);
+  setTrustedDevice(true);
   formElement.reset();
   toggleMajorField();
-  switchAuthTab('login');
-  $('#loginMobile').value = mobile;
   $('#pendingStudentId').textContent = studentId;
-  setAuthMessage(`রেজিস্ট্রেশন সফল। তোমার ইউনিক Student ID: ${studentId}`, true);
+  if (onRegistered) {
+    onRegistered();
+    showFeedback(`রেজিস্ট্রেশন সফল — ID: ${studentId}`);
+  } else {
+    switchAuthTab('login');
+    $('#loginMobile').value = mobile;
+    setAuthMessage(`রেজিস্ট্রেশন সফল। তোমার ইউনিক Student ID: ${studentId}`, true);
+  }
 }
 
 function initRegistrationSteps() {
@@ -127,12 +135,12 @@ function initRegistrationSteps() {
   return { reset: () => showStep(0) };
 }
 
-export function initRegister({ state }) {
+export function initRegister({ state, onRegistered }) {
   populateRegistrationClasses();
   initFixedContactMobile();
   const registerSteps = initRegistrationSteps();
   $('#regClass')?.addEventListener('change', toggleMajorField);
-  $('#registrationForm')?.addEventListener('submit', event => handleRegistration(event, state));
+  $('#registrationForm')?.addEventListener('submit', event => handleRegistration(event, state, onRegistered));
 
   // Starting registration always returns to the first step.
   $$('[data-auth-tab]').forEach(trigger => trigger.addEventListener('click', () => {
