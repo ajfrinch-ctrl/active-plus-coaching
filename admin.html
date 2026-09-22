@@ -219,6 +219,14 @@
               <span class="student-count-badge" id="studentCountBadge">৮ জন শিক্ষার্থী</span>
             </div>
           </div>
+          <div class="student-class-filter">
+            <label class="student-search" for="studentClassFilter">
+              <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-users"></use></svg>
+              <select id="studentClassFilter" aria-label="শ্রেণি অনুযায়ী ফিল্টার">
+                <option value="all">সব শ্রেণির শিক্ষার্থী</option>
+              </select>
+            </label>
+          </div>
           <div class="chip-row" id="studentFilterChips" aria-label="স্ট্যাটাস ফিল্টার">
             <button class="chip active" type="button" data-student-filter="all">সব</button>
             <button class="chip" type="button" data-student-filter="pending">অপেক্ষমাণ</button>
@@ -590,6 +598,67 @@
             <div class="quick-report-actions">
               <button class="mini-btn approve" type="button" data-report-pdf="routine">PDF ডাউনলোড</button>
               <button class="mini-btn" type="button" data-report-csv="routine">CSV</button>
+            </div>
+          </article>
+        </div>
+
+        <!-- Class-wise / results / attendance reports -->
+        <div class="quick-report-grid">
+          <article class="admin-card quick-report-card">
+            <header class="admin-card-head">
+              <div><p class="eyebrow">Class-wise</p><h2>শ্রেণি অনুযায়ী শিক্ষার্থী রিপোর্ট</h2></div>
+            </header>
+            <p class="quick-report-desc">নির্দিষ্ট শ্রেণি/বিভাগের সব শিক্ষার্থীর যোগাযোগ, উপস্থিতি, ফলাফল ও বকেয়াসহ পূর্ণ তালিকা — শিক্ষার্থী ব্যবস্থাপনা সহজ করতে।</p>
+            <div class="report-select-row">
+              <select id="classReportClass" aria-label="শ্রেণি">
+                <option value="all">সব শ্রেণি</option>
+              </select>
+              <select id="classReportGroup" aria-label="বিভাগ">
+                <option value="all">সব বিভাগ</option>
+              </select>
+            </div>
+            <p class="quick-report-meta" id="reportMeta-class">—</p>
+            <div class="quick-report-actions">
+              <button class="mini-btn approve" type="button" data-report-pdf="class">PDF ডাউনলোড</button>
+              <button class="mini-btn" type="button" data-report-csv="class">CSV</button>
+              <button class="mini-btn" type="button" data-action="open-class-students">শিক্ষার্থী তালিকায় খুলুন</button>
+            </div>
+          </article>
+
+          <article class="admin-card quick-report-card">
+            <header class="admin-card-head">
+              <div><p class="eyebrow">Results</p><h2>ফলাফল রিপোর্ট</h2></div>
+            </header>
+            <p class="quick-report-desc">প্রকাশিত পরীক্ষার র‍্যাংক, প্রাপ্ত নম্বর, গ্রেড ও অনুপস্থিতির তালিকা — অনলাইন পরীক্ষা ও ক্লাসে নেওয়া মূল্যায়ন, দুই উৎস থেকেই।</p>
+            <div class="report-select-row">
+              <select id="resultExamSelect" aria-label="পরীক্ষা">
+                <option value="">পরীক্ষা নির্বাচন করুন</option>
+              </select>
+              <select id="resultClassFilter" aria-label="শ্রেণি">
+                <option value="all">সব শ্রেণি</option>
+              </select>
+            </div>
+            <p class="quick-report-meta" id="reportMeta-results">—</p>
+            <div class="quick-report-actions">
+              <button class="mini-btn approve" type="button" data-report-pdf="results">PDF ডাউনলোড</button>
+              <button class="mini-btn" type="button" data-report-csv="results">CSV</button>
+            </div>
+          </article>
+
+          <article class="admin-card quick-report-card">
+            <header class="admin-card-head">
+              <div><p class="eyebrow">Attendance</p><h2>উপস্থিতি-অনুপস্থিতি রিপোর্ট</h2></div>
+            </header>
+            <p class="quick-report-desc">ক্লাস সেশনভিত্তিক উপস্থিত, অনুপস্থিত ও দেরিতে উপস্থিত শিক্ষার্থীর তালিকা এবং সেই সেশনের উপস্থিতির হার।</p>
+            <div class="report-select-row">
+              <select id="attendanceSessionSelect" aria-label="ক্লাস সেশন">
+                <option value="">ক্লাস সেশন নির্বাচন করুন</option>
+              </select>
+            </div>
+            <p class="quick-report-meta" id="reportMeta-attendance">—</p>
+            <div class="quick-report-actions">
+              <button class="mini-btn approve" type="button" data-report-pdf="attendance">PDF ডাউনলোড</button>
+              <button class="mini-btn" type="button" data-report-csv="attendance">CSV</button>
             </div>
           </article>
         </div>

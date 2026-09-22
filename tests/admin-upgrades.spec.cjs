@@ -171,3 +171,69 @@ test('teacher registration is controlled from the admin panel and enforced in te
   await page.locator('#teacherEnter').click();
   await expect(page.locator('#teacherShell')).toBeVisible();
 });
+
+test('class-wise, results and attendance reports download; class filter simplifies students', async ({ page }) => {
+  await enter(page);
+  // Seed a published exam with attempts and a routine session with attendance,
+  // exactly what the teacher panel would save.
+  await page.evaluate(async () => {
+    const { buildDemoExams } = await import('/js/demo-data.js');
+    const db = { version: 1, exams: [], attempts: [] };
+    const fixtures = buildDemoExams(Date.now(), 'spec');
+    db.exams.push(...fixtures.exams);
+    db.attempts.push(...fixtures.attempts);
+    localStorage.setItem('activePlus.exams.v1', JSON.stringify(db));
+    const { teachingRepository } = await import('/js/teaching-data.js');
+    const saved = await teachingRepository.saveActivity({
+      type: 'routine', title: 'গণিত ক্লাস', subject: 'গণিত', className: 'দশম শ্রেণি', group: 'বিজ্ঞান বিভাগ',
+      status: 'published', date: '2026-09-21', time: '16:00', duration: 60, details: '', room: 'রুম ২০৩'
+    });
+    const id = saved.activities.find(item => item.type === 'routine').id;
+    await teachingRepository.saveProgress(id, { 'AP-1024': 'present', '260810021': 'absent' });
+  });
+  await page.reload();
+  await enter(page);
+  await bottom(page, 'more');
+  await page.locator('.admin-more-item[data-admin-view=reports]').click();
+
+  // Class-wise report: pick a class, see its students and open them in management.
+  await page.locator('#classReportClass').selectOption('দশম শ্রেণি');
+  await expect(page.locator('#reportMeta-class')).toContainText('৩ জন');
+  await page.locator('#classReportGroup').selectOption('বিজ্ঞান বিভাগ');
+  await expect(page.locator('#reportMeta-class')).toContainText('২ জন');
+  const classPdf = page.waitForEvent('download');
+  await page.locator('[data-report-pdf=class]').click();
+  expect((await classPdf).suggestedFilename()).toMatch(/^APC-class-report-.*\.pdf$/);
+  await page.locator('[data-action=open-class-students]').click();
+  await expect(page.locator('[data-view-panel=students]')).toBeVisible();
+  await expect(page.locator('#studentClassFilter')).toHaveValue('দশম শ্রেণি');
+  await expect(page.locator('#studentSearch')).toHaveValue('বিজ্ঞান বিভাগ');
+  await expect(page.locator('#studentList .student-row')).toHaveCount(2);
+  // The same class filter works manually in student management.
+  await page.locator('#studentClassFilter').selectOption('নবম শ্রেণি');
+  await page.locator('#studentSearch').fill('');
+  await expect(page.locator('#studentList .student-row')).toHaveCount(1);
+
+  // Results report: online exam attempts, ranks, grades and absentees.
+  await bottom(page, 'more');
+  await page.locator('.admin-more-item[data-admin-view=reports]').click();
+  const examValue = await page.locator('#resultExamSelect option', { hasText: 'সম্পন্ন MCQ' }).getAttribute('value');
+  await page.locator('#resultExamSelect').selectOption(examValue);
+  await expect(page.locator('#reportMeta-results')).toHaveText('জমা ৩ জন • অনুপস্থিত ১ জন');
+  await page.locator('#resultClassFilter').selectOption('দশম শ্রেণি');
+  await expect(page.locator('#reportMeta-results')).toHaveText('জমা ২ জন • অনুপস্থিত ০ জন');
+  const resultsPdf = page.waitForEvent('download');
+  await page.locator('[data-report-pdf=results]').click();
+  expect((await resultsPdf).suggestedFilename()).toMatch(/^APC-results-report-.*\.pdf$/);
+
+  // Attendance report: session picker with present/absent counts and rate.
+  await page.locator('#attendanceSessionSelect').selectOption({ index: 1 });
+  await expect(page.locator('#reportMeta-attendance')).toHaveText('উপস্থিত ১ জন • অনুপস্থিত ১ জন • হার ৫০%');
+  const attendanceCsv = page.waitForEvent('download');
+  await page.locator('[data-report-csv=attendance]').click();
+  const csv = await attendanceCsv;
+  expect(csv.suggestedFilename()).toMatch(/^APC-attendance-report-.*\.csv$/);
+  const csvText = (await fs.readFile(await csv.path())).toString('utf8');
+  expect(csvText).toContain('"উপস্থিতি"');
+  expect(csvText).toContain('অনুপস্থিত');
+});

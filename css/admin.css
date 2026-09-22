@@ -769,3 +769,37 @@ body.admin-modal-open { overflow: hidden; }
 
 /* Disabled entry (teacher registration closed by admin) */
 .auth-submit:disabled { opacity: .55; cursor: not-allowed; box-shadow: none; }
+
+/* ---------- Student management class filter ---------- */
+
+.student-class-filter { display: flex; }
+.student-class-filter .student-search { width: 100%; }
+.student-class-filter select {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--ink);
+  background: var(--white);
+  outline: 0;
+  font-size: 12.5px;
+}
+.student-class-filter select:focus { border-color: var(--forest); box-shadow: 0 0 0 3px rgba(4, 121, 90, .12); }
+.student-class-filter .student-search svg { pointer-events: none; }
+
+/* ---------- Report Center: class / results / attendance selectors ---------- */
+
+.report-select-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-top: 10px; }
+.report-select-row select {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--ink);
+  background: var(--white);
+  outline: 0;
+  font-size: 12px;
+}
+.report-select-row select:focus { border-color: var(--forest); box-shadow: 0 0 0 3px rgba(4, 121, 90, .12); }

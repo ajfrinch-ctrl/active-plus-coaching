@@ -11,6 +11,8 @@ import { loadAppConfig, saveAppConfig, loadAccount, saveAccount } from './storag
 import { financeRepository, monthLabel, dateLabel, searchStudents, studentFeeSummary, newestTransactions, TRANSACTIONS_KEY } from './finance-data.js';
 import { receiptMarkup, downloadReceipt } from './finance-receipt.js';
 import { downloadReportPDF, downloadCSV } from './report-generator.js';
+import { examRepository, totalMarks, examResults, EXAM_KEY } from './exam-data.js';
+import { teachingRepository, displayDate, PROGRESS_LABELS, TEACHING_KEY } from './teaching-data.js';
 import { initExamManager } from './exam-manager.js';
 import { registerServiceWorker } from './service-worker.js';
 import { initFixedShell } from './fixed-shell.js';
@@ -56,6 +58,9 @@ const state = {
     method: 'all'
   },
   filter: 'all',
+  classFilter: 'all',
+  examDb: null,
+  teachingDb: null,
   query: ''
 };
 
@@ -177,6 +182,8 @@ function visibleStudents() {
   return state.students.filter(student => {
     const matchesFilter = state.filter === 'all' || student.status === state.filter;
     if (!matchesFilter) return false;
+    // Class filter (student management made easy: pick a class, see only that class).
+    if (state.classFilter !== 'all' && student.className !== state.classFilter) return false;
     if (!rawQuery) return true;
 
     // 1. Check Student ID (ID string, numeric digits, Bangla numerals)
@@ -1039,7 +1046,49 @@ function reportDataSets() {
         { label: 'সময়', width: 1.1 }
       ],
       rows: routineRows
-    }
+    },
+    class: (() => {
+      const students = classReportStudents();
+      const classLabel = $('#classReportClass')?.value || 'all';
+      const groupLabel = $('#classReportGroup')?.value || 'all';
+      return {
+        title: 'শ্রেণি অনুযায়ী শিক্ষার্থী রিপোর্ট',
+        subtitle: `${classLabel === 'all' ? 'সব শ্রেণি' : classLabel} • ${groupLabel === 'all' ? 'সব বিভাগ' : groupLabel}`,
+        period: `মোট ${bn(students.length)} জন শিক্ষার্থী`,
+        columns: [
+          { label: 'নাম', width: 1.5 },
+          { label: 'Student ID', width: 1.1 },
+          { label: 'বিভাগ', width: 1 },
+          { label: 'মোবাইল', width: 1.1 },
+          { label: 'অবস্থা', width: 0.9 },
+          { label: 'উপস্থিতি', width: 0.9 },
+          { label: 'ফলাফল', width: 0.9 },
+          { label: 'বকেয়া', width: 0.9 }
+        ],
+        rows: students.map(student => {
+          const summary = studentFeeSummary(student, state.transactions);
+          return [
+            student.name,
+            student.id,
+            student.group || '—',
+            bn(student.mobile || '—'),
+            statusMeta[student.status]?.label || student.status,
+            `${bn(student.attendance ?? 0)}%`,
+            `${bn(student.average ?? 0)}%`,
+            money(summary.due)
+          ];
+        }),
+        summary: [
+          { label: 'মোট শিক্ষার্থী', value: `${bn(students.length)} জন` },
+          { label: 'অনুমোদিত', value: `${bn(students.filter(s => s.status === 'approved').length)} জন` },
+          { label: 'মোট বকেয়া', value: money(students.reduce((sum, student) => sum + studentFeeSummary(student, state.transactions).due, 0)) },
+          { label: 'গড় উপস্থিতি', value: `${bn(students.length ? Math.round(students.reduce((sum, student) => sum + Number(student.attendance || 0), 0) / students.length) : 0)}%` }
+        ],
+        note: 'নোট: উপস্থিতি ও ফলাফল শিক্ষার্থী রেকর্ডের সর্বশেষ হিসাব; বকেয়া চলতি মাসের মাসিক বেতন।'
+      };
+    })(),
+    results: selectedResultReport(),
+    attendance: selectedAttendanceReport()
   };
 }
 
@@ -1054,12 +1103,252 @@ function renderReportCards() {
   meta('routine', `${bn(Object.values(state.routine).reduce((sum, info) => sum + info.classes.length, 0))} টি ক্লাস সাপ্তাহিক রুটিনে`);
 }
 
+/* ---------- Class-wise students, exam results and attendance reports ---------- */
+
+function onlineResultExams() {
+  return (state.examDb?.exams || [])
+    .filter(exam => exam.status === 'published')
+    .sort((a, b) => b.startAt - a.startAt);
+}
+
+function teachingResultExams() {
+  return (state.teachingDb?.activities || [])
+    .filter(activity => activity.type === 'exam' && activity.status === 'published'
+      && Object.values(activity.progress).some(entry => Number.isFinite(Number(entry?.value))))
+    .sort((a, b) => String(b.date).localeCompare(String(a.date)));
+}
+
+function attendanceSessions() {
+  return (state.teachingDb?.activities || [])
+    .filter(activity => activity.type === 'routine' && activity.status === 'published' && Object.keys(activity.progress).length)
+    .sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.time).localeCompare(String(a.time)));
+}
+
+function classExamDateLabel(startAt) {
+  return new Date(startAt).toISOString().slice(0, 10);
+}
+
+function populateAcademicReportSelectors() {
+  const classSelect = $('#classReportClass');
+  if (classSelect) {
+    const previous = classSelect.value || 'all';
+    classSelect.innerHTML = '<option value="all">সব শ্রেণি</option>' +
+      enabledClasses.map(className => `<option value="${escapeHtml(className)}">${escapeHtml(className)}</option>`).join('');
+    classSelect.value = enabledClasses.includes(previous) || previous === 'all' ? previous : 'all';
+  }
+  const groupSelect = $('#classReportGroup');
+  if (groupSelect) {
+    const previous = groupSelect.value || 'all';
+    const selectedClass = classSelect?.value || 'all';
+    const groups = [...new Set(state.students
+      .filter(student => selectedClass === 'all' || student.className === selectedClass)
+      .map(student => student.group).filter(Boolean))];
+    groupSelect.innerHTML = '<option value="all">সব বিভাগ</option>' +
+      groups.map(group => `<option value="${escapeHtml(group)}">${escapeHtml(group)}</option>`).join('');
+    groupSelect.value = groups.includes(previous) || previous === 'all' ? previous : 'all';
+  }
+  const examSelect = $('#resultExamSelect');
+  if (examSelect) {
+    const previous = examSelect.value;
+    const options = [
+      ...onlineResultExams().map(exam => ({ value: `online:${exam.id}`, label: `${exam.title} • ${exam.subject} (${displayDate(classExamDateLabel(exam.startAt))})` })),
+      ...teachingResultExams().map(activity => ({ value: `teaching:${activity.id}`, label: `${activity.title} • ${activity.className} (${displayDate(activity.date)})` }))
+    ];
+    examSelect.innerHTML = '<option value="">পরীক্ষা নির্বাচন করুন</option>' +
+      options.map(option => `<option value="${escapeHtml(option.value)}">${escapeHtml(option.label)}</option>`).join('');
+    examSelect.value = options.some(option => option.value === previous) ? previous : '';
+  }
+  const classFilter = $('#resultClassFilter');
+  if (classFilter) {
+    const previous = classFilter.value || 'all';
+    classFilter.innerHTML = '<option value="all">সব শ্রেণি</option>' +
+      enabledClasses.map(className => `<option value="${escapeHtml(className)}">${escapeHtml(className)}</option>`).join('');
+    classFilter.value = enabledClasses.includes(previous) || previous === 'all' ? previous : 'all';
+  }
+  const sessionSelect = $('#attendanceSessionSelect');
+  if (sessionSelect) {
+    const previous = sessionSelect.value;
+    const options = attendanceSessions().map(activity => ({
+      value: activity.id,
+      label: `${activity.title} • ${displayDate(activity.date)} • ${bn(activity.time)}`
+    }));
+    sessionSelect.innerHTML = '<option value="">ক্লাস সেশন নির্বাচন করুন</option>' +
+      options.map(option => `<option value="${escapeHtml(option.value)}">${escapeHtml(option.label)}</option>`).join('');
+    sessionSelect.value = options.some(option => option.value === previous) ? previous : '';
+  }
+}
+
+function classReportStudents() {
+  const className = $('#classReportClass')?.value || 'all';
+  const group = $('#classReportGroup')?.value || 'all';
+  return state.students
+    .filter(student => (className === 'all' || student.className === className)
+      && (group === 'all' || (student.group || '') === group))
+    .slice()
+    .sort((a, b) => a.className.localeCompare(b.className, 'bn') || a.name.localeCompare(b.name, 'bn'));
+}
+
+function selectedResultReport() {
+  const key = $('#resultExamSelect')?.value || '';
+  if (!key) return null;
+  const classFilter = $('#resultClassFilter')?.value || 'all';
+  const columns = [
+    { label: 'র‍্যাংক', width: 0.7 },
+    { label: 'শিক্ষার্থী', width: 1.7 },
+    { label: 'শ্রেণি/বিভাগ', width: 1.5 },
+    { label: 'প্রাপ্ত নম্বর', width: 1 },
+    { label: 'গ্রেড', width: 0.7 },
+    { label: 'অবস্থা', width: 1.1 }
+  ];
+  if (key.startsWith('online:')) {
+    const exam = onlineResultExams().find(item => item.id === key.slice(7));
+    if (!exam) return null;
+    const max = totalMarks(exam);
+    const ranked = examResults(state.examDb, exam)
+      .filter(row => classFilter === 'all' || row.className === classFilter);
+    const submittedIds = new Set(ranked.map(row => row.studentId));
+    const absent = (exam.participants || [])
+      .filter(person => !submittedIds.has(person.id) && (classFilter === 'all' || person.className === classFilter));
+    const rows = [
+      ...ranked.map(row => [bn(row.rank), `${row.name} (${row.studentId})`, row.className || '—', `${bn(row.score)} / ${bn(max)}`, row.grade, 'জমা দিয়েছে']),
+      ...absent.map(person => ['—', `${person.name} (${person.id})`, person.className || '—', '—', '—', 'অনুপস্থিত'])
+    ];
+    const scores = ranked.map(row => Number(row.score) || 0);
+    return {
+      title: 'ফলাফল রিপোর্ট',
+      subtitle: `${exam.title} • ${exam.subject} • পূর্ণমান ${bn(max)}`,
+      period: displayDate(classExamDateLabel(exam.startAt)),
+      columns,
+      rows,
+      summary: [
+        { label: 'অংশগ্রহণ', value: `${bn(ranked.length + absent.length)} জন` },
+        { label: 'জমা দিয়েছে', value: `${bn(ranked.length)} জন` },
+        { label: 'অনুপস্থিত', value: `${bn(absent.length)} জন` },
+        { label: 'গড় নম্বর', value: scores.length ? `${bn((scores.reduce((sum, value) => sum + value, 0) / scores.length).toFixed(1))} / ${bn(max)}` : '—' }
+      ]
+    };
+  }
+  const activity = teachingResultExams().find(item => item.id === key.slice(9));
+  if (!activity) return null;
+  const entries = Object.entries(activity.progress)
+    .map(([studentId, entry]) => ({ studentId, score: Number(entry?.value) }))
+    .filter(entry => Number.isFinite(entry.score) && (classFilter === 'all' || (state.students.find(s => s.id === entry.studentId)?.className || activity.className) === classFilter))
+    .sort((a, b) => b.score - a.score);
+  const rows = entries.map((entry, index) => {
+    const student = state.students.find(item => item.id === entry.studentId);
+    const percent = activity.totalMarks ? entry.score / activity.totalMarks * 100 : 0;
+    const grade = percent < 33 ? 'F' : percent >= 80 ? 'A+' : percent >= 70 ? 'A' : percent >= 60 ? 'A−' : percent >= 50 ? 'B' : percent >= 40 ? 'C' : 'D';
+    return [bn(index + 1), `${student ? student.name : entry.studentId} (${entry.studentId})`, `${activity.className} • ${student?.group || '—'}`, `${bn(entry.score)} / ${bn(activity.totalMarks)}`, grade, 'জমা দিয়েছে'];
+  });
+  const scores = entries.map(entry => entry.score);
+  return {
+    title: 'ফলাফল রিপোর্ট',
+    subtitle: `${activity.title} • ${activity.subject} • ${activity.className} • পূর্ণমান ${bn(activity.totalMarks)}`,
+    period: displayDate(activity.date),
+    columns,
+    rows,
+    summary: [
+      { label: 'মূল্যায়িত', value: `${bn(entries.length)} জন` },
+      { label: 'গড় নম্বর', value: scores.length ? `${bn((scores.reduce((sum, value) => sum + value, 0) / scores.length).toFixed(1))} / ${bn(activity.totalMarks)}` : '—' },
+      { label: 'সর্বোচ্চ', value: scores.length ? `${bn(Math.max(...scores))} / ${bn(activity.totalMarks)}` : '—' }
+    ]
+  };
+}
+
+function selectedAttendanceReport() {
+  const id = $('#attendanceSessionSelect')?.value || '';
+  if (!id) return null;
+  const session = attendanceSessions().find(item => item.id === id);
+  if (!session) return null;
+  const statusOrder = { present: 0, late: 1, absent: 2 };
+  const entries = Object.entries(session.progress)
+    .map(([studentId, entry]) => ({ studentId, value: entry?.value, student: state.students.find(item => item.id === studentId) }))
+    .sort((a, b) => (statusOrder[a.value] ?? 9) - (statusOrder[b.value] ?? 9)
+      || String(a.student?.id || a.studentId).localeCompare(String(b.student?.id || b.studentId)));
+  const rows = entries.map(entry => [
+    `${entry.student ? entry.student.name : entry.studentId} (${entry.studentId})`,
+    entry.student ? `${entry.student.className} • ${entry.student.group || '—'}` : session.className,
+    PROGRESS_LABELS[entry.value] || entry.value || '—'
+  ]);
+  const counts = { present: 0, late: 0, absent: 0 };
+  for (const entry of entries) if (entry.value && entry.value in counts) counts[entry.value]++;
+  const total = entries.length;
+  const rate = total ? Math.round((counts.present + counts.late) / total * 100) : 0;
+  return {
+    title: 'উপস্থিতি-অনুপস্থিতি রিপোর্ট',
+    subtitle: `${session.title} • ${session.subject} • ${session.className}${session.group ? ` • ${session.group}` : ''}`,
+    period: `${displayDate(session.date)} • সময়: ${bn(session.time)}${session.room ? ` • ${session.room}` : ''}`,
+    columns: [
+      { label: 'শিক্ষার্থী', width: 1.7 },
+      { label: 'শ্রেণি/বিভাগ', width: 1.5 },
+      { label: 'উপস্থিতি', width: 1.2 }
+    ],
+    rows,
+    summary: [
+      { label: 'উপস্থিত', value: `${bn(counts.present)} জন` },
+      { label: 'অনুপস্থিত', value: `${bn(counts.absent)} জন` },
+      { label: 'দেরিতে', value: `${bn(counts.late)} জন` },
+      { label: 'উপস্থিতির হার', value: `${bn(rate)}%` }
+    ]
+  };
+}
+
+function renderAcademicReports() {
+  populateAcademicReportSelectors();
+  const meta = (key, text) => { const el = $(`#reportMeta-${key}`); if (el) el.textContent = text; };
+  const classStudents = classReportStudents();
+  const classDue = classStudents.reduce((sum, student) => sum + studentFeeSummary(student, state.transactions).due, 0);
+  const avgAttendance = classStudents.length
+    ? Math.round(classStudents.reduce((sum, student) => sum + Number(student.attendance || 0), 0) / classStudents.length)
+    : 0;
+  const classLabel = $('#classReportClass')?.value || 'all';
+  meta('class', `${bn(classStudents.length)} জন • বকেয়া ৳${bn(classDue.toLocaleString('en-US'))} • গড় উপস্থিতি ${bn(avgAttendance)}% (${classLabel === 'all' ? 'সব শ্রেণি' : classLabel})`);
+
+  const examSelect = $('#resultExamSelect');
+  if (!examSelect || examSelect.options.length <= 1) meta('results', 'এখনও কোনো প্রকাশিত পরীক্ষার ফলাফল নেই।');
+  else if (!examSelect.value) meta('results', 'ফলাফল দেখতে পরীক্ষা নির্বাচন করুন।');
+  else {
+    const results = selectedResultReport();
+    const submitted = results?.summary.find(item => item.label === 'জমা দিয়েছে')?.value
+      || results?.summary.find(item => item.label === 'মূল্যায়িত')?.value || '—';
+    const absent = results?.summary.find(item => item.label === 'অনুপস্থিত')?.value || '০ জন';
+    meta('results', `জমা ${submitted} • অনুপস্থিত ${absent}`);
+  }
+
+  const sessionSelect = $('#attendanceSessionSelect');
+  if (!sessionSelect || sessionSelect.options.length <= 1) meta('attendance', 'এখনও কোনো ক্লাস সেশনে উপস্থিতি নেওয়া হয়নি (শিক্ষক প্যানেলে উপস্থিতি দিলে এখানে দেখা যাবে)।');
+  else if (!sessionSelect.value) meta('attendance', 'উপস্থিতি দেখতে ক্লাস সেশন নির্বাচন করুন।');
+  else {
+    const attendance = selectedAttendanceReport();
+    const present = attendance?.summary.find(item => item.label === 'উপস্থিত')?.value || '—';
+    const absent = attendance?.summary.find(item => item.label === 'অনুপস্থিত')?.value || '—';
+    const rate = attendance?.summary.find(item => item.label === 'উপস্থিতির হার')?.value || '—';
+    meta('attendance', `উপস্থিত ${present} • অনুপস্থিত ${absent} • হার ${rate}`);
+  }
+}
+
+async function loadAcademicData() {
+  const [examResult, teachingResult] = await Promise.allSettled([examRepository.list(), teachingRepository.list()]);
+  state.examDb = examResult.status === 'fulfilled' ? examResult.value : null;
+  state.teachingDb = teachingResult.status === 'fulfilled' ? teachingResult.value : null;
+  renderAcademicReports();
+}
+
 const reportFileStamps = () => new Date().toISOString().slice(0, 10);
 
 async function handleReportDownload(button) {
   const key = button.dataset.reportPdf || button.dataset.reportCsv;
   const format = button.dataset.reportPdf ? 'pdf' : 'csv';
   if (!key || button.disabled) return;
+  const data = reportDataSets()[key];
+  if (!data) {
+    toast('আগে প্রয়োজনীয় পরীক্ষা বা সেশন নির্বাচন করুন।');
+    return;
+  }
+  if (!data.rows.length) {
+    toast('এই রিপোর্টে দেখানোর মতো কোনো তথ্য নেই।');
+    return;
+  }
   const label = button.textContent;
   button.disabled = true;
   button.textContent = format === 'pdf' ? 'তৈরি হচ্ছে…' : 'সাজানো হচ্ছে…';
@@ -1175,6 +1464,7 @@ function renderFinance() {
   renderStudentLedger();
   renderReportGenerator();
   renderReportCards();
+  renderAcademicReports();
 }
 
 /* ---------- Student App Management ---------- */
@@ -1369,7 +1659,10 @@ $$('[data-admin-view]').forEach(button => {
     if (button.dataset.studentScope === 'pending') {
       state.filter = 'pending';
       state.query = '';
+      state.classFilter = 'all';
       $('#studentSearch').value = '';
+      const classSelect = $('#studentClassFilter');
+      if (classSelect) classSelect.value = 'all';
       $$('#studentFilterChips .chip').forEach(chip => chip.classList.toggle('active', chip.dataset.studentFilter === 'pending'));
       renderStudents();
     }
@@ -1410,6 +1703,17 @@ $('#studentFilterChips').addEventListener('click', event => {
   $$('#studentFilterChips .chip').forEach(item => item.classList.toggle('active', item === chip));
   renderStudents();
 });
+
+/* Class filter keeps student management simple: pick a class, see only that class. */
+const studentClassFilter = $('#studentClassFilter');
+if (studentClassFilter) {
+  studentClassFilter.innerHTML = '<option value="all">সব শ্রেণির শিক্ষার্থী</option>' +
+    enabledClasses.map(className => `<option value="${escapeHtml(className)}">${escapeHtml(className)}</option>`).join('');
+  studentClassFilter.addEventListener('change', () => {
+    state.classFilter = studentClassFilter.value;
+    renderStudents();
+  });
+}
 
 const studentAction = event => {
   const button = event.target.closest('[data-action]');
@@ -1529,10 +1833,31 @@ $('#ledgerSearch')?.addEventListener('input', renderStudentLedger);
   });
 });
 
-/* Report Center downloads (PDF + CSV) */
+/* Report Center downloads (PDF + CSV) and class report → student list shortcut */
 $('.admin-view[data-view-panel="reports"]')?.addEventListener('click', event => {
   const button = event.target.closest('[data-report-pdf], [data-report-csv]');
-  if (button) handleReportDownload(button);
+  if (button) {
+    handleReportDownload(button);
+    return;
+  }
+  if (event.target.closest('[data-action="open-class-students"]')) {
+    // Jump to student management pre-filtered by the selected class/group search.
+    const className = $('#classReportClass')?.value || 'all';
+    const group = $('#classReportGroup')?.value || 'all';
+    state.classFilter = className;
+    state.query = group === 'all' ? '' : group;
+    $('#studentSearch').value = state.query;
+    const classSelect = $('#studentClassFilter');
+    if (classSelect) classSelect.value = className;
+    state.filter = 'all';
+    $$('#studentFilterChips .chip').forEach(chip => chip.classList.toggle('active', chip.dataset.studentFilter === 'all'));
+    renderStudents();
+    setView('students');
+  }
+});
+
+['classReportClass', 'classReportGroup', 'resultExamSelect', 'resultClassFilter', 'attendanceSessionSelect'].forEach(id => {
+  document.getElementById(id)?.addEventListener('change', renderAcademicReports);
 });
 
 const handleFinanceClick = event => {
@@ -1582,8 +1907,10 @@ document.addEventListener('keydown', event => {
 $('#feeMonth').innerHTML = '';
 populateFinanceMonths();
 loadFinanceTransactions();
+loadAcademicData();
 window.addEventListener('storage', event => {
   if (!state.savingFee && (event.key === TRANSACTIONS_KEY || event.key === null)) loadFinanceTransactions();
+  if (event.key === EXAM_KEY || event.key === TEACHING_KEY) loadAcademicData();
 });
 
 initDemoForms(demoWarnings);

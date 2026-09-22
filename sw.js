@@ -1,4 +1,4 @@
-const CACHE_NAME = 'active-plus-student-v42-admin-upgrades';
+const CACHE_NAME = 'active-plus-student-v43-admin-upgrades';
 const APP_SHELL = [
   './',
   './index.html',
