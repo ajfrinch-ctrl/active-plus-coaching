@@ -1,8 +1,8 @@
 /* Shared responsive rules */
 @media (min-width: 520px) {
   body { padding: 20px 0; }
-  .app-shell, .auth-screen { height: calc(100vh - 40px); min-height: calc(100vh - 40px); border-radius: 26px; box-shadow: 0 18px 70px rgba(35, 77, 66, .13); }
-  .topbar { border-radius: 26px 26px 0 0; }
+  .app-shell, .auth-screen { height: calc(100vh - 40px); min-height: calc(100vh - 40px); border-radius: 24px; box-shadow: 0 18px 60px rgba(20, 33, 28, .12); }
+  .topbar { border-radius: 24px 24px 0 0; }
 }
 
 @media (max-width: 480px) {
@@ -12,14 +12,20 @@
 }
 
 @media (max-width: 360px) {
-  .app-main { padding-left: 16px; padding-right: 16px; }
-  .topbar-inner { padding-left: 0; padding-right: 0; }
-  .progress-card h2 { font-size: 15px; }
-  .progress-copy { font-size: 9px; }
-  .progress-ring { flex-basis: 68px; width: 68px; height: 68px; }
-  .quick-card { gap: 6px; padding-left: 7px; padding-right: 7px; }
-  .quick-card strong { font-size: 10px; }
-  .weather-pill { max-width: 28px; padding: 6px; }
+  .app-main { padding-left: 12px; padding-right: 12px; }
+  .topbar-inner { padding-left: 12px; padding-right: 12px; }
+  .topbar-strip { padding-left: 12px; padding-right: 12px; }
+  .home-hero-title h2 { font-size: 15px; }
+  .home-date-pill { font-size: 10px; }
+  .home-stats { gap: 7px; padding-left: 12px; padding-right: 12px; }
+  .home-stat { padding: 10px 4px 9px; }
+  .home-stat-value { font-size: 13px; }
+  .home-hero-foot { padding-left: 12px; padding-right: 12px; }
+  .home-hero-foot-side > strong { font-size: 17px; }
+  .quick-wrap { gap: 8px; padding: 14px 10px; }
+  .quick-tile-btn { width: 46px; height: 46px; }
+  .quick-tile > span:last-child { font-size: 10px; }
+  .weather-pill { max-width: 30px; padding: 0; justify-content: center; }
   .weather-pill span { display: none; }
 }
 

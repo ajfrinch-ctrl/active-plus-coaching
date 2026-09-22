@@ -1,4 +1,4 @@
-const CACHE_NAME = 'active-plus-student-v29-no-security-check';
+const CACHE_NAME = 'active-plus-student-v30-shopledger-home-style';
 const APP_SHELL = [
   './',
   './index.html',

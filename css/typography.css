@@ -11,25 +11,10 @@
 html, body, button, input, select, textarea { font-family: var(--app-font); }
 body { font-size: 15px; line-height: 1.6; }
 
-/* Comfortable reading sizes for a phone held at arm's length. */
+/* Comfortable reading sizes for a phone held at arm's length.
+   Home view sizes live in dashboard.css (ShopLedGer scale: 11/12/14/16px). */
 .eyebrow { font-size: 11px; letter-spacing: .8px; }
-.welcome-row h1 { font-size: 29px; }
-.welcome-row .muted { font-size: 13px; }
-.offline-pill { font-size: 11px; }
-.progress-card h2 { font-size: 19px; }
-.progress-copy { font-size: 12px; }
-.progress-footer { font-size: 11px; }
-.stat-card strong { font-size: 20px; }
-.stat-card > span:last-child { font-size: 10px; }
-.section-heading h2 { font-size: 19px; }
-.quick-card strong { font-size: 13px; }
-.quick-card small { font-size: 10px; }
-.class-time strong { font-size: 18px; }
-.class-time span, .class-detail > span:last-child { font-size: 10px; }
-.live-label { font-size: 9px; }
-.class-detail > strong { font-size: 13px; }
-.notice-strip strong { font-size: 11px; }
-.notice-strip small { font-size: 9px; }
+.section-heading h2 { font-size: 16px; }
 
 .page-intro h1 { font-size: 29px; }
 .page-intro > p:last-child { font-size: 13px; }
@@ -99,9 +84,6 @@ body { font-size: 15px; line-height: 1.6; }
 
 @media (max-width: 360px) {
   body { font-size: 14px; }
-  .welcome-row h1 { font-size: 27px; }
-  .progress-card h2 { font-size: 18px; }
-  .quick-card strong { font-size: 12px; }
   .page-intro h1 { font-size: 27px; }
   .auth-panel input, .auth-panel select, .auth-panel textarea { font-size: 13px; }
 }
@@ -109,14 +91,8 @@ body { font-size: 15px; line-height: 1.6; }
 /* Small readability lift for everyday mobile reading. */
 body { font-size: 15.5px; }
 .eyebrow { font-size: 11.5px; }
-.welcome-row .muted, .page-intro > p:last-child { font-size: 13.5px; }
-.progress-copy { font-size: 12.5px; }
-.progress-footer, .offline-pill { font-size: 11.5px; }
-.stat-card > span:last-child, .quick-card small { font-size: 10.5px; }
-.day-time-copy strong { font-size: 13px; }
-.day-time-copy small { font-size: 10px; }
-.day-time-card time { font-size: 15px; }
-.quick-card strong, .class-detail > strong, .routine-body strong, .course-item > div > strong, .result-row strong { font-size: 13.5px; }
+.page-intro > p:last-child { font-size: 13.5px; }
+.routine-body strong, .course-item > div > strong, .result-row strong { font-size: 13.5px; }
 .routine-body small, .course-item > div > small, .result-row div small { font-size: 10.5px; }
 .auth-panel label, .edit-modal label, .field label { font-size: 11.5px; }
 .auth-panel input, .auth-panel select, .auth-panel textarea { font-size: 14.5px; }

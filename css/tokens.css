@@ -1,34 +1,40 @@
 /* Design tokens and global reset */
 /* Active Plus Coaching — mobile-first student app */
+/* Palette follows the ShopLedGer design system: flat bg, deep green primary, white cards. */
 :root {
-  --ink: #192c29;
-  --muted: #70807b;
-  --muted-2: #98a5a0;
-  --forest: #154d42;
-  --forest-dark: #0f3d34;
-  --mint: #e8f3ed;
-  --mint-strong: #cbe8d9;
-  --cream: #fcfaf6;
+  --ink: #14211c;
+  --muted: #5b6b64;
+  --muted-2: #8a978f;
+  --forest: #04795a;
+  --forest-dark: #065f46;
+  --forest-light: #0f9a73;
+  --mint: #eefaf6;
+  --mint-2: #e6f5ee;
+  --mint-strong: #d1ebe2;
+  --cream: #f4f7f6;
   --white: #ffffff;
-  --line: #edf0ed;
-  --orange: #f4a35e;
-  --coral: #f47764;
-  --purple: #8d82d6;
-  --blue: #74a8db;
-  --shadow: 0 16px 45px rgba(36, 74, 64, .09);
-  --soft-shadow: 0 5px 18px rgba(36, 74, 64, .07);
-  --radius-lg: 22px;
-  --radius-md: 15px;
+  --line: #e4ece8;
+  --orange: #b45309;
+  --coral: #c2410c;
+  --sun: #f2b544;
+  --purple: #6d63b8;
+  --blue: #1d4f78;
+  --shadow: 0 8px 28px rgba(4, 121, 90, .07), 0 1px 2px rgba(20, 33, 28, .04);
+  --soft-shadow: 0 4px 16px rgba(4, 121, 90, .06);
+  --radius-xl: 24px;
+  --radius-lg: 20px;
+  --radius-md: 16px;
+  --radius-sm: 12px;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html { min-height: 100%; background: #e6efeb; scroll-behavior: smooth; }
+html { min-height: 100%; background: var(--cream); scroll-behavior: smooth; }
 body {
   min-width: 320px;
   min-height: 100%;
   color: var(--ink);
-  background: #e6efeb;
+  background: var(--cream);
   font-family: "Noto Sans Bengali", "Nirmala UI", "Segoe UI", system-ui, -apple-system, sans-serif;
   font-size: 14px;
   line-height: 1.5;
@@ -37,7 +43,7 @@ body {
 }
 button, input, select { font: inherit; }
 button { color: inherit; cursor: pointer; }
-button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid rgba(244, 119, 100, .35); outline-offset: 2px; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid rgba(4, 121, 90, .3); outline-offset: 2px; }
 svg { display: block; }
 
 .app-shell {

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#006b43">
+  <meta name="theme-color" content="#04795a">
   <meta name="description" content="Active Plus Coaching ডামি এডমিন প্যানেল — এক ক্লিকে প্রবেশ, সব ডেটা লোকাল ডেমো।">
   <meta name="robots" content="noindex">
   <title>Active Plus | ডামি এডমিন প্যানেল</title>
@@ -96,43 +96,65 @@
     </nav>
 
     <main class="admin-main">
-      <!-- Dashboard -->
+      <!-- Dashboard — ShopLedGer-style home: today card with tone stat tiles and a summary foot -->
       <section class="admin-view active" data-view-panel="dashboard" aria-labelledby="dashTitle">
-        <div class="page-intro">
-          <div><p class="eyebrow">এক নজরে</p><h1 id="dashTitle">ড্যাশবোর্ড</h1></div>
-          <span class="page-date" id="adminTodayDate">শনিবার, ২১ সেপ্টেম্বর ২০২৬৬</span>
-        </div>
-
-        <div class="admin-stats">
-          <article class="admin-stat">
-            <span class="admin-stat-icon mint" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-users"></use></svg></span>
-            <div><strong id="dashStudentCount">—</strong><small>মোট শিক্ষার্থী</small></div>
-          </article>
-          <article class="admin-stat">
-            <span class="admin-stat-icon amber" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-clipboard"></use></svg></span>
-            <div><strong id="dashPendingCount">—</strong><small>অনুমোদনের অপেক্ষায়</small></div>
-          </article>
-          <article class="admin-stat">
-            <span class="admin-stat-icon blue" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-book"></use></svg></span>
-            <div><strong id="dashClassCount">—</strong><small>চলমান ক্লাস</small></div>
-          </article>
-          <article class="admin-stat">
-            <span class="admin-stat-icon lilac" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-megaphone"></use></svg></span>
-            <div><strong id="dashNoticeCount">—</strong><small>প্রকাশিত নোটিশ</small></div>
-          </article>
-        </div>
+        <article class="admin-hero">
+          <div class="admin-hero-head">
+            <div class="admin-hero-title">
+              <span class="admin-hero-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-home"></use></svg></span>
+              <h2 id="dashTitle">আজকের হিসাব</h2>
+            </div>
+            <span class="admin-date-pill" id="adminTodayDate">শনিবার, ২১ সেপ্টেম্বর ২০২৬</span>
+          </div>
+          <div class="admin-hero-stats">
+            <div class="admin-stat-tile tone-mint">
+              <span class="tile-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-users"></use></svg></span>
+              <p class="tile-label">মোট শিক্ষার্থী</p>
+              <p class="tile-value" id="dashStudentCount">—</p>
+              <p class="tile-sub">সব ক্লাস মিলিয়ে</p>
+            </div>
+            <div class="admin-stat-tile tone-blue">
+              <span class="tile-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-book"></use></svg></span>
+              <p class="tile-label">চলমান ক্লাস</p>
+              <p class="tile-value" id="dashClassCount">—</p>
+              <p class="tile-sub">এই সেশনে</p>
+            </div>
+            <div class="admin-stat-tile tone-amber">
+              <span class="tile-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-megaphone"></use></svg></span>
+              <p class="tile-label">প্রকাশিত নোটিশ</p>
+              <p class="tile-value" id="dashNoticeCount">—</p>
+              <p class="tile-sub">নোটিশ বোর্ডে</p>
+            </div>
+          </div>
+          <button class="admin-hero-foot" type="button" data-admin-view="students">
+            <span class="admin-hero-foot-copy">
+              <span class="admin-hero-foot-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-clipboard"></use></svg></span>
+              <span>
+                <p class="admin-hero-foot-label">অনুমোদনের অপেক্ষায়</p>
+                <p class="admin-hero-foot-sub">নতুন রেজিস্ট্রেশন দেখুন</p>
+              </span>
+            </span>
+            <strong id="dashPendingCount">—</strong>
+          </button>
+        </article>
 
         <div class="admin-duo">
           <article class="admin-card">
             <header class="admin-card-head">
-              <div><p class="eyebrow">আগামতি</p><h2>অনুমোদনের অপেক্ষায়</h2></div>
+              <div class="admin-card-title">
+                <span class="admin-card-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-clipboard"></use></svg></span>
+                <div><p class="eyebrow">আগামতি</p><h2>অনুমোদনের অপেক্ষায়</h2></div>
+              </div>
               <button class="text-link" type="button" data-admin-view="students">সব দেখুন →</button>
             </header>
             <div class="pending-list" id="dashPendingList"></div>
           </article>
           <article class="admin-card">
             <header class="admin-card-head">
-              <div><p class="eyebrow">আজ</p><h2>আজকের ক্লাস</h2></div>
+              <div class="admin-card-title">
+                <span class="admin-card-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-calendar"></use></svg></span>
+                <div><p class="eyebrow">আজ</p><h2>আজকের ক্লাস</h2></div>
+              </div>
             </header>
             <div class="today-list" id="dashTodayList"></div>
           </article>
@@ -140,7 +162,10 @@
 
         <article class="admin-card" style="margin-top: 14px;">
           <header class="admin-card-head">
-            <div><p class="eyebrow">এনরোলমেন্ট</p><h2>ক্লাসভিত্তিক শিক্ষার্থী</h2></div>
+            <div class="admin-card-title">
+              <span class="admin-card-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-users"></use></svg></span>
+              <div><p class="eyebrow">এনরোলমেন্ট</p><h2>ক্লাসভিত্তিক শিক্ষার্থী</h2></div>
+            </div>
           </header>
           <div class="enrollment" id="dashEnrollment"></div>
         </article>
@@ -254,23 +279,23 @@
 
     <nav class="admin-bottom" aria-label="এডমিন মোবাইল নেভিগেশন">
       <button class="admin-bottom-item active" type="button" data-admin-view="dashboard">
-        <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-home"></use></svg>
+        <span class="nav-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-home"></use></svg></span>
         <span>ড্যাশবোর্ড</span>
       </button>
       <button class="admin-bottom-item" type="button" data-admin-view="students">
-        <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-users"></use></svg>
+        <span class="nav-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-users"></use></svg></span>
         <span>শিক্ষার্থী</span>
       </button>
       <button class="admin-bottom-item" type="button" data-admin-view="notices">
-        <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-megaphone"></use></svg>
+        <span class="nav-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-megaphone"></use></svg></span>
         <span>নোটিশ</span>
       </button>
       <button class="admin-bottom-item" type="button" data-admin-view="routine">
-        <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-calendar"></use></svg>
+        <span class="nav-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-calendar"></use></svg></span>
         <span>রুটিন</span>
       </button>
       <button class="admin-bottom-item" type="button" data-admin-view="classes">
-        <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-sliders"></use></svg>
+        <span class="nav-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-sliders"></use></svg></span>
         <span>ক্লাস</span>
       </button>
     </nav>
