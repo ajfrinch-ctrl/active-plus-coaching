@@ -47,19 +47,53 @@ function applyAppConfig(cfg) {
 
   // 3. Maintenance Mode
   if (cfg.maintenanceMode) {
-    let maintBanner = $('#appMaintenanceBanner');
-    if (!maintBanner) {
-      maintBanner = document.createElement('div');
-      maintBanner.id = 'appMaintenanceBanner';
-      maintBanner.className = 'maintenance-alert-box';
-      maintBanner.innerHTML = `
-        <div style="margin:10px 14px 0;padding:12px 14px;border-radius:14px;background:#fff0eb;border:1px solid #fbdad0;color:#9b4436;font-size:11px;line-height:1.5;">
-          <strong style="display:block;margin-bottom:2px;font-size:12px;">⚠️ সিস্টেম রক্ষণাবেক্ষণ চলছে</strong>
-          <span>${cfg.maintenanceMessage || 'বর্তমানে অ্যাপে আপডেট কাজ চলছে।'}</span>
-        </div>`;
-      $('#authScreen')?.prepend(maintBanner);
-      $('#appShell')?.prepend(maintBanner.cloneNode(true));
+    // 1. On Auth Screen: insert inside .auth-card safely below topbar
+    let authMaintBanner = $('#authMaintenanceBanner');
+    if (!authMaintBanner) {
+      authMaintBanner = document.createElement('div');
+      authMaintBanner.id = 'authMaintenanceBanner';
+      authMaintBanner.className = 'maintenance-alert-card';
+      const authCard = $('.auth-card');
+      if (authCard) {
+        authCard.prepend(authMaintBanner);
+      }
     }
+    authMaintBanner.innerHTML = `
+      <div class="maint-icon">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-shield"></use></svg>
+      </div>
+      <div class="maint-body">
+        <strong>⚠️ সিস্টেম রক্ষণাবেক্ষণ চলছে</strong>
+        <p>${cfg.maintenanceMessage || 'বর্তমানে অ্যাপটিতে সিস্টেম আপডেট ও রক্ষণাবেক্ষণের কাজ চলছে।'}</p>
+      </div>
+    `;
+    authMaintBanner.hidden = false;
+
+    // 2. On App Main Screen: insert inside #appMain safely below topbar
+    let appMaintBanner = $('#appMainMaintenanceBanner');
+    if (!appMaintBanner) {
+      appMaintBanner = document.createElement('div');
+      appMaintBanner.id = 'appMainMaintenanceBanner';
+      appMaintBanner.className = 'maintenance-alert-card';
+      const appMain = $('#appMain');
+      if (appMain) {
+        appMain.prepend(appMaintBanner);
+      }
+    }
+    appMaintBanner.innerHTML = `
+      <div class="maint-icon">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-shield"></use></svg>
+      </div>
+      <div class="maint-body">
+        <strong>⚠️ সিস্টেম রক্ষণাবেক্ষণ চলছে</strong>
+        <p>${cfg.maintenanceMessage || 'বর্তমানে অ্যাপটিতে সিস্টেম আপডেট ও রক্ষণাবেক্ষণের কাজ চলছে।'}</p>
+      </div>
+    `;
+    appMaintBanner.hidden = false;
+  } else {
+    $('#authMaintenanceBanner')?.remove();
+    $('#appMainMaintenanceBanner')?.remove();
+    $('#appMaintenanceBanner')?.remove();
   }
 
   // 4. Registration Permission
