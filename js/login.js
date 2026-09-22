@@ -1,7 +1,8 @@
-/* Login feature: mobile number + PIN verification and auth tab switching. */
+/* Login feature: mobile number + PIN verification and auth tab switching.
+   Updated: long-lived session so security check isn't required every time. */
 import { $, $$, normalizeMobile, setAuthMessage } from './ui.js';
 import { defaultStudent } from './config.js';
-import { saveStudent, persistSession } from './storage.js';
+import { saveStudent, persistSession, setTrustedDevice, isSecurityCheckDisabled } from './storage.js';
 
 export function switchAuthTab(tab) {
   $$('[data-auth-tab]').forEach(trigger => {
@@ -38,7 +39,9 @@ function handleLogin(event, state, onAuthenticated) {
   }
   state.student = { ...state.student, ...(state.account.student || {}) };
   saveStudent(state.student);
-  persistSession($('#rememberMe')?.checked !== false);
+  const remember = $('#rememberMe')?.checked !== false;
+  persistSession(remember);
+  if (remember) setTrustedDevice(true);
   onAuthenticated?.();
 }
 
@@ -60,8 +63,19 @@ function initDemoLogin(state, onDemo) {
   });
 }
 
+function initSkipSecurityToggle() {
+  const checkbox = $('#skipSecurityCheck');
+  if (!checkbox) return;
+  checkbox.checked = isSecurityCheckDisabled();
+  checkbox.addEventListener('change', () => {
+    // This checkbox on login screen is just visual; actual toggle lives in profile
+    // But we keep it in sync if present
+  });
+}
+
 export function initLogin({ state, onAuthenticated, onDemo }) {
   initPinVisibility();
+  initSkipSecurityToggle();
   $$('[data-auth-tab]').forEach(trigger => trigger.addEventListener('click', () => {
     switchAuthTab(trigger.dataset.authTab);
   }));
