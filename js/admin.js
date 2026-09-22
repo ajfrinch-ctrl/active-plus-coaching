@@ -558,7 +558,7 @@ function populateStudentFeeSelect() {
   select.innerHTML = '<option value="">শিক্ষার্থী সিলেক্ট করুন...</option>' +
     state.students.map(s => `
       <option value="${s.id}" data-name="${s.name}" data-class="${s.className}">
-        ${s.name} [ID: ${s.id}] — ${s.className} [${s.status === 'approved' ? 'অনুমোদিত' : 'অপেক্ষমাণ'}]
+        ${s.name} — ${s.className} (${s.status === 'approved' ? 'অনুমোদিত' : 'অপেক্ষমাণ'})
       </option>`).join('');
   if (currentVal) select.value = currentVal;
 }
@@ -575,15 +575,8 @@ function renderRecentTransactions() {
             <svg viewBox="0 0 24 24"><use href="#icon-receipt"></use></svg>
           </span>
           <div class="trx-info">
-            <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
-              <strong>${tx.studentName}</strong>
-              <span class="audit-id-badge">ID: ${tx.studentId}</span>
-            </div>
-            <div style="display:flex;align-items:center;gap:4px;margin-top:2px;flex-wrap:wrap;">
-              <span class="audit-id-badge">${tx.receiptNo}</span>
-              <span class="audit-id-badge blue">${tx.id}</span>
-            </div>
-            <small>${tx.feeType} • ${tx.month} • ${tx.method}</small>
+            <strong>${tx.studentName}</strong>
+            <small>${tx.className} • ${tx.feeType} (${tx.month}) • ${tx.method}</small>
           </div>
         </div>
         <div class="trx-right">
@@ -628,10 +621,7 @@ function renderStudentLedger() {
     ? filtered.map(student => `
       <article class="ledger-item">
         <div class="student-copy">
-          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-            <strong>${student.name}</strong>
-            <span class="audit-id-badge">ID: ${student.id}</span>
-          </div>
+          <strong>${student.name}</strong>
           <small>${student.className} • ${student.group} • 📞 ${bn(student.mobile)}</small>
           <small style="margin-top:2px;color:${student.isPaid ? 'var(--forest)' : '#c05b4b'};font-weight:700;">
             সেপ্টেম্বর ২০২৬: ${student.isPaid ? 'পরিশোধিত (৳' + bn(student.paidAmount) + ')' : 'বকেয়া: ৳' + bn(student.dueAmount)}
@@ -720,13 +710,13 @@ function renderReportGenerator() {
 
   // Update Memo & Scope
   const memoEl = $('#padMemoNo');
-  if (memoEl) memoEl.textContent = `AUD-MEMO-2609-${String(100 + filtered.length)}`;
+  if (memoEl) memoEl.textContent = `APC/২০২৬-${String(100 + filtered.length)}`;
 
   const periodEl = $('#padPeriod');
-  if (periodEl) periodEl.textContent = monthFilter === 'all' ? 'সর্বমোট সময়কাল' : monthFilter;
+  if (periodEl) periodEl.textContent = monthFilter === 'all' ? 'সব সময়' : monthFilter;
 
   const classScopeEl = $('#padClassScope');
-  if (classScopeEl) classScopeEl.textContent = classFilter === 'all' ? 'সব শ্রেণি' : `${classFilter} [${classCodes[classFilter] || 'CLS-GEN'}]`;
+  if (classScopeEl) classScopeEl.textContent = classFilter === 'all' ? 'সব শ্রেণি' : classFilter;
 
   const feeScopeEl = $('#padFeeTypeScope');
   if (feeScopeEl) feeScopeEl.textContent = feeTypeFilter === 'all' ? 'সব ধরন' : feeTypeFilter;
@@ -744,7 +734,7 @@ function renderReportGenerator() {
   if (tableTotalEl) tableTotalEl.textContent = `৳${bn(totalAmount.toLocaleString('en-US'))}`;
   if (wordsEl) wordsEl.textContent = numberToBanglaWords(totalAmount);
 
-  // Render Pad Table Rows with full Audit traceability
+  // Render Pad Table Rows with clean, straightforward columns
   const tbody = $('#padTableBody');
   if (!tbody) return;
 
@@ -752,28 +742,21 @@ function renderReportGenerator() {
     ? filtered.map((tx, idx) => `
       <tr>
         <td style="text-align:center;font-weight:700;color:var(--muted);">${bn(idx + 1)}</td>
-        <td><span class="audit-id-badge">${tx.receiptNo}</span></td>
-        <td><span class="audit-id-badge blue">${tx.id}</span></td>
-        <td>
-          <strong>${tx.studentName}</strong>
-          <small style="display:block;margin-top:2px;"><span class="audit-id-badge amber">ID: ${tx.studentId}</span></small>
-        </td>
-        <td>
-          ${tx.className}
-          <small style="display:block;margin-top:2px;"><span class="audit-id-badge purple">${classCodes[tx.className] || 'CLS-GEN'}</span></small>
-        </td>
+        <td>${tx.date || '২২ সেপ্টেম্বর ২০২৬'}</td>
+        <td><strong>${tx.studentName}</strong></td>
+        <td>${tx.className}</td>
         <td>
           ${tx.feeType}
           <small style="display:block;color:var(--muted);font-size:9.5px;">${tx.month}</small>
         </td>
         <td>
-          <span style="display:inline-block;padding:2px 7px;border-radius:4px;background:#eef6f1;color:#154d42;font-size:9px;font-weight:800;">${tx.method}</span>
+          <span style="display:inline-block;padding:2px 7px;border-radius:4px;background:#eef6f1;color:#154d42;font-size:9.5px;font-weight:800;">${tx.method}</span>
         </td>
         <td style="text-align:right;">
           <strong>৳${bn(Number(tx.amount).toLocaleString('en-US'))}</strong>
         </td>
       </tr>`).join('')
-    : '<tr><td colspan="8" style="text-align:center;padding:26px;color:var(--muted);">কোনো লেনদেন রেকর্ড পাওয়া যায়নি। ফিল্টার পরিবর্তন করুন।</td></tr>';
+    : '<tr><td colspan="7" style="text-align:center;padding:26px;color:var(--muted);">কোনো কালেকশন রেকর্ড পাওয়া যায়নি।</td></tr>';
 }
 
 function collectFee(event) {
@@ -802,7 +785,6 @@ function collectFee(event) {
   const newTx = {
     id: newTxId,
     receiptNo: newReceiptNo,
-    auditCode: `AUD-${newTxId}`,
     studentId: student.id,
     studentName: student.name,
     className: student.className,
@@ -821,33 +803,28 @@ function collectFee(event) {
   $('#feeAmount').value = '1500';
 
   renderFinance();
-  toast(`${student.name} [${student.id}]-এর ৳${bn(amount)} ফি সফলভাবে জমা নেওয়া হয়েছে`);
+  toast(`${student.name}-এর ৳${bn(amount)} ফি সফলভাবে জমা নেওয়া হয়েছে`);
   openReceiptModal(newTx);
 }
 
 function openReceiptModal(tx) {
-  const classCode = classCodes[tx.className] || 'CLS-GEN';
   openModal(
-    'মানি রসিদ (Audit Ready)',
-    `রসিদ নং: ${tx.receiptNo}`,
+    'মানি রসিদ',
+    `রসিদ নং: ${tx.receiptNo || 'REC-১০১'}`,
     `
       <div class="receipt-modal-box" id="printReceiptBox">
         <div class="receipt-header">
           <div class="receipt-brand-title">Active Plus Coaching</div>
           <div class="receipt-sub">শিখতে থাকো, এগিয়ে যাও • দিনাজপুর</div>
-          <div class="receipt-badge-title">অফিশিয়াল মানি রসিদ (PAID)</div>
+          <div class="receipt-badge-title">মানি রসিদ (PAID)</div>
         </div>
         <dl class="receipt-meta-grid">
-          <div><dt>রসিদ নং (Receipt)</dt><dd><span class="audit-id-badge">${tx.receiptNo}</span></dd></div>
-          <div><dt>অডিট ট্রানজেকশন ID</dt><dd><span class="audit-id-badge blue">${tx.id}</span></dd></div>
-          <div><dt>তারিখ ও সময়</dt><dd>${tx.date}</dd></div>
-          <div><dt>শিক্ষার্থীর নাম</dt><dd>${tx.studentName}</dd></div>
-          <div><dt>Student ID</dt><dd><span class="audit-id-badge amber">${tx.studentId}</span></dd></div>
-          <div><dt>শ্রেণি ও কোড</dt><dd>${tx.className} <span class="audit-id-badge purple">${classCode}</span></dd></div>
+          <div><dt>রসিদ নং</dt><dd><strong>${tx.receiptNo || 'REC-১০১'}</strong></dd></div>
+          <div><dt>তারিখ</dt><dd>${tx.date}</dd></div>
+          <div><dt>শিক্ষার্থীর নাম</dt><dd><strong>${tx.studentName}</strong></dd></div>
+          <div><dt>শ্রেণি</dt><dd>${tx.className}</dd></div>
           <div><dt>ফি এর ধরন</dt><dd>${tx.feeType} (${tx.month})</dd></div>
-          <div><dt>পেমেন্ট মেথড</dt><dd>${tx.method}</dd></div>
-          <div><dt>Trx Ref</dt><dd>${tx.trxRef || '—'}</dd></div>
-          <div><dt>অডিট ট্র্যাকিং কোড</dt><dd><span class="audit-id-badge">AUD-TX-${tx.id.replace(/[^0-9A-Za-z]/g, '')}</span></dd></div>
+          <div><dt>পেমেন্ট মাধ্যম</dt><dd>${tx.method}</dd></div>
         </dl>
         <div class="receipt-amount-block">
           <div>
