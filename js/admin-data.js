@@ -135,21 +135,21 @@ export const adminStudents = Object.freeze([
 
 export const adminNotices = Object.freeze([
   {
-    id: 'n-101',
+    id: 'NOT-2609-101',
     title: 'নতুন ব্যাচের ভর্তি পরীক্ষার সময়সূচি',
     body: 'দশম ও একাদশ শ্রেণির ভর্তি পরীক্ষা আগামী শনি-রবিবার বিকেল ৩টায় অনুষ্ঠিত হবে। পরীক্ষায় উপস্থিত হতে ID কার্ড সঙ্গে আনতে হবে।',
     audience: 'সব শিক্ষার্থী',
     date: '১৮ সেপ্টেম্বর ২০২৬'
   },
   {
-    id: 'n-100',
+    id: 'NOT-2609-100',
     title: 'ক্লাস রুটিন পরিবর্তন',
     body: 'রবিবার থেকে মঙ্গলবারের উচ্চতর গণিত ক্লাসটি বিকেল ৪:৩০-এর পরিবর্তে সন্ধ্যা ৬:০০-এ শুরু হবে। বাকি ক্লাস আগের মতোই থাকছে।',
     audience: 'বিজ্ঞান বিভাগ',
     date: '১৫ সেপ্টেম্বর ২০২৬'
   },
   {
-    id: 'n-099',
+    id: 'NOT-2609-099',
     title: 'বার্ষিক দিবস রিপ্রজেন্টেশন',
     body: 'বুধবার বিকেল ৪:৩০-তে বার্ষিক দিবসের রিপ্রজেন্টেশন হবে। সব শিক্ষার্থীকে যথা সময়ে উপস্থিত থাকতে হবে।',
     audience: 'সব শিক্ষার্থী',
@@ -170,6 +170,153 @@ export const classEnrollment = Object.freeze([
   { className: 'অনার্স ২য় বর্ষ', count: 1 },
   { className: 'অনার্স ৩য় বর্ষ', count: 1 },
   { className: 'অনার্স ৪র্থ বর্ষ', count: 0 }
+]);
+
+export const classCodes = Object.freeze({
+  'অষ্টম শ্রেণি': 'CLS-08',
+  'নবম শ্রেণি': 'CLS-09',
+  'দশম শ্রেণি': 'CLS-10',
+  'একাদশ শ্রেণি': 'CLS-11',
+  'দ্বাদশ শ্রেণি': 'CLS-12',
+  'ডিগ্রি ১ম বর্ষ': 'CLS-DEG-1',
+  'ডিগ্রি ২য় বর্ষ': 'CLS-DEG-2',
+  'ডিগ্রি ৩য় বর্ষ': 'CLS-DEG-3',
+  'অনার্স ১ম বর্ষ': 'CLS-HON-1',
+  'অনার্স ২য় বর্ষ': 'CLS-HON-2',
+  'অনার্স ৩য় বর্ষ': 'CLS-HON-3',
+  'অনার্স ৪র্থ বর্ষ': 'CLS-HON-4'
+});
+
+export const feeCategories = Object.freeze([
+  'মাসিক বেতন',
+  'ভর্তি ফি',
+  'মডেল টেস্ট ফি',
+  'লেকচার শিট ফি',
+  'পরীক্ষার ফি',
+  'অন্যান্য'
+]);
+
+export const paymentMethods = Object.freeze([
+  'নগদ (Cash)',
+  'বিকাশ (bKash)',
+  'নগদ (Nagad)',
+  'রকেট (Rocket)',
+  'ব্যাংক ট্রান্সফার'
+]);
+
+export const initialTransactions = Object.freeze([
+  {
+    id: 'TRX-9821',
+    receiptNo: 'REC-2609-01',
+    auditCode: 'AUD-TX-9821',
+    studentId: 'AP-1024',
+    studentName: 'রাইসা ইসলাম',
+    className: 'দশম শ্রেণি',
+    feeType: 'মাসিক বেতন',
+    month: 'সেপ্টেম্বর ২০২৬',
+    amount: 1500,
+    method: 'বিকাশ (bKash)',
+    trxRef: 'BK-89X2190',
+    date: '২২ সেপ্টেম্বর ২০২৬',
+    collectedBy: 'এডমিন',
+    note: 'সেপ্টেম্বর মাসের কোচিং বেতন'
+  },
+  {
+    id: 'TRX-9820',
+    receiptNo: 'REC-2609-02',
+    auditCode: 'AUD-TX-9820',
+    studentId: '260810021',
+    studentName: 'তহমিদ হাসান',
+    className: 'দশম শ্রেণি',
+    feeType: 'মাসিক বেতন',
+    month: 'সেপ্টেম্বর ২০২৬',
+    amount: 1500,
+    method: 'নগদ (Cash)',
+    trxRef: 'CSH-0941',
+    date: '২২ সেপ্টেম্বর ২০২৬',
+    collectedBy: 'এডমিন',
+    note: 'নগদে পরিশোধিত'
+  },
+  {
+    id: 'TRX-9819',
+    receiptNo: 'REC-2609-03',
+    auditCode: 'AUD-TX-9819',
+    studentId: '260716011',
+    studentName: 'সুমাইয়া খাতুন',
+    className: 'অনার্স ১ম বর্ষ',
+    feeType: 'মাসিক বেতন',
+    month: 'সেপ্টেম্বর ২০২৬',
+    amount: 2000,
+    method: 'নগদ (Nagad)',
+    trxRef: 'NG-430922',
+    date: '২১ সেপ্টেম্বর ২০২৬',
+    collectedBy: 'এডমিন',
+    note: 'অনলাইন পেমেন্ট'
+  },
+  {
+    id: 'TRX-9818',
+    receiptNo: 'REC-2609-04',
+    auditCode: 'AUD-TX-9818',
+    studentId: '260613004',
+    studentName: 'ইমরান হোসেন',
+    className: 'ডিগ্রি ১ম বর্ষ',
+    feeType: 'মডেল টেস্ট ফি',
+    month: 'সেপ্টেম্বর ২০২৬',
+    amount: 800,
+    method: 'নগদ (Cash)',
+    trxRef: 'CSH-0938',
+    date: '২০ সেপ্টেম্বর ২০২৬',
+    collectedBy: 'এডমিন',
+    note: 'মডেল টেস্ট ১ ও ২ ফি'
+  },
+  {
+    id: 'TRX-9817',
+    receiptNo: 'REC-2608-15',
+    auditCode: 'AUD-TX-9817',
+    studentId: 'AP-1024',
+    studentName: 'রাইসা ইসলাম',
+    className: 'দশম শ্রেণি',
+    feeType: 'ভর্তি ফি',
+    month: 'আগস্ট ২০২৬',
+    amount: 3000,
+    method: 'বিকাশ (bKash)',
+    trxRef: 'BK-77A1045',
+    date: '১৪ আগস্ট ২০২৬',
+    collectedBy: 'এডমিন',
+    note: 'ভর্তি ও রেজিস্ট্রেশন ফি'
+  },
+  {
+    id: 'TRX-9816',
+    receiptNo: 'REC-2608-16',
+    auditCode: 'AUD-TX-9816',
+    studentId: '260810021',
+    studentName: 'তহমিদ হাসান',
+    className: 'দশম শ্রেণি',
+    feeType: 'ভর্তি ফি',
+    month: 'আগস্ট ২০২৬',
+    amount: 3000,
+    method: 'নগদ (Cash)',
+    trxRef: 'CSH-0820',
+    date: '০২ আগস্ট ২০২৬',
+    collectedBy: 'এডমিন',
+    note: 'নতুন সেশন ভর্তি ফি'
+  },
+  {
+    id: 'TRX-9815',
+    receiptNo: 'REC-2608-17',
+    auditCode: 'AUD-TX-9815',
+    studentId: '260716011',
+    studentName: 'সুমাইয়া খাতুন',
+    className: 'অনার্স ১ম বর্ষ',
+    feeType: 'লেকচার শিট ফি',
+    month: 'আগস্ট ২০২৬',
+    amount: 500,
+    method: 'রকেট (Rocket)',
+    trxRef: 'RK-908123',
+    date: '২৫ আগস্ট ২০২৬',
+    collectedBy: 'এডমিন',
+    note: 'বাংলা সাহিত্যের পূর্ণাঙ্গ শিট'
+  }
 ]);
 
 export const dayNames = Object.freeze({

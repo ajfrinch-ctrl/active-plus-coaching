@@ -10,7 +10,32 @@ export const STORAGE_KEYS = Object.freeze({
   skipSecurity: 'active-plus-skip-security-v1',
   installDismissed: 'active-plus-install-dismissed',
   idSequence: 'active-plus-id-sequence',
-  weather: 'active-plus-weather-v1'
+  weather: 'active-plus-weather-v1',
+  appConfig: 'active-plus-app-config-v1'
+});
+
+export const ADMIN_ID = '01819486966';
+
+export const DEFAULT_APP_SETTINGS = Object.freeze({
+  maintenanceMode: false,
+  maintenanceMessage: 'সম্মানিত শিক্ষার্থী, অ্যাপটিতে বর্তমানে সিস্টেম আপডেট চলছে। সাময়িক অসুবিধার জন্য আন্তরিকভাবে দুঃখিত।',
+  allowRegistration: true,
+  skipSecurityCheck: false,
+  tagline: 'শিখতে থাকো, এগিয়ে যাও',
+  helplineMobile: '01819486966',
+  whatsappNumber: '01819486966',
+  officialEmail: 'activeplus.coaching@gmail.com',
+  campusAddress: 'দিনাজপুর সদর, দিনাজপুর',
+  broadcastAlert: true,
+  broadcastMessage: 'সকল শিক্ষার্থীর দৃষ্টি আকর্ষণ করা যাচ্ছে: আগামী সপ্তাহের মডেল টেস্টের রুটিন প্রকাশিত হয়েছে।',
+  broadcastTone: 'green',
+  modules: {
+    routine: true,
+    courses: true,
+    results: true,
+    installPrompt: true
+  },
+  themeMode: 'auto'
 });
 
 export const enabledClasses = Object.freeze([

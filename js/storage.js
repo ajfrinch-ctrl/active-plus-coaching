@@ -1,5 +1,5 @@
 /* One place for local persistence. Replacing these adapters with an API later keeps UI modules unchanged. */
-import { STORAGE_KEYS, defaultStudent } from './config.js';
+import { STORAGE_KEYS, defaultStudent, DEFAULT_APP_SETTINGS } from './config.js';
 
 function getStorage(type = 'local') {
   try { return type === 'session' ? window.sessionStorage : window.localStorage; }
@@ -134,6 +134,22 @@ export function clearSession() {
     local?.removeItem(STORAGE_KEYS.trustedDevice);
     sessionStore?.removeItem(STORAGE_KEYS.session);
   } catch { /* no-op */ }
+}
+
+export function loadAppConfig() {
+  const custom = readJSON(STORAGE_KEYS.appConfig, {});
+  return {
+    ...DEFAULT_APP_SETTINGS,
+    ...custom,
+    modules: {
+      ...DEFAULT_APP_SETTINGS.modules,
+      ...(custom?.modules || {})
+    }
+  };
+}
+
+export function saveAppConfig(config) {
+  return writeJSON(STORAGE_KEYS.appConfig, config);
 }
 
 export function clearAllSecurity() {
