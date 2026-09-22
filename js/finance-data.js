@@ -14,7 +14,7 @@ export function searchStudents(students, query) {
   const text = latinDigits(query).normalize('NFC').trim().toLocaleLowerCase();
   if (!text) return [];
   const compact = text.replace(/[\s()+-]/g, '');
-  return students.filter(s => [s.name, s.nameEn, s.id, s.mobile].some(value => {
+  return students.filter(s => [s.name, s.nameEn, s.id, s.mobile, s.guardianMobile].some(value => {
     const normalized = latinDigits(value).normalize('NFC').toLocaleLowerCase();
     return normalized.includes(text) || (compact && normalized.replace(/[\s()+-]/g, '').includes(compact));
   }));

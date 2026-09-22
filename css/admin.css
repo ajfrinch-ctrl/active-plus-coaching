@@ -803,3 +803,38 @@ body.admin-modal-open { overflow: hidden; }
   font-size: 12px;
 }
 .report-select-row select:focus { border-color: var(--forest); box-shadow: 0 0 0 3px rgba(4, 121, 90, .12); }
+
+/* ---------- Payment Receive panel (payment.html) ---------- */
+
+.pay-entry-note { margin: 0 0 16px; color: var(--muted); font-size: 12px; line-height: 1.65; }
+.auth-footnote .inline-link { margin-right: 14px; }
+.pay-body { background: var(--bg, #f2f6f3); }
+
+.pay-shell { min-height: 100dvh; display: flex; flex-direction: column; }
+.pay-topbar {
+  position: sticky; top: 0; z-index: 40;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: calc(10px + env(safe-area-inset-top)) 14px 10px;
+  background: var(--white); border-bottom: 1px solid var(--line);
+}
+.pay-topbar .admin-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.pay-topbar .admin-brand img { width: 38px; height: 38px; }
+.pay-topbar .admin-brand strong { display: block; color: var(--ink); font-size: 14.5px; }
+.pay-topbar .admin-brand small { display: block; color: var(--muted); font-size: 10.5px; }
+
+.pay-main { flex: 1; width: min(100%, 560px); margin: 0 auto; padding: 14px 14px calc(28px + env(safe-area-inset-bottom)); display: grid; gap: 14px; align-content: start; }
+.pay-main .admin-card { margin: 0; }
+
+.pay-toast {
+  position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom));
+  transform: translateX(-50%); z-index: 80;
+  max-width: min(92vw, 420px); padding: 11px 16px;
+  border-radius: 14px; background: var(--ink, #20392e); color: #fff;
+  font-size: 12px; font-weight: 700; text-align: center;
+  box-shadow: 0 14px 34px rgba(20, 33, 28, .35);
+  animation: adminFadeIn .2s ease both;
+}
+.receipt-actions { justify-content: stretch; }
+.receipt-actions .admin-btn { flex: 1 1 auto; }
+
+.pay-main .finance-search-input input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; display: none; }

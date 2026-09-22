@@ -1,9 +1,10 @@
-const CACHE_NAME = 'active-plus-student-v43-admin-upgrades';
+const CACHE_NAME = 'active-plus-student-v44-payment-desk';
 const APP_SHELL = [
   './',
   './index.html',
   './admin.html',
   './teacher.html',
+  './payment.html',
   './styles.css',
   './css/admin.css',
   './css/mobile.css',
@@ -59,6 +60,7 @@ const APP_SHELL = [
   './js/fixed-shell.js',
   './js/main.js',
   './js/admin.js',
+  './js/payment.js',
   './js/teacher.js',
   './js/teaching-data.js',
   './js/student-teaching.js',
