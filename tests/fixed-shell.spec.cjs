@@ -18,24 +18,24 @@ for (const viewport of [{ width: 320, height: 740 }, { width: 390, height: 844 }
     await page.setViewportSize(viewport);
     await page.goto('/index.html');
     await page.locator('#demoLoginButton').click();
-    const selectors = { header: '#appShell .topbar', footer: '.bottom-nav', main: '#appMain' };
+    const selectors = { header: '#studentHeader', footer: '.bottom-nav', main: '#appMain' };
     await barsStayInPlace(page, selectors);
     await page.locator('#appMain').evaluate(el => { el.scrollTop = el.scrollHeight; });
     await expect.poll(() => page.locator('#appMain').evaluate(el => el.scrollTop)).toBeGreaterThan(76);
-    await expect(page.locator('#appShell .topbar')).toHaveClass(/is-scrolled/);
+    await expect(page.locator('#studentHeader [data-fixed-tagline]')).toBeVisible();
     await barsStayInPlace(page, selectors);
     const lastBottom = await page.locator('#homeView > :last-child').evaluate(el => el.getBoundingClientRect().bottom);
     const footerTop = (await page.locator('.bottom-nav').boundingBox()).y;
     expect(lastBottom).toBeLessThanOrEqual(footerTop);
-    // Identity/scroll position reset when a bottom tab changes the view.
+    // The login-style identity stays unchanged when a bottom tab changes the view.
     await page.locator('.bottom-nav [data-view=routine]').click();
     await expect.poll(() => page.locator('#appMain').evaluate(el => el.scrollTop)).toBe(0);
-    await expect(page.locator('#appShell .topbar')).not.toHaveClass(/is-scrolled/);
+    await expect(page.locator('#studentHeader')).not.toHaveClass(/is-scrolled/);
     await barsStayInPlace(page, selectors);
     await page.setViewportSize({ width: 390, height: 520 });
     await barsStayInPlace(page, selectors);
     // Actual header size, not a hard-coded offset, reserves the content space.
-    await page.locator('#appShell .topbar').evaluate(el => { el.style.paddingBottom = '24px'; });
+    await page.locator('#studentHeader').evaluate(el => { el.style.height = '90px'; });
     await barsStayInPlace(page, selectors);
   });
 
@@ -75,7 +75,7 @@ for (const entry of ['index.html', 'admin.html']) {
     await page.goto('/' + entry);
     await page.locator('.auth-screen').evaluate(el => { el.scrollTop = el.scrollHeight; });
     await expect.poll(() => page.locator('.auth-screen').evaluate(el => el.scrollTop)).toBeGreaterThan(0);
-    expect((await page.locator('.auth-topbar').boundingBox()).y).toBe(0);
+    expect((await page.locator('.auth-screen .auth-topbar').boundingBox()).y).toBe(0);
     expect(await page.evaluate(() => window.scrollY)).toBe(0);
     if (entry === 'index.html') {
       await page.locator('.auth-tab[data-auth-tab=register]').click();
@@ -96,3 +96,28 @@ test('pending account confirmation still scrolls to its logout button', async ({
   await expect(page.locator('#authScreen')).toBeVisible();
   expect(await page.evaluate(() => window.scrollY)).toBe(0);
 });
+
+for (const width of [320, 390, 480]) {
+  test(`student reuses login branding, with one bell and no legacy header (${width}px)`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto('/index.html');
+    const branding = await page.locator('#authScreen .auth-brand').innerHTML();
+    const loginHeight = (await page.locator('#authScreen .auth-topbar').boundingBox()).height;
+    await page.locator('#demoLoginButton').click();
+    await expect(page.locator('#studentHeader')).toBeVisible();
+    expect(await page.locator('#studentHeader .auth-brand').innerHTML()).toBe(branding);
+    expect((await page.locator('#studentHeader').boundingBox()).height).toBe(loginHeight);
+    await expect(page.locator('#appShell .topbar, #topbarStudentName, #weatherStatus, #currentTime, .topbar-strip')).toHaveCount(0);
+    await expect(page.locator('#notificationButton')).toHaveCount(1);
+    await expect(page.locator('#notificationButton')).toBeVisible();
+    expect(await page.locator('#studentHeader .auth-brand strong').evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.locator('#notificationButton').click();
+    await expect(page.locator('#noticeModal')).toBeVisible();
+    await expect(page.locator('.notification-dot')).toBeHidden();
+    await page.locator('#noticeModal .modal-action').click();
+    await page.reload();
+    await expect(page.locator('#studentHeader')).toBeVisible();
+    await expect(page.locator('.notification-dot')).toBeHidden();
+  });
+}

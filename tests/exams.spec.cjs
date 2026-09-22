@@ -110,7 +110,7 @@ for (const width of [320,390,844,1280]) {
     await page.setViewportSize({width,height:width===844?390:844}); await teacher(page); await page.locator('[data-exam-action=new-mcq]').click();
     await expect(page.locator('#teacherExamWorkspace [name=title]')).toHaveCSS('font-size','16px'); expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
     await page.locator('[data-exam-action=list]').click(); await seed(page); const pupil=await student(context); await pupil.setViewportSize({width,height:width===844?390:844}); await pupil.locator('[data-student-exam-action=start]').click();
-    await expect(pupil.locator('.bottom-nav .bottom-link')).toHaveCount(5); await expect(pupil.locator('.bottom-nav')).toHaveCSS('position','fixed'); await expect(pupil.locator('.topbar')).toHaveCSS('position','fixed');
+    await expect(pupil.locator('.bottom-nav .bottom-link')).toHaveCount(5); await expect(pupil.locator('.bottom-nav')).toHaveCSS('position','fixed'); await expect(pupil.locator('#studentHeader')).toHaveCSS('position','fixed');
     const save=pupil.locator('[data-student-exam-action=confirm]'); await save.scrollIntoViewIfNeeded(); expect(await pupil.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true); expect((await save.boundingBox()).y+(await save.boundingBox()).height).toBeLessThanOrEqual((await pupil.locator('.bottom-nav').boundingBox()).y);
   });
 }

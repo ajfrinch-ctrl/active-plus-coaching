@@ -18,7 +18,6 @@ import { initInstallPrompt, installApp } from './install.js';
 import { initConnectivity } from './connectivity.js';
 import { registerServiceWorker } from './service-worker.js';
 import { initDynamicTheme } from './theme.js';
-import { initScrollHeader } from './scroll-header.js';
 import { initFixedShell } from './fixed-shell.js';
 import { initStudentExams } from './student-exams.js';
 import { initStudentTeaching } from './student-teaching.js';
@@ -200,7 +199,6 @@ initProfile({
 initRoutine();
 initConnectivity();
 initDynamicTheme();
-initScrollHeader();
 initInstallPrompt();
 registerServiceWorker();
 initLogin({

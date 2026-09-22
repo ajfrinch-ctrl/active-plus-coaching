@@ -129,28 +129,12 @@
       <div class="pending-info"><span>✓</span><p>শিক্ষক বা এডমিন অনুমোদন দিলে এই মোবাইল নম্বর ও PIN দিয়ে আবার লগইন করো।</p></div>
       <button class="pending-logout" type="button" id="pendingLogout">লগইন পেইজে ফিরে যান</button>
     </section>
-    <header class="topbar">
-      <div class="topbar-inner">
-        <button class="brand-button" type="button" data-view="home" aria-label="হোমে ফিরে যান">
-          <span class="brand-mark"><img src="assets/icons/app-logo.png" alt="" width="40" height="40"></span>
-          <span class="brand-copy">
-            <strong class="institution-name">Active Plus Coaching</strong>
-            <strong id="topbarStudentName" class="student-topbar-name">রাইসা ইসলাম</strong>
-            <small data-fixed-tagline aria-label="শিখতে থাকো, এগিয়ে যাও">শিখতে থাকো, এগিয়ে যাও</small>
-          </span>
-        </button>
-        <div class="topbar-actions">
-          <span class="weather-pill" id="weatherStatus" aria-label="আজকের আবহাওয়া"><svg id="weatherIcon" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-sun"></use></svg><span id="weatherLabel">স্বচ্ছ আকাশ</span></span>
-          <button class="icon-button notification-button" id="notificationButton" type="button" aria-label="নোটিশ দেখুন" aria-haspopup="dialog">
-            <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-bell"></use></svg>
-            <span class="notification-dot" hidden aria-hidden="true"></span>
-          </button>
-        </div>
-      </div>
-      <div class="topbar-strip">
-        <span class="strip-date"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-calendar"></use></svg><span><strong id="todayDay">সোমবার</strong>, <span id="todayDate">২১ সেপ্টেম্বর ২০২৬</span></span></span>
-        <span class="strip-clock"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-clock"></use></svg><time id="currentTime">০৪:৩০ বিকেল</time></span>
-      </div>
+    <header class="auth-topbar student-topbar" id="studentHeader">
+      <div class="auth-brand"><img src="assets/icons/app-logo.png" alt="Active Plus Coaching logo" width="38" height="38"><span><strong>Active Plus Coaching</strong><small data-fixed-tagline aria-label="শিখতে থাকো, এগিয়ে যাও">শিখতে থাকো, এগিয়ে যাও</small></span></div>
+      <button class="icon-button notification-button" id="notificationButton" type="button" aria-label="নোটিশ দেখুন" aria-haspopup="dialog">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-bell"></use></svg>
+        <span class="notification-dot" hidden aria-hidden="true"></span>
+      </button>
     </header>
 
     <main class="app-main" id="appMain">

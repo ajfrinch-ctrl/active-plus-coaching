@@ -48,7 +48,7 @@ button, a { touch-action: manipulation; }
 /* Fixed top + bottom bars; the middle panel is the only app scroll area. */
 html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
 .app-shell, .admin-shell {
-  --shell-header-height: calc(94px + env(safe-area-inset-top, 0px));
+  --shell-header-height: calc(64px + env(safe-area-inset-top, 0px));
   --shell-footer-height: calc(68px + var(--safe-bottom));
   height: 100vh;
   height: 100dvh;
@@ -100,3 +100,11 @@ body.admin-modal-open .admin-main { overflow-y: hidden; }
 .demo-preview-note > div { display: flex; flex-wrap: wrap; gap: 8px; }
 .demo-preview-note button { min-height: 44px; padding: 8px; border: 1px solid #bfd7c7; border-radius: 8px; color: #24553f; background: white; font: inherit; }
 .demo-preview-note [data-demo-status]:empty { display: none; }
+
+/* Student pages reuse the login header, with only the single notification action. */
+.student-topbar { gap: 8px; justify-content: space-between; }
+.student-topbar .auth-brand { flex: 1; }
+.student-topbar .auth-brand img { flex-shrink: 0; }
+.student-topbar .auth-brand span { min-width: 0; }
+.student-topbar .auth-brand strong, .student-topbar .auth-brand small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.student-topbar .notification-button { flex: 0 0 44px; width: 44px; height: 44px; }
