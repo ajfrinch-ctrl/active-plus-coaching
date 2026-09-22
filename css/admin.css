@@ -700,3 +700,72 @@ body.admin-modal-open { overflow: hidden; }
 .admin-bottom-item:focus-visible, .admin-more-item:focus-visible, .admin-more-back:focus-visible, .admin-dashboard-collect:focus-visible, .admin-hero-foot:focus-visible { outline: 3px solid var(--forest); outline-offset: 3px; }
 
 .teacher-panel-link { text-decoration: none; }
+
+/* ---------- Dashboard money summary (today + this month) ---------- */
+
+.dash-finance-card { margin-top: 16px; padding: 16px; }
+.dash-finance-head { margin-bottom: 12px; }
+.dash-finance-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.dash-finance-tile { min-width: 0; padding: 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--white); }
+.dash-finance-tile.tone-mint { background: var(--mint); border-color: var(--mint-strong); }
+.dash-finance-tile.tone-blue { background: #eff6ff; }
+.dash-finance-tile.tone-amber { background: #fff7ed; }
+.dash-finance-tile small { display: block; color: var(--muted); font-size: 10.5px; font-weight: 800; }
+.dash-finance-tile strong { display: block; margin-top: 4px; color: var(--forest); font-size: 19px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -.2px; }
+.dash-finance-tile.tone-amber strong { color: var(--orange); }
+.dash-finance-tile span { display: block; margin-top: 3px; color: var(--muted); font-size: 9.5px; font-weight: 700; }
+
+/* ---------- Privacy mode (student management hides info until selected) ---------- */
+
+.auto-hide-badge.privacy { color: var(--orange); background: #fff7ed; border-color: #f3ddb7; }
+.auto-hide-badge.privacy svg { flex: 0 0 auto; }
+.student-avatar.locked { color: var(--muted); background: #eef2f0; border: 1px dashed var(--line); }
+.student-avatar.locked svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.student-name-hidden { color: var(--muted-2); }
+
+/* Student edit form inside the shared modal */
+.student-edit-form label { display: block; margin: 10px 0 5px; color: var(--ink); font-size: 10.5px; font-weight: 800; }
+.student-edit-form label:first-child { margin-top: 0; }
+.student-edit-form input, .student-edit-form select { width: 100%; min-height: 42px; padding: 0 12px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); background: var(--white); outline: 0; font-size: 12.5px; }
+.student-edit-form input:focus, .student-edit-form select:focus { border-color: var(--forest); box-shadow: 0 0 0 3px rgba(4, 121, 90, .12); }
+.student-edit-form .modal-actions { justify-content: stretch; }
+.student-edit-form .modal-actions .admin-btn { flex: 1; min-height: 44px; }
+
+/* ---------- Routine form: class selector, teacher dropdown, subject autofill ---------- */
+
+.routine-form-grid select { width: 100%; height: 42px; margin-top: 5px; padding: 0 12px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); background: var(--white); outline: 0; font-size: 12.5px; }
+.routine-form-grid select:focus { border-color: var(--forest); box-shadow: 0 0 0 3px rgba(4, 121, 90, .12); }
+.routine-form-grid select:invalid { color: var(--muted); }
+.routine-form > .finance-hint { margin-top: 8px; }
+
+/* ---------- Fee form quick amounts ---------- */
+
+.quick-amount-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
+.quick-amount { min-height: 30px; padding: 0 11px; border: 1px solid var(--mint-strong); border-radius: 99px; color: var(--forest); background: var(--mint); font-size: 10px; font-weight: 800; }
+.quick-amount:hover { background: #e3f5ec; }
+
+/* ---------- Ledger search ---------- */
+
+.ledger-search-wrap { padding: 0 16px 12px; }
+.ledger-search-wrap .student-search input { min-height: 44px; }
+.ledger-list { padding-top: 0; }
+
+/* ---------- Report Center ---------- */
+
+.reports-intro-hint { margin: -6px 0 14px; }
+.report-card-head { align-items: flex-start; }
+.report-card .report-filters { border-radius: 0; }
+.quick-report-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin-top: 14px; }
+.quick-report-card { padding: 16px; }
+.quick-report-desc { color: var(--muted); font-size: 11.5px; line-height: 1.6; }
+.quick-report-meta { margin-top: 8px; padding: 8px 12px; border: 1px solid var(--mint-strong); border-radius: 10px; color: var(--forest); background: var(--mint); font-size: 11px; font-weight: 800; overflow-wrap: anywhere; }
+.quick-report-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.quick-report-actions .mini-btn { min-height: 38px; padding: 0 14px; }
+
+/* ---------- Teacher registration control ---------- */
+
+.teacher-chip-row { display: flex; flex-wrap: wrap; gap: 7px; }
+.teacher-chip { display: inline-flex; align-items: center; padding: 6px 11px; border: 1px solid var(--mint-strong); border-radius: 99px; color: var(--forest); background: var(--mint); font-size: 10.5px; font-weight: 800; }
+
+/* Disabled entry (teacher registration closed by admin) */
+.auth-submit:disabled { opacity: .55; cursor: not-allowed; box-shadow: none; }

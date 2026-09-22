@@ -130,6 +130,34 @@
           <span><strong>ফি গ্রহণ করুন</strong><small>শিক্ষার্থী খুঁজে পেমেন্ট নিন</small></span>
           <svg class="admin-menu-arrow" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg>
         </button>
+        <article class="admin-card dash-finance-card" aria-labelledby="dashFinanceTitle">
+          <header class="admin-card-head dash-finance-head">
+            <div><p class="eyebrow">Money &amp; Fees</p><h2 id="dashFinanceTitle">অর্থ ব্যবস্থাপনা ও ফি সারাংশ</h2></div>
+            <button class="mini-btn" type="button" data-admin-view="finance">বিস্তারিত হিসাব</button>
+          </header>
+          <div class="dash-finance-grid">
+            <div class="dash-finance-tile tone-mint">
+              <small>আজকের আদায়</small>
+              <strong id="dashTodayAmount">৳০</strong>
+              <span id="dashTodaySub">০ টি লেনদেন</span>
+            </div>
+            <div class="dash-finance-tile tone-blue">
+              <small>এই মাসের আদায়</small>
+              <strong id="dashMonthAmount">৳০</strong>
+              <span id="dashMonthSub">—</span>
+            </div>
+            <div class="dash-finance-tile tone-amber">
+              <small>চলতি মাসের বকেয়া</small>
+              <strong id="dashMonthDue">৳০</strong>
+              <span>মাসিক বেতন</span>
+            </div>
+            <div class="dash-finance-tile">
+              <small>সর্বমোট আদায়</small>
+              <strong id="dashTotalAmount">৳০</strong>
+              <span>সব সময়ের হিসাব</span>
+            </div>
+          </div>
+        </article>
       </section>
 
       <section class="admin-view" data-view-panel="more" aria-labelledby="moreTitle">
@@ -141,6 +169,11 @@
           <button class="admin-more-item" type="button" data-admin-view="notices">
             <span class="admin-more-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-megaphone"></use></svg></span>
             <span class="admin-more-copy"><strong>নোটিশ</strong><small>নোটিশ প্রকাশ ও ব্যবস্থাপনা</small></span>
+            <svg class="admin-menu-arrow" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg>
+          </button>
+          <button class="admin-more-item" type="button" data-admin-view="reports">
+            <span class="admin-more-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-receipt"></use></svg></span>
+            <span class="admin-more-copy"><strong>রিপোর্ট জেনারেটর</strong><small>প্রয়োজনীয় সব রিপোর্ট PDF/CSV ডাউনলোড</small></span>
             <svg class="admin-menu-arrow" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg>
           </button>
           <button class="admin-more-item" type="button" data-admin-view="app-management">
@@ -182,6 +215,7 @@
             </label>
             <div class="student-search-meta">
               <span class="auto-hide-badge" title="টাইপ করার সাথে সাথে অমিল শিক্ষার্থী স্বয়ংক্রিয়ভাবে লুকাবে"><span class="auto-hide-dot"></span>অটো হাইড সক্রিয়</span>
+              <span class="auto-hide-badge privacy" title="গোপনীয়তা মোড: তালিকায় ব্যক্তিগত তথ্য লুকানো — তথ্য দেখুন চাপলেই দেখা যাবে"><svg aria-hidden="true" viewBox="0 0 24 24" style="width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:2;"><use href="#icon-lock"></use></svg>তথ্য গোপন মোড</span>
               <span class="student-count-badge" id="studentCountBadge">৮ জন শিক্ষার্থী</span>
             </div>
           </div>
@@ -248,11 +282,19 @@
           </header>
           <form id="addRoutineForm" class="routine-form" novalidate>
             <div class="routine-form-grid">
-              <label>বিষয়
-                <input id="routineSubject" type="text" placeholder="যেমন: উচ্চতর গণিত" required>
+              <label>কোন শ্রেণির জন্য *
+                <select id="routineClass" required>
+                  <option value="" disabled selected>শ্রেণি নির্বাচন করুন</option>
+                </select>
               </label>
-              <label>শিক্ষক
-                <input id="routineTeacher" type="text" placeholder="শিক্ষকের নাম" required>
+              <label>বিষয় *
+                <input id="routineSubject" type="text" list="routineSubjectList" placeholder="যেমন: উচ্চতর গণিত" autocomplete="off" required>
+                <datalist id="routineSubjectList"></datalist>
+              </label>
+              <label>শিক্ষক *
+                <select id="routineTeacher" required>
+                  <option value="" disabled selected>শিক্ষক নির্বাচন করুন</option>
+                </select>
               </label>
               <label>রুম
                 <input id="routineRoom" type="text" placeholder="যেমন: রুম ২০৩" required>
@@ -261,6 +303,7 @@
                 <input id="routineTime" type="time" value="18:00" required>
               </label>
             </div>
+            <p class="finance-hint">বিষয় একবার লিখলেই পরের বার টাইপ করার সময় নিচে সাজেশন দেখাবে (অটোফিল)।</p>
             <button class="admin-btn primary" type="submit">
               <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-plus"></use></svg>
               রুটিনে যোগ করুন
@@ -308,7 +351,6 @@
         <div class="finance-nav-pills" id="financeSubNav">
           <button class="chip active" type="button" data-finance-tab="collection">ফি গ্রহণ ও লেনদেন</button>
           <button class="chip" type="button" data-finance-tab="students">শিক্ষার্থী ফি লেজার</button>
-          <button class="chip" type="button" data-finance-tab="reports">রিপোর্ট জেনারেটর</button>
         </div>
 
         <!-- Sub-panel 1: Fee collection form + recent transactions -->
@@ -369,6 +411,11 @@
                   <div>
                     <label for="feeAmount">টাকার পরিমাণ (৳) *</label>
                     <input id="feeAmount" type="number" min="1" max="10000000" step="1" placeholder="১৫০০" value="1500" required>
+                    <div class="quick-amount-row" id="feeQuickAmounts" aria-label="দ্রুত পরিমাণ">
+                      <button class="quick-amount" type="button" data-fee-quick="due">পূর্ণ বকেয়া</button>
+                      <button class="quick-amount" type="button" data-fee-quick="monthly">মাসিক ফি</button>
+                      <button class="quick-amount" type="button" data-fee-quick="half">অর্ধেক (আংশিক)</button>
+                    </div>
                   </div>
                   <div>
                     <label for="feeMethod">পেমেন্ট মাধ্যম *</label>
@@ -422,77 +469,128 @@
                 <button class="chip" type="button" data-ledger-filter="paid">পরিশোধিত</button>
               </div>
             </header>
+            <div class="ledger-search-wrap">
+              <label class="student-search" for="ledgerSearch">
+                <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-search"></use></svg>
+                <input id="ledgerSearch" type="search" placeholder="লেজারে নাম, আইডি বা মোবাইল দিয়ে খুঁজুন..." autocomplete="off">
+              </label>
+            </div>
             <div class="ledger-list" id="studentLedgerList"></div>
           </article>
         </div>
+      </section>
 
-        <!-- Sub-panel 3: Mobile collection report -->
-        <div class="finance-panel" data-finance-view="reports">
-          <article class="admin-card report-card">
+      <!-- Report Center: every downloadable report lives here. -->
+      <section class="admin-view" data-view-panel="reports" aria-labelledby="reportsTitle">
+        <button class="admin-more-back" type="button" data-admin-view="more">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-left"></use></svg>
+          আরও-তে ফিরুন
+        </button>
+        <div class="page-intro">
+          <div><p class="eyebrow">Report Center</p><h1 id="reportsTitle">রিপোর্ট জেনারেটর</h1></div>
+        </div>
+        <p class="finance-hint reports-intro-hint">প্রয়োজনীয় সব রিপোর্ট এক জায়গা থেকে তৈরি করে PDF বা CSV ফাইলে ডাউনলোড করুন। PDF-এ লোগো ও বাংলা ফন্ট থাকে; CSV এক্সেলে খোলে।</p>
+
+        <!-- Main collection report with filters + live preview -->
+        <article class="admin-card report-card">
+          <header class="admin-card-head report-card-head">
+            <div><p class="eyebrow">Collection Report</p><h2>কালেকশন রিপোর্ট</h2></div>
+            <div class="finance-header-actions">
+              <button class="mini-btn approve" type="button" data-report-pdf="collection">PDF ডাউনলোড</button>
+              <button class="mini-btn" type="button" data-report-csv="collection">CSV</button>
+            </div>
+          </header>
+
+          <div class="report-filters">
+            <div>
+              <label for="reportMonth">সময়কাল / মাস</label>
+              <select id="reportMonth">
+                <option value="all">সব সময়</option>
+              </select>
+            </div>
+            <div>
+              <label for="reportClass">শ্রেণি</label>
+              <select id="reportClass">
+                <option value="all">সব শ্রেণি</option>
+              </select>
+            </div>
+            <div>
+              <label for="reportFeeType">ফি এর ধরন</label>
+              <select id="reportFeeType">
+                <option value="all">সব ধরন</option>
+              </select>
+            </div>
+            <div>
+              <label for="reportMethod">পেমেন্ট মাধ্যম</label>
+              <select id="reportMethod">
+                <option value="all">সব মাধ্যম</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="mobile-report-summary">
+            <div class="mobile-report-brand">
+              <img src="assets/icons/app-logo.png" alt="" width="40" height="40">
+              <div><strong>Active Plus Coaching</strong><small id="reportPeriod"></small></div>
+            </div>
+            <dl class="mobile-report-totals">
+              <div class="report-total-primary"><dt>মোট আদায়</dt><dd id="reportGrandTotal">৳০</dd></div>
+              <div><dt>লেনদেন</dt><dd id="reportTrxCount">০ টি</dd></div>
+              <div><dt>গড় আদায়</dt><dd id="reportAverage">৳০</dd></div>
+            </dl>
+            <p class="finance-hint">নির্বাচিত ফিল্টারের সব লেনদেন নিচে দেখানো হচ্ছে; PDF/CSV-তে একই ফিল্টার প্রযোজ্য।</p>
+          </div>
+          <div class="report-collection-list" id="reportCollectionList" role="list" aria-label="রিপোর্টের লেনদেন"></div>
+        </article>
+
+        <!-- One-click report cards -->
+        <div class="quick-report-grid">
+          <article class="admin-card quick-report-card">
             <header class="admin-card-head">
-              <div><p class="eyebrow">Collection Report</p><h2>কালেকশন রিপোর্ট</h2></div>
+              <div><p class="eyebrow">Today</p><h2>আজকের কালেকশন রিপোর্ট</h2></div>
             </header>
-
-            <div class="report-filters">
-              <div>
-                <label for="reportMonth">সময়কাল / মাস</label>
-                <select id="reportMonth">
-                  <option value="all">সব সময়</option>
-                  <option value="সেপ্টেম্বর ২০২৬" selected>সেপ্টেম্বর ২০২৬ (চলতি মাস)</option>
-                  <option value="আগস্ট ২০২৬">আগস্ট ২০২৬</option>
-                  <option value="জুলাই ২০২৬">জুলাই ২০২৬</option>
-                </select>
-              </div>
-              <div>
-                <label for="reportClass">শ্রেণি</label>
-                <select id="reportClass">
-                  <option value="all">সব শ্রেণি</option>
-                  <option value="অষ্টম শ্রেণি">অষ্টম শ্রেণি</option>
-                  <option value="নবম শ্রেণি">নবম শ্রেণি</option>
-                  <option value="দশম শ্রেণি">দশম শ্রেণি</option>
-                  <option value="একাদশ শ্রেণি">একাদশ শ্রেণি</option>
-                  <option value="দ্বাদশ শ্রেণি">দ্বাদশ শ্রেণি</option>
-                  <option value="অনার্স ১ম বর্ষ">অনার্স ১ম বর্ষ</option>
-                  <option value="ডিগ্রি ১ম বর্ষ">ডিগ্রি ১ম বর্ষ</option>
-                </select>
-              </div>
-              <div>
-                <label for="reportFeeType">ফি এর ধরন</label>
-                <select id="reportFeeType">
-                  <option value="all">সব ধরন</option>
-                  <option value="মাসিক বেতন">মাসিক বেতন</option>
-                  <option value="ভর্তি ফি">ভর্তি ফি</option>
-                  <option value="মডেল টেস্ট ফি">মডেল টেস্ট ফি</option>
-                  <option value="লেকচার শিট ফি">লেকচার শিট ফি</option>
-                  <option value="পরীক্ষার ফি">পরীক্ষার ফি</option>
-                </select>
-              </div>
-              <div>
-                <label for="reportMethod">পেমেন্ট মাধ্যম</label>
-                <select id="reportMethod">
-                  <option value="all">সব মাধ্যম</option>
-                  <option value="নগদ">নগদ (Cash)</option>
-                  <option value="বিকাশ">বিকাশ (bKash)</option>
-                  <option value="নগদ (Nagad)">নগদ (Nagad)</option>
-                  <option value="রকেট">রকেট (Rocket)</option>
-                  <option value="ব্যাংক">ব্যাংক ট্রান্সফার</option>
-                </select>
-              </div>
+            <p class="quick-report-desc">আজকের সব ফি আদায়ের তালিকা ও মোট হিসাব — দিন শেষে হিসাব মেলানোর জন্য।</p>
+            <p class="quick-report-meta" id="reportMeta-today">—</p>
+            <div class="quick-report-actions">
+              <button class="mini-btn approve" type="button" data-report-pdf="today">PDF ডাউনলোড</button>
+              <button class="mini-btn" type="button" data-report-csv="today">CSV</button>
             </div>
+          </article>
 
-            <div class="mobile-report-summary">
-              <div class="mobile-report-brand">
-                <img src="assets/icons/app-logo.png" alt="" width="40" height="40">
-                <div><strong>Active Plus Coaching</strong><small id="reportPeriod"></small></div>
-              </div>
-              <dl class="mobile-report-totals">
-                <div class="report-total-primary"><dt>মোট আদায়</dt><dd id="reportGrandTotal">৳০</dd></div>
-                <div><dt>লেনদেন</dt><dd id="reportTrxCount">০ টি</dd></div>
-                <div><dt>গড় আদায়</dt><dd id="reportAverage">৳০</dd></div>
-              </dl>
-              <p class="finance-hint">নির্বাচিত ফিল্টারের সব লেনদেন নিচে দেখানো হচ্ছে।</p>
+          <article class="admin-card quick-report-card">
+            <header class="admin-card-head">
+              <div><p class="eyebrow">Dues</p><h2>বকেয়া রিপোর্ট</h2></div>
+            </header>
+            <p class="quick-report-desc">চলতি মাসে মাসিক বেতনের যাদের বকেয়া আছে — ফোন করে মনে করিয়ে দেওয়ার তালিকা।</p>
+            <p class="quick-report-meta" id="reportMeta-dues">—</p>
+            <div class="quick-report-actions">
+              <button class="mini-btn approve" type="button" data-report-pdf="dues">PDF ডাউনলোড</button>
+              <button class="mini-btn" type="button" data-report-csv="dues">CSV</button>
             </div>
-            <div class="report-collection-list" id="reportCollectionList" role="list" aria-label="রিপোর্টের লেনদেন"></div>
+          </article>
+
+          <article class="admin-card quick-report-card">
+            <header class="admin-card-head">
+              <div><p class="eyebrow">Students</p><h2>শিক্ষার্থী তালিকা রিপোর্ট</h2></div>
+            </header>
+            <p class="quick-report-desc">সব শিক্ষার্থীর নাম, আইডি, শ্রেণি, বিভাগ, মোবাইল ও অবস্থাসহ পূর্ণ তালিকা।</p>
+            <p class="quick-report-meta" id="reportMeta-students">—</p>
+            <div class="quick-report-actions">
+              <button class="mini-btn approve" type="button" data-report-pdf="students">PDF ডাউনলোড</button>
+              <button class="mini-btn" type="button" data-report-csv="students">CSV</button>
+            </div>
+          </article>
+
+          <article class="admin-card quick-report-card">
+            <header class="admin-card-head">
+              <div><p class="eyebrow">Weekly Routine</p><h2>সাপ্তাহিক ক্লাস রুটিন রিপোর্ট</h2></div>
+            </header>
+            <p class="quick-report-desc">শনিবার থেকে বৃহস্পতিবার পর্যন্ত সব ক্লাসের সময়, শ্রেণি, শিক্ষক ও রুমসহ রুটিন।</p>
+            <p class="quick-report-meta" id="reportMeta-routine">—</p>
+            <div class="quick-report-actions">
+              <button class="mini-btn approve" type="button" data-report-pdf="routine">PDF ডাউনলোড</button>
+              <button class="mini-btn" type="button" data-report-csv="routine">CSV</button>
+            </div>
           </article>
         </div>
       </section>
@@ -565,7 +663,33 @@
             </div>
           </article>
 
-          <!-- Card 2: Live Alert & Broadcast Banner -->
+          <!-- Card 2: Teacher Registration Control -->
+          <article class="admin-card">
+            <header class="admin-card-head">
+              <div><p class="eyebrow">Teacher Registration</p><h2>শিক্ষক রেজিস্ট্রেশন নিয়ন্ত্রণ</h2></div>
+              <span class="badge badge-approved" id="teacherRegBadge">খোলা আছে</span>
+            </header>
+            <div class="app-setting-group">
+              <label class="app-toggle-item">
+                <div class="app-toggle-copy">
+                  <strong>নতুন শিক্ষক রেজিস্ট্রেশন / প্রবেশ অনুমোদন</strong>
+                  <small>বন্ধ করলে শিক্ষক প্যানেলে (teacher.html) নতুন শিক্ষকের রেজিস্ট্রেশন ও প্রবেশ সাময়িক বন্ধ থাকবে; চালু করলে আবার খুলে যাবে</small>
+                </div>
+                <span class="toggle-switch">
+                  <input type="checkbox" id="cfgTeacherRegistration" checked>
+                  <i></i>
+                </span>
+              </label>
+              <div class="app-field">
+                <label>বর্তমানে যুক্ত শিক্ষক (রুটিন অনুযায়ী)</label>
+                <div class="teacher-chip-row" id="teacherRegList" aria-label="বর্তমান শিক্ষক তালিকা"></div>
+                <small style="color:var(--muted);font-size:11px;">শিক্ষক যোগ হয় ক্লাস রুটিনের শিক্ষক তালিকা থেকে; নতুন শিক্ষক রুটিনে যোগ করলেই এখানে দেখা যাবে।</small>
+              </div>
+              <p class="finance-hint">সেটিংসটি "সব সেটিংস সংরক্ষণ করুন" চাপলে সংরক্ষিত হয়ে সঙ্গে সঙ্গে শিক্ষক প্যানেলে কার্যকর হয়।</p>
+            </div>
+          </article>
+
+          <!-- Card 3: Live Alert & Broadcast Banner -->
           <article class="admin-card">
             <header class="admin-card-head">
               <div><p class="eyebrow">Live Broadcast</p><h2>লাইভ ব্রডকাস্ট ও এলার্ট নোটিশ</h2></div>

@@ -45,8 +45,11 @@ async function receiptAssets() {
   return assets;
 }
 
+/** Shared logo + Bengali font loader for every offline canvas PDF (receipts and reports). */
+export function loadBrandAssets() { return receiptAssets(); }
+
 /** Wrap at words; split long IDs/references at grapheme boundaries, not Bangla vowel marks. */
-function wrapText(ctx, text, width) {
+export function wrapText(ctx, text, width) {
   const segmenter = typeof Intl.Segmenter === 'function' ? new Intl.Segmenter('bn', { granularity: 'grapheme' }) : null;
   const lines = [];
   for (const paragraph of String(text ?? '—').split('\n')) {

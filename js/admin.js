@@ -10,6 +10,7 @@ import { adminStudents, adminNotices, classEnrollment, classCodes, dayNames, fee
 import { loadAppConfig, saveAppConfig, loadAccount, saveAccount } from './storage.js';
 import { financeRepository, monthLabel, dateLabel, searchStudents, studentFeeSummary, newestTransactions, TRANSACTIONS_KEY } from './finance-data.js';
 import { receiptMarkup, downloadReceipt } from './finance-receipt.js';
+import { downloadReportPDF, downloadCSV } from './report-generator.js';
 import { initExamManager } from './exam-manager.js';
 import { registerServiceWorker } from './service-worker.js';
 import { initFixedShell } from './fixed-shell.js';
@@ -90,7 +91,7 @@ function exitPanel() {
 
 /* ---------- View switching ---------- */
 
-const moreViews = new Set(['notices', 'app-management', 'classes', 'exams']);
+const moreViews = new Set(['notices', 'app-management', 'classes', 'exams', 'reports']);
 function setView(view) {
   if (!$$('.admin-view').some(panel => panel.dataset.viewPanel === view)) return;
   state.activeView = view;
@@ -121,6 +122,29 @@ function renderDashboard() {
   const today = new Date();
   $('#adminTodayDate').textContent = dateLabel(today);
   $('#adminTodayDate').dateTime = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  renderFinanceSummary();
+}
+
+/* Dashboard money summary: today and this month at a glance. */
+function renderFinanceSummary() {
+  const money = value => '৳' + bn(Math.round(value).toLocaleString('en-US'));
+  const today = dateLabel(new Date());
+  const month = monthLabel();
+  const todayTx = state.transactions.filter(tx => tx.date === today);
+  const monthTx = state.transactions.filter(tx => tx.month === month);
+  const todayTotal = todayTx.reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+  const monthTotal = monthTx.reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+  const grandTotal = state.transactions.reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+  const monthDue = state.students.filter(s => s.status === 'approved')
+    .reduce((sum, student) => sum + studentFeeSummary(student, state.transactions).due, 0);
+  if ($('#dashTodayAmount')) {
+    $('#dashTodayAmount').textContent = money(todayTotal);
+    $('#dashTodaySub').textContent = `${bn(todayTx.length)} টি লেনদেন`;
+    $('#dashMonthAmount').textContent = money(monthTotal);
+    $('#dashMonthSub').textContent = month;
+    $('#dashMonthDue').textContent = money(monthDue);
+    $('#dashTotalAmount').textContent = money(grandTotal);
+  }
 }
 
 /* ---------- Students ---------- */
@@ -226,20 +250,20 @@ function renderStudents() {
 
   $('#studentList').innerHTML = list.length
     ? list.map(student => `
-      <article class="student-row">
-        <span class="student-avatar" aria-hidden="true">${student.name.charAt(0)}</span>
+      <article class="student-row student-row-locked">
+        <span class="student-avatar locked" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-lock"></use></svg></span>
         <div class="student-copy">
           <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-            <strong>${student.name}</strong>
+            <strong class="student-name-hidden">গোপন রাখা হয়েছে</strong>
             <span class="audit-id-badge">ID: ${student.id}</span>
           </div>
-          <small>${student.className} • ${student.group}</small>
-          <small class="student-mobile">📞 ${bn(student.mobile)}</small>
+          <small>ব্যক্তিগত তথ্য লুকানো — দেখতে "তথ্য দেখুন" চাপুন</small>
         </div>
         <div class="student-side">
           <span class="badge ${statusMeta[student.status].className}">${statusMeta[student.status].label}</span>
           <div class="student-actions">
-            <button class="mini-btn" type="button" data-action="view" data-id="${student.id}">দেখুন</button>
+            <button class="mini-btn" type="button" data-action="view" data-id="${student.id}">তথ্য দেখুন</button>
+            <button class="mini-btn" type="button" data-action="edit" data-id="${student.id}">সম্পাদনা</button>
             ${student.status === 'pending' ? `
               <button class="mini-btn approve" type="button" data-action="approve" data-id="${student.id}">অনুমোদন</button>
               <button class="mini-btn danger" type="button" data-action="reject" data-id="${student.id}">বাতিল</button>` : ''}
@@ -302,6 +326,7 @@ function openStudentDetail(student) {
       </dl>
       <div class="modal-actions">
         ${student.status === 'pending' ? '<button class="admin-btn primary" type="button" data-modal-action="approve">অনুমোদন করুন</button>' : ''}
+        <button class="admin-btn primary" type="button" data-modal-action="edit">সম্পাদনা করুন</button>
         <button class="admin-btn ghost" type="button" data-modal-action="reset-pin">PIN রিসেট</button>
         <button class="admin-btn ghost" type="button" data-modal-action="close">বন্ধ করুন</button>
       </div>`
@@ -315,10 +340,113 @@ function openStudentDetail(student) {
       } else if (action === 'reset-pin') {
         openPinReset(student);
         return;
+      } else if (action === 'edit') {
+        openStudentEdit(student);
+        return;
       }
       closeModal();
     });
   });
+}
+
+/* ---------- Student edit modal ---------- */
+
+const editableClasses = enabledClasses;
+
+function openStudentEdit(student) {
+  const fee = student.monthlyFee ?? '';
+  openModal(
+    'শিক্ষার্থী তথ্য সম্পাদনা',
+    `${student.name} — ${student.id}`,
+    `
+      <form id="studentEditForm" class="student-edit-form" novalidate>
+        <div class="form-grid-2">
+          <div>
+            <label for="editStudentName">নাম (বাংলা) *</label>
+            <input id="editStudentName" type="text" maxlength="120" value="${escapeHtml(student.name)}" required>
+          </div>
+          <div>
+            <label for="editStudentNameEn">নাম (English)</label>
+            <input id="editStudentNameEn" type="text" maxlength="120" value="${escapeHtml(student.nameEn || '')}">
+          </div>
+        </div>
+        <label for="editStudentFather">পিতার নাম</label>
+        <input id="editStudentFather" type="text" maxlength="120" value="${escapeHtml(student.fatherName || '')}">
+        <div class="form-grid-2">
+          <div>
+            <label for="editStudentClass">শ্রেণি *</label>
+            <select id="editStudentClass" required>
+              ${editableClasses.map(className => `<option value="${escapeHtml(className)}" ${className === student.className ? 'selected' : ''}>${escapeHtml(className)}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label for="editStudentGroup">বিভাগ / গ্রুপ</label>
+            <input id="editStudentGroup" type="text" maxlength="80" value="${escapeHtml(student.group || '')}">
+          </div>
+        </div>
+        <div class="form-grid-2">
+          <div>
+            <label for="editStudentMobile">মোবাইল *</label>
+            <input id="editStudentMobile" type="tel" inputmode="numeric" maxlength="14" value="${escapeHtml(student.mobile || '')}" required>
+          </div>
+          <div>
+            <label for="editStudentGuardianMobile">অভিভাবকের মোবাইল</label>
+            <input id="editStudentGuardianMobile" type="tel" inputmode="numeric" maxlength="14" value="${escapeHtml(student.guardianMobile || '')}">
+          </div>
+        </div>
+        <label for="editStudentAddress">ঠিকানা</label>
+        <input id="editStudentAddress" type="text" maxlength="300" value="${escapeHtml(student.address || '')}">
+        <label for="editStudentFee">নির্ধারিত মাসিক ফি (৳) — খালি রাখলে ডিফল্ট ৳১,৫০০</label>
+        <input id="editStudentFee" type="number" min="0" max="1000000" step="1" value="${escapeHtml(String(fee))}" placeholder="1500">
+        <p id="studentEditError" class="finance-error" role="alert" hidden></p>
+        <div class="modal-actions">
+          <button class="admin-btn primary" type="submit">সংরক্ষণ করুন</button>
+          <button class="admin-btn ghost" type="button" data-edit-cancel>বাতিল</button>
+        </div>
+      </form>`
+  );
+  $('#adminModalBody [data-edit-cancel]').addEventListener('click', () => { closeModal(); });
+  $('#studentEditForm').addEventListener('submit', event => {
+    event.preventDefault();
+    saveStudentEdit(student);
+  });
+}
+
+function saveStudentEdit(student) {
+  const name = $('#editStudentName').value.trim();
+  const mobile = normalizeDigitsOnly($('#editStudentMobile').value);
+  const guardianMobile = normalizeDigitsOnly($('#editStudentGuardianMobile').value);
+  const error = $('#studentEditError');
+  const fail = message => {
+    error.textContent = message;
+    error.hidden = false;
+  };
+  if (!name) return fail('শিক্ষার্থীর নাম দিন।');
+  if (mobile.length !== 11 || !mobile.startsWith('01')) return fail('মোবাইল নম্বরটি ০১ দিয়ে শুরু হওয়া ১১ সংখ্যার হতে হবে।');
+  if (guardianMobile && (guardianMobile.length !== 11 || !guardianMobile.startsWith('01'))) return fail('অভিভাবকের মোবাইল নম্বরটি সঠিক নয় (১১ সংখ্যা)।');
+  const feeRaw = $('#editStudentFee').value.trim();
+  let monthlyFee = null;
+  if (feeRaw !== '') {
+    monthlyFee = Number(feeRaw);
+    if (!Number.isFinite(monthlyFee) || monthlyFee < 0 || monthlyFee > 1000000) return fail('মাসিক ফি সঠিক সংখ্যা দিন।');
+  }
+  const className = $('#editStudentClass').value;
+  Object.assign(student, {
+    name,
+    nameEn: $('#editStudentNameEn').value.trim(),
+    fatherName: $('#editStudentFather').value.trim(),
+    className,
+    group: $('#editStudentGroup').value.trim(),
+    mobile,
+    guardianMobile,
+    address: $('#editStudentAddress').value.trim(),
+    monthlyFee
+  });
+  closeModal();
+  renderStudents();
+  renderFinance();
+  renderDashboard();
+  toast(`${name} এর তথ্য সম্পাদনা করা হয়েছে`);
 }
 
 function openPinReset(student) {
@@ -424,6 +552,14 @@ function toBengaliTime(value) {
   return { time, period };
 }
 
+function routineTeachers() {
+  return [...new Set(Object.values(state.routine).flatMap(info => info.classes.map(cls => cls.teacher).filter(Boolean)))];
+}
+
+function routineSubjects() {
+  return [...new Set(Object.values(state.routine).flatMap(info => info.classes.map(cls => cls.subject).filter(Boolean)))];
+}
+
 function renderRoutine() {
   $('#routineDayTabs').innerHTML = Object.keys(state.routine).map(day => `
     <button class="day-tab ${day === state.activeDay ? 'active' : ''}" type="button" data-routine-day="${day}">
@@ -431,6 +567,24 @@ function renderRoutine() {
     </button>`).join('');
 
   $('#addRoutineHeading').textContent = `নতুন ক্লাস যোগ করুন — ${dayNames[state.activeDay]}`;
+
+  // Which class the new class is for — dropdown from the enabled class list.
+  const classSelect = $('#routineClass');
+  if (classSelect && classSelect.options.length <= 1) {
+    classSelect.innerHTML = '<option value="" disabled selected>শ্রেণি নির্বাচন করুন</option>' +
+      enabledClasses.map(className => `<option value="${escapeHtml(className)}">${escapeHtml(className)}</option>`).join('');
+  }
+  // Teacher dropdown fed from the teachers already in the routine.
+  const teacherSelect = $('#routineTeacher');
+  if (teacherSelect) {
+    const previous = teacherSelect.value;
+    teacherSelect.innerHTML = '<option value="" disabled selected>শিক্ষক নির্বাচন করুন</option>' +
+      routineTeachers().map(teacher => `<option value="${escapeHtml(teacher)}">${escapeHtml(teacher)}</option>`).join('');
+    if (previous && routineTeachers().includes(previous)) teacherSelect.value = previous;
+  }
+  // Subject autofill: previously typed subjects become suggestions while typing.
+  const subjectList = $('#routineSubjectList');
+  if (subjectList) subjectList.innerHTML = routineSubjects().map(subject => `<option value="${escapeHtml(subject)}"></option>`).join('');
 
   const classes = state.routine[state.activeDay].classes;
   $('#routineList').innerHTML = classes.length
@@ -440,6 +594,7 @@ function renderRoutine() {
         <div class="routine-copy">
           <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
             <strong>${cls.subject}</strong>
+            ${cls.className ? `<span class="audit-id-badge purple">${escapeHtml(cls.className)}</span>` : ''}
             <span class="audit-id-badge blue">${cls.id || `RTN-${state.activeDay.toUpperCase()}-${String(index + 1).padStart(2, '0')}`}</span>
           </div>
           <small>${cls.teacher} • ${cls.room}</small>
@@ -454,18 +609,20 @@ function renderRoutine() {
 
 function addRoutineClass(event) {
   event.preventDefault();
+  const className = $('#routineClass').value;
   const subject = $('#routineSubject').value.trim();
-  const teacher = $('#routineTeacher').value.trim();
+  const teacher = $('#routineTeacher').value;
   const room = $('#routineRoom').value.trim();
   const time = $('#routineTime').value;
-  if (!subject || !teacher || !room || !time) {
-    toast('বিষয়, শিক্ষক, রুম ও সময় দিন');
+  if (!className || !subject || !teacher || !room || !time) {
+    toast('শ্রেণি, বিষয়, শিক্ষক, রুম ও সময় নির্বাচন/লিখুন');
     return;
   }
   const { time: bengaliTime, period } = toBengaliTime(time);
   const classUniqueId = `RTN-${state.activeDay.toUpperCase()}-${String(state.routine[state.activeDay].classes.length + 1).padStart(2, '0')}`;
   state.routine[state.activeDay].classes.push({
     id: classUniqueId,
+    className,
     time: bengaliTime,
     period,
     subject,
@@ -474,11 +631,14 @@ function addRoutineClass(event) {
     tag: 'নতুন',
     tone: 'green'
   });
+  // Keep subject and class handy for the next entry; reset only the rest.
+  const nextSubject = subject;
   event.target.reset();
   $('#routineTime').value = '18:00';
+  $('#routineSubject').value = nextSubject;
   renderRoutine();
   renderDashboard();
-  toast(`${subject} [${classUniqueId}] রুটিনে যোগ হয়েছে`);
+  toast(`${className} • ${subject} [${classUniqueId}] রুটিনে যোগ হয়েছে`);
 }
 
 /* ---------- Classes ---------- */
@@ -535,7 +695,9 @@ async function loadFinanceTransactions() {
     state.financeReady = true;
     $('#financeLoadError').hidden = true;
     populateFinanceMonths();
+    populateReportFilterOptions();
     renderFinance();
+    renderDashboard();
   } catch {
     state.financeReady = false;
     $('#financeLoadError').textContent = 'লেনদেনের ডেটা পড়া যায়নি। ব্রাউজারের স্টোরেজ চালু করে পেজ রিফ্রেশ করুন। ডেটা নিরাপদ রাখতে পেমেন্ট বন্ধ আছে।';
@@ -556,7 +718,30 @@ function populateFinanceMonths() {
   $('#feeMonth').innerHTML = options;
   $('#feeMonth').value = months.has(selectedMonth) ? selectedMonth : monthLabel();
   $('#reportMonth').innerHTML = '<option value="all">সব সময়</option>' + options;
-  $('#reportMonth').value = state.reportFilters.month;
+  $('#reportMonth').value = months.has(state.reportFilters.month) || state.reportFilters.month === 'all' ? state.reportFilters.month : monthLabel();
+  state.reportFilters.month = $('#reportMonth').value;
+}
+
+/* Filter dropdowns for the collection report — filled from the shared dataset. */
+function populateReportFilterOptions() {
+  const classSelect = $('#reportClass');
+  if (classSelect && classSelect.options.length <= 1) {
+    classSelect.innerHTML = '<option value="all">সব শ্রেণি</option>' +
+      enabledClasses.map(className => `<option value="${escapeHtml(className)}">${escapeHtml(className)}</option>`).join('');
+    classSelect.value = state.reportFilters.className;
+  }
+  const feeTypeSelect = $('#reportFeeType');
+  if (feeTypeSelect && feeTypeSelect.options.length <= 1) {
+    feeTypeSelect.innerHTML = '<option value="all">সব ধরন</option>' +
+      feeCategories.map(feeType => `<option value="${escapeHtml(feeType)}">${escapeHtml(feeType)}</option>`).join('');
+    feeTypeSelect.value = state.reportFilters.feeType;
+  }
+  const methodSelect = $('#reportMethod');
+  if (methodSelect && methodSelect.options.length <= 1) {
+    methodSelect.innerHTML = '<option value="all">সব মাধ্যম</option>' +
+      paymentMethods.map(method => `<option value="${escapeHtml(method)}">${escapeHtml(method)}</option>`).join('');
+    methodSelect.value = state.reportFilters.method;
+  }
 }
 
 function renderFinanceStats() {
@@ -675,7 +860,10 @@ function renderStudentLedger() {
     return { ...student, paidAmount: summary.tuitionPaid, dueAmount: summary.due, isPaid: summary.due === 0 };
   });
 
-  const filtered = studentsWithStatus.filter(s => {
+  const query = ($('#ledgerSearch')?.value || '').trim();
+  const searched = query ? searchStudents(studentsWithStatus, query) : studentsWithStatus;
+
+  const filtered = searched.filter(s => {
     if (state.ledgerFilter === 'due') return !s.isPaid;
     if (state.ledgerFilter === 'paid') return s.isPaid;
     return true;
@@ -709,17 +897,21 @@ function renderStudentLedger() {
     : '<p class="admin-empty">কোনো শিক্ষার্থী পাওয়া যায়নি।</p>';
 }
 
-function renderReportGenerator() {
+function filteredReportTransactions() {
   const { month, className, feeType, method } = state.reportFilters;
-  const filtered = newestTransactions(state.transactions.filter(tx =>
+  return newestTransactions(state.transactions.filter(tx =>
     (month === 'all' || tx.month === month) &&
     (className === 'all' || tx.className === className) &&
     (feeType === 'all' || tx.feeType === feeType) &&
-    (method === 'all' || (tx.method || '').includes(method))
+    (method === 'all' || tx.method === method)
   ));
+}
+
+function renderReportGenerator() {
+  const filtered = filteredReportTransactions();
   const total = filtered.reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
   const money = value => `৳${bn(value.toLocaleString('en-US'))}`;
-  $('#reportPeriod').textContent = month === 'all' ? 'সব সময়ের হিসাব' : month;
+  $('#reportPeriod').textContent = state.reportFilters.month === 'all' ? 'সব সময়ের হিসাব' : state.reportFilters.month;
   $('#reportTrxCount').textContent = `${bn(filtered.length)} টি`;
   $('#reportGrandTotal').textContent = money(total);
   $('#reportAverage').textContent = money(filtered.length ? Math.round(total / filtered.length) : 0);
@@ -734,6 +926,157 @@ function renderReportGenerator() {
         <button class="mini-btn" type="button" data-action="download-receipt" data-trx-id="${escapeHtml(tx.id)}">রসিদ ডাউনলোড</button>
       </div>
     </article>`).join('') : '<p class="admin-empty" role="status">কোনো কালেকশন রেকর্ড পাওয়া যায়নি।</p>';
+}
+
+/* ---------- Report Center: downloadable PDF / CSV for every report ---------- */
+
+const collectionColumns = [
+  { label: 'তারিখ', width: 1.2 },
+  { label: 'শিক্ষার্থী', width: 1.5 },
+  { label: 'শ্রেণি', width: 1.1 },
+  { label: 'ফি ও মাস', width: 1.5 },
+  { label: 'মাধ্যম', width: 1.2 },
+  { label: 'টাকা', width: 0.9 }
+];
+const collectionRow = tx => [tx.date || '—', `${tx.studentName} (${tx.studentId})`, tx.className, `${tx.feeType} • ${tx.month}`, tx.method, money(tx.amount)];
+
+function money(amount) {
+  return `৳${bn(Number(amount || 0).toLocaleString('en-US'))}`;
+}
+
+function reportDataSets() {
+  const month = monthLabel();
+  const today = dateLabel();
+  const collection = filteredReportTransactions();
+  const todayTx = newestTransactions(state.transactions.filter(tx => tx.date === today));
+  const dues = state.students
+    .filter(s => s.status === 'approved')
+    .map(student => ({ student, summary: studentFeeSummary(student, state.transactions) }))
+    .filter(entry => entry.summary.due > 0);
+  const routineRows = Object.entries(state.routine).flatMap(([day, info]) =>
+    info.classes.length
+      ? info.classes.map(cls => [dayNames[day], cls.subject, cls.className || 'সব শ্রেণি', cls.teacher, cls.room, `${cls.time} (${cls.period})`])
+      : [[dayNames[day], '— কোনো ক্লাস নেই —', '', '', '', '']]
+  );
+  return {
+    collection: {
+      title: 'ফি কালেকশন রিপোর্ট',
+      subtitle: 'নির্বাচিত ফিল্টার অনুযায়ী সমস্ত লেনদেন',
+      period: state.reportFilters.month === 'all' ? 'সব সময়' : state.reportFilters.month,
+      columns: collectionColumns,
+      rows: collection.map(collectionRow),
+      summary: [
+        { label: 'মোট আদায়', value: money(collection.reduce((sum, tx) => sum + Number(tx.amount || 0), 0)) },
+        { label: 'লেনদেন', value: `${bn(collection.length)} টি` },
+        { label: 'গড় আদায়', value: money(collection.length ? Math.round(collection.reduce((sum, tx) => sum + Number(tx.amount || 0), 0) / collection.length) : 0) }
+      ],
+      note: 'নোট: রসিদভিত্তিক বিস্তারিত Admin প্যানেলের কালেকশন রিপোর্ট তালিকায় দেখা যায়।'
+    },
+    today: {
+      title: 'আজকের কালেকশন রিপোর্ট',
+      subtitle: 'আজকের সব ফি আদায়',
+      period: today,
+      columns: collectionColumns,
+      rows: todayTx.map(collectionRow),
+      summary: [
+        { label: 'আজকের আদায়', value: money(todayTx.reduce((sum, tx) => sum + Number(tx.amount || 0), 0)) },
+        { label: 'লেনদেন', value: `${bn(todayTx.length)} টি` }
+      ]
+    },
+    dues: {
+      title: 'বকেয়া রিপোর্ট',
+      subtitle: `চলতি মাসের (${month}) মাসিক বেতনের বকেয়া — শুধু অনুমোদিত শিক্ষার্থী`,
+      period: month,
+      columns: [
+        { label: 'শিক্ষার্থী', width: 1.6 },
+        { label: 'Student ID', width: 1.2 },
+        { label: 'শ্রেণি', width: 1.2 },
+        { label: 'মাসিক ফি', width: 1 },
+        { label: 'পরিশোধিত', width: 1 },
+        { label: 'বকেয়া', width: 1 }
+      ],
+      rows: dues.map(({ student, summary }) => [student.name, student.id, `${student.className} • ${student.group || '—'}`, money(summary.monthlyFee), money(summary.tuitionPaid), money(summary.due)]),
+      summary: [
+        { label: 'মোট বকেয়া', value: money(dues.reduce((sum, entry) => sum + entry.summary.due, 0)) },
+        { label: 'বকেয়া শিক্ষার্থী', value: `${bn(dues.length)} জন` }
+      ]
+    },
+    students: {
+      title: 'শিক্ষার্থী তালিকা রিপোর্ট',
+      subtitle: 'সব শিক্ষার্থীর পূর্ণ তালিকা (নাম, শ্রেণি, যোগাযোগ ও অবস্থা)',
+      period: `${dateLabel()} • মোট ${bn(state.students.length)} জন`,
+      columns: [
+        { label: 'নাম', width: 1.5 },
+        { label: 'Student ID', width: 1.2 },
+        { label: 'শ্রেণি ও বিভাগ', width: 1.6 },
+        { label: 'মোবাইল', width: 1.2 },
+        { label: 'অভিভাবক', width: 1.2 },
+        { label: 'অবস্থা', width: 0.9 }
+      ],
+      rows: state.students.map(student => [
+        `${student.name} (${student.nameEn || '—'})`, student.id,
+        `${student.className} • ${student.group || '—'}`,
+        bn(student.mobile || '—'),
+        student.guardianMobile ? bn(student.guardianMobile) : '—',
+        statusMeta[student.status]?.label || student.status
+      ]),
+      summary: [
+        { label: 'মোট শিক্ষার্থী', value: `${bn(state.students.length)} জন` },
+        { label: 'অনুমোদিত', value: `${bn(state.students.filter(s => s.status === 'approved').length)} জন` },
+        { label: 'অপেক্ষমাণ', value: `${bn(state.students.filter(s => s.status === 'pending').length)} জন` }
+      ]
+    },
+    routine: {
+      title: 'সাপ্তাহিক ক্লাস রুটিন রিপোর্ট',
+      subtitle: 'শনিবার থেকে বৃহস্পতিবার — সব শ্রেণির ক্লাস',
+      period: `মোট ${bn(routineRows.length)} সারি`,
+      columns: [
+        { label: 'দিন', width: 1 },
+        { label: 'বিষয়', width: 1.3 },
+        { label: 'শ্রেণি', width: 1.3 },
+        { label: 'শিক্ষক', width: 1.5 },
+        { label: 'রুম', width: 1 },
+        { label: 'সময়', width: 1.1 }
+      ],
+      rows: routineRows
+    }
+  };
+}
+
+function renderReportCards() {
+  const sets = reportDataSets();
+  const today = sets.today;
+  const dues = sets.dues;
+  const meta = (key, text) => { const el = $(`#reportMeta-${key}`); if (el) el.textContent = text; };
+  meta('today', `${today.rows.length ? bn(today.rows.length) + ' টি লেনদেন' : 'আজ এখনও কোনো আদায় নেই'} • ${today.summary[0].value}`);
+  meta('dues', `${bn(dues.rows.length)} জনের বকেয়া • ${dues.summary[0].value}`);
+  meta('students', `মোট ${bn(state.students.length)} জন • অনুমোদিত ${bn(state.students.filter(s => s.status === 'approved').length)} জন`);
+  meta('routine', `${bn(Object.values(state.routine).reduce((sum, info) => sum + info.classes.length, 0))} টি ক্লাস সাপ্তাহিক রুটিনে`);
+}
+
+const reportFileStamps = () => new Date().toISOString().slice(0, 10);
+
+async function handleReportDownload(button) {
+  const key = button.dataset.reportPdf || button.dataset.reportCsv;
+  const format = button.dataset.reportPdf ? 'pdf' : 'csv';
+  if (!key || button.disabled) return;
+  const label = button.textContent;
+  button.disabled = true;
+  button.textContent = format === 'pdf' ? 'তৈরি হচ্ছে…' : 'সাজানো হচ্ছে…';
+  button.setAttribute('aria-busy', 'true');
+  try {
+    const data = reportDataSets()[key];
+    const filename = `APC-${key}-report-${reportFileStamps()}.${format === 'pdf' ? 'pdf' : 'csv'}`;
+    if (format === 'pdf') await downloadReportPDF(filename, data);
+    else downloadCSV(filename, data.columns, data.rows);
+    toast(`${button.closest('.admin-card')?.querySelector('h2')?.textContent || 'রিপোর্ট'} ডাউনলোড হয়েছে`);
+  } catch {
+    toast('রিপোর্ট ডাউনলোড হয়নি। আবার চেষ্টা করুন।');
+  } finally {
+    button.disabled = false;
+    button.textContent = label;
+    button.removeAttribute('aria-busy');
+  }
 }
 
 async function collectFee(event) {
@@ -831,9 +1174,30 @@ function renderFinance() {
   renderRecentTransactions();
   renderStudentLedger();
   renderReportGenerator();
+  renderReportCards();
 }
 
 /* ---------- Student App Management ---------- */
+
+/* Teacher registration control: on/off switch + current teacher list. */
+function routineTeacherNames() {
+  return [...new Set(Object.values(state.routine).flatMap(info => info.classes.map(cls => cls.teacher).filter(Boolean)))];
+}
+
+function renderTeacherRegistrationControl(cfg = state.appConfig || loadAppConfig()) {
+  const allowed = cfg.allowTeacherRegistration !== false;
+  if ($('#cfgTeacherRegistration')) $('#cfgTeacherRegistration').checked = allowed;
+  if ($('#teacherRegBadge')) {
+    $('#teacherRegBadge').textContent = allowed ? 'খোলা আছে' : 'বন্ধ আছে';
+    $('#teacherRegBadge').className = `badge ${allowed ? 'badge-approved' : 'badge-rejected'}`;
+  }
+  if ($('#teacherRegList')) {
+    const teachers = routineTeacherNames();
+    $('#teacherRegList').innerHTML = teachers.length
+      ? teachers.map(teacher => `<span class="teacher-chip">${escapeHtml(teacher)}</span>`).join('')
+      : '<span class="finance-hint">রুটিনে এখনও কোনো শিক্ষক যোগ করা হয়নি।</span>';
+  }
+}
 
 function renderAppManagement() {
   const cfg = state.appConfig || loadAppConfig();
@@ -843,6 +1207,7 @@ function renderAppManagement() {
   if ($('#cfgMaintenanceMsg')) $('#cfgMaintenanceMsg').value = cfg.maintenanceMessage || '';
   if ($('#cfgAllowRegistration')) $('#cfgAllowRegistration').checked = cfg.allowRegistration !== false;
   if ($('#cfgSkipSecurity')) $('#cfgSkipSecurity').checked = cfg.skipSecurityCheck !== false;
+  renderTeacherRegistrationControl(cfg);
   if ($('#appStatusLiveBadge')) {
     $('#appStatusLiveBadge').textContent = cfg.maintenanceMode ? '🔴 রক্ষণাবেক্ষণ মোড' : '🟢 অ্যাপ লাইভ';
     $('#appStatusLiveBadge').className = `badge ${cfg.maintenanceMode ? 'badge-rejected' : 'badge-approved'}`;
@@ -878,6 +1243,7 @@ function saveAppSettingsFromForm() {
   const maintenanceMode = $('#cfgMaintenanceMode')?.checked || false;
   const maintenanceMessage = $('#cfgMaintenanceMsg')?.value.trim() || DEFAULT_APP_SETTINGS.maintenanceMessage;
   const allowRegistration = $('#cfgAllowRegistration')?.checked !== false;
+  const allowTeacherRegistration = $('#cfgTeacherRegistration')?.checked !== false;
   const skipSecurityCheck = $('#cfgSkipSecurity')?.checked !== false;
 
   const broadcastAlert = $('#cfgBroadcastAlert')?.checked !== false;
@@ -901,6 +1267,7 @@ function saveAppSettingsFromForm() {
     maintenanceMode,
     maintenanceMessage,
     allowRegistration,
+    allowTeacherRegistration,
     skipSecurityCheck,
     broadcastAlert,
     broadcastMessage,
@@ -922,7 +1289,9 @@ function saveAppSettingsFromForm() {
   saveAppConfig(state.appConfig);
   renderAppManagement();
   renderDashboard();
-  toast('শিক্ষার্থী অ্যাপের সকল কনফিগারেশন সফলভাবে সংরক্ষিত ও সক্রিয় করা হয়েছে');
+  toast(allowTeacherRegistration
+    ? 'সেটিংস সংরক্ষিত — শিক্ষক রেজিস্ট্রেশন ও প্যানেল প্রবেশ খোলা আছে'
+    : 'সেটিংস সংরক্ষিত — শিক্ষক রেজিস্ট্রেশন ও প্যানেল প্রবেশ বন্ধ করা হয়েছে');
 }
 
 function resetAppSettingsToDefault() {
@@ -968,6 +1337,10 @@ $('#cfgBroadcastAlert')?.addEventListener('change', event => {
     $('#cfgBroadcastBadge').textContent = isAlert ? 'সক্রিয়' : 'নিষ্ক্রিয়';
     $('#cfgBroadcastBadge').className = `badge ${isAlert ? 'badge-approved' : 'badge-pending'}`;
   }
+});
+
+$('#cfgTeacherRegistration')?.addEventListener('change', event => {
+  renderTeacherRegistrationControl({ ...loadAppConfig(), allowTeacherRegistration: event.target.checked });
 });
 
 $('#adminLoginForm')?.addEventListener('submit', event => {
@@ -1050,6 +1423,8 @@ const studentAction = event => {
     setStatus(id, 'rejected', `${student.name} এর অনুরোধ বাতিল করা হয়েছে`);
   } else if (action === 'view') {
     openStudentDetail(student);
+  } else if (action === 'edit') {
+    openStudentEdit(student);
   } else if (action === 'reset-pin') {
     openPinReset(student);
   }
@@ -1100,10 +1475,22 @@ $('#btnFinanceGoCollect')?.addEventListener('click', () => {
 });
 
 $('#btnFinanceGoReport')?.addEventListener('click', () => {
-  setFinanceTab('reports');
+  setView('reports');
 });
 
 $('#feeCollectionForm')?.addEventListener('submit', collectFee);
+$('#feeCollectionForm')?.addEventListener('click', event => {
+  // Quick amount chips: full due, monthly fee, or a half payment.
+  const chip = event.target.closest('[data-fee-quick]');
+  if (!chip || state.savingFee || $('#feeCollectionForm').hidden) return;
+  const student = state.students.find(s => s.id === $('#feeStudent').value);
+  if (!student) return;
+  const summary = studentFeeSummary(student, state.transactions);
+  const base = summary.due > 0 ? summary.due : summary.monthlyFee;
+  if (chip.dataset.feeQuick === 'due') $('#feeAmount').value = base || '';
+  else if (chip.dataset.feeQuick === 'monthly') $('#feeAmount').value = summary.monthlyFee || '';
+  else if (chip.dataset.feeQuick === 'half') $('#feeAmount').value = base ? Math.max(1, Math.round(base / 2)) : '';
+});
 $('#feeStudentSearch').addEventListener('input', () => {
   state.feeStudentId = null;
   $('#feeCollectionForm').hidden = true;
@@ -1128,6 +1515,8 @@ $('#ledgerFilterChips')?.addEventListener('click', event => {
   renderStudentLedger();
 });
 
+$('#ledgerSearch')?.addEventListener('input', renderStudentLedger);
+
 ['reportMonth', 'reportClass', 'reportFeeType', 'reportMethod'].forEach(id => {
   const el = document.getElementById(id);
   if (!el) return;
@@ -1138,6 +1527,12 @@ $('#ledgerFilterChips')?.addEventListener('click', event => {
     state.reportFilters.method = $('#reportMethod').value;
     renderReportGenerator();
   });
+});
+
+/* Report Center downloads (PDF + CSV) */
+$('.admin-view[data-view-panel="reports"]')?.addEventListener('click', event => {
+  const button = event.target.closest('[data-report-pdf], [data-report-csv]');
+  if (button) handleReportDownload(button);
 });
 
 const handleFinanceClick = event => {

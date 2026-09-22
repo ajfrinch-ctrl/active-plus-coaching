@@ -1,4 +1,4 @@
-const CACHE_NAME = 'active-plus-student-v41-student-login-header';
+const CACHE_NAME = 'active-plus-student-v42-admin-upgrades';
 const APP_SHELL = [
   './',
   './index.html',
@@ -64,7 +64,8 @@ const APP_SHELL = [
   './js/student-teaching.js',
   './js/admin-data.js',
   './js/finance-data.js',
-  './js/finance-receipt.js'
+  './js/finance-receipt.js',
+  './js/report-generator.js'
 ];
 
 self.addEventListener('install', event => {

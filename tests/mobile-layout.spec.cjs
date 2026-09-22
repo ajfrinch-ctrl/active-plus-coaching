@@ -58,7 +58,8 @@ for (const viewport of viewports) {
     await page.locator('#feeProfileCollect').click();
     expect(await page.locator('#feeCollectionForm .form-grid-2').first().evaluate(el => getComputedStyle(el).gridTemplateColumns.split(' ').length)).toBe(1);
     await noOverflow(page, '#feeCollectionForm');
-    await page.locator('[data-finance-tab=reports]').click();
+    await page.locator('#btnFinanceGoReport').click();
+    await expect(page.locator('.admin-view[data-view-panel=reports]')).toBeVisible();
     await expect(page.locator('#btnPrintReport, .pad-statement, table')).toHaveCount(0);
     await page.locator('#reportMonth').selectOption('all');
     await expect(page.locator('#reportTrxCount')).toHaveText('৭ টি');
@@ -69,7 +70,7 @@ for (const viewport of viewports) {
     await page.locator('#reportFeeType').selectOption('মাসিক বেতন');
     await expect(page.locator('#reportTrxCount')).toHaveText('৩ টি');
     await expect(page.locator('#reportGrandTotal')).toHaveText('৳৫,০০০');
-    await page.locator('#reportMethod').selectOption('বিকাশ');
+    await page.locator('#reportMethod').selectOption('বিকাশ (bKash)');
     await expect(page.locator('#reportTrxCount')).toHaveText('১ টি');
     await expect(page.locator('#reportGrandTotal')).toHaveText('৳১,৫০০');
     await page.locator('#reportCollectionList [data-action=view-receipt]').click();

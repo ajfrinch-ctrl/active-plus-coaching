@@ -1,6 +1,7 @@
 import { prepareDemoData } from './demo-data.js';
 import { initDemoForms } from './demo-forms.js';
 import { enabledClasses } from './config.js';
+import { loadAppConfig } from './storage.js';
 import { toBanglaNumber as bn } from './ui.js';
 import { initExamManager } from './exam-manager.js';
 import { initFixedShell } from './fixed-shell.js';
@@ -179,8 +180,27 @@ function showStudent(id) {
 }
 
 ['teacherClassFilter', 'teacherStudentClass'].forEach(id => { $('#' + id).insertAdjacentHTML('beforeend', classOptions()); });
+/* Admin-controlled teacher registration/entry gate (Admin Panel → শিক্ষক রেজিস্ট্রেশন নিয়ন্ত্রণ). */
+const teacherRegistrationOpen = () => loadAppConfig().allowTeacherRegistration !== false;
+function syncTeacherRegistrationNotice() {
+  const open = teacherRegistrationOpen();
+  const notice = $('#teacherRegNotice');
+  if (notice) notice.hidden = open;
+  const button = $('#teacherEnter');
+  if (button) button.disabled = !open;
+}
+syncTeacherRegistrationNotice();
+window.addEventListener('storage', event => {
+  if (event.key === 'active-plus-app-config-v1' || event.key === null) syncTeacherRegistrationNotice();
+});
 $('#teacherEnter').addEventListener('click', async event => {
-  const button = event.currentTarget; button.disabled = true; $('#teacherEntryError').hidden = true;
+  const button = event.currentTarget;
+  if (!teacherRegistrationOpen()) {
+    $('#teacherEntryError').textContent = 'শিক্ষক রেজিস্ট্রেশন ও প্রবেশ এই মুহূর্তে এডমিন কর্তৃক বন্ধ রাখা হয়েছে।';
+    $('#teacherEntryError').hidden = false;
+    return;
+  }
+  button.disabled = true; $('#teacherEntryError').hidden = true;
   if (await reload()) {
     $('#teacherEntry').hidden = true; $('#teacherShell').hidden = false; setView('home');
   } else { $('#teacherEntryError').textContent = 'ডেটা পড়া যায়নি। ব্রাউজারের স্টোরেজ চালু করে আবার চেষ্টা করুন।'; $('#teacherEntryError').hidden = false; }
