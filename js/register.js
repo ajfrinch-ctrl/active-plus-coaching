@@ -1,7 +1,8 @@
 /* Registration feature: step-by-step student self-registration with auto Student ID.
    Updated: auto-login after registration so PIN check isn't needed immediately. */
 import { $, $$, normalizeMobile, normalizeAnswer, setAuthMessage, showFeedback } from './ui.js';
-import { enabledClasses } from './config.js';
+import { enabledClasses, DEFAULT_PIN } from './config.js';
+import { contactNumber, isContactNumber } from './account-policy.js';
 import { saveAccount, saveStudent, generateStudentId, persistSession, setTrustedDevice } from './storage.js';
 import { switchAuthTab } from './login.js';
 
@@ -35,10 +36,10 @@ function handleRegistration(event, state, onRegistered) {
     return;
   }
   const form = new FormData(formElement);
-  const mobile = normalizeMobile(form.get('mobile'));
+  const mobile = contactNumber(form.get('mobile'));
   const pin = String(form.get('pin') || '');
   const pinConfirm = String(form.get('pinConfirm') || '');
-  if (mobile.length < 10) return setAuthMessage('সঠিক মোবাইল নম্বর দিন।');
+  if (!isContactNumber(mobile)) return setAuthMessage('সঠিক মোবাইল নম্বর দিন।');
   if (!/^\d{4,6}$/.test(pin)) return setAuthMessage('PIN অবশ্যই ৪ থেকে ৬ সংখ্যার হতে হবে।');
   if (pin !== pinConfirm) return setAuthMessage('দুটি PIN এক নয়। আবার মিলিয়ে দিন।');
   if (state.account) return setAuthMessage('এই ডিভাইসে ইতিমধ্যে একটি অ্যাকাউন্ট আছে। লগইন করুন অথবা এডমিনের সাহায্য নিন।');
@@ -57,7 +58,7 @@ function handleRegistration(event, state, onRegistered) {
     guardianName: String(form.get('guardianName') || '').trim(),
     birthDate: String(form.get('birthDate') || ''),
     gender: String(form.get('gender') || ''),
-    studentMobile: normalizeMobile(form.get('studentMobile')),
+    studentMobile: mobile,
     guardianMobile: normalizeMobile(form.get('guardianMobile')),
     address: String(form.get('address') || '').trim(),
     major: String(form.get('major') || '').trim(),
@@ -66,8 +67,10 @@ function handleRegistration(event, state, onRegistered) {
     registrationNo: String(form.get('registrationNo') || '').trim()
   };
 
-  state.account = {
+  const account = {
     mobile,
+    registrationMobile: mobile,
+    additionalMobiles: [],
     pin,
     securityQuestion: String(form.get('securityQuestion') || ''),
     securityAnswer: normalizeAnswer(form.get('securityAnswer')),
@@ -76,8 +79,9 @@ function handleRegistration(event, state, onRegistered) {
     status: 'pending',
     createdAt: new Date().toISOString()
   };
+  if (!saveAccount(account)) return setAuthMessage('সংরক্ষণ হয়নি। স্টোরেজ পরীক্ষা করে আবার চেষ্টা করুন।');
+  state.account = account;
   state.student = { ...state.student, ...studentData };
-  saveAccount(state.account);
   saveStudent(state.student);
   persistSession(true);
   setTrustedDevice(true);
@@ -137,6 +141,7 @@ function initRegistrationSteps() {
 
 export function initRegister({ state, onRegistered }) {
   populateRegistrationClasses();
+  ['regPin', 'regPinConfirm'].forEach(id => { const field = $('#' + id); if (field) field.value = field.defaultValue = DEFAULT_PIN; });
   initFixedContactMobile();
   const registerSteps = initRegistrationSteps();
   $('#regClass')?.addEventListener('change', toggleMajorField);

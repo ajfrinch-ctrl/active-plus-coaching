@@ -1,8 +1,10 @@
 /* Login feature: mobile number + PIN verification and auth tab switching.
    Updated: long-lived session so security check isn't required every time. */
-import { $, $$, normalizeMobile, setAuthMessage } from './ui.js';
-import { defaultStudent } from './config.js';
-import { saveStudent, persistSession, setTrustedDevice, isSecurityCheckDisabled } from './storage.js';
+import { $, $$, setAuthMessage, scrollToTop } from './ui.js';
+import { demoEnabled } from './demo-data.js';
+import { defaultStudent, DEFAULT_PIN } from './config.js';
+import { contactNumber } from './account-policy.js';
+import { persistAccount, loadAccount, saveStudent, persistSession, setTrustedDevice, isSecurityCheckDisabled } from './storage.js';
 
 export function switchAuthTab(tab) {
   $$('[data-auth-tab]').forEach(trigger => {
@@ -17,17 +19,22 @@ export function switchAuthTab(tab) {
     panel.hidden = !active;
   });
   setAuthMessage('');
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  scrollToTop();
 }
 
 function handleLogin(event, state, onAuthenticated) {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
-  const mobile = normalizeMobile(form.get('mobile'));
+  const mobile = contactNumber(form.get('mobile'));
+  state.account = loadAccount() || state.account;
   const pin = String(form.get('pin') || '');
   if (!mobile || pin.length < 4) {
     setAuthMessage('মোবাইল নম্বর ও ৪–৬ সংখ্যার PIN সঠিকভাবে দিন।');
     return;
+  }
+  if (!state.account && demoEnabled() && mobile === defaultStudent.studentMobile && pin === DEFAULT_PIN) {
+    try { state.account = persistAccount(demoAccount()); }
+    catch { setAuthMessage('ডেমো অ্যাকাউন্ট সংরক্ষণ হয়নি।'); return; }
   }
   if (!state.account) {
     setAuthMessage('এই ডিভাইসে কোনো অ্যাকাউন্ট নেই। আগে রেজিস্ট্রেশন করুন।');
@@ -55,9 +62,16 @@ function initPinVisibility() {
   });
 }
 
+function demoAccount() {
+  return { mobile: defaultStudent.studentMobile, pin: DEFAULT_PIN, status: 'active', student: { ...defaultStudent }, securityQuestion: 'তোমার শৈশবের ডাকনাম কী?', securityAnswer: 'রাইসা', additionalMobiles: ['01900000000'], demoFixture: true };
+}
+
 function initDemoLogin(state, onDemo) {
   $('#demoLoginButton')?.addEventListener('click', () => {
-    state.account = { mobile: '01700000000', pin: '123456', status: 'active', student: { ...defaultStudent } };
+    if (loadAccount()) return setAuthMessage('এই ডিভাইসে অ্যাকাউন্ট আছে। নিজের নিবন্ধিত নম্বর দিয়ে লগইন করুন।');
+    const account = demoEnabled() ? demoAccount() : { mobile: '01700000000', pin: DEFAULT_PIN, status: 'active', student: { ...defaultStudent } };
+    try { state.account = persistAccount(account); }
+    catch { return setAuthMessage('ডেমো অ্যাকাউন্ট সংরক্ষণ হয়নি। স্টোরেজ পরীক্ষা করুন।'); }
     state.student = { ...defaultStudent };
     onDemo?.();
   });

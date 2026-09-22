@@ -14,6 +14,8 @@ export const STORAGE_KEYS = Object.freeze({
   appConfig: 'active-plus-app-config-v1'
 });
 
+export const DEFAULT_PIN = '123123';
+
 export const ADMIN_ID = '01819486966';
 
 export const DEFAULT_APP_SETTINGS = Object.freeze({
@@ -52,7 +54,10 @@ export const defaultStudent = Object.freeze({
   group: 'বিজ্ঞান বিভাগ',
   id: 'AP-1024',
   studentMobile: '01700000000',
-  guardianMobile: '01800000000'
+  guardianMobile: '01800000000',
+  fatherName: 'আব্দুল করিম', motherName: 'সালমা বেগম', guardianName: 'আব্দুল করিম',
+  birthDate: '2010-03-15', gender: 'নারী', address: 'ডেমো ঠিকানা: বাড়ি ১২, রোড ৫, দিনাজপুর সদর',
+  major: 'গণিত', institution: 'ডেমো আদর্শ উচ্চ বিদ্যালয়', roll: '12', registrationNo: '2026001024'
 });
 
 export const subjectInitials = Object.freeze({

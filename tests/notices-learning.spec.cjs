@@ -1,0 +1,93 @@
+const { test, expect } = require('./fixtures.cjs');
+const READ_KEY = 'activePlus.notices.read.v1:AP-1024';
+const CONFIG_KEY = 'active-plus-app-config-v1';
+test.use({ viewport: { width: 390, height: 844 } });
+async function enter(page) {
+  await page.goto('/index.html');
+  await page.locator('#demoLoginButton').click();
+  await expect(page.locator('#appShell')).toBeVisible();
+}
+
+test('only bell opens notices; read state survives closing, reload and offline', async ({ page, context }) => {
+  await enter(page);
+  await expect(page.locator('#noticeShortcut, #noticeStrip, .js-notice-open')).toHaveCount(0);
+  await expect(page.locator('.notification-dot')).toBeVisible();
+  await page.locator('#notificationButton').click();
+  await expect(page.locator('#noticeModal')).toBeVisible();
+  await expect(page.locator('.notification-dot')).toBeHidden();
+  await expect(page.locator('#noticeListStudent .unread')).toHaveCount(0);
+  await expect(page.locator('#noticeReadStatus')).toContainText('সব নোটিশ পড়া হয়েছে');
+  await page.locator('#noticeModal .modal-action').click();
+  await page.reload();
+  await expect(page.locator('.notification-dot')).toBeHidden();
+  await page.evaluate(async () => navigator.serviceWorker.ready);
+  await expect.poll(() => page.evaluate(() => !!navigator.serviceWorker.controller)).toBe(true);
+  await context.setOffline(true); await page.reload();
+  await expect(page.locator('.notification-dot')).toBeHidden();
+  await page.locator('#notificationButton').click();
+  await expect(page.locator('#noticeListStudent .notice-detail')).toHaveCount(3);
+  await context.setOffline(false);
+});
+
+test('read receipts sync across tabs and edited broadcasts become unread without HTML injection', async ({ page, context }) => {
+  await enter(page);
+  const other = await context.newPage(); await other.goto('/index.html');
+  await expect(other.locator('.notification-dot')).toBeVisible();
+  await page.locator('#notificationButton').click();
+  await expect(other.locator('.notification-dot')).toBeHidden();
+  await page.locator('#noticeModal .modal-action').click();
+  const message = '<img src=x onerror=alert(1)> নতুন ক্লাসের সময়';
+  await other.evaluate(({ key, message }) => localStorage.setItem(key, JSON.stringify({ broadcastAlert: true, broadcastMessage: message })), { key: CONFIG_KEY, message });
+  await expect(page.locator('.notification-dot')).toBeVisible();
+  await expect(page.locator('#notificationButton')).toHaveAttribute('aria-label', 'নোটিশ দেখুন — ১টি অপঠিত');
+  await page.locator('#notificationButton').click();
+  await expect(page.locator('#noticeListStudent')).toContainText(message);
+  await expect(page.locator('#noticeListStudent img')).toHaveCount(0);
+  await expect(page.locator('.notification-dot')).toBeHidden();
+  await page.reload(); await expect(page.locator('.notification-dot')).toBeHidden();
+});
+
+test('read state belongs to the student, not every account on the device', async ({ page }) => {
+  await enter(page); await page.locator('#notificationButton').click();
+  expect(await page.evaluate(key => JSON.parse(localStorage.getItem(key)).length, READ_KEY)).toBe(3);
+  await page.evaluate(() => {
+    const key = 'active-plus-account-v1', account = JSON.parse(localStorage.getItem(key));
+    account.student.id = 'ANOTHER-STUDENT'; localStorage.setItem(key, JSON.stringify(account));
+  });
+  await page.reload(); await expect(page.locator('.notification-dot')).toBeVisible();
+});
+
+test('unreadable receipt storage is preserved and failed persistence is explained', async ({ page }) => {
+  await enter(page);
+  await page.evaluate(key => localStorage.setItem(key, '{broken'), READ_KEY);
+  await page.reload(); await page.locator('#notificationButton').click();
+  await expect(page.locator('.feedback-toast')).toContainText('ডিভাইসে সংরক্ষণ হয়নি');
+  expect(await page.evaluate(key => localStorage.getItem(key), READ_KEY)).toBe('{broken');
+  await expect(page.locator('.notification-dot')).toBeHidden();
+  await page.reload(); await expect(page.locator('.notification-dot')).toBeVisible();
+});
+
+for (const width of [320, 390, 480]) {
+  test(`work board: summary, filters, completion persistence and no overflow at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 }); await enter(page);
+    await page.evaluate(async () => {
+      const { teachingRepository: repo } = await import('/js/teaching-data.js');
+      for (const type of ['homework', 'suggestion', 'routine']) await repo.saveActivity({ type, title: type === 'homework' ? 'বীজগণিত অনুশীলনী' : 'সহায়ক পাঠ', subject: 'গণিত', className: 'দশম শ্রেণি', status: 'published', date: '2026-10-01', time: '17:00', duration: 60, details: 'প্রথম অধ্যায়ের অনুশীলনী সমাধান করো।', room: 'কক্ষ ২' });
+    });
+    await page.locator('#teacherHomeLink').click();
+    await expect(page.locator('#learningSummary strong')).toHaveText(['৩', '১', '০']);
+    await page.locator('[data-learning-filter=homework]').click();
+    await expect(page.locator('#learningList .learning-card')).toHaveCount(1);
+    await expect(page.locator('#learningList .learning-meta')).toContainText('জমার শেষ সময়');
+    await expect(page.locator('#learningList .learning-teacher')).toContainText('শিক্ষক');
+    await page.locator('[data-complete-homework]').click();
+    await expect(page.locator('#learningSummary strong')).toHaveText(['৩', '০', '১']);
+    await expect(page.locator('#learningList .learning-state')).toHaveText('সম্পন্ন');
+    await expect(page.locator('[data-complete-homework]')).toHaveCount(0);
+    await page.reload(); await page.locator('.bottom-nav [data-view=courses]').click();
+    await expect(page.locator('#learningSummary strong')).toHaveText(['৩', '০', '১']);
+    await page.locator('[data-learning-filter=exam]').click();
+    await expect(page.locator('#learningList .teacher-empty')).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.querySelector('#appMain').scrollWidth <= document.querySelector('#appMain').clientWidth)).toBe(true);
+  });
+}

@@ -1,4 +1,5 @@
 /* App shell lifecycle and student identity rendering. */
+import { loadAccount } from './storage.js';
 import { $, $$, scrollToTop, toBanglaNumber } from './ui.js';
 
 export function renderStudent(student) {
@@ -7,7 +8,6 @@ export function renderStudent(student) {
   const meta = `${student.className} · ${student.group}`;
 
   $('#studentName') && ($('#studentName').textContent = firstName);
-  $('#topbarStudentName') && ($('#topbarStudentName').textContent = student.name || firstName);
   $('#avatarInitial') && ($('#avatarInitial').textContent = initial);
   $('#profileAvatar') && ($('#profileAvatar').textContent = initial);
   $('#profileName') && ($('#profileName').textContent = student.name);
@@ -16,6 +16,12 @@ export function renderStudent(student) {
   $('#studentId') && ($('#studentId').textContent = student.id);
   $('#studentMobileValue') && ($('#studentMobileValue').textContent = toBanglaNumber(student.studentMobile || 'নম্বর নেই'));
   $('#guardianMobileValue') && ($('#guardianMobileValue').textContent = toBanglaNumber(student.guardianMobile || 'নম্বর নেই'));
+  const additional = $('#studentAdditionalMobiles');
+  if (additional) {
+    const numbers = loadAccount()?.additionalMobiles || [];
+    additional.textContent = numbers.length ? `অতিরিক্ত: ${numbers.map(toBanglaNumber).join(' • ')}` : '';
+    additional.hidden = !numbers.length;
+  }
   if ($('#editStudentId')) $('#editStudentId').value = student.id || '';
 }
 
@@ -47,6 +53,6 @@ export function setView(viewName) {
   const panel = document.getElementById(`${viewName}View`);
   if (!panel) return;
   $$('[data-view-panel]').forEach(item => item.classList.toggle('active', item === panel));
-  $$('.bottom-link').forEach(item => item.classList.toggle('active', item.dataset.view === viewName));
+  $$('.bottom-link').forEach(item => item.classList.toggle('active', item.dataset.view === (viewName === 'exams' ? 'courses' : viewName)));
   scrollToTop();
 }

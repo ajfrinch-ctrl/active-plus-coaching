@@ -49,5 +49,9 @@ export function closeModal(id) {
 }
 
 export function scrollToTop() {
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  const auth = $('#authScreen');
+  const shell = $('#appShell');
+  const container = auth && !auth.hidden ? auth
+    : shell?.classList.contains('is-pending') ? $('#pendingScreen') : $('#appMain');
+  container?.scrollTo({ top: 0, behavior: 'instant' });
 }

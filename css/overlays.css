@@ -58,3 +58,11 @@ body.modal-open { overflow: hidden; }
   color: #793429;
   margin: 0;
 }
+
+/* The bell is the sole notification entry point; read history remains accessible. */
+.notification-dot[hidden] { display: none; }
+.notice-read-status { padding: 10px 12px; margin-bottom: 12px; border-radius: 10px; background: var(--mint); color: var(--forest); font-size: 12px; }
+#noticeListStudent .notice-detail { border-top: 1px solid var(--line); padding: 14px 0; }
+#noticeListStudent .notice-detail h3 { font-size: 14px; line-height: 1.7; }
+#noticeListStudent .notice-detail p { font-size: 12px; line-height: 1.9; }
+#noticeListStudent .notice-time { font-size: 10px; color: var(--muted); }

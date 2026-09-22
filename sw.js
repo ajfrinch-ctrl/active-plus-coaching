@@ -1,10 +1,15 @@
-const CACHE_NAME = 'active-plus-student-v30-shopledger-home-style';
+const CACHE_NAME = 'active-plus-student-v41-student-login-header';
 const APP_SHELL = [
   './',
   './index.html',
   './admin.html',
+  './teacher.html',
   './styles.css',
   './css/admin.css',
+  './css/mobile.css',
+  './css/exams.css',
+  './css/teaching.css',
+  './css/receipt.css',
   './manifest.json',
   './assets/icons/app-logo.png',
   './assets/icons/install-icon.png',
@@ -26,6 +31,15 @@ const APP_SHELL = [
   './css/scroll-header.css',
   './assets/fonts/NotoSansBengali-Variable.ttf',
   './js/config.js',
+  './js/demo-data.js',
+  './js/demo-forms.js',
+  './assets/demo-study-notes.txt',
+  './js/exam-data.js',
+  './js/exam-ui.js',
+  './js/exam-manager.js',
+  './js/exam-pdf.js',
+  './js/student-exams.js',
+  './js/account-policy.js',
   './js/storage.js',
   './js/ui.js',
   './js/shell.js',
@@ -42,9 +56,15 @@ const APP_SHELL = [
   './js/service-worker.js',
   './js/theme.js',
   './js/scroll-header.js',
+  './js/fixed-shell.js',
   './js/main.js',
   './js/admin.js',
-  './js/admin-data.js'
+  './js/teacher.js',
+  './js/teaching-data.js',
+  './js/student-teaching.js',
+  './js/admin-data.js',
+  './js/finance-data.js',
+  './js/finance-receipt.js'
 ];
 
 self.addEventListener('install', event => {

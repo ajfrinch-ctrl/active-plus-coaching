@@ -1,3 +1,5 @@
+import { prepareDemoData } from './demo-data.js';
+import { initDemoForms } from './demo-forms.js';
 /* Application composition root. Feature modules can be replaced independently.
    Updated: don't ask security check every time - auto-login for trusted devices. */
 import { APP_TAGLINE } from './config.js';
@@ -16,7 +18,12 @@ import { initInstallPrompt, installApp } from './install.js';
 import { initConnectivity } from './connectivity.js';
 import { registerServiceWorker } from './service-worker.js';
 import { initDynamicTheme } from './theme.js';
-import { initScrollHeader } from './scroll-header.js';
+import { initFixedShell } from './fixed-shell.js';
+import { initStudentExams } from './student-exams.js';
+import { initStudentTeaching } from './student-teaching.js';
+
+const demoWarnings = await prepareDemoData();
+initFixedShell();
 
 const appConfig = loadAppConfig();
 
@@ -29,21 +36,6 @@ function applyAppConfig(cfg) {
     tagline.setAttribute('aria-label', taglineText);
     tagline.textContent = taglineText;
   });
-
-  // 2. Broadcast / Emergency Alert Banner on Student Home
-  const noticeStrip = $('#noticeStrip') || $('.notice-strip');
-  if (noticeStrip) {
-    if (cfg.broadcastAlert && cfg.broadcastMessage) {
-      noticeStrip.hidden = false;
-      const copyEl = noticeStrip.querySelector('strong');
-      const smallEl = noticeStrip.querySelector('small');
-      if (copyEl) copyEl.textContent = 'জরুরি ঘোষণা';
-      if (smallEl) smallEl.textContent = cfg.broadcastMessage;
-      noticeStrip.dataset.tone = cfg.broadcastTone || 'green';
-    } else if (cfg.broadcastAlert === false) {
-      noticeStrip.hidden = true;
-    }
-  }
 
   // 3. Maintenance Mode
   if (cfg.maintenanceMode) {
@@ -131,6 +123,8 @@ const state = {
   student: loadStudent(),
   account: loadAccount()
 };
+const refreshExams = initStudentExams({ getStudent: () => state.student, getAccount: () => state.account });
+const refreshTeaching = initStudentTeaching({ getStudent: () => state.student });
 
 function handleAction(action) {
   switch (action) {
@@ -170,6 +164,9 @@ function handleAction(action) {
 
 function enterApp() {
   openStudentApp(state);
+  refreshTeaching();
+  refreshExams();
+  refreshNotices();
 }
 
 function leaveApp() {
@@ -194,15 +191,14 @@ function shouldAutoLogin() {
 
 renderStudent(state.student);
 initNavigation({ onAction: handleAction });
-initModals();
+const refreshNotices = initModals({ getStudent: () => state.student });
 initProfile({
   state,
-  onStudentChange: student => renderStudent(student)
+  onStudentChange: student => { renderStudent(student); refreshTeaching(); refreshExams(); }
 });
 initRoutine();
 initConnectivity();
 initDynamicTheme();
-initScrollHeader();
 initInstallPrompt();
 registerServiceWorker();
 initLogin({
@@ -241,8 +237,10 @@ if (shouldAutoLogin()) {
 }
 
 const hashView = window.location.hash.replace('#', '');
-if (['home', 'routine', 'courses', 'results', 'profile'].includes(hashView) && !$('#authScreen')?.hidden) {
+if (['home', 'routine', 'courses', 'results', 'profile', 'exams'].includes(hashView) && !$('#authScreen')?.hidden) {
   // Keep auth as the first screen; a shortcut is applied after login by the normal shell.
-} else if (['home', 'routine', 'courses', 'results', 'profile'].includes(hashView)) {
+} else if (['home', 'routine', 'courses', 'results', 'profile', 'exams'].includes(hashView)) {
   setView(hashView);
 }
+
+initDemoForms(demoWarnings);
