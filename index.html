@@ -143,7 +143,7 @@
           <span class="weather-pill" id="weatherStatus" aria-label="আজকের আবহাওয়া"><svg id="weatherIcon" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-sun"></use></svg><span id="weatherLabel">স্বচ্ছ আকাশ</span></span>
           <button class="icon-button notification-button" id="notificationButton" type="button" aria-label="নোটিশ দেখুন" aria-haspopup="dialog">
             <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-bell"></use></svg>
-            <span class="notification-dot"></span>
+            <span class="notification-dot" hidden aria-hidden="true"></span>
           </button>
         </div>
       </div>
@@ -166,7 +166,7 @@
         </article>
 
         <button class="exam-link" type="button" data-view="exams">পরীক্ষা দাও →<small>প্রকাশিত পরীক্ষা, প্রশ্নপত্র ও ফলাফল</small></button>
-        <button class="teacher-home-link" id="teacherHomeLink" type="button" data-view="courses" hidden><span><strong>শিক্ষকের দেওয়া কাজ</strong><small id="teacherHomeCount"></small></span><span aria-hidden="true">→</span></button>
+        <button class="teacher-home-link" id="teacherHomeLink" type="button" data-view="courses" hidden><span class="learning-home-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-book"></use></svg></span><span class="learning-home-copy"><strong>শিক্ষকের দেওয়া কাজ</strong><small id="teacherHomeCount"></small></span><span class="learning-home-arrow" aria-hidden="true">→</span></button>
         <article class="home-hero">
           <div class="home-hero-head">
             <div class="home-hero-title">
@@ -214,7 +214,7 @@
         <section class="home-section">
           <div class="home-section-head">
             <h3>দ্রুত কাজ</h3>
-            <span class="home-count-pill">৪টি অপশন</span>
+            <span class="home-count-pill">৩টি অপশন</span>
           </div>
           <div class="quick-wrap">
             <button class="quick-tile" type="button" data-view="routine">
@@ -228,10 +228,6 @@
             <button class="quick-tile" type="button" data-view="results">
               <span class="quick-tile-btn qt-amber"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-award"></use></svg></span>
               <span>ফলাফল</span>
-            </button>
-            <button class="quick-tile" type="button" id="noticeShortcut">
-              <span class="quick-tile-btn qt-red"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-bell"></use></svg></span>
-              <span>নোটিশ</span>
             </button>
           </div>
         </section>
@@ -254,23 +250,7 @@
           </div>
         </section>
 
-        <section class="home-section">
-          <div class="home-section-head">
-            <h3><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-megaphone"></use></svg> নোটিশ</h3>
-            <button type="button" class="home-link-pill js-notice-open">সব দেখুন <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg></button>
-          </div>
-          <div class="home-list-card">
-            <button class="home-row" type="button" id="noticeStrip">
-              <span class="home-row-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-megaphone"></use></svg></span>
-              <span class="home-row-copy">
-                <small>আজ • ১০:৩০ সকাল</small>
-                <strong>নতুন নোটিশ এসেছে</strong>
-                <small class="sub">আগামীকালের ক্লাস টেস্টের সময় পরিবর্তন হয়েছে</small>
-              </span>
-              <span class="home-row-side"><strong>২টি</strong><small>নতুন</small></span>
-            </button>
-          </div>
-        </section>
+
       </section>
 
       <!-- ROUTINE -->
@@ -296,7 +276,8 @@
         <div class="page-intro"><p class="eyebrow">চলমান পড়াশোনা</p><h1 id="coursesTitle">আমার কোর্স</h1><p>প্রতিটি বিষয়ে নিজের অগ্রগতি দেখে নাও।</p></div>
         <button class="exam-link" type="button" data-view="exams">পরীক্ষা দাও<small>MCQ, লিখিত ও সংক্ষিপ্ত পরীক্ষা • সবার ফলাফল</small></button>
         <section class="teaching-board" id="learningBoard" aria-labelledby="learningTitle">
-          <h2 id="learningTitle">শিক্ষকের দেওয়া কাজ</h2><p id="learningCount" role="status"></p>
+          <div class="learning-heading"><span class="learning-home-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-book"></use></svg></span><div><h2 id="learningTitle">শিক্ষকের দেওয়া কাজ</h2><p id="learningCount" role="status"></p></div></div>
+          <div class="learning-summary" id="learningSummary" aria-label="কাজের সারসংক্ষেপ"></div>
           <div class="learning-filter" id="learningFilters" aria-label="কাজের ধরন">
             <button type="button" data-learning-filter="all" aria-pressed="true">সব</button>
             <button type="button" data-learning-filter="exam" aria-pressed="false">পরীক্ষা</button>
@@ -368,7 +349,7 @@
   </div>
 
   <div class="modal-backdrop" id="noticeModal" hidden>
-    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="noticeModalTitle"><div class="modal-header"><div><p class="eyebrow">Active Plus আপডেট</p><h2 id="noticeModalTitle">নোটিশ</h2></div><button type="button" class="modal-close" data-close-modal="noticeModal" aria-label="বন্ধ করুন">×</button></div><article class="notice-detail unread"><span class="notice-detail-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-megaphone"></use></svg></span><div><span class="notice-time">আজ · ১০:৩০ সকাল</span><h3>আগামীকালের ক্লাস টেস্ট</h3><p>আগামীকাল উচ্চতর গণিতের ক্লাস টেস্ট বিকেল ৪:৩০ মিনিটে অনুষ্ঠিত হবে। সবাইকে সময়মতো উপস্থিত থাকার জন্য অনুরোধ করা হচ্ছে।</p></div></article><article class="notice-detail"><span class="notice-detail-icon light"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-info"></use></svg></span><div><span class="notice-time">১৮ সেপ্টেম্বর ২০২৬</span><h3>মাসিক পরীক্ষার ফলাফল</h3><p>সেপ্টেম্বর মাসের পরীক্ষার ফলাফল এখন ফলাফল সেকশনে দেখা যাচ্ছে।</p></div></article><button class="modal-action" type="button" data-close-modal="noticeModal">বুঝেছি</button></section>
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="noticeModalTitle"><div class="modal-header"><div><p class="eyebrow">Active Plus আপডেট</p><h2 id="noticeModalTitle">নোটিশ</h2></div><button type="button" class="modal-close" data-close-modal="noticeModal" aria-label="বন্ধ করুন">×</button></div><p id="noticeReadStatus" class="notice-read-status" role="status"></p><div id="noticeListStudent"></div><button class="modal-action" type="button" data-close-modal="noticeModal">বুঝেছি</button></section>
   </div>
 
   <div class="modal-backdrop" id="logoutModal" hidden>

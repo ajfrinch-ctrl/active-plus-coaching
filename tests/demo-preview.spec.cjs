@@ -50,10 +50,12 @@ test('admin finance, notices, routine and approvals show examples but never save
 
 test('seeding is idempotent, preserves edited records/ledger/account and never repairs corruption silently',async({page})=>{
   await page.goto('/index.html');
+  // Seeding resumes asynchronously after module loading; wait for app initialization.
+  await expect(page.locator('#loginMobile')).toHaveValue('01700000000');
   await page.evaluate(({exams,finance})=>{const db=JSON.parse(localStorage.getItem(exams));db.exams[1].title='আমার নিজের পরিবর্তিত শিরোনাম';localStorage.setItem(exams,JSON.stringify(db));localStorage.setItem(finance,'[]');localStorage.setItem('active-plus-account-v1',JSON.stringify({mobile:'01811223344',pin:'789789',status:'active',student:{id:'REAL-1',name:'আমার নিজের নাম',studentMobile:'01811223344',className:'দশম শ্রেণি',group:'বিজ্ঞান'}}));},{exams:EXAMS,finance:FINANCE});
-  const before=await page.evaluate(key=>localStorage.getItem(key),EXAMS); await page.reload(); expect(await page.evaluate(key=>localStorage.getItem(key),EXAMS)).toBe(before); expect(await page.evaluate(key=>localStorage.getItem(key),FINANCE)).toBe('[]');
+  const before=await page.evaluate(key=>localStorage.getItem(key),EXAMS); await page.reload(); await expect(page.locator('#appMain > .demo-preview-note')).toBeAttached(); expect(await page.evaluate(key=>localStorage.getItem(key),EXAMS)).toBe(before); expect(await page.evaluate(key=>localStorage.getItem(key),FINANCE)).toBe('[]');
   const account=await page.evaluate(()=>JSON.parse(localStorage.getItem('active-plus-account-v1'))); expect(account.pin).toBe('789789'); expect(account.student.name).toBe('আমার নিজের নাম');
-  await page.evaluate(key=>{localStorage.removeItem(`${key}.demo-seeded.v1`);localStorage.setItem(key,'{broken');},EXAMS); await page.reload(); expect(await page.evaluate(key=>localStorage.getItem(key),EXAMS)).toBe('{broken');
+  await page.evaluate(key=>{localStorage.removeItem(`${key}.demo-seeded.v1`);localStorage.setItem(key,'{broken');},EXAMS); await page.reload(); await expect(page.locator('#appMain > .demo-preview-note')).toBeAttached(); expect(await page.evaluate(key=>localStorage.getItem(key),EXAMS)).toBe('{broken');
 });
 
 test('fresh-time samples are additive; profile examples and offline fixtures survive reload',async({page,context})=>{

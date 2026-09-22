@@ -21,7 +21,8 @@ Active Plus Coaching-এর মোবাইল-ফার্স্ট Progressive
 - ক্লাস রুটিন — দিনভিত্তিক ফিল্টারসহ
 - চলমান কোর্স ও অধ্যায়ভিত্তিক অগ্রগতি
 - সাম্প্রতিক পরীক্ষার ফলাফল
-- নোটিশ দেখার জন্য অফলাইন মডাল
+- হেডারের ঘণ্টায় একটিমাত্র নোটিশ ইনবক্স; খুললে অপঠিত চিহ্ন সরে যায়, আগের নোটিশ ইতিহাসে থাকে। শিক্ষার্থীভিত্তিক পড়ার অবস্থা একই ডিভাইসে অফলাইন/রিলোডেও থাকে; ঘোষণার লেখা বদলালে আবার অপঠিত হয়।
+- শিক্ষকের দেওয়া কাজে মোট/বাকি/সম্পন্ন বাড়ির কাজের সারসংক্ষেপ, সংখ্যাসহ ধরনভিত্তিক ফিল্টার, বিষয়–তারিখ–শিক্ষক–অবস্থাসহ মোবাইল কার্ড ও বড় অ্যাকশন বাটন
 - ব্যক্তিগত তথ্য লোকালস্টোরেজে সম্পাদনা ও সংরক্ষণ
 - PWA install prompt এবং service worker cache
 - local time অনুযায়ী টপবার স্ট্রিপের হালকা টিন্ট পরিবর্তন; offline weather profile টপবারের আবহাওয়া চিপে দেখা যায়
@@ -281,3 +282,7 @@ Tests: template parser/validation, approval transitions/ownership, timing/grace,
 অটোফিল বন্ধ করার বাটন আছে। আবার চালু করতে Login/Entry পেজের **নমুনা ডেটা ও অটোফিল চালু করুন** চাপুন; ফোন থেকেই করা যায়, site data মুছতে হয় না। mode key `activePlus.demo.autofill.v1`; বন্ধ করলে নমুনা/ব্যবহারকারীর সংরক্ষিত ডেটা মুছে যায় না। ক্ষতিগ্রস্ত ডেটা বা storage failure হলে seed দিয়ে overwrite হয় না।
 
 `js/demo-data.js`-এ additive fixture builder/seed, `js/demo-forms.js`-এ visible-field defaults ও mobile controls। `tests/demo-preview.spec.cjs` default populated experience পরীক্ষা করে। অন্যান্য workflow regression tests `tests/fixtures.cjs` দিয়ে auto-seeding বন্ধ রেখে নির্দিষ্ট data scenario পরীক্ষা করে; domain validation/security guards bypass করে না।
+
+### নোটিশ ও কাজের বোর্ড যাচাই
+
+`tests/notices-learning.spec.cjs` একক নোটিশ প্রবেশপথ, পড়ার অবস্থা, রিলোড/অফলাইন, একই ডিভাইসের ট্যাব, আলাদা শিক্ষার্থী, ঘোষণার পরিবর্তন, corrupt storage এবং ৩২০/৩৯০/৪৮০px কাজের বোর্ড যাচাই করে। নোটিশ ইনবক্সের উৎস বর্তমানে নমুনা নোটিশ ও লোকাল App Settings-এর ঘোষণা; Admin-এর পৃথক নোটিশ CRUD এখনো এই ইনবক্সের সঙ্গে সংযুক্ত নয়। পড়ার রেকর্ড `activePlus.notices.read.v1:<student-id>`-এ থাকে, অন্য ডিভাইসে sync হয় না। স্টোরেজে লেখা না গেলে শুধু চলতি সেশনে পড়া হিসেবে থাকে এবং সতর্কবার্তা দেখায়।

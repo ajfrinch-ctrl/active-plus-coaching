@@ -38,21 +38,6 @@ function applyAppConfig(cfg) {
     tagline.textContent = taglineText;
   });
 
-  // 2. Broadcast / Emergency Alert Banner on Student Home
-  const noticeStrip = $('#noticeStrip') || $('.notice-strip');
-  if (noticeStrip) {
-    if (cfg.broadcastAlert && cfg.broadcastMessage) {
-      noticeStrip.hidden = false;
-      const copyEl = noticeStrip.querySelector('strong');
-      const smallEl = noticeStrip.querySelector('small');
-      if (copyEl) copyEl.textContent = 'জরুরি ঘোষণা';
-      if (smallEl) smallEl.textContent = cfg.broadcastMessage;
-      noticeStrip.dataset.tone = cfg.broadcastTone || 'green';
-    } else if (cfg.broadcastAlert === false) {
-      noticeStrip.hidden = true;
-    }
-  }
-
   // 3. Maintenance Mode
   if (cfg.maintenanceMode) {
     // 1. On Auth Screen: insert inside .auth-card safely below topbar
@@ -182,6 +167,7 @@ function enterApp() {
   openStudentApp(state);
   refreshTeaching();
   refreshExams();
+  refreshNotices();
 }
 
 function leaveApp() {
@@ -206,7 +192,7 @@ function shouldAutoLogin() {
 
 renderStudent(state.student);
 initNavigation({ onAction: handleAction });
-initModals();
+const refreshNotices = initModals({ getStudent: () => state.student });
 initProfile({
   state,
   onStudentChange: student => { renderStudent(student); refreshTeaching(); refreshExams(); }
