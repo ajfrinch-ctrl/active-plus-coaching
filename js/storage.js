@@ -1,4 +1,5 @@
 /* One place for local persistence. Replacing these adapters with an API later keeps UI modules unchanged. */
+import { protectAccountIdentity } from './account-policy.js';
 import { STORAGE_KEYS, defaultStudent, DEFAULT_APP_SETTINGS } from './config.js';
 
 function getStorage(type = 'local') {
@@ -14,7 +15,7 @@ export function readJSON(key, fallback = null) {
 }
 
 export function writeJSON(key, value) {
-  try { getStorage()?.setItem(key, JSON.stringify(value)); return true; }
+  try { const storage = getStorage(); if (!storage) return false; storage.setItem(key, JSON.stringify(value)); return true; }
   catch { return false; }
 }
 
@@ -23,15 +24,29 @@ export function loadStudent() {
 }
 
 export function saveStudent(student) {
-  return writeJSON(STORAGE_KEYS.student, student);
+  const account = loadAccount();
+  const value = account?.student?.id && account.student.id === student.id ? { ...student, studentMobile: account.registrationMobile || account.mobile } : student;
+  return writeJSON(STORAGE_KEYS.student, value);
 }
 
 export function loadAccount() {
-  return readJSON(STORAGE_KEYS.account, null);
+  const account = readJSON(STORAGE_KEYS.account, null);
+  if (!account) return null;
+  try { return protectAccountIdentity(account, account); } catch { return account; }
+}
+
+export function persistAccount(account) {
+  const storage = getStorage();
+  if (!storage) throw new Error('স্টোরেজ পাওয়া যায়নি');
+  const raw = storage.getItem(STORAGE_KEYS.account);
+  const previous = raw === null ? null : JSON.parse(raw);
+  const value = protectAccountIdentity(account, previous);
+  storage.setItem(STORAGE_KEYS.account, JSON.stringify(value));
+  return value;
 }
 
 export function saveAccount(account) {
-  return writeJSON(STORAGE_KEYS.account, account);
+  try { persistAccount(account); return true; } catch { return false; }
 }
 
 const SESSION_DAYS_REMEMBER = 90;

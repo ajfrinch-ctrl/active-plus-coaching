@@ -1,15 +1,16 @@
 /* Collapses the Home identity into the fixed topbar after the student starts scrolling. */
 export function initScrollHeader() {
   const topbar = document.querySelector('.app-shell .topbar');
-  if (!topbar) return;
+  const content = document.querySelector('#appMain');
+  if (!topbar || !content) return;
   let ticking = false;
 
   const update = () => {
-    topbar.classList.toggle('is-scrolled', window.scrollY > 76);
+    topbar.classList.toggle('is-scrolled', content.scrollTop > 76);
     ticking = false;
   };
 
-  window.addEventListener('scroll', () => {
+  content.addEventListener('scroll', () => {
     if (!ticking) {
       window.requestAnimationFrame(update);
       ticking = true;

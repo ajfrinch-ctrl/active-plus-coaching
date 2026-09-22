@@ -2,7 +2,8 @@
    Updated: toggle to disable security check every time. */
 import { $, openModal, closeModal, showFeedback, normalizeMobile } from './ui.js';
 import { enabledClasses } from './config.js';
-import { saveStudent, saveAccount, isSecurityCheckDisabled, setSecurityCheckDisabled, isTrustedDevice, setTrustedDevice, persistSession } from './storage.js';
+import { appendAccountMobile } from './account-policy.js';
+import { loadAccount, saveStudent, persistAccount, isSecurityCheckDisabled, setSecurityCheckDisabled, isTrustedDevice, setTrustedDevice, persistSession } from './storage.js';
 
 export function populateProfileClassOptions() {
   const select = $('#classInput');
@@ -24,7 +25,10 @@ export function openProfileEditor(student) {
   setValue('editGuardianName', student.guardianName);
   setValue('editBirthDate', student.birthDate);
   setValue('editGender', student.gender);
-  setValue('editStudentMobile', student.studentMobile);
+  const account = loadAccount();
+  setValue('editStudentMobile', account?.registrationMobile || account?.mobile || student.studentMobile);
+  setValue('editAdditionalMobile', '');
+  $('#editAdditionalMobiles').textContent = (account?.additionalMobiles || []).join(' • ') || 'এখনও অতিরিক্ত নম্বর নেই';
   setValue('editGuardianMobile', student.guardianMobile);
   setValue('editAddress', student.address);
   setValue('classInput', student.className);
@@ -49,7 +53,7 @@ function readEditableStudent(form, current) {
     guardianName: String(form.get('guardianName') || '').trim(),
     birthDate: String(form.get('birthDate') || ''),
     gender: String(form.get('gender') || ''),
-    studentMobile: normalizeMobile(form.get('studentMobile')),
+    studentMobile: current.studentMobile,
     guardianMobile: normalizeMobile(form.get('guardianMobile')),
     address: String(form.get('address') || '').trim(),
     className: String(form.get('className') || ''),
@@ -114,18 +118,20 @@ export function initProfile({ state, onStudentChange }) {
   $('#profileForm')?.addEventListener('submit', event => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    const previousMobile = normalizeMobile(state.student.studentMobile);
-    state.student = readEditableStudent(form, state.student);
-
-    // Keep login and profile mobile numbers aligned when they were the same account number.
-    if (state.account && (!state.account.mobile || state.account.mobile === previousMobile)) {
-      state.account = { ...state.account, mobile: state.student.studentMobile, student: state.student };
-      saveAccount(state.account);
-    } else if (state.account) {
-      state.account = { ...state.account, student: state.student };
-      saveAccount(state.account);
-    }
-
+    if (!event.currentTarget.reportValidity()) return;
+    const account = loadAccount() || state.account;
+    if (!account) return showFeedback('অ্যাকাউন্ট পাওয়া যায়নি। আবার লগইন করুন।');
+    let nextAccount;
+    try {
+      nextAccount = form.get('additionalMobile')?.trim() ? appendAccountMobile(account, form.get('additionalMobile')) : account;
+    } catch (error) { return showFeedback(error.message); }
+    const student = readEditableStudent(form, { ...state.student, studentMobile: account.registrationMobile || account.mobile });
+    nextAccount = { ...nextAccount, student };
+    let saved;
+    try { saved = persistAccount(nextAccount); }
+    catch { return showFeedback('সংরক্ষণ হয়নি। স্টোরেজ পরীক্ষা করে আবার চেষ্টা করুন।'); }
+    state.account = saved;
+    state.student = state.account.student;
     saveStudent(state.student);
     onStudentChange?.(state.student);
     closeModal('editModal');

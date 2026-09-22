@@ -1,0 +1,30 @@
+.receipt-modal-box {
+  border: 2px solid var(--forest);
+  border-radius: 16px;
+  padding: 20px 18px;
+  background: #ffffff;
+  position: relative;
+  overflow: hidden;
+}
+.receipt-header { text-align: center; padding-bottom: 12px; border-bottom: 1.5px dashed #d5e2d9; margin-bottom: 14px; }
+.receipt-brand-title { color: var(--forest); font-family: Georgia, serif; font-size: 18px; font-weight: 900; }
+.receipt-sub { color: var(--coral); font-size: 10px; font-weight: 800; letter-spacing: .5px; }
+.receipt-badge-title { display: inline-block; margin-top: 6px; padding: 3px 12px; border-radius: 99px; background: var(--mint); color: var(--forest); font-size: 10.5px; font-weight: 900; letter-spacing: 1px; }
+.receipt-meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; margin-bottom: 14px; font-size: 11.5px; }
+.receipt-meta-grid dt { color: var(--muted); font-size: 9.5px; font-weight: 700; }
+.receipt-meta-grid dd { color: var(--ink); font-weight: 800; }
+.receipt-amount-block { margin: 14px 0; padding: 12px 14px; border-radius: 12px; background: var(--mint); display: flex; align-items: center; justify-content: space-between; }
+.receipt-amount-block span { color: var(--forest); font-size: 12px; font-weight: 800; }
+.receipt-amount-block strong { color: var(--forest-dark); font-size: 20px; font-weight: 900; }
+.receipt-paid-seal { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 6px; color: #167a55; border: 1.5px solid #167a55; font-size: 11px; font-weight: 900; letter-spacing: 1px; transform: rotate(-3deg); }
+.receipt-footer-sign { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 24px; padding-top: 14px; border-top: 1px solid #edf2ee; font-size: 10px; color: var(--muted); }
+.receipt-signature-line { border-top: 1px dashed #a0b2aa; width: 100px; text-align: center; padding-top: 4px; color: var(--ink); font-weight: 700; }
+
+.receipt-logo { display: block; margin: 0 auto 8px; object-fit: contain; }
+.receipt-modal-box { background: #fff; color: #20392e; }
+.receipt-meta-grid { margin: 0 0 14px; }
+.receipt-meta-grid > div { min-width: 0; }
+.receipt-meta-grid dd { margin: 2px 0 0; overflow-wrap: anywhere; }
+.receipt-note { font-size: 11px; color: var(--muted); overflow-wrap: anywhere; white-space: pre-wrap; }
+.receipt-amount-block strong { display: block; }
+@media (max-width: 380px) { .receipt-meta-grid { grid-template-columns: 1fr; } .receipt-amount-block { flex-wrap: wrap; gap: 8px; } }

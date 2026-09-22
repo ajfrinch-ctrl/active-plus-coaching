@@ -2,13 +2,15 @@
 <html lang="bn">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
   <meta name="theme-color" content="#04795a">
   <meta name="description" content="Active Plus Coaching ডামি এডমিন প্যানেল — এক ক্লিকে প্রবেশ, সব ডেটা লোকাল ডেমো।">
   <meta name="robots" content="noindex">
   <title>Active Plus | ডামি এডমিন প্যানেল</title>
   <link rel="icon" type="image/png" href="assets/icons/app-logo.png">
   <link rel="stylesheet" href="css/admin.css">
+  <link rel="stylesheet" href="css/mobile.css">
+  <link rel="stylesheet" href="css/exams.css">
   <link rel="preload" href="assets/fonts/NotoSansBengali-Variable.ttf" as="font" type="font/ttf" crossorigin>
 </head>
 <body>
@@ -40,7 +42,7 @@
           <label for="adminLoginPin">পাসকোড / PIN</label>
           <div class="input-wrap">
             <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg>
-            <input id="adminLoginPin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="6" autocomplete="current-password" placeholder="৪–৬ সংখ্যার PIN" value="1234" required>
+            <input id="adminLoginPin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="6" autocomplete="current-password" placeholder="৪–৬ সংখ্যার PIN" value="123123" required>
             <button class="show-pin" type="button" data-toggle-pin="adminLoginPin" aria-label="PIN দেখুন">
               <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg>
             </button>
@@ -75,11 +77,11 @@
         </a>
         <div class="admin-topbar-actions">
           <span class="admin-demo-badge"><span class="demo-dot"></span>ডেমো মোড</span>
-          <a class="admin-app-link" href="index.html" title="শিক্ষার্থী অ্যাপ">
+          <a class="admin-app-link" href="index.html" title="শিক্ষার্থী অ্যাপ" aria-label="শিক্ষার্থী অ্যাপ খুলুন">
             <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-smartphone"></use></svg>
             <span>শিক্ষার্থী অ্যাপ</span>
           </a>
-          <button class="admin-exit" id="adminExitButton" type="button">
+          <button class="admin-exit" id="adminExitButton" type="button" aria-label="প্রস্থান">
             <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-logout"></use></svg>
             <span>প্রস্থান</span>
           </button>
@@ -87,138 +89,83 @@
       </div>
     </header>
 
-    <nav class="admin-side" aria-label="এডমিন নেভিগেশন">
-      <button class="admin-nav-item active" type="button" data-admin-view="dashboard">
-        <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-home"></use></svg>
-        <span>ড্যাশবোর্ড</span>
-      </button>
-      <button class="admin-nav-item" type="button" data-admin-view="students">
-        <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-users"></use></svg>
-        <span>শিক্ষার্থী</span>
-        <em class="side-badge" id="sidePendingBadge">৩</em>
-      </button>
-      <button class="admin-nav-item" type="button" data-admin-view="notices">
-        <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-megaphone"></use></svg>
-        <span>নোটিশ</span>
-      </button>
-      <button class="admin-nav-item" type="button" data-admin-view="routine">
-        <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-calendar"></use></svg>
-        <span>ক্লাস রুটিন</span>
-      </button>
-      <button class="admin-nav-item" type="button" data-admin-view="finance">
-        <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-wallet"></use></svg>
-        <span>অর্থব্যবস্থাপনা</span>
-      </button>
-      <button class="admin-nav-item" type="button" data-admin-view="app-management">
-        <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-smartphone"></use></svg>
-        <span>শিক্ষার্থী অ্যাপ</span>
-      </button>
-      <button class="admin-nav-item" type="button" data-admin-view="classes">
-        <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-sliders"></use></svg>
-        <span>ক্লাস সেটিংস</span>
-      </button>
-      <div class="admin-side-foot">
-        <a class="admin-app-link" href="index.html">
-          <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-smartphone"></use></svg>
-          <span>শিক্ষার্থী অ্যাপ খুলুন</span>
-        </a>
-      </div>
-    </nav>
 
-    <main class="admin-main">
-      <!-- Dashboard — ShopLedGer-style home: today card with tone stat tiles and a summary foot -->
+
+    <main class="admin-main" id="adminMain">
+      <!-- Compact home: essential summary and one collection shortcut. -->
       <section class="admin-view active" data-view-panel="dashboard" aria-labelledby="dashTitle">
         <article class="admin-hero">
           <div class="admin-hero-head">
             <div class="admin-hero-title">
-              <span class="admin-hero-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-home"></use></svg></span>
-              <h2 id="dashTitle">আজকের হিসাব</h2>
+              <span class="admin-hero-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-home"></use></svg></span>
+              <h1 id="dashTitle">ড্যাশবোর্ড</h1>
             </div>
-            <span class="admin-date-pill" id="adminTodayDate">শনিবার, ২১ সেপ্টেম্বর ২০২৬</span>
+            <time class="admin-date-pill" id="adminTodayDate"></time>
           </div>
           <div class="admin-hero-stats">
             <div class="admin-stat-tile tone-mint">
               <span class="tile-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-users"></use></svg></span>
               <p class="tile-label">মোট শিক্ষার্থী</p>
               <p class="tile-value" id="dashStudentCount">—</p>
-              <p class="tile-sub">সব ক্লাস মিলিয়ে</p>
             </div>
             <div class="admin-stat-tile tone-blue">
               <span class="tile-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-book"></use></svg></span>
               <p class="tile-label">চলমান ক্লাস</p>
               <p class="tile-value" id="dashClassCount">—</p>
-              <p class="tile-sub">এই সেশনে</p>
-            </div>
-            <div class="admin-stat-tile tone-amber">
-              <span class="tile-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-megaphone"></use></svg></span>
-              <p class="tile-label">প্রকাশিত নোটিশ</p>
-              <p class="tile-value" id="dashNoticeCount">—</p>
-              <p class="tile-sub">নোটিশ বোর্ডে</p>
             </div>
           </div>
-          <button class="admin-hero-foot" type="button" data-admin-view="students">
+          <button class="admin-hero-foot" type="button" data-admin-view="students" data-student-scope="pending">
             <span class="admin-hero-foot-copy">
-              <span class="admin-hero-foot-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-clipboard"></use></svg></span>
+              <span class="admin-hero-foot-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-clipboard"></use></svg></span>
               <span>
-                <p class="admin-hero-foot-label">অনুমোদনের অপেক্ষায়</p>
-                <p class="admin-hero-foot-sub">নতুন রেজিস্ট্রেশন দেখুন</p>
+                <span class="admin-hero-foot-label">অনুমোদনের অপেক্ষায়</span>
+                <span class="admin-hero-foot-sub">অনুরোধগুলো দেখুন →</span>
               </span>
             </span>
             <strong id="dashPendingCount">—</strong>
           </button>
         </article>
-
-        <div class="admin-duo">
-          <article class="admin-card">
-            <header class="admin-card-head">
-              <div class="admin-card-title">
-                <span class="admin-card-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-clipboard"></use></svg></span>
-                <div><p class="eyebrow">আগামতি</p><h2>অনুমোদনের অপেক্ষায়</h2></div>
-              </div>
-              <button class="text-link" type="button" data-admin-view="students">সব দেখুন →</button>
-            </header>
-            <div class="pending-list" id="dashPendingList"></div>
-          </article>
-          <article class="admin-card">
-            <header class="admin-card-head">
-              <div class="admin-card-title">
-                <span class="admin-card-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-calendar"></use></svg></span>
-                <div><p class="eyebrow">আজ</p><h2>আজকের ক্লাস</h2></div>
-              </div>
-            </header>
-            <div class="today-list" id="dashTodayList"></div>
-          </article>
-        </div>
-
-        <article class="admin-card" style="margin-top: 14px;">
-          <header class="admin-card-head">
-            <div class="admin-card-title">
-              <span class="admin-card-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-smartphone"></use></svg></span>
-              <div><p class="eyebrow">Student App Status</p><h2>শিক্ষার্থী অ্যাপ লাইভ অবস্থা ও কন্ট্রোল</h2></div>
-            </div>
-            <button class="text-link" type="button" data-admin-view="app-management">অ্যাপ কন্ট্রোল সেন্টার →</button>
-          </header>
-          <div class="dash-app-status-row" id="dashAppStatusRow">
-            <div class="dash-app-status-item">
-              <span>অ্যাপের স্থিতি</span>
-              <strong id="dashAppLiveState">🟢 লাইভ চালু</strong>
-            </div>
-            <div class="dash-app-status-item">
-              <span>লাইভ ব্রডকাস্ট ব্যানার</span>
-              <strong id="dashAppBroadcastState">সক্রিয়</strong>
-            </div>
-            <div class="dash-app-status-item">
-              <span>রেজিস্ট্রেশন স্ট্যাটাস</span>
-              <strong id="dashAppRegState">চালু</strong>
-            </div>
-            <div class="dash-app-status-item">
-              <span>ট্যাগলাইন</span>
-              <strong id="dashAppTaglineState">শিখতে থাকো, এগিয়ে যাও</strong>
-            </div>
-          </div>
-        </article>
+        <button class="admin-dashboard-collect" id="dashCollectFee" type="button">
+          <span class="admin-dashboard-collect-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-wallet"></use></svg></span>
+          <span><strong>ফি গ্রহণ করুন</strong><small>শিক্ষার্থী খুঁজে পেমেন্ট নিন</small></span>
+          <svg class="admin-menu-arrow" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg>
+        </button>
       </section>
 
+      <section class="admin-view" data-view-panel="more" aria-labelledby="moreTitle">
+        <div class="page-intro">
+          <div><p class="eyebrow">অন্যান্য সেবা</p><h1 id="moreTitle">আরও</h1></div>
+        </div>
+        <nav class="admin-more-menu admin-card" aria-label="আরও এডমিন অপশন">
+          <button class="admin-more-item" type="button" data-admin-view="exams"><span class="admin-more-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-clipboard"></use></svg></span><span class="admin-more-copy"><strong>পরীক্ষা নিন</strong><small>প্রশ্ন অনুমোদন, প্রকাশ ও পরীক্ষার রিপোর্ট</small></span><span aria-hidden="true">→</span></button>
+          <button class="admin-more-item" type="button" data-admin-view="notices">
+            <span class="admin-more-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-megaphone"></use></svg></span>
+            <span class="admin-more-copy"><strong>নোটিশ</strong><small>নোটিশ প্রকাশ ও ব্যবস্থাপনা</small></span>
+            <svg class="admin-menu-arrow" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg>
+          </button>
+          <button class="admin-more-item" type="button" data-admin-view="app-management">
+            <span class="admin-more-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-smartphone"></use></svg></span>
+            <span class="admin-more-copy"><strong>শিক্ষার্থী অ্যাপ</strong><small>অ্যাপের অবস্থা ও কন্ট্রোল</small></span>
+            <svg class="admin-menu-arrow" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg>
+          </button>
+          <button class="admin-more-item" type="button" data-admin-view="classes">
+            <span class="admin-more-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-sliders"></use></svg></span>
+            <span class="admin-more-copy"><strong>ক্লাস সেটিংস</strong><small>ক্লাস চালু বা বন্ধ করুন</small></span>
+            <svg class="admin-menu-arrow" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg>
+          </button>
+          <a class="admin-more-item teacher-panel-link" href="teacher.html">
+            <span class="admin-more-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-book"></use></svg></span>
+            <span class="admin-more-copy"><strong>শিক্ষক প্যানেল</strong><small>পরীক্ষা, বাড়ির কাজ, সাজেশন ও রুটিন</small></span>
+            <span aria-hidden="true">→</span>
+          </a>
+        </nav>
+      </section>
+
+      <section class="admin-view" data-view-panel="exams" aria-labelledby="adminExamsTitle">
+        <button class="admin-more-back" type="button" data-admin-view="more">← আরও-তে ফিরুন</button>
+        <div class="page-intro"><div><p class="eyebrow">অনলাইন পরীক্ষা ব্যবস্থাপনা</p><h1 id="adminExamsTitle">পরীক্ষা নিন</h1></div></div>
+        <div id="adminExamWorkspace"></div>
+      </section>
       <!-- Students -->
       <section class="admin-view" data-view-panel="students" aria-labelledby="studentsTitle">
         <div class="page-intro">
@@ -250,6 +197,10 @@
 
       <!-- Notices -->
       <section class="admin-view" data-view-panel="notices" aria-labelledby="noticesTitle">
+        <button class="admin-more-back" type="button" data-admin-view="more">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-left"></use></svg>
+          আরও-তে ফিরুন
+        </button>
         <div class="page-intro">
           <div><p class="eyebrow">Announcements</p><h1 id="noticesTitle">নোটিশ বোর্ড</h1></div>
         </div>
@@ -329,7 +280,7 @@
               ফি গ্রহণ
             </button>
             <button class="mini-btn" type="button" id="btnFinanceGoReport">
-              <svg aria-hidden="true" viewBox="0 0 24 24" style="width:13px;height:13px;"><use href="#icon-printer"></use></svg>
+              <svg aria-hidden="true" viewBox="0 0 24 24" style="width:13px;height:13px;"><use href="#icon-clipboard"></use></svg>
               রিপোর্ট
             </button>
           </div>
@@ -342,11 +293,11 @@
           </article>
           <article class="admin-stat">
             <span class="admin-stat-icon blue" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-calendar"></use></svg></span>
-            <div><strong id="financeMonthCollected">৳০</strong><small>চলতি মাস (সেপ্টেম্বর)</small></div>
+            <div><strong id="financeMonthCollected">৳০</strong><small>চলতি মাস</small></div>
           </article>
           <article class="admin-stat">
             <span class="admin-stat-icon amber" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-clipboard"></use></svg></span>
-            <div><strong id="financeTotalDue">৳০</strong><small>বকেয়া ফি হিসাব</small></div>
+            <div><strong id="financeTotalDue">৳০</strong><small>চলতি মাসের বকেয়া বেতন</small></div>
           </article>
           <article class="admin-stat">
             <span class="admin-stat-icon lilac" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-receipt"></use></svg></span>
@@ -362,16 +313,34 @@
 
         <!-- Sub-panel 1: Fee collection form + recent transactions -->
         <div class="finance-panel active" data-finance-view="collection">
+          <article class="admin-card finance-search-card">
+            <header class="admin-card-head">
+              <div><p class="eyebrow">Student Search</p><h2>শিক্ষার্থী খুঁজুন</h2></div>
+              <span class="badge badge-approved">১ → ২ → ৩</span>
+            </header>
+            <div class="finance-search-body">
+              <label for="feeStudentSearch">নাম, মোবাইল নম্বর অথবা Student ID</label>
+              <div class="finance-search-input">
+                <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-search"></use></svg>
+                <input id="feeStudentSearch" type="search" placeholder="যেমন: রাইসা, 017… অথবা AP-1024" autocomplete="off" aria-controls="feeSearchResults" aria-describedby="feeSearchHint">
+              </div>
+              <p id="feeSearchHint" class="finance-hint">শিক্ষার্থী খুঁজুন → প্রোফাইল দেখুন → পেমেন্ট গ্রহণ করুন</p>
+              <p id="financeLoadError" class="finance-error" role="alert" hidden></p>
+              <p id="feeSearchStatus" class="finance-hint" role="status" aria-live="polite"></p>
+              <div id="feeSearchResults" class="fee-search-results"></div>
+            </div>
+          </article>
           <div class="admin-duo">
             <article class="admin-card">
               <header class="admin-card-head">
-                <div><p class="eyebrow">Fee Collection</p><h2>নতুন ফি গ্রহণ</h2></div>
+                <div><p class="eyebrow">Student Quick Profile</p><h2>প্রোফাইল ও ফি গ্রহণ</h2></div>
               </header>
-              <form id="feeCollectionForm" class="fee-form" novalidate>
-                <label for="feeStudent">শিক্ষার্থী নির্বাচন করুন *</label>
-                <select id="feeStudent" required>
-                  <option value="">শিক্ষার্থী সিলেক্ট করুন...</option>
-                </select>
+              <div id="feeQuickProfile" class="fee-quick-profile">
+                <p class="admin-empty">উপরে সার্চ করে শিক্ষার্থীর নামের উপর ক্লিক করুন।</p>
+              </div>
+              <form id="feeCollectionForm" class="fee-form" hidden>
+                <input id="feeStudent" type="hidden">
+                <p id="feePaymentFor" class="finance-payment-for"></p>
 
                 <div class="form-grid-2">
                   <div>
@@ -399,7 +368,7 @@
                 <div class="form-grid-2">
                   <div>
                     <label for="feeAmount">টাকার পরিমাণ (৳) *</label>
-                    <input id="feeAmount" type="number" min="50" step="50" placeholder="১৫০০" value="1500" required>
+                    <input id="feeAmount" type="number" min="1" max="10000000" step="1" placeholder="১৫০০" value="1500" required>
                   </div>
                   <div>
                     <label for="feeMethod">পেমেন্ট মাধ্যম *</label>
@@ -416,15 +385,16 @@
                 <div class="form-grid-2">
                   <div>
                     <label for="feeTrxId">Trx ID / রেফারেন্স (ঐচ্ছিক)</label>
-                    <input id="feeTrxId" type="text" placeholder="যেমন: BK-98X10">
+                    <input id="feeTrxId" type="text" maxlength="120" placeholder="যেমন: BK-98X10">
                   </div>
                   <div>
                     <label for="feeNote">নোট / মন্তব্য</label>
-                    <input id="feeNote" type="text" placeholder="যেমন: নিয়মিত পরিশোধ">
+                    <input id="feeNote" type="text" maxlength="500" placeholder="যেমন: নিয়মিত পরিশোধ">
                   </div>
                 </div>
 
-                <button class="admin-btn primary" type="submit" style="margin-top: 14px;">
+                <p id="feeSaveError" class="finance-error" role="alert" hidden></p>
+                <button id="feeSaveButton" class="admin-btn primary" type="submit" style="margin-top: 14px;">
                   <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-check-circle"></use></svg>
                   ফি গ্রহণ ও রসিদ তৈরি করুন
                 </button>
@@ -433,7 +403,7 @@
 
             <article class="admin-card">
               <header class="admin-card-head">
-                <div><p class="eyebrow">Recent Payments</p><h2>সাম্প্রতিক কালেকশন</h2></div>
+                <div><p class="eyebrow">Recent Payments</p><h2>সাম্প্রতিক কালেকশন</h2><p class="finance-hint">সর্বশেষ ৫টি আদায় • রসিদ ও ডাউনলোড</p></div>
                 <span class="badge badge-approved" id="trxCountBadge">০ টি লেনদেন</span>
               </header>
               <div class="trx-list" id="recentTrxList"></div>
@@ -456,17 +426,11 @@
           </article>
         </div>
 
-        <!-- Sub-panel 3: Report Generator (Institutional Letterhead Pad Statement) -->
+        <!-- Sub-panel 3: Mobile collection report -->
         <div class="finance-panel" data-finance-view="reports">
           <article class="admin-card report-card">
             <header class="admin-card-head">
-              <div><p class="eyebrow">Official Statement</p><h2>প্রতিষ্ঠান প্যাড স্টেটমেন্ট রিপোর্ট</h2></div>
-              <div class="report-head-actions">
-                <button class="admin-btn primary" type="button" id="btnPrintReport">
-                  <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-printer"></use></svg>
-                  প্যাডে প্রিন্ট / PDF সংরক্ষণ
-                </button>
-              </div>
+              <div><p class="eyebrow">Collection Report</p><h2>কালেকশন রিপোর্ট</h2></div>
             </header>
 
             <div class="report-filters">
@@ -516,164 +480,29 @@
               </div>
             </div>
 
-            <!-- OFFICIAL INSTITUTION LETTERHEAD PAD STATEMENT -->
-            <div class="pad-statement-wrapper" id="padStatementWrapper">
-              <div class="pad-statement">
-                <!-- Watermark Background -->
-                <div class="pad-watermark" aria-hidden="true">ACTIVE PLUS COACHING</div>
-
-                <!-- Letterhead Header -->
-                <header class="pad-header">
-                  <div class="pad-brand-row">
-                    <img class="pad-logo" src="assets/icons/app-logo.png" alt="Active Plus Coaching" width="56" height="56">
-                    <div class="pad-titles">
-                      <h1 class="pad-institute-name">Active Plus Coaching</h1>
-                      <h2 class="pad-institute-bn">অ্যাক্টিভ প্লাস কোচিং সেন্টার</h2>
-                      <p class="pad-slogan">“শিখতে থাকো, এগিয়ে যাও • মানসম্মত শিক্ষা ও সঠিক দিকনির্দেশনা”</p>
-                    </div>
-                    <div class="pad-badge-seal">
-                      <strong>স্টেটমেন্ট</strong>
-                      <span class="seal-text-bot">Active Plus</span>
-                    </div>
-                  </div>
-
-                  <div class="pad-contact-bar">
-                    <span>📍 দিনাজপুর সদর, দিনাজপুর</span>
-                    <span>📞 ০১৮১৯-৪৮৬৯৬৬</span>
-                    <span>✉️ activeplus.coaching@gmail.com</span>
-                  </div>
-                  <div class="pad-divider-line"></div>
-                </header>
-
-                <!-- Memo & Statement Title Section -->
-                <section class="pad-memo-section">
-                  <div class="pad-title-center">
-                    <h3 class="pad-main-title">ফি কালেকশন ও আর্থিক বিবরণী</h3>
-                  </div>
-
-                  <div class="pad-memo-grid">
-                    <div class="pad-memo-cell">
-                      <span class="pad-lbl">স্মারক নং:</span>
-                      <strong id="padMemoNo">APC/২০২৬-০৯</strong>
-                    </div>
-                    <div class="pad-memo-cell">
-                      <span class="pad-lbl">তারিখ:</span>
-                      <strong id="padStatementDate">২২ সেপ্টেম্বর ২০২৬</strong>
-                    </div>
-                    <div class="pad-memo-cell">
-                      <span class="pad-lbl">সময়কাল / মাস:</span>
-                      <strong id="padPeriod">সেপ্টেম্বর ২০২৬ (চলতি মাস)</strong>
-                    </div>
-                    <div class="pad-memo-cell">
-                      <span class="pad-lbl">শ্রেণি:</span>
-                      <strong id="padClassScope">সব শ্রেণি</strong>
-                    </div>
-                    <div class="pad-memo-cell">
-                      <span class="pad-lbl">ফি এর ধরন:</span>
-                      <strong id="padFeeTypeScope">সব ধরন</strong>
-                    </div>
-                    <div class="pad-memo-cell">
-                      <span class="pad-lbl">বিভাগ / শাখা:</span>
-                      <strong>অর্থ ও হিসাব শাখা</strong>
-                    </div>
-                  </div>
-                </section>
-
-                <!-- Executive Summary Box in Pad -->
-                <section class="pad-summary-grid">
-                  <div class="pad-summary-item">
-                    <span class="pad-sum-lbl">মোট ট্রানজেকশন</span>
-                    <strong id="padTotalTrx">০ টি</strong>
-                  </div>
-                  <div class="pad-summary-item primary">
-                    <span class="pad-sum-lbl">সর্বমোট আদায়কৃত ফি</span>
-                    <strong id="padGrandTotal">৳০</strong>
-                  </div>
-                  <div class="pad-summary-item">
-                    <span class="pad-sum-lbl">গড় কালেকশন</span>
-                    <strong id="padAvgCollection">৳০</strong>
-                  </div>
-                </section>
-
-                <!-- Statement Ledger Table -->
-                <section class="pad-table-section">
-                  <table class="pad-table">
-                    <thead>
-                      <tr>
-                        <th style="width: 32px; text-align: center;">ক্র.</th>
-                        <th>তারিখ</th>
-                        <th>শিক্ষার্থীর নাম</th>
-                        <th>শ্রেণি</th>
-                        <th>ফি এর বিবরণ ও মাস</th>
-                        <th>মাধ্যম</th>
-                        <th style="text-align: right;">পরিমাণ (৳)</th>
-                      </tr>
-                    </thead>
-                    <tbody id="padTableBody"></tbody>
-                    <tfoot>
-                      <tr>
-                        <td colspan="6" class="pad-tfoot-label">
-                          <strong>সর্বমোট আদায়</strong>
-                          <div class="pad-in-words" id="padAmountWords">কথায়: —</div>
-                        </td>
-                        <td style="text-align: right;" class="pad-tfoot-amount">
-                          <strong id="padTableTotal">৳০</strong>
-                        </td>
-                      </tr>
-                    </tfoot>
-                  </table>
-                </section>
-
-                <!-- Statement Footer: Official Seal & Signatures -->
-                <footer class="pad-footer">
-                  <div class="pad-disclaimer">
-                    <p><strong>ঘোষণাপত্র:</strong> এটি Active Plus Coaching এর অফিসিয়াল আর্থিক বিবরণী। এতে প্রদত্ত তথ্য সংরক্ষিত রেজিস্টার অনুযায়ী সঠিক ও প্রত্যয়িত।</p>
-                  </div>
-
-                  <div class="pad-signatures-row">
-                    <div class="pad-sig-box">
-                      <div class="pad-sig-space"></div>
-                      <div class="pad-sig-line"></div>
-                      <strong>হিসাবরক্ষক</strong>
-                      <small>অর্থ ও হিসাব বিভাগ</small>
-                    </div>
-
-                    <div class="pad-official-stamp">
-                      <svg viewBox="0 0 100 100" class="pad-stamp-svg">
-                        <circle cx="50" cy="50" r="46" fill="none" stroke="#154d42" stroke-width="2.5" stroke-dasharray="3,2"/>
-                        <circle cx="50" cy="50" r="41" fill="none" stroke="#154d42" stroke-width="1.2"/>
-                        <circle cx="50" cy="50" r="28" fill="none" stroke="#154d42" stroke-width="1"/>
-                        <path id="padSealTextPath" d="M 18,50 A 32,32 0 1,1 82,50 A 32,32 0 1,1 18,50" fill="none"/>
-                        <text font-size="7.5" font-weight="900" fill="#154d42" letter-spacing="1.5">
-                          <textPath href="#padSealTextPath" startOffset="50%" text-anchor="middle">ACTIVE PLUS COACHING • DINAJPUR •</textPath>
-                        </text>
-                        <text x="50" y="47" font-size="7" font-weight="900" fill="#154d42" text-anchor="middle">OFFICIAL</text>
-                        <text x="50" y="56" font-size="8" font-weight="900" fill="#154d42" text-anchor="middle">VERIFIED</text>
-                      </svg>
-                      <span class="pad-stamp-caption">অফিশিয়াল সিলমোহর</span>
-                    </div>
-
-                    <div class="pad-sig-box">
-                      <div class="pad-sig-space"></div>
-                      <div class="pad-sig-line"></div>
-                      <strong>শাখা পরিচালক / অধ্যক্ষ</strong>
-                      <small>Active Plus Coaching</small>
-                    </div>
-                  </div>
-
-                  <div class="pad-bottom-bar">
-                    <span>Active Plus Coaching • Financial Management System</span>
-                    <span id="padPrintTimestamp">মুদ্রণ তারিখ: ২২ সেপ্টেম্বর ২০২৬</span>
-                  </div>
-                </footer>
+            <div class="mobile-report-summary">
+              <div class="mobile-report-brand">
+                <img src="assets/icons/app-logo.png" alt="" width="40" height="40">
+                <div><strong>Active Plus Coaching</strong><small id="reportPeriod"></small></div>
               </div>
+              <dl class="mobile-report-totals">
+                <div class="report-total-primary"><dt>মোট আদায়</dt><dd id="reportGrandTotal">৳০</dd></div>
+                <div><dt>লেনদেন</dt><dd id="reportTrxCount">০ টি</dd></div>
+                <div><dt>গড় আদায়</dt><dd id="reportAverage">৳০</dd></div>
+              </dl>
+              <p class="finance-hint">নির্বাচিত ফিল্টারের সব লেনদেন নিচে দেখানো হচ্ছে।</p>
             </div>
+            <div class="report-collection-list" id="reportCollectionList" role="list" aria-label="রিপোর্টের লেনদেন"></div>
           </article>
         </div>
       </section>
 
       <!-- Student App Management -->
       <section class="admin-view" data-view-panel="app-management" aria-labelledby="appManagementTitle">
+        <button class="admin-more-back" type="button" data-admin-view="more">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-left"></use></svg>
+          আরও-তে ফিরুন
+        </button>
         <div class="page-intro">
           <div><p class="eyebrow">App Control Center</p><h1 id="appManagementTitle">শিক্ষার্থী অ্যাপ ম্যানেজমেন্ট</h1></div>
           <div class="page-intro-actions">
@@ -907,6 +736,10 @@
 
       <!-- Classes -->
       <section class="admin-view" data-view-panel="classes" aria-labelledby="classesTitle">
+        <button class="admin-more-back" type="button" data-admin-view="more">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-left"></use></svg>
+          আরও-তে ফিরুন
+        </button>
         <div class="page-intro">
           <div><p class="eyebrow">Settings</p><h1 id="classesTitle">ক্লাস সেটিংস</h1></div>
         </div>
@@ -921,7 +754,7 @@
     </main>
 
     <nav class="admin-bottom" aria-label="এডমিন মোবাইল নেভিগেশন">
-      <button class="admin-bottom-item active" type="button" data-admin-view="dashboard">
+      <button class="admin-bottom-item active" type="button" data-admin-view="dashboard" aria-current="page">
         <span class="nav-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-home"></use></svg></span>
         <span>ড্যাশবোর্ড</span>
       </button>
@@ -929,25 +762,17 @@
         <span class="nav-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-users"></use></svg></span>
         <span>শিক্ষার্থী</span>
       </button>
-      <button class="admin-bottom-item" type="button" data-admin-view="notices">
-        <span class="nav-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-megaphone"></use></svg></span>
-        <span>নোটিশ</span>
+      <button class="admin-bottom-item" type="button" data-admin-view="finance">
+        <span class="nav-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-wallet"></use></svg></span>
+        <span>হিসাব</span>
       </button>
       <button class="admin-bottom-item" type="button" data-admin-view="routine">
         <span class="nav-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-calendar"></use></svg></span>
         <span>রুটিন</span>
       </button>
-      <button class="admin-bottom-item" type="button" data-admin-view="finance">
-        <span class="nav-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-wallet"></use></svg></span>
-        <span>হিসাব</span>
-      </button>
-      <button class="admin-bottom-item" type="button" data-admin-view="app-management">
-        <span class="nav-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-smartphone"></use></svg></span>
-        <span>অ্যাপ</span>
-      </button>
-      <button class="admin-bottom-item" type="button" data-admin-view="classes">
-        <span class="nav-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-sliders"></use></svg></span>
-        <span>ক্লাস</span>
+      <button class="admin-bottom-item" type="button" data-admin-view="more">
+        <span class="nav-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-more"></use></svg></span>
+        <span>আরও</span>
       </button>
     </nav>
   </div>
@@ -965,6 +790,7 @@
 
   <!-- Reusable SVG icon sprite. No external assets are required for offline use. -->
   <svg class="icon-sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="icon-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></symbol>
     <symbol id="icon-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V10Z"/><path d="M9 21v-6h6v6"/></symbol>
     <symbol id="icon-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.7a3.5 3.5 0 0 1 0 6.6M21.5 20a6.5 6.5 0 0 0-4.4-6.1"/></symbol>
     <symbol id="icon-megaphone" viewBox="0 0 24 24"><path d="m3 11 13-5v12L3 14v-3ZM16 10h3a2 2 0 0 1 0 4h-3M6 15l1.5 5H11l-1.5-5"/></symbol>
@@ -983,7 +809,6 @@
     <symbol id="icon-smartphone" viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M10 18h4"/></symbol>
     <symbol id="icon-logout" viewBox="0 0 24 24"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></symbol>
     <symbol id="icon-wallet" viewBox="0 0 24 24"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h3v-4h-3z"/></symbol>
-    <symbol id="icon-printer" viewBox="0 0 24 24"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></symbol>
     <symbol id="icon-receipt" viewBox="0 0 24 24"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M8 7h8M8 11h8M8 15h5"/></symbol>
     <symbol id="icon-phone" viewBox="0 0 24 24"><path d="M6 3h3l2 5-2 1.5a12 12 0 0 0 5.5 5.5L16 13l5 2v3a2 2 0 0 1-2 2C10.7 20 4 13.3 4 5a2 2 0 0 1 2-2Z"/></symbol>
     <symbol id="icon-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>

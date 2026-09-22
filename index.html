@@ -2,7 +2,7 @@
 <html lang="bn">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
   <meta name="theme-color" content="#04795a">
   <meta name="description" content="Active Plus Coaching শিক্ষার্থী অ্যাপ — অফলাইনে রুটিন, ক্লাস, ফলাফল ও নোটিশ দেখুন।">
   <meta name="mobile-web-app-capable" content="yes">
@@ -14,6 +14,9 @@
   <link rel="icon" type="image/png" href="assets/icons/app-logo.png">
   <link rel="apple-touch-icon" href="assets/icons/install-icon.png">
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="css/mobile.css">
+  <link rel="stylesheet" href="css/exams.css">
+  <link rel="stylesheet" href="css/teaching.css">
   <link rel="preload" href="assets/fonts/NotoSansBengali-Variable.ttf" as="font" type="font/ttf" crossorigin>
 </head>
 <body>
@@ -34,7 +37,7 @@
         <form id="loginForm" novalidate>
           <label for="loginMobile">মোবাইল নম্বর</label>
           <div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-phone"></use></svg><input id="loginMobile" name="mobile" type="tel" inputmode="numeric" autocomplete="tel" placeholder="০১XXXXXXXXX" required></div>
-          <label for="loginPin">পাসকোড / PIN</label>
+          <p class="fixed-field-note">নতুন অ্যাকাউন্টের ডিফল্ট PIN: ১২৩১২৩</p><label for="loginPin">পাসকোড / PIN</label>
           <div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg><input id="loginPin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="6" autocomplete="current-password" placeholder="৪–৬ সংখ্যার PIN" required><button class="show-pin" type="button" data-toggle-pin="loginPin" aria-label="PIN দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg></button></div>
           <div class="form-row"><label class="remember-label"><input type="checkbox" id="rememberMe" checked><span class="fake-check"></span>এই ডিভাইসে মনে রাখুন</label><button type="button" class="link-button" id="forgotPinButton">PIN ভুলে গেছেন?</button></div>
           <button class="auth-submit" type="submit">লগইন করুন <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg></button>
@@ -55,10 +58,10 @@
             <div class="form-section-title"><span>০১</span><div><strong id="stepOneTitle">অ্যাকাউন্ট তথ্য</strong><small>লগইনের জন্য ব্যবহার হবে</small></div></div>
             <div class="field-grid">
               <div class="field full"><label for="regMobile">মোবাইল নম্বর <i>*</i></label><div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-phone"></use></svg><input id="regMobile" name="mobile" type="tel" inputmode="numeric" autocomplete="tel" placeholder="০১XXXXXXXXX" required></div></div>
-              <div class="field"><label for="regPin">৪–৬ সংখ্যার PIN <i>*</i></label><div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg><input id="regPin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="6" placeholder="PIN দিন" required><button class="show-pin" type="button" data-toggle-pin="regPin" aria-label="PIN দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg></button></div></div>
-              <div class="field"><label for="regPinConfirm">PIN আবার দিন <i>*</i></label><div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg><input id="regPinConfirm" name="pinConfirm" type="password" inputmode="numeric" minlength="4" maxlength="6" placeholder="PIN মিলান" required><button class="show-pin" type="button" data-toggle-pin="regPinConfirm" aria-label="PIN দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg></button></div></div>
+              <div class="field"><label for="regPin">ডিফল্ট PIN <i>*</i></label><div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg><input id="regPin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="6" placeholder="PIN দিন" value="123123" required><button class="show-pin" type="button" data-toggle-pin="regPin" aria-label="PIN দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg></button></div></div>
+              <div class="field"><label for="regPinConfirm">PIN আবার দিন <i>*</i></label><div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg><input id="regPinConfirm" name="pinConfirm" type="password" inputmode="numeric" minlength="4" maxlength="6" placeholder="PIN মিলান" value="123123" required><button class="show-pin" type="button" data-toggle-pin="regPinConfirm" aria-label="PIN দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg></button></div></div>
             </div>
-            <div class="step-actions"><span></span><button type="button" class="step-next" data-next-step>পরের অংশ <span>→</span></button></div>
+            <p class="fixed-field-note">ডিফল্ট PIN: ১২৩১২৩। চাইলে নিজের PIN দিন। প্রথম মোবাইল নম্বর আর পরিবর্তন করা যাবে না।</p><div class="step-actions"><span></span><button type="button" class="step-next" data-next-step>পরের অংশ <span>→</span></button></div>
           </section>
 
           <section class="registration-step" data-registration-step="2" data-step-title="শিক্ষার্থীর পরিচয়" aria-labelledby="stepTwoTitle" hidden>
@@ -78,7 +81,7 @@
           <section class="registration-step" data-registration-step="3" data-step-title="যোগাযোগের তথ্য" aria-labelledby="stepThreeTitle" hidden>
             <div class="form-section-title"><span>০৩</span><div><strong id="stepThreeTitle">যোগাযোগের তথ্য</strong><small>প্রয়োজনে যোগাযোগের জন্য</small></div></div>
             <div class="field-grid">
-              <div class="field full"><label for="studentMobile">যোগাযোগের মোবাইল <i>*</i></label><div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-phone"></use></svg><input id="studentMobile" name="studentMobile" type="tel" inputmode="numeric" placeholder="প্রথম ধাপের মোবাইল নম্বর" readonly required></div><small class="fixed-field-note">লগইনের মোবাইল নম্বরই যোগাযোগের নম্বর হিসেবে ব্যবহার হবে</small></div>
+              <div class="field full"><label for="studentMobile">যোগাযোগের মোবাইল <i>*</i></label><div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-phone"></use></svg><input id="studentMobile" name="studentMobile" type="tel" inputmode="numeric" placeholder="প্রথম ধাপের মোবাইল নম্বর" readonly required></div><small class="fixed-field-note">প্রথম নিবন্ধনের নম্বর স্থায়ী থাকবে। পরে শুধু অতিরিক্ত নম্বর যোগ করা যাবে।</small></div>
               <div class="field full"><label for="guardianMobile">অভিভাবকের মোবাইল <i>*</i></label><input id="guardianMobile" name="guardianMobile" type="tel" inputmode="numeric" placeholder="অভিভাবকের নম্বর" required></div>
               <div class="field full"><label for="address">সম্পূর্ণ ঠিকানা <i>*</i></label><textarea id="address" name="address" rows="3" placeholder="বাড়ি, গ্রাম/রোড, ডাকঘর, উপজেলা, জেলা" required></textarea></div>
             </div>
@@ -112,6 +115,7 @@
       </div>
     </div>
     <p class="admin-entry-link-wrap"><a class="admin-entry-link" href="admin.html"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-shield"></use></svg> কোচিং অফিস? ডামি এডমিন প্যানেলে এক ক্লিকে ঢুকুন</a></p>
+    <p class="admin-entry-link-wrap"><a class="admin-entry-link" href="teacher.html">শিক্ষক? আলাদা শিক্ষক প্যানেলে প্রবেশ করুন →</a></p>
   </section>
 
   <!-- A compact, mobile-first app shell. All content is local and works without a network. -->
@@ -161,6 +165,8 @@
           <button class="welcome-avatar" type="button" data-view="profile" aria-label="প্রোফাইল খুলুন"><span id="avatarInitial">র</span></button>
         </article>
 
+        <button class="exam-link" type="button" data-view="exams">পরীক্ষা দাও →<small>প্রকাশিত পরীক্ষা, প্রশ্নপত্র ও ফলাফল</small></button>
+        <button class="teacher-home-link" id="teacherHomeLink" type="button" data-view="courses" hidden><span><strong>শিক্ষকের দেওয়া কাজ</strong><small id="teacherHomeCount"></small></span><span aria-hidden="true">→</span></button>
         <article class="home-hero">
           <div class="home-hero-head">
             <div class="home-hero-title">
@@ -270,6 +276,7 @@
       <!-- ROUTINE -->
       <section class="view" id="routineView" data-view-panel="routine" aria-labelledby="routineTitle">
         <div class="page-intro"><p class="eyebrow">সপ্তাহের পরিকল্পনা</p><h1 id="routineTitle">ক্লাস রুটিন</h1><p>তোমার ক্লাসগুলো এক জায়গায়, একদম সহজে।</p></div>
+        <section class="teaching-board" id="teacherRoutineBoard" aria-labelledby="teacherRoutineTitle" hidden><h2 id="teacherRoutineTitle">শিক্ষকের নির্ধারিত ক্লাস</h2><p>তারিখ অনুযায়ী ক্লাস ও উপস্থিতি। নিচে আগের ডেমো সাপ্তাহিক রুটিন।</p><div class="learning-list" id="teacherRoutineList"></div></section>
         <div class="class-context"><span class="mini-avatar">দ</span><span><small>বর্তমান ক্লাস</small><strong id="routineClass">দশম শ্রেণি · বিজ্ঞান</strong></span><button type="button" data-view="profile" aria-label="ক্লাসের প্রোফাইল দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-chevron-right"></use></svg></button></div>
         <div class="day-tabs" role="tablist" aria-label="সপ্তাহের দিন">
           <button class="day-tab active" type="button" data-day="sat" role="tab"><small>শনি</small><strong>২১</strong></button>
@@ -287,6 +294,20 @@
       <!-- COURSES -->
       <section class="view" id="coursesView" data-view-panel="courses" aria-labelledby="coursesTitle">
         <div class="page-intro"><p class="eyebrow">চলমান পড়াশোনা</p><h1 id="coursesTitle">আমার কোর্স</h1><p>প্রতিটি বিষয়ে নিজের অগ্রগতি দেখে নাও।</p></div>
+        <button class="exam-link" type="button" data-view="exams">পরীক্ষা দাও<small>MCQ, লিখিত ও সংক্ষিপ্ত পরীক্ষা • সবার ফলাফল</small></button>
+        <section class="teaching-board" id="learningBoard" aria-labelledby="learningTitle">
+          <h2 id="learningTitle">শিক্ষকের দেওয়া কাজ</h2><p id="learningCount" role="status"></p>
+          <div class="learning-filter" id="learningFilters" aria-label="কাজের ধরন">
+            <button type="button" data-learning-filter="all" aria-pressed="true">সব</button>
+            <button type="button" data-learning-filter="exam" aria-pressed="false">পরীক্ষা</button>
+            <button type="button" data-learning-filter="homework" aria-pressed="false">বাড়ির কাজ</button>
+            <button type="button" data-learning-filter="suggestion" aria-pressed="false">সাজেশন</button>
+            <button type="button" data-learning-filter="routine" aria-pressed="false">রুটিন</button>
+          </div>
+          <p class="learning-error" id="learningError" role="alert" hidden></p>
+          <div class="learning-list" id="learningList"></div>
+        </section>
+        <p class="teacher-local-note">নিচের কোর্সের অগ্রগতি পূর্বের ডেমো তথ্য।</p>
         <div class="course-summary"><div><span class="card-eyebrow">এই টার্মের অগ্রগতি</span><strong>৭৪%</strong><span>আরও একটু নিয়মিত হলেই সেরা ফলাফল!</span></div><div class="summary-bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
         <div class="course-filter"><span>সকল বিষয়</span><button type="button" class="filter-button" aria-label="বিষয় ফিল্টার"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-sliders"></use></svg></button></div>
         <div class="course-list">
@@ -299,8 +320,14 @@
       </section>
 
       <!-- RESULTS -->
+      <section class="view" id="examsView" data-view-panel="exams" aria-labelledby="studentExamsTitle">
+        <button class="exam-link" type="button" data-view="courses">← কোর্সে ফিরো</button><h1 id="studentExamsTitle">পরীক্ষা দাও</h1><div id="studentExamWorkspace"></div>
+      </section>
       <section class="view" id="resultsView" data-view-panel="results" aria-labelledby="resultsTitle">
         <div class="page-intro"><p class="eyebrow">তোমার পারফরম্যান্স</p><h1 id="resultsTitle">ফলাফল</h1><p>পরিশ্রমের ফলাফল, এক নজরে।</p></div>
+        <button class="exam-link" type="button" data-view="exams">অনলাইন পরীক্ষার ফলাফল দেখো →</button>
+        <section class="teaching-board" id="teacherResultsBoard" aria-labelledby="teacherResultsTitle" hidden><h2 id="teacherResultsTitle">শিক্ষকের দেওয়া ফলাফল</h2><div class="learning-list" id="teacherResultsList"></div></section>
+        <p class="teacher-local-note">নিচের সারাংশটি পূর্বের ডেমো পরীক্ষার তথ্য।</p>
         <div class="result-hero"><div><span class="card-eyebrow">সর্বশেষ মডেল টেস্ট</span><h2>মোট স্কোর <strong>৮৬%</strong></h2><p>তোমার অবস্থান: <b>১২তম</b> · মোট শিক্ষার্থী ৪৮ জন</p></div><span class="trophy"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-award"></use></svg></span></div>
         <div class="result-stats"><div><small>মোট পরীক্ষা</small><strong>০৮</strong></div><div><small>সর্বোচ্চ স্কোর</small><strong>৯৪%</strong></div><div><small>উন্নতি</small><strong class="up">+৮%</strong></div></div>
         <div class="section-heading section-heading-spaced"><div><p class="eyebrow">সাম্প্রতিক</p><h2>পরীক্ষার ফলাফল</h2></div><button type="button" class="text-button" data-action="all-results">সব দেখুন</button></div>
@@ -315,7 +342,7 @@
       <section class="view" id="profileView" data-view-panel="profile" aria-labelledby="profileTitle">
         <div class="page-intro profile-intro"><p class="eyebrow">তোমার তথ্য</p><h1 id="profileTitle">প্রোফাইল</h1><p>তোমার শিক্ষার্থী অ্যাকাউন্টের তথ্য।</p></div>
         <article class="profile-card"><div class="profile-avatar" id="profileAvatar">র</div><div><h2 id="profileName">রাইসা ইসলাম</h2><p id="profileMeta">দশম শ্রেণি · বিজ্ঞান বিভাগ</p><span class="student-id">ID: <b id="studentId">AP-1024</b></span></div><button class="edit-button" type="button" data-action="edit-profile" aria-label="প্রোফাইল সম্পাদনা"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-edit"></use></svg></button></article>
-        <article class="contact-card"><div class="contact-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-phone"></use></svg></div><div class="contact-copy"><span>শিক্ষার্থীর মোবাইল</span><strong id="studentMobileValue">০১৭০০০০০০০০</strong><small>অভিভাবক · <b id="guardianMobileValue">০১৮০০০০০০০০</b></small></div><button class="whatsapp-button" type="button" data-action="whatsapp-share" aria-label="WhatsApp-এ তথ্য শেয়ার করুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-whatsapp"></use></svg><span>WhatsApp</span></button></article>
+        <article class="contact-card"><div class="contact-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-phone"></use></svg></div><div class="contact-copy"><span>শিক্ষার্থীর মোবাইল</span><strong id="studentMobileValue">০১৭০০০০০০০০</strong><small>অভিভাবক · <b id="guardianMobileValue">০১৮০০০০০০০০</b></small><small id="studentAdditionalMobiles" hidden></small></div><button class="whatsapp-button" type="button" data-action="whatsapp-share" aria-label="WhatsApp-এ তথ্য শেয়ার করুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-whatsapp"></use></svg><span>WhatsApp</span></button></article>
         <div class="profile-section"><p class="eyebrow">অ্যাকাউন্ট</p><div class="settings-list"><button type="button" data-action="edit-profile"><span class="settings-icon mint"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-user"></use></svg></span><span><strong>ব্যক্তিগত তথ্য</strong><small>নাম, ক্লাস ও বিভাগ</small></span><svg class="setting-arrow" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-chevron-right"></use></svg></button><button type="button" data-action="show-offline"><span class="settings-icon green"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-download"></use></svg></span><span><strong>অফলাইন ডেটা</strong><small>সব ডেটা এই ফোনেই সংরক্ষিত</small></span><span class="saved-tag">সংরক্ষিত</span></button><button type="button" data-action="install"><span class="settings-icon purple"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-smartphone"></use></svg></span><span><strong>অ্যাপ ইনস্টল করুন</strong><small>হোম স্ক্রিন থেকে দ্রুত খুলুন</small></span><svg class="setting-arrow" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-chevron-right"></use></svg></button></div></div>
         <div class="profile-section"><p class="eyebrow">নিরাপত্তা</p><div class="settings-list">
           <label class="settings-toggle"><span class="settings-icon mint"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-shield"></use></svg></span><span><strong>প্রতিবার PIN চেক বন্ধ রাখুন</strong><small>চালু করলে অ্যাপ খুলতে আর PIN লাগবে না</small></span><span class="toggle-switch"><input type="checkbox" id="skipSecurityToggle"><i></i></span></label>
@@ -359,7 +386,7 @@
         <div class="field full"><label for="editGuardianName">অভিভাবকের নাম</label><input id="editGuardianName" name="guardianName" type="text"></div>
         <div class="field"><label for="editBirthDate">জন্মতারিখ</label><input id="editBirthDate" name="birthDate" type="date"></div>
         <div class="field"><label for="editGender">লিঙ্গ</label><select id="editGender" name="gender"><option value="">নির্বাচন করুন</option><option>পুরুষ</option><option>নারী</option><option>অন্যান্য</option></select></div>
-        <div class="field"><label for="editStudentMobile">শিক্ষার্থীর মোবাইল</label><input id="editStudentMobile" name="studentMobile" type="tel" inputmode="numeric"></div>
+        <div class="field full"><label for="editStudentMobile">প্রথম নিবন্ধনের মোবাইল (স্থায়ী)</label><input id="editStudentMobile" name="studentMobile" type="tel" inputmode="numeric" readonly aria-describedby="primaryMobileNote"><small id="primaryMobileNote" class="fixed-field-note">এই নম্বর মুছতে বা বদলাতে পারবেন না। লগইনে এই নম্বরই ব্যবহার করুন।</small></div><div class="field full"><label for="editAdditionalMobile">নতুন মোবাইল নম্বর যোগ করুন</label><input id="editAdditionalMobile" name="additionalMobile" type="tel" inputmode="tel" placeholder="০১XXXXXXXXX" autocomplete="tel"><small class="fixed-field-note">আগের নম্বরগুলো থাকবে; নতুন নম্বর শুধু যোগাযোগের জন্য।</small><small id="editAdditionalMobiles"></small></div>
         <div class="field"><label for="editGuardianMobile">অভিভাবকের মোবাইল</label><input id="editGuardianMobile" name="guardianMobile" type="tel" inputmode="numeric"></div>
         <div class="field full"><label for="editAddress">সম্পূর্ণ ঠিকানা</label><textarea id="editAddress" name="address" rows="3"></textarea></div>
         <div class="field"><label for="classInput">শ্রেণি / বর্ষ</label><select id="classInput" name="className" required></select></div>

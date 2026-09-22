@@ -1,0 +1,40 @@
+/* The same phone-sized layout for teacher, admin and student exam workflows. */
+.exam-workspace { min-width: 0; margin-top: 16px; }
+.exam-workspace [hidden] { display: none !important; }
+.exam-workspace h2 { font-size: 20px; line-height: 1.5; margin-bottom: 10px; }
+.exam-workspace h3 { font-size: 16px; line-height: 1.6; margin: 8px 0; overflow-wrap: anywhere; }
+.exam-workspace p, .exam-workspace small { line-height: 1.8; overflow-wrap: anywhere; }
+.exam-workspace small, .exam-note { color: var(--muted); font-size: 12px; }
+.exam-note { margin: 10px 0; }
+.exam-list, .exam-form, .exam-question-list, .exam-results { display: grid; gap: 14px; }
+.exam-card, .exam-question, .exam-summary, .exam-preview { padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--white); min-width: 0; overflow-wrap: anywhere; }
+.exam-form label { display: grid; gap: 6px; font-size: 13px; font-weight: 700; }
+.exam-form input, .exam-form select, .exam-form textarea { width: 100%; font: inherit; font-size: 16px; min-height: 44px; padding: 11px; border: 1px solid var(--line); border-radius: 10px; background: var(--white); color: var(--ink); }
+.exam-form textarea { min-height: 170px; resize: vertical; }
+.exam-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+.exam-workspace button, .exam-link { min-height: 44px; padding: 10px 13px; border: 1px solid var(--line); border-radius: 11px; color: var(--forest); background: var(--white); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.exam-workspace button.primary, .exam-link { background: var(--forest); color: white; }
+.exam-workspace button.danger { color: #a73c2e; }
+.exam-workspace button:disabled { opacity: .5; cursor: wait; }
+.exam-workspace button:focus-visible, .exam-option:focus-within { outline: 3px solid var(--forest); outline-offset: 2px; }
+.exam-error { margin: 12px 0; padding: 12px; color: #a13525; background: #fff1eb; border-radius: 10px; font-size: 13px; }
+.exam-message { margin: 12px 0; padding: 12px; color: var(--forest); background: var(--mint); border-radius: 10px; font-size: 13px; }
+.exam-tag { display: inline-block; padding: 4px 9px; border-radius: 7px; background: var(--mint); color: var(--forest); font-size: 11px; margin-right: 5px; }
+.exam-template { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; font-size: 13px; padding: 14px; background: #f2f6f4; border-radius: 10px; }
+.exam-timer { position: sticky; top: 0; z-index: 3; background: #e8f5ed; color: #124f3e; padding: 12px; border: 1px solid #bddbca; border-radius: 12px; margin: 0 0 16px; }
+.exam-timer strong { display: block; font-size: 23px; font-variant-numeric: tabular-nums; }
+.exam-question { margin: 0; }
+.exam-question legend { font-weight: 800; font-size: 13px; color: var(--forest); padding: 0 4px; }
+.exam-option { display: flex; align-items: flex-start; gap: 10px; min-height: 48px; margin-top: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; font-size: 14px; cursor: pointer; }
+.exam-option:has(input:checked) { background: var(--mint); border-color: var(--forest); }
+.exam-option input { position: static !important; width: 19px !important; height: 19px !important; min-height: 19px !important; opacity: 1 !important; margin-top: 3px; flex-shrink: 0; accent-color: var(--forest); }
+.exam-question p { white-space: pre-wrap; }
+.exam-summary dl { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.exam-summary dd { font-weight: 800; font-size: 20px; }
+.exam-summary dt { font-size: 12px; color: var(--muted); }
+.exam-link { display: block; width: 100%; text-align: left; margin: 16px 0; text-decoration: none; }
+.exam-link small { display: block; opacity: .85; font-weight: 400; }
+.exam-auto-notice { font-size: 12px; margin: 10px 0; color: var(--forest); }
+
+.exam-workspace button[aria-pressed="true"] { background: var(--mint); border-color: var(--forest); }
+#studentExamsTitle { font-size: 25px; }

@@ -1,3 +1,5 @@
+import { prepareDemoData } from './demo-data.js';
+import { initDemoForms } from './demo-forms.js';
 /* Application composition root. Feature modules can be replaced independently.
    Updated: don't ask security check every time - auto-login for trusted devices. */
 import { APP_TAGLINE } from './config.js';
@@ -17,6 +19,12 @@ import { initConnectivity } from './connectivity.js';
 import { registerServiceWorker } from './service-worker.js';
 import { initDynamicTheme } from './theme.js';
 import { initScrollHeader } from './scroll-header.js';
+import { initFixedShell } from './fixed-shell.js';
+import { initStudentExams } from './student-exams.js';
+import { initStudentTeaching } from './student-teaching.js';
+
+const demoWarnings = await prepareDemoData();
+initFixedShell();
 
 const appConfig = loadAppConfig();
 
@@ -131,6 +139,8 @@ const state = {
   student: loadStudent(),
   account: loadAccount()
 };
+const refreshExams = initStudentExams({ getStudent: () => state.student, getAccount: () => state.account });
+const refreshTeaching = initStudentTeaching({ getStudent: () => state.student });
 
 function handleAction(action) {
   switch (action) {
@@ -170,6 +180,8 @@ function handleAction(action) {
 
 function enterApp() {
   openStudentApp(state);
+  refreshTeaching();
+  refreshExams();
 }
 
 function leaveApp() {
@@ -197,7 +209,7 @@ initNavigation({ onAction: handleAction });
 initModals();
 initProfile({
   state,
-  onStudentChange: student => renderStudent(student)
+  onStudentChange: student => { renderStudent(student); refreshTeaching(); refreshExams(); }
 });
 initRoutine();
 initConnectivity();
@@ -241,8 +253,10 @@ if (shouldAutoLogin()) {
 }
 
 const hashView = window.location.hash.replace('#', '');
-if (['home', 'routine', 'courses', 'results', 'profile'].includes(hashView) && !$('#authScreen')?.hidden) {
+if (['home', 'routine', 'courses', 'results', 'profile', 'exams'].includes(hashView) && !$('#authScreen')?.hidden) {
   // Keep auth as the first screen; a shortcut is applied after login by the normal shell.
-} else if (['home', 'routine', 'courses', 'results', 'profile'].includes(hashView)) {
+} else if (['home', 'routine', 'courses', 'results', 'profile', 'exams'].includes(hashView)) {
   setView(hashView);
 }
+
+initDemoForms(demoWarnings);
