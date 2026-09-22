@@ -14,14 +14,16 @@ export const STORAGE_KEYS = Object.freeze({
   appConfig: 'active-plus-app-config-v1'
 });
 
+export const ADMIN_ID = '01819486966';
+
 export const DEFAULT_APP_SETTINGS = Object.freeze({
   maintenanceMode: false,
   maintenanceMessage: 'সম্মানিত শিক্ষার্থী, অ্যাপটিতে বর্তমানে সিস্টেম আপডেট চলছে। সাময়িক অসুবিধার জন্য আন্তরিকভাবে দুঃখিত।',
   allowRegistration: true,
   skipSecurityCheck: false,
   tagline: 'শিখতে থাকো, এগিয়ে যাও',
-  helplineMobile: '01700000000',
-  whatsappNumber: '01700000000',
+  helplineMobile: '01819486966',
+  whatsappNumber: '01819486966',
   officialEmail: 'activeplus.coaching@gmail.com',
   campusAddress: 'দিনাজপুর সদর, দিনাজপুর',
   broadcastAlert: true,

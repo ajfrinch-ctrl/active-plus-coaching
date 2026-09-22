@@ -2,7 +2,7 @@
    No password, no PIN: a single tap on the entry button opens the panel.
    All data is local demo data from js/admin-data.js — future API work can
    replace the dataset without changing this UI. */
-import { enabledClasses, schedule, DEFAULT_APP_SETTINGS } from './config.js';
+import { enabledClasses, schedule, DEFAULT_APP_SETTINGS, ADMIN_ID } from './config.js';
 import { toBanglaNumber } from './ui.js';
 import { adminStudents, adminNotices, classEnrollment, classCodes, dayNames, feeCategories, paymentMethods, initialTransactions } from './admin-data.js';
 import { loadAppConfig, saveAppConfig } from './storage.js';
@@ -920,8 +920,8 @@ function renderAppManagement() {
 
   // Branding & Contacts
   if ($('#cfgTagline')) $('#cfgTagline').value = cfg.tagline || 'শিখতে থাকো, এগিয়ে যাও';
-  if ($('#cfgHelpline')) $('#cfgHelpline').value = cfg.helplineMobile || '01700000000';
-  if ($('#cfgWhatsapp')) $('#cfgWhatsapp').value = cfg.whatsappNumber || '01700000000';
+  if ($('#cfgHelpline')) $('#cfgHelpline').value = cfg.helplineMobile || ADMIN_ID || '01819486966';
+  if ($('#cfgWhatsapp')) $('#cfgWhatsapp').value = cfg.whatsappNumber || ADMIN_ID || '01819486966';
   if ($('#cfgEmail')) $('#cfgEmail').value = cfg.officialEmail || 'activeplus.coaching@gmail.com';
   if ($('#cfgAddress')) $('#cfgAddress').value = cfg.campusAddress || 'দিনাজপুর সদর, দিনাজপুর';
 
