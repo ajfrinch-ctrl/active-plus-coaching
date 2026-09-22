@@ -83,6 +83,10 @@
         <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-calendar"></use></svg>
         <span>ক্লাস রুটিন</span>
       </button>
+      <button class="admin-nav-item" type="button" data-admin-view="finance">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-wallet"></use></svg>
+        <span>অর্থব্যবস্থাপনা</span>
+      </button>
       <button class="admin-nav-item" type="button" data-admin-view="classes">
         <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-sliders"></use></svg>
         <span>ক্লাস সেটিংস</span>
@@ -137,13 +141,6 @@
             <div class="today-list" id="dashTodayList"></div>
           </article>
         </div>
-
-        <article class="admin-card" style="margin-top: 14px;">
-          <header class="admin-card-head">
-            <div><p class="eyebrow">এনরোলমেন্ট</p><h2>ক্লাসভিত্তিক শিক্ষার্থী</h2></div>
-          </header>
-          <div class="enrollment" id="dashEnrollment"></div>
-        </article>
       </section>
 
       <!-- Students -->
@@ -152,10 +149,19 @@
           <div><p class="eyebrow">Student Management</p><h1 id="studentsTitle">শিক্ষার্থী ব্যবস্থাপনা</h1></div>
         </div>
         <div class="student-toolbar">
-          <label class="student-search">
-            <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-search"></use></svg>
-            <input id="studentSearch" type="search" placeholder="নাম, Student ID বা মোবাইল দিয়ে খুঁজুন" autocomplete="off">
-          </label>
+          <div class="student-search-box">
+            <label class="student-search" for="studentSearch">
+              <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-search"></use></svg>
+              <input id="studentSearch" type="search" placeholder="নাম বা মোবাইল নং দিয়ে খুঁজুন..." autocomplete="off">
+              <button class="student-search-clear" id="studentSearchClear" type="button" aria-label="অনুসন্ধান মুছুন" hidden>
+                <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-close"></use></svg>
+              </button>
+            </label>
+            <div class="student-search-meta">
+              <span class="auto-hide-badge" title="টাইপ করার সাথে সাথে অমিল শিক্ষার্থী স্বয়ংক্রিয়ভাবে লুকাবে"><span class="auto-hide-dot"></span>অটো হাইড সক্রিয়</span>
+              <span class="student-count-badge" id="studentCountBadge">৮ জন শিক্ষার্থী</span>
+            </div>
+          </div>
           <div class="chip-row" id="studentFilterChips" aria-label="স্ট্যাটাস ফিল্টার">
             <button class="chip active" type="button" data-student-filter="all">সব</button>
             <button class="chip" type="button" data-student-filter="pending">অপেক্ষমাণ</button>
@@ -237,6 +243,363 @@
         <div class="routine-list" id="routineList"></div>
       </section>
 
+      <!-- Finance & Fee Collection & Reports -->
+      <section class="admin-view" data-view-panel="finance" aria-labelledby="financeTitle">
+        <div class="page-intro">
+          <div><p class="eyebrow">Financial Management</p><h1 id="financeTitle">অর্থব্যবস্থাপনা ও ফি কালেকশন</h1></div>
+          <div class="finance-header-actions">
+            <button class="mini-btn approve" type="button" id="btnFinanceGoCollect">
+              <svg aria-hidden="true" viewBox="0 0 24 24" style="width:13px;height:13px;"><use href="#icon-plus"></use></svg>
+              ফি গ্রহণ
+            </button>
+            <button class="mini-btn" type="button" id="btnFinanceGoReport">
+              <svg aria-hidden="true" viewBox="0 0 24 24" style="width:13px;height:13px;"><use href="#icon-printer"></use></svg>
+              রিপোর্ট
+            </button>
+          </div>
+        </div>
+
+        <div class="admin-stats">
+          <article class="admin-stat">
+            <span class="admin-stat-icon mint" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-wallet"></use></svg></span>
+            <div><strong id="financeTotalCollected">৳০</strong><small>মোট ফি আদায়</small></div>
+          </article>
+          <article class="admin-stat">
+            <span class="admin-stat-icon blue" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-calendar"></use></svg></span>
+            <div><strong id="financeMonthCollected">৳০</strong><small>চলতি মাস (সেপ্টেম্বর)</small></div>
+          </article>
+          <article class="admin-stat">
+            <span class="admin-stat-icon amber" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-clipboard"></use></svg></span>
+            <div><strong id="financeTotalDue">৳০</strong><small>বকেয়া ফি হিসাব</small></div>
+          </article>
+          <article class="admin-stat">
+            <span class="admin-stat-icon lilac" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-receipt"></use></svg></span>
+            <div><strong id="financeTrxCount">০ টি</strong><small>মোট ট্রানজেকশন</small></div>
+          </article>
+        </div>
+
+        <div class="finance-nav-pills" id="financeSubNav">
+          <button class="chip active" type="button" data-finance-tab="collection">ফি গ্রহণ ও লেনদেন</button>
+          <button class="chip" type="button" data-finance-tab="students">শিক্ষার্থী ফি লেজার</button>
+          <button class="chip" type="button" data-finance-tab="reports">রিপোর্ট জেনারেটর</button>
+        </div>
+
+        <!-- Sub-panel 1: Fee collection form + recent transactions -->
+        <div class="finance-panel active" data-finance-view="collection">
+          <div class="admin-duo">
+            <article class="admin-card">
+              <header class="admin-card-head">
+                <div><p class="eyebrow">Fee Collection</p><h2>নতুন ফি গ্রহণ</h2></div>
+              </header>
+              <form id="feeCollectionForm" class="fee-form" novalidate>
+                <label for="feeStudent">শিক্ষার্থী নির্বাচন করুন *</label>
+                <select id="feeStudent" required>
+                  <option value="">শিক্ষার্থী সিলেক্ট করুন...</option>
+                </select>
+
+                <div class="form-grid-2">
+                  <div>
+                    <label for="feeType">ফি এর ধরন *</label>
+                    <select id="feeType" required>
+                      <option value="মাসিক বেতন">মাসিক বেতন</option>
+                      <option value="ভর্তি ফি">ভর্তি ফি</option>
+                      <option value="মডেল টেস্ট ফি">মডেল টেস্ট ফি</option>
+                      <option value="লেকচার শিট ফি">লেকচার শিট ফি</option>
+                      <option value="পরীক্ষার ফি">পরীক্ষার ফি</option>
+                      <option value="অন্যান্য">অন্যান্য</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label for="feeMonth">কোন মাসের ফি *</label>
+                    <select id="feeMonth" required>
+                      <option value="সেপ্টেম্বর ২০২৬">সেপ্টেম্বর ২০২৬</option>
+                      <option value="অক্টোবর ২০২৬">অক্টোবর ২০২৬</option>
+                      <option value="আগস্ট ২০২৬">আগস্ট ২০২৬</option>
+                      <option value="জুলাই ২০২৬">জুলাই ২০২৬</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="form-grid-2">
+                  <div>
+                    <label for="feeAmount">টাকার পরিমাণ (৳) *</label>
+                    <input id="feeAmount" type="number" min="50" step="50" placeholder="১৫০০" value="1500" required>
+                  </div>
+                  <div>
+                    <label for="feeMethod">পেমেন্ট মাধ্যম *</label>
+                    <select id="feeMethod" required>
+                      <option value="নগদ (Cash)">নগদ (Cash)</option>
+                      <option value="বিকাশ (bKash)">বিকাশ (bKash)</option>
+                      <option value="নগদ (Nagad)">নগদ (Nagad)</option>
+                      <option value="রকেট (Rocket)">রকেট (Rocket)</option>
+                      <option value="ব্যাংক ট্রান্সফার">ব্যাংক ট্রান্সফার</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="form-grid-2">
+                  <div>
+                    <label for="feeTrxId">Trx ID / রেফারেন্স (ঐচ্ছিক)</label>
+                    <input id="feeTrxId" type="text" placeholder="যেমন: BK-98X10">
+                  </div>
+                  <div>
+                    <label for="feeNote">নোট / মন্তব্য</label>
+                    <input id="feeNote" type="text" placeholder="যেমন: নিয়মিত পরিশোধ">
+                  </div>
+                </div>
+
+                <button class="admin-btn primary" type="submit" style="margin-top: 14px;">
+                  <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-check-circle"></use></svg>
+                  ফি গ্রহণ ও রসিদ তৈরি করুন
+                </button>
+              </form>
+            </article>
+
+            <article class="admin-card">
+              <header class="admin-card-head">
+                <div><p class="eyebrow">Recent Payments</p><h2>সাম্প্রতিক কালেকশন</h2></div>
+                <span class="badge badge-approved" id="trxCountBadge">০ টি লেনদেন</span>
+              </header>
+              <div class="trx-list" id="recentTrxList"></div>
+            </article>
+          </div>
+        </div>
+
+        <!-- Sub-panel 2: Student Fee Ledger -->
+        <div class="finance-panel" data-finance-view="students">
+          <article class="admin-card">
+            <header class="admin-card-head">
+              <div><p class="eyebrow">Student Ledger</p><h2>শিক্ষার্থীদের ফি ও বকেয়া হিসাব</h2></div>
+              <div class="chip-row" id="ledgerFilterChips">
+                <button class="chip active" type="button" data-ledger-filter="all">সব</button>
+                <button class="chip" type="button" data-ledger-filter="due">বকেয়া আছে</button>
+                <button class="chip" type="button" data-ledger-filter="paid">পরিশোধিত</button>
+              </div>
+            </header>
+            <div class="ledger-list" id="studentLedgerList"></div>
+          </article>
+        </div>
+
+        <!-- Sub-panel 3: Report Generator (Institutional Letterhead Pad Statement) -->
+        <div class="finance-panel" data-finance-view="reports">
+          <article class="admin-card report-card">
+            <header class="admin-card-head">
+              <div><p class="eyebrow">Official Statement</p><h2>প্রতিষ্ঠান প্যাড স্টেটমেন্ট রিপোর্ট</h2></div>
+              <div class="report-head-actions">
+                <button class="admin-btn primary" type="button" id="btnPrintReport">
+                  <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-printer"></use></svg>
+                  প্যাডে প্রিন্ট / PDF সংরক্ষণ
+                </button>
+              </div>
+            </header>
+
+            <div class="report-filters">
+              <div>
+                <label for="reportMonth">সময়কাল / মাস</label>
+                <select id="reportMonth">
+                  <option value="all">সব সময়</option>
+                  <option value="সেপ্টেম্বর ২০২৬" selected>সেপ্টেম্বর ২০২৬ (চলতি মাস)</option>
+                  <option value="আগস্ট ২০২৬">আগস্ট ২০২৬</option>
+                  <option value="জুলাই ২০২৬">জুলাই ২০২৬</option>
+                </select>
+              </div>
+              <div>
+                <label for="reportClass">শ্রেণি</label>
+                <select id="reportClass">
+                  <option value="all">সব শ্রেণি</option>
+                  <option value="অষ্টম শ্রেণি">অষ্টম শ্রেণি</option>
+                  <option value="নবম শ্রেণি">নবম শ্রেণি</option>
+                  <option value="দশম শ্রেণি">দশম শ্রেণি</option>
+                  <option value="একাদশ শ্রেণি">একাদশ শ্রেণি</option>
+                  <option value="দ্বাদশ শ্রেণি">দ্বাদশ শ্রেণি</option>
+                  <option value="অনার্স ১ম বর্ষ">অনার্স ১ম বর্ষ</option>
+                  <option value="ডিগ্রি ১ম বর্ষ">ডিগ্রি ১ম বর্ষ</option>
+                </select>
+              </div>
+              <div>
+                <label for="reportFeeType">ফি এর ধরন</label>
+                <select id="reportFeeType">
+                  <option value="all">সব ধরন</option>
+                  <option value="মাসিক বেতন">মাসিক বেতন</option>
+                  <option value="ভর্তি ফি">ভর্তি ফি</option>
+                  <option value="মডেল টেস্ট ফি">মডেল টেস্ট ফি</option>
+                  <option value="লেকচার শিট ফি">লেকচার শিট ফি</option>
+                  <option value="পরীক্ষার ফি">পরীক্ষার ফি</option>
+                </select>
+              </div>
+              <div>
+                <label for="reportMethod">পেমেন্ট মাধ্যম</label>
+                <select id="reportMethod">
+                  <option value="all">সব মাধ্যম</option>
+                  <option value="নগদ">নগদ (Cash)</option>
+                  <option value="বিকাশ">বিকাশ (bKash)</option>
+                  <option value="নগদ (Nagad)">নগদ (Nagad)</option>
+                  <option value="রকেট">রকেট (Rocket)</option>
+                  <option value="ব্যাংক">ব্যাংক ট্রান্সফার</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- OFFICIAL INSTITUTION LETTERHEAD PAD STATEMENT -->
+            <div class="pad-statement-wrapper" id="padStatementWrapper">
+              <div class="pad-statement">
+                <!-- Watermark Background -->
+                <div class="pad-watermark" aria-hidden="true">ACTIVE PLUS COACHING</div>
+
+                <!-- Letterhead Header -->
+                <header class="pad-header">
+                  <div class="pad-brand-row">
+                    <img class="pad-logo" src="assets/icons/app-logo.png" alt="Active Plus Coaching" width="56" height="56">
+                    <div class="pad-titles">
+                      <h1 class="pad-institute-name">Active Plus Coaching</h1>
+                      <h2 class="pad-institute-bn">অ্যাক্টিভ প্লাস কোচিং সেন্টার</h2>
+                      <p class="pad-slogan">“শিখতে থাকো, এগিয়ে যাও • মানসম্মত শিক্ষা ও সঠিক দিকনির্দেশনা”</p>
+                    </div>
+                    <div class="pad-badge-seal">
+                      <span class="seal-text-top">OFFICIAL</span>
+                      <strong>STATEMENT</strong>
+                      <span class="seal-text-bot">VERIFIED</span>
+                    </div>
+                  </div>
+
+                  <div class="pad-contact-bar">
+                    <span>📍 প্রধান কার্যালয়, দিনাজপুর</span>
+                    <span>📞 ০১৭০০-০০০০০০</span>
+                    <span>✉️ activeplus.coaching@gmail.com</span>
+                    <span>🌐 Reg: APC-DEMO-2026</span>
+                  </div>
+                  <div class="pad-divider-line"></div>
+                </header>
+
+                <!-- Memo & Statement Title Section -->
+                <section class="pad-memo-section">
+                  <div class="pad-title-center">
+                    <h3 class="pad-main-title">ফি কালেকশন ও আর্থিক বিবরণী স্টেটমেন্ট</h3>
+                    <p class="pad-sub-title">FINANCIAL & FEE COLLECTION STATEMENT REPORT</p>
+                  </div>
+
+                  <div class="pad-memo-grid">
+                    <div class="pad-memo-cell">
+                      <span class="pad-lbl">স্মারক নং (Memo):</span>
+                      <strong id="padMemoNo">APC/FIN/2026-09/108</strong>
+                    </div>
+                    <div class="pad-memo-cell">
+                      <span class="pad-lbl">প্রস্তুতের তারিখ:</span>
+                      <strong id="padStatementDate">২২ সেপ্টেম্বর ২০২৬</strong>
+                    </div>
+                    <div class="pad-memo-cell">
+                      <span class="pad-lbl">সময়কাল / মাস:</span>
+                      <strong id="padPeriod">সেপ্টেম্বর ২০২৬ (চলতি মাস)</strong>
+                    </div>
+                    <div class="pad-memo-cell">
+                      <span class="pad-lbl">আওতাভুক্ত শ্রেণি:</span>
+                      <strong id="padClassScope">সব শ্রেণি</strong>
+                    </div>
+                    <div class="pad-memo-cell">
+                      <span class="pad-lbl">ফি এর ধরন:</span>
+                      <strong id="padFeeTypeScope">সব ধরন</strong>
+                    </div>
+                    <div class="pad-memo-cell">
+                      <span class="pad-lbl">বিভাগ / শাখা:</span>
+                      <strong>অর্থ ও হিসাব শাখা</strong>
+                    </div>
+                  </div>
+                </section>
+
+                <!-- Executive Summary Box in Pad -->
+                <section class="pad-summary-grid">
+                  <div class="pad-summary-item">
+                    <span class="pad-sum-lbl">মোট ট্রানজেকশন</span>
+                    <strong id="padTotalTrx">০ টি</strong>
+                  </div>
+                  <div class="pad-summary-item primary">
+                    <span class="pad-sum-lbl">সর্বমোট আদায়কৃত ফি</span>
+                    <strong id="padGrandTotal">৳০</strong>
+                  </div>
+                  <div class="pad-summary-item">
+                    <span class="pad-sum-lbl">গড় কালেকশন</span>
+                    <strong id="padAvgCollection">৳০</strong>
+                  </div>
+                </section>
+
+                <!-- Statement Ledger Table -->
+                <section class="pad-table-section">
+                  <table class="pad-table">
+                    <thead>
+                      <tr>
+                        <th style="width: 30px; text-align: center;">ক্র.</th>
+                        <th>রসিদ নং (Receipt)</th>
+                        <th>অডিট Trx ID</th>
+                        <th>শিক্ষার্থীর বিবরণ (Student)</th>
+                        <th>শ্রেণি ও কোড</th>
+                        <th>ফি বিবরণ ও মাস</th>
+                        <th>মাধ্যম</th>
+                        <th style="text-align: right;">পরিমাণ (৳)</th>
+                      </tr>
+                    </thead>
+                    <tbody id="padTableBody"></tbody>
+                    <tfoot>
+                      <tr>
+                        <td colspan="7" class="pad-tfoot-label">
+                          <strong>সর্বমোট আদায় (Total Net Collection)</strong>
+                          <div class="pad-in-words" id="padAmountWords">কথায়: —</div>
+                        </td>
+                        <td style="text-align: right;" class="pad-tfoot-amount">
+                          <strong id="padTableTotal">৳০</strong>
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </section>
+
+                <!-- Statement Footer: Official Seal & Signatures -->
+                <footer class="pad-footer">
+                  <div class="pad-disclaimer">
+                    <p><strong>ঘোষণাপত্র:</strong> এই স্টেটমেন্টটি Active Plus Coaching এর অফিসিয়াল সেন্ট্রাল ম্যানেজমেন্ট সিস্টেম দ্বারা প্রস্তুতকৃত। এতে প্রদত্ত তথ্য সংরক্ষিত আর্থিক রেজিস্টার অনুযায়ী সঠিক ও প্রত্যয়িত।</p>
+                  </div>
+
+                  <div class="pad-signatures-row">
+                    <div class="pad-sig-box">
+                      <div class="pad-sig-space"></div>
+                      <div class="pad-sig-line"></div>
+                      <strong>হিসাবরক্ষক</strong>
+                      <small>অর্থ ও হিসাব বিভাগ</small>
+                    </div>
+
+                    <div class="pad-official-stamp">
+                      <svg viewBox="0 0 100 100" class="pad-stamp-svg">
+                        <circle cx="50" cy="50" r="46" fill="none" stroke="#154d42" stroke-width="2.5" stroke-dasharray="3,2"/>
+                        <circle cx="50" cy="50" r="41" fill="none" stroke="#154d42" stroke-width="1.2"/>
+                        <circle cx="50" cy="50" r="28" fill="none" stroke="#154d42" stroke-width="1"/>
+                        <path id="padSealTextPath" d="M 18,50 A 32,32 0 1,1 82,50 A 32,32 0 1,1 18,50" fill="none"/>
+                        <text font-size="7.5" font-weight="900" fill="#154d42" letter-spacing="1.5">
+                          <textPath href="#padSealTextPath" startOffset="50%" text-anchor="middle">ACTIVE PLUS COACHING • DINAJPUR •</textPath>
+                        </text>
+                        <text x="50" y="47" font-size="7" font-weight="900" fill="#154d42" text-anchor="middle">OFFICIAL</text>
+                        <text x="50" y="56" font-size="8" font-weight="900" fill="#154d42" text-anchor="middle">VERIFIED</text>
+                      </svg>
+                      <span class="pad-stamp-caption">অফিশিয়াল সিলমোহর</span>
+                    </div>
+
+                    <div class="pad-sig-box">
+                      <div class="pad-sig-space"></div>
+                      <div class="pad-sig-line"></div>
+                      <strong>শাখা পরিচালক / অধ্যক্ষ</strong>
+                      <small>Active Plus Coaching</small>
+                    </div>
+                  </div>
+
+                  <div class="pad-bottom-bar">
+                    <span>Active Plus Coaching • Financial Management System</span>
+                    <span id="padPrintTimestamp">মুদ্রণ তারিখ: ২২ সেপ্টেম্বর ২০২৬</span>
+                  </div>
+                </footer>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
       <!-- Classes -->
       <section class="admin-view" data-view-panel="classes" aria-labelledby="classesTitle">
         <div class="page-intro">
@@ -269,6 +632,10 @@
         <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-calendar"></use></svg>
         <span>রুটিন</span>
       </button>
+      <button class="admin-bottom-item" type="button" data-admin-view="finance">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-wallet"></use></svg>
+        <span>হিসাব</span>
+      </button>
       <button class="admin-bottom-item" type="button" data-admin-view="classes">
         <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-sliders"></use></svg>
         <span>ক্লাস</span>
@@ -299,12 +666,17 @@
     <symbol id="icon-shield" viewBox="0 0 24 24"><path d="M12 3 5 6v5.2c0 4.8 3 8 7 9.8 4-1.8 7-5 7-9.8V6l-7-3Z"/><path d="m9 12 2 2 4-4.5"/></symbol>
     <symbol id="icon-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
     <symbol id="icon-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m16 16 5 5"/></symbol>
+    <symbol id="icon-close" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
     <symbol id="icon-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
     <symbol id="icon-trash" viewBox="0 0 24 24"><path d="M4 7h16M9.5 7V5h5v2M6.5 7l1 13.5h9l1-13.5M10 11v5.5M14 11v5.5"/></symbol>
     <symbol id="icon-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
     <symbol id="icon-arrow-left" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></symbol>
     <symbol id="icon-smartphone" viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M10 18h4"/></symbol>
     <symbol id="icon-logout" viewBox="0 0 24 24"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></symbol>
+    <symbol id="icon-wallet" viewBox="0 0 24 24"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h3v-4h-3z"/></symbol>
+    <symbol id="icon-printer" viewBox="0 0 24 24"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></symbol>
+    <symbol id="icon-receipt" viewBox="0 0 24 24"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M8 7h8M8 11h8M8 15h5"/></symbol>
+    <symbol id="icon-check-circle" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></symbol>
   </svg>
   <script type="module" src="js/admin.js"></script>
 </body>

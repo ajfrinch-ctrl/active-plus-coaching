@@ -4,7 +4,7 @@
    replace the dataset without changing this UI. */
 import { enabledClasses, schedule } from './config.js';
 import { toBanglaNumber } from './ui.js';
-import { adminStudents, adminNotices, classEnrollment, dayNames } from './admin-data.js';
+import { adminStudents, adminNotices, classEnrollment, classCodes, dayNames, feeCategories, paymentMethods, initialTransactions } from './admin-data.js';
 
 const bn = toBanglaNumber;
 const $ = selector => document.querySelector(selector);
@@ -13,12 +13,30 @@ const $$ = selector => Array.from(document.querySelectorAll(selector));
 const state = {
   students: adminStudents.map(student => ({ ...student })),
   notices: adminNotices.map(notice => ({ ...notice })),
+  transactions: initialTransactions.map(tx => ({ ...tx })),
   routine: Object.fromEntries(
-    Object.entries(schedule).map(([day, info]) => [day, { ...info, classes: info.classes.map(cls => ({ ...cls })) }])
+    Object.entries(schedule).map(([day, info]) => [
+      day,
+      {
+        ...info,
+        classes: info.classes.map((cls, idx) => ({
+          id: cls.id || `RTN-${day.toUpperCase()}-${String(idx + 1).padStart(2, '0')}`,
+          ...cls
+        }))
+      }
+    ])
   ),
   enabled: new Set(enabledClasses),
   activeView: 'dashboard',
   activeDay: 'sat',
+  activeFinanceTab: 'collection',
+  ledgerFilter: 'all',
+  reportFilters: {
+    month: 'সেপ্টেম্বর ২০২৬',
+    className: 'all',
+    feeType: 'all',
+    method: 'all'
+  },
   filter: 'all',
   query: ''
 };
@@ -83,8 +101,11 @@ function renderDashboard() {
       <div class="pending-row">
         <span class="student-avatar" aria-hidden="true">${student.name.charAt(0)}</span>
         <div class="pending-copy">
-          <strong>${student.name}</strong>
-          <small>${student.id} • ${student.className}</small>
+          <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
+            <strong>${student.name}</strong>
+            <span class="audit-id-badge">ID: ${student.id}</span>
+          </div>
+          <small>${student.className} • ${student.group}</small>
         </div>
         <div class="pending-actions">
           <button class="mini-btn approve" type="button" data-action="approve" data-id="${student.id}">অনুমোদন</button>
@@ -98,22 +119,32 @@ function renderDashboard() {
       <div class="today-row">
         <div class="today-time"><strong>${cls.time}</strong><small>${cls.period}</small></div>
         <div class="today-copy">
-          <strong>${cls.subject}</strong>
+          <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
+            <strong>${cls.subject}</strong>
+            <span class="audit-id-badge blue">${cls.id || 'RTN-SAT'}</span>
+          </div>
           <small>${cls.teacher} • ${cls.room}</small>
         </div>
       </div>`).join('')
     : '<p class="admin-empty">আজ কোনো ক্লাস নেই।</p>';
-
-  const max = Math.max(...classEnrollment.map(entry => entry.count), 1);
-  $('#dashEnrollment').innerHTML = classEnrollment.map(entry => `
-    <div class="enrollment-row">
-      <span class="enrollment-label">${entry.className}</span>
-      <span class="enrollment-track"><span style="width: ${Math.max((entry.count / max) * 100, entry.count ? 6 : 2)}%"></span></span>
-      <span class="enrollment-count">${bn(entry.count)}</span>
-    </div>`).join('');
 }
 
 /* ---------- Students ---------- */
+
+function escapeHtml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function normalizeDigitsOnly(text) {
+  return String(text || '')
+    .replace(/[০-৯]/g, d => '০১২৩৪৫৬৭৮৯'.indexOf(d))
+    .replace(/[^0-9]/g, '');
+}
 
 const statusMeta = Object.freeze({
   approved: { label: 'অনুমোদিত', className: 'badge-approved' },
@@ -122,25 +153,85 @@ const statusMeta = Object.freeze({
 });
 
 function visibleStudents() {
-  const query = state.query.trim().toLowerCase();
+  const rawQuery = state.query.trim().toLowerCase();
+  const digitQuery = normalizeDigitsOnly(rawQuery);
+
   return state.students.filter(student => {
     const matchesFilter = state.filter === 'all' || student.status === state.filter;
-    const matchesQuery = !query || [student.name, student.nameEn, student.id, student.mobile].some(
-      value => String(value).toLowerCase().includes(query)
-    );
-    return matchesFilter && matchesQuery;
+    if (!matchesFilter) return false;
+    if (!rawQuery) return true;
+
+    // Check name (Bangla & English)
+    const nameBn = (student.name || '').toLowerCase();
+    const nameEn = (student.nameEn || '').toLowerCase();
+    if (nameBn.includes(rawQuery) || nameEn.includes(rawQuery)) {
+      return true;
+    }
+
+    // Check mobile and guardian mobile (both English digits & Bangla digits)
+    const mobileNorm = normalizeDigitsOnly(student.mobile);
+    const guardianMobileNorm = normalizeDigitsOnly(student.guardianMobile);
+    const mobileBn = toBanglaNumber(student.mobile);
+    const guardianMobileBn = toBanglaNumber(student.guardianMobile);
+
+    if (
+      (digitQuery && (mobileNorm.includes(digitQuery) || guardianMobileNorm.includes(digitQuery))) ||
+      student.mobile.toLowerCase().includes(rawQuery) ||
+      (student.guardianMobile && student.guardianMobile.toLowerCase().includes(rawQuery)) ||
+      mobileBn.includes(rawQuery) ||
+      guardianMobileBn.includes(rawQuery)
+    ) {
+      return true;
+    }
+
+    // Check Student ID
+    const idStr = (student.id || '').toLowerCase();
+    const idDigits = normalizeDigitsOnly(student.id);
+    const idBn = toBanglaNumber(student.id);
+
+    if (
+      idStr.includes(rawQuery) ||
+      (digitQuery && idDigits.includes(digitQuery)) ||
+      idBn.includes(rawQuery)
+    ) {
+      return true;
+    }
+
+    // Auto-hide non-matching students
+    return false;
   });
 }
 
 function renderStudents() {
   const list = visibleStudents();
+  const clearBtn = $('#studentSearchClear');
+  const countBadge = $('#studentCountBadge');
+
+  if (clearBtn) {
+    clearBtn.hidden = !state.query.trim();
+  }
+
+  if (countBadge) {
+    const count = list.length;
+    if (state.query.trim()) {
+      countBadge.textContent = count > 0
+        ? `${bn(count)} জন শিক্ষার্থী পাওয়া গেছে`
+        : 'কোনো ফলাফল মেলেনি';
+    } else {
+      countBadge.textContent = `${bn(count)} জন শিক্ষার্থী`;
+    }
+  }
+
   $('#studentList').innerHTML = list.length
     ? list.map(student => `
       <article class="student-row">
         <span class="student-avatar" aria-hidden="true">${student.name.charAt(0)}</span>
         <div class="student-copy">
-          <strong>${student.name}</strong>
-          <small>${student.id} • ${student.className} • ${student.group}</small>
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+            <strong>${student.name}</strong>
+            <span class="audit-id-badge">ID: ${student.id}</span>
+          </div>
+          <small>${student.className} • ${student.group}</small>
           <small class="student-mobile">📞 ${bn(student.mobile)}</small>
         </div>
         <div class="student-side">
@@ -154,7 +245,12 @@ function renderStudents() {
           </div>
         </div>
       </article>`).join('')
-    : '<p class="admin-empty">কোনো শিক্ষার্থী পাওয়া যায়নি।</p>';
+    : state.query.trim()
+      ? `<div class="admin-empty-search">
+          <p>🔍 "<strong>${escapeHtml(state.query.trim())}</strong>" দিয়ে কোনো শিক্ষার্থী পাওয়া যায়নি</p>
+          <small>নামের বানান বা ১১ ডিজিটের মোবাইল নম্বর (যেমন: ০১৭... বা 017...) দিয়ে খুঁজুন। অমিল রেকর্ড স্বয়ংক্রিয়ভাবে লুকানো রয়েছে (অটো হাইড)।</small>
+        </div>`
+      : '<p class="admin-empty">কোনো শিক্ষার্থী পাওয়া যায়নি।</p>';
 }
 
 function findStudent(id) {
@@ -181,12 +277,14 @@ function updatePendingBadge() {
 /* ---------- Student detail and PIN reset modal ---------- */
 
 function openStudentDetail(student) {
+  const classCode = classCodes[student.className] || 'CLS-GEN';
   const rows = [
-    ['Student ID', student.id],
+    ['Student Unique ID', `<span class="audit-id-badge">${student.id}</span>`],
+    ['অডিট ট্র্যাকিং কোড', `<span class="audit-id-badge amber">AUD-STU-${student.id.replace(/[^0-9A-Za-z]/g, '')}</span>`],
     ['নাম (বাংলা)', student.name],
     ['নাম (English)', student.nameEn],
     ['পিতার নাম', student.fatherName],
-    ['শ্রেণি', student.className],
+    ['শ্রেণি ও কোড', `${student.className} <span class="audit-id-badge purple">${classCode}</span>`],
     ['বিভাগ / গ্রুপ', student.group],
     ['মোবাইল', bn(student.mobile)],
     ['অভিভাবকের মোবাইল', bn(student.guardianMobile)],
@@ -199,7 +297,7 @@ function openStudentDetail(student) {
     ? `উপস্থিতি ${bn(student.attendance)}% • গড় ফলাফল ${bn(student.average)}%`
     : 'অনুমোদনের পরে থেকে দেখা যাবে';
   openModal(
-    'শিক্ষার্থী রেকর্ড',
+    'শিক্ষার্থী রেকর্ড (Audit Ready)',
     student.name,
     `
       <dl class="detail-grid">
@@ -267,7 +365,12 @@ function renderNotices() {
     ? state.notices.map(notice => `
       <article class="notice-item">
         <div class="notice-item-top">
-          <strong>${notice.title}</strong>
+          <div>
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;flex-wrap:wrap;">
+              <strong>${notice.title}</strong>
+              <span class="audit-id-badge amber">${notice.id}</span>
+            </div>
+          </div>
           <button class="icon-btn" type="button" data-action="delete-notice" data-id="${notice.id}" aria-label="${notice.title} নোটিশটি মুছুন">
             <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-trash"></use></svg>
           </button>
@@ -290,17 +393,18 @@ function publishNotice(event) {
     toast('নোটিশের শিরোনাম ও বিবরণ দিন');
     return;
   }
+  const noticeUniqueId = `NOT-2609-${String(state.notices.length + 1).padStart(3, '0')}`;
   state.notices.unshift({
-    id: `n-${Date.now()}`,
+    id: noticeUniqueId,
     title,
     body,
     audience,
-    date: '২১ সেপ্টেম্বর ২০২৬'
+    date: '২২ সেপ্টেম্বর ২০২৬'
   });
   event.target.reset();
   renderNotices();
   renderDashboard();
-  toast('নোটিশ প্রকাশিত — শিক্ষার্থী অ্যাপে দেখা যাবে (ডেমো)');
+  toast(`নোটিশ [${noticeUniqueId}] প্রকাশিত হয়েছে`);
 }
 
 /* ---------- Routine ---------- */
@@ -327,7 +431,10 @@ function renderRoutine() {
       <div class="routine-row">
         <div class="routine-time"><strong>${cls.time}</strong><small>${cls.period}</small></div>
         <div class="routine-copy">
-          <strong>${cls.subject}</strong>
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+            <strong>${cls.subject}</strong>
+            <span class="audit-id-badge blue">${cls.id || `RTN-${state.activeDay.toUpperCase()}-${String(index + 1).padStart(2, '0')}`}</span>
+          </div>
           <small>${cls.teacher} • ${cls.room}</small>
         </div>
         <span class="routine-tag">${cls.tag}</span>
@@ -349,7 +456,9 @@ function addRoutineClass(event) {
     return;
   }
   const { time: bengaliTime, period } = toBengaliTime(time);
+  const classUniqueId = `RTN-${state.activeDay.toUpperCase()}-${String(state.routine[state.activeDay].classes.length + 1).padStart(2, '0')}`;
   state.routine[state.activeDay].classes.push({
+    id: classUniqueId,
     time: bengaliTime,
     period,
     subject,
@@ -362,7 +471,7 @@ function addRoutineClass(event) {
   $('#routineTime').value = '18:00';
   renderRoutine();
   renderDashboard();
-  toast(`${subject} ক্লাসটি ${dayNames[state.activeDay]} রুটিনে যোগ হয়েছে`);
+  toast(`${subject} [${classUniqueId}] রুটিনে যোগ হয়েছে`);
 }
 
 /* ---------- Classes ---------- */
@@ -372,10 +481,14 @@ function renderClasses() {
   $('#classList').innerHTML = enabledClasses.map(className => {
     const entry = classEnrollment.find(item => item.className === className);
     const enabled = state.enabled.has(className);
+    const code = classCodes[className] || 'CLS-GEN';
     return `
       <div class="class-row">
         <div class="class-copy">
-          <strong>${className}</strong>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <strong>${className}</strong>
+            <span class="audit-id-badge purple">${code}</span>
+          </div>
           <small>${bn(entry ? entry.count : 0)} শিক্ষার্থী</small>
         </div>
         <label class="switch" aria-label="${className} চালু বা বন্ধ করুন">
@@ -394,7 +507,384 @@ function toggleClass(event) {
   else state.enabled.delete(className);
   renderClasses();
   renderDashboard();
-  toast(`${className} ${input.checked ? 'চালু' : 'বন্ধ'} করা হয়েছে (ডেমো)`);
+  toast(`${className} [${classCodes[className] || 'CLS-GEN'}] ${input.checked ? 'চালু' : 'বন্ধ'} করা হয়েছে (ডেমো)`);
+}
+
+/* ---------- Finance & Fee Collection & Reports ---------- */
+
+function setFinanceTab(tab) {
+  state.activeFinanceTab = tab;
+  $$('#financeSubNav .chip').forEach(btn =>
+    btn.classList.toggle('active', btn.dataset.financeTab === tab)
+  );
+  $$('.finance-panel').forEach(panel =>
+    panel.classList.toggle('active', panel.dataset.financeView === tab)
+  );
+}
+
+function renderFinanceStats() {
+  const totalCollected = state.transactions.reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+  const currentMonth = 'সেপ্টেম্বর ২০২৬';
+  const monthCollected = state.transactions
+    .filter(tx => (tx.month || '').includes('সেপ্টেম্বর'))
+    .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+
+  const approvedStudents = state.students.filter(s => s.status === 'approved');
+  const paidStudentIds = new Set(
+    state.transactions
+      .filter(tx => (tx.month || '').includes('সেপ্টেম্বর') && tx.feeType === 'মাসিক বেতন')
+      .map(tx => tx.studentId)
+  );
+  const unpaidCount = approvedStudents.filter(s => !paidStudentIds.has(s.id)).length;
+  const totalDue = unpaidCount * 1500;
+
+  const totalEl = $('#financeTotalCollected');
+  const monthEl = $('#financeMonthCollected');
+  const dueEl = $('#financeTotalDue');
+  const trxCountEl = $('#financeTrxCount');
+  const badgeEl = $('#trxCountBadge');
+
+  if (totalEl) totalEl.textContent = '৳' + bn(totalCollected.toLocaleString('en-US'));
+  if (monthEl) monthEl.textContent = '৳' + bn(monthCollected.toLocaleString('en-US'));
+  if (dueEl) dueEl.textContent = '৳' + bn(totalDue.toLocaleString('en-US'));
+  if (trxCountEl) trxCountEl.textContent = bn(state.transactions.length) + ' টি';
+  if (badgeEl) badgeEl.textContent = bn(state.transactions.length) + ' টি লেনদেন';
+}
+
+function populateStudentFeeSelect() {
+  const select = $('#feeStudent');
+  if (!select) return;
+  const currentVal = select.value;
+  select.innerHTML = '<option value="">শিক্ষার্থী সিলেক্ট করুন...</option>' +
+    state.students.map(s => `
+      <option value="${s.id}" data-name="${s.name}" data-class="${s.className}">
+        ${s.name} [ID: ${s.id}] — ${s.className} [${s.status === 'approved' ? 'অনুমোদিত' : 'অপেক্ষমাণ'}]
+      </option>`).join('');
+  if (currentVal) select.value = currentVal;
+}
+
+function renderRecentTransactions() {
+  const listEl = $('#recentTrxList');
+  if (!listEl) return;
+
+  listEl.innerHTML = state.transactions.length
+    ? state.transactions.map(tx => `
+      <div class="trx-item">
+        <div class="trx-left">
+          <span class="trx-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><use href="#icon-receipt"></use></svg>
+          </span>
+          <div class="trx-info">
+            <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
+              <strong>${tx.studentName}</strong>
+              <span class="audit-id-badge">ID: ${tx.studentId}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:4px;margin-top:2px;flex-wrap:wrap;">
+              <span class="audit-id-badge">${tx.receiptNo}</span>
+              <span class="audit-id-badge blue">${tx.id}</span>
+            </div>
+            <small>${tx.feeType} • ${tx.month} • ${tx.method}</small>
+          </div>
+        </div>
+        <div class="trx-right">
+          <span class="trx-amount">৳${bn(Number(tx.amount).toLocaleString('en-US'))}</span>
+          <span class="trx-date">${tx.date}</span>
+          <button class="mini-btn" type="button" data-action="view-receipt" data-trx-id="${tx.id}">রসিদ</button>
+        </div>
+      </div>`).join('')
+    : '<p class="admin-empty">এখনও কোনো ফি কালেকশন রেকর্ড নেই।</p>';
+}
+
+function renderStudentLedger() {
+  const listEl = $('#studentLedgerList');
+  if (!listEl) return;
+
+  const septPayments = new Map();
+  state.transactions
+    .filter(tx => (tx.month || '').includes('সেপ্টেম্বর'))
+    .forEach(tx => {
+      septPayments.set(tx.studentId, (septPayments.get(tx.studentId) || 0) + Number(tx.amount));
+    });
+
+  const studentsWithStatus = state.students.map(student => {
+    const paidAmount = septPayments.get(student.id) || 0;
+    const monthlyFee = 1500;
+    const isPaid = paidAmount >= monthlyFee;
+    return {
+      ...student,
+      paidAmount,
+      dueAmount: isPaid ? 0 : (monthlyFee - paidAmount),
+      isPaid
+    };
+  });
+
+  const filtered = studentsWithStatus.filter(s => {
+    if (state.ledgerFilter === 'due') return !s.isPaid;
+    if (state.ledgerFilter === 'paid') return s.isPaid;
+    return true;
+  });
+
+  listEl.innerHTML = filtered.length
+    ? filtered.map(student => `
+      <article class="ledger-item">
+        <div class="student-copy">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+            <strong>${student.name}</strong>
+            <span class="audit-id-badge">ID: ${student.id}</span>
+          </div>
+          <small>${student.className} • ${student.group} • 📞 ${bn(student.mobile)}</small>
+          <small style="margin-top:2px;color:${student.isPaid ? 'var(--forest)' : '#c05b4b'};font-weight:700;">
+            সেপ্টেম্বর ২০২৬: ${student.isPaid ? 'পরিশোধিত (৳' + bn(student.paidAmount) + ')' : 'বকেয়া: ৳' + bn(student.dueAmount)}
+          </small>
+        </div>
+        <div class="student-side">
+          <span class="badge ${student.isPaid ? 'badge-approved' : 'badge-pending'}">
+            ${student.isPaid ? 'পরিশোধিত' : 'বকেয়া'}
+          </span>
+          <div class="student-actions">
+            ${!student.isPaid ? `
+              <button class="mini-btn approve" type="button" data-action="quick-collect" data-id="${student.id}">
+                ফি গ্রহণ
+              </button>` : `
+              <button class="mini-btn" type="button" data-action="view-student-receipts" data-id="${student.id}">
+                রসিদ দেখুন
+              </button>`}
+          </div>
+        </div>
+      </article>`).join('')
+    : '<p class="admin-empty">কোনো শিক্ষার্থী পাওয়া যায়নি।</p>';
+}
+
+function numberToBanglaWords(num) {
+  const n = Math.floor(Number(num) || 0);
+  if (n === 0) return 'কথায়: শূন্য টাকা মাত্র';
+
+  const units = ['', 'এক', 'দুই', 'তিন', 'চার', 'পাঁচ', 'ছয়', 'সাত', 'আট', 'নয়', 'দশ',
+    'এগারো', 'বারো', 'তেরো', 'চৌদ্দ', 'পনেরো', 'ষোলো', 'সতেরো', 'আঠারো', 'উনিশ', 'বিশ',
+    'একুশ', 'বাইশ', 'তেইশ', 'চব্বিশ', 'পঁচিশ', 'ছাব্বিশ', 'সাতাশ', 'আটাশ', 'উনত্রিশ', 'ত্রিশ',
+    'একত্রিশ', 'বত্রিশ', 'তেত্রিশ', 'চৌত্রিশ', 'পঁয়ত্রিশ', 'ছত্রিশ', 'সাঁইত্রিশ', 'আটত্রিশ', 'উনচল্লিশ', 'চল্লিশ',
+    'একচল্লিশ', 'বিয়াল্লিশ', 'তেতাল্লিশ', 'চুয়াল্লিশ', 'পঁয়তাল্লিশ', 'ছেচল্লিশ', 'সাতচল্লিশ', 'আটচল্লিশ', 'উনপঞ্চাশ', 'পঞ্চাশ',
+    'একান্ন', 'বায়ান্ন', 'তিপ্পান্ন', 'চুয়ান্ন', 'পঞ্চান্ন', 'ছাপ্পান্ন', 'সাতান্ন', 'আটান্ন', 'উনষাট', 'ষাট',
+    'একষট্টি', 'বাষট্টি', 'তেষট্টি', 'চৌষট্টি', 'পঁয়ষট্টি', 'ছেষট্টি', 'সাতষট্টি', 'আটষট্টি', 'উনসত্তর', 'সত্তর',
+    'একাত্তর', 'বাহাত্তর', 'তিয়াত্তর', 'চুয়াত্তর', 'পঁচাত্তর', 'ছিয়াত্তর', 'সাতাত্তর', 'আটাত্তর', 'উনআশি', 'আশি',
+    'একাশি', 'বিরাশি', 'তিরাশি', 'চুরাশি', 'পঁচাশি', 'ছিয়াশি', 'সাতাশি', 'আটাশি', 'ঊননব্বই', 'নব্বই',
+    'একানব্বই', 'বিরানব্বই', 'তিরানব্বই', 'চুরানব্বই', 'পঁচানব্বই', 'ছিয়ানব্বই', 'সাতানব্বই', 'আটানব্বই', 'নিরানব্বই'];
+
+  function convertSmall(val) {
+    if (val === 0) return '';
+    let res = '';
+    if (val >= 100) {
+      const h = Math.floor(val / 100);
+      res += (units[h] ? units[h] + ' শত ' : '');
+      val %= 100;
+    }
+    if (val > 0) {
+      res += units[val] + ' ';
+    }
+    return res;
+  }
+
+  let crore = Math.floor(n / 10000000);
+  let rem = n % 10000000;
+  let lakh = Math.floor(rem / 100000);
+  rem %= 100000;
+  let thousand = Math.floor(rem / 1000);
+  rem %= 1000;
+  let hundred = rem;
+
+  let words = '';
+  if (crore > 0) words += convertSmall(crore) + 'কোটি ';
+  if (lakh > 0) words += convertSmall(lakh) + 'লাখ ';
+  if (thousand > 0) words += convertSmall(thousand) + 'হাজার ';
+  if (hundred > 0) words += convertSmall(hundred);
+
+  return `কথায়: ${words.trim()} টাকা মাত্র`;
+}
+
+function renderReportGenerator() {
+  const monthFilter = state.reportFilters.month;
+  const classFilter = state.reportFilters.className;
+  const feeTypeFilter = state.reportFilters.feeType;
+  const methodFilter = state.reportFilters.method;
+
+  const filtered = state.transactions.filter(tx => {
+    const matchMonth = monthFilter === 'all' || (tx.month && tx.month.includes(monthFilter));
+    const matchClass = classFilter === 'all' || tx.className === classFilter;
+    const matchFee = feeTypeFilter === 'all' || tx.feeType === feeTypeFilter;
+    const matchMethod = methodFilter === 'all' || (tx.method && tx.method.includes(methodFilter));
+    return matchMonth && matchClass && matchFee && matchMethod;
+  });
+
+  const totalAmount = filtered.reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+  const avgAmount = filtered.length ? Math.round(totalAmount / filtered.length) : 0;
+
+  // Update Memo & Scope
+  const memoEl = $('#padMemoNo');
+  if (memoEl) memoEl.textContent = `AUD-MEMO-2609-${String(100 + filtered.length)}`;
+
+  const periodEl = $('#padPeriod');
+  if (periodEl) periodEl.textContent = monthFilter === 'all' ? 'সর্বমোট সময়কাল' : monthFilter;
+
+  const classScopeEl = $('#padClassScope');
+  if (classScopeEl) classScopeEl.textContent = classFilter === 'all' ? 'সব শ্রেণি' : `${classFilter} [${classCodes[classFilter] || 'CLS-GEN'}]`;
+
+  const feeScopeEl = $('#padFeeTypeScope');
+  if (feeScopeEl) feeScopeEl.textContent = feeTypeFilter === 'all' ? 'সব ধরন' : feeTypeFilter;
+
+  // Update Pad Summary Box
+  const countEl = $('#padTotalTrx');
+  const grandTotalEl = $('#padGrandTotal');
+  const avgEl = $('#padAvgCollection');
+  const tableTotalEl = $('#padTableTotal');
+  const wordsEl = $('#padAmountWords');
+
+  if (countEl) countEl.textContent = `${bn(filtered.length)} টি`;
+  if (grandTotalEl) grandTotalEl.textContent = `৳${bn(totalAmount.toLocaleString('en-US'))}`;
+  if (avgEl) avgEl.textContent = `৳${bn(avgAmount.toLocaleString('en-US'))}`;
+  if (tableTotalEl) tableTotalEl.textContent = `৳${bn(totalAmount.toLocaleString('en-US'))}`;
+  if (wordsEl) wordsEl.textContent = numberToBanglaWords(totalAmount);
+
+  // Render Pad Table Rows with full Audit traceability
+  const tbody = $('#padTableBody');
+  if (!tbody) return;
+
+  tbody.innerHTML = filtered.length
+    ? filtered.map((tx, idx) => `
+      <tr>
+        <td style="text-align:center;font-weight:700;color:var(--muted);">${bn(idx + 1)}</td>
+        <td><span class="audit-id-badge">${tx.receiptNo}</span></td>
+        <td><span class="audit-id-badge blue">${tx.id}</span></td>
+        <td>
+          <strong>${tx.studentName}</strong>
+          <small style="display:block;margin-top:2px;"><span class="audit-id-badge amber">ID: ${tx.studentId}</span></small>
+        </td>
+        <td>
+          ${tx.className}
+          <small style="display:block;margin-top:2px;"><span class="audit-id-badge purple">${classCodes[tx.className] || 'CLS-GEN'}</span></small>
+        </td>
+        <td>
+          ${tx.feeType}
+          <small style="display:block;color:var(--muted);font-size:9.5px;">${tx.month}</small>
+        </td>
+        <td>
+          <span style="display:inline-block;padding:2px 7px;border-radius:4px;background:#eef6f1;color:#154d42;font-size:9px;font-weight:800;">${tx.method}</span>
+        </td>
+        <td style="text-align:right;">
+          <strong>৳${bn(Number(tx.amount).toLocaleString('en-US'))}</strong>
+        </td>
+      </tr>`).join('')
+    : '<tr><td colspan="8" style="text-align:center;padding:26px;color:var(--muted);">কোনো লেনদেন রেকর্ড পাওয়া যায়নি। ফিল্টার পরিবর্তন করুন।</td></tr>';
+}
+
+function collectFee(event) {
+  event.preventDefault();
+  const studentId = $('#feeStudent').value;
+  const feeType = $('#feeType').value;
+  const month = $('#feeMonth').value;
+  const amount = Number($('#feeAmount').value);
+  const method = $('#feeMethod').value;
+  const trxRef = $('#feeTrxId').value.trim() || `TRX-${Date.now().toString().slice(-4)}`;
+  const note = $('#feeNote').value.trim() || 'ফি পরিশোধ';
+
+  if (!studentId || !amount || amount <= 0) {
+    toast('শিক্ষার্থী ও ফি এর পরিমাণ নির্বাচন করুন');
+    return;
+  }
+
+  const student = state.students.find(s => s.id === studentId);
+  if (!student) {
+    toast('শিক্ষার্থী নির্বাচন করুন');
+    return;
+  }
+
+  const newReceiptNo = `REC-2609-${String(state.transactions.length + 1).padStart(2, '0')}`;
+  const newTxId = `TRX-${Date.now().toString().slice(-4)}`;
+  const newTx = {
+    id: newTxId,
+    receiptNo: newReceiptNo,
+    auditCode: `AUD-${newTxId}`,
+    studentId: student.id,
+    studentName: student.name,
+    className: student.className,
+    feeType,
+    month,
+    amount,
+    method,
+    trxRef,
+    date: '২২ সেপ্টেম্বর ২০২৬',
+    collectedBy: 'এডমিন',
+    note
+  };
+
+  state.transactions.unshift(newTx);
+  event.target.reset();
+  $('#feeAmount').value = '1500';
+
+  renderFinance();
+  toast(`${student.name} [${student.id}]-এর ৳${bn(amount)} ফি সফলভাবে জমা নেওয়া হয়েছে`);
+  openReceiptModal(newTx);
+}
+
+function openReceiptModal(tx) {
+  const classCode = classCodes[tx.className] || 'CLS-GEN';
+  openModal(
+    'মানি রসিদ (Audit Ready)',
+    `রসিদ নং: ${tx.receiptNo}`,
+    `
+      <div class="receipt-modal-box" id="printReceiptBox">
+        <div class="receipt-header">
+          <div class="receipt-brand-title">Active Plus Coaching</div>
+          <div class="receipt-sub">শিখতে থাকো, এগিয়ে যাও • দিনাজপুর</div>
+          <div class="receipt-badge-title">অফিশিয়াল মানি রসিদ (PAID)</div>
+        </div>
+        <dl class="receipt-meta-grid">
+          <div><dt>রসিদ নং (Receipt)</dt><dd><span class="audit-id-badge">${tx.receiptNo}</span></dd></div>
+          <div><dt>অডিট ট্রানজেকশন ID</dt><dd><span class="audit-id-badge blue">${tx.id}</span></dd></div>
+          <div><dt>তারিখ ও সময়</dt><dd>${tx.date}</dd></div>
+          <div><dt>শিক্ষার্থীর নাম</dt><dd>${tx.studentName}</dd></div>
+          <div><dt>Student ID</dt><dd><span class="audit-id-badge amber">${tx.studentId}</span></dd></div>
+          <div><dt>শ্রেণি ও কোড</dt><dd>${tx.className} <span class="audit-id-badge purple">${classCode}</span></dd></div>
+          <div><dt>ফি এর ধরন</dt><dd>${tx.feeType} (${tx.month})</dd></div>
+          <div><dt>পেমেন্ট মেথড</dt><dd>${tx.method}</dd></div>
+          <div><dt>Trx Ref</dt><dd>${tx.trxRef || '—'}</dd></div>
+          <div><dt>অডিট ট্র্যাকিং কোড</dt><dd><span class="audit-id-badge">AUD-TX-${tx.id.replace(/[^0-9A-Za-z]/g, '')}</span></dd></div>
+        </dl>
+        <div class="receipt-amount-block">
+          <div>
+            <span>মোট পরিশোধিত টাকা</span>
+            <strong>৳${bn(Number(tx.amount).toLocaleString('en-US'))}</strong>
+          </div>
+          <span class="receipt-paid-seal">✓ পরিশোধিত</span>
+        </div>
+        <p style="font-size:10px;color:var(--muted);margin-top:4px;">নোট: ${tx.note || 'ফি পরিশোধ সম্পন্ন'}</p>
+        <div class="receipt-footer-sign">
+          <div>আদায়কারী: ${tx.collectedBy || 'এডমিন'}</div>
+          <div class="receipt-signature-line">কর্তৃপক্ষের স্বাক্ষর</div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="admin-btn primary" type="button" data-modal-action="print-receipt">
+          <svg aria-hidden="true" viewBox="0 0 24 24" style="width:14px;height:14px;"><use href="#icon-printer"></use></svg>
+          রসিদ প্রিন্ট করুন
+        </button>
+        <button class="admin-btn ghost" type="button" data-modal-action="close">বন্ধ করুন</button>
+      </div>`
+  );
+
+  $('#adminModalBody [data-modal-action="print-receipt"]')?.addEventListener('click', () => {
+    window.print();
+  });
+  $('#adminModalBody [data-modal-action="close"]')?.addEventListener('click', () => {
+    closeModal();
+  });
+}
+
+function renderFinance() {
+  renderFinanceStats();
+  populateStudentFeeSelect();
+  renderRecentTransactions();
+  renderStudentLedger();
+  renderReportGenerator();
 }
 
 /* ---------- Render everything ---------- */
@@ -405,6 +895,7 @@ function renderAll() {
   renderNotices();
   renderRoutine();
   renderClasses();
+  renderFinance();
   updatePendingBadge();
 }
 
@@ -425,6 +916,16 @@ $$('[data-admin-view]').forEach(button => {
 $('#studentSearch').addEventListener('input', event => {
   state.query = event.target.value;
   renderStudents();
+});
+
+$('#studentSearchClear')?.addEventListener('click', () => {
+  const input = $('#studentSearch');
+  if (input) {
+    input.value = '';
+    state.query = '';
+    renderStudents();
+    input.focus();
+  }
 });
 
 $('#studentFilterChips').addEventListener('click', event => {
@@ -483,6 +984,77 @@ $('#routineList').addEventListener('click', event => {
 });
 
 $('#classList').addEventListener('change', toggleClass);
+
+/* ---------- Finance Wiring ---------- */
+
+$('#financeSubNav')?.addEventListener('click', event => {
+  const tab = event.target.closest('[data-finance-tab]');
+  if (!tab) return;
+  setFinanceTab(tab.dataset.financeTab);
+});
+
+$('#btnFinanceGoCollect')?.addEventListener('click', () => {
+  setFinanceTab('collection');
+  $('#feeStudent')?.focus();
+});
+
+$('#btnFinanceGoReport')?.addEventListener('click', () => {
+  setFinanceTab('reports');
+});
+
+$('#feeCollectionForm')?.addEventListener('submit', collectFee);
+
+$('#ledgerFilterChips')?.addEventListener('click', event => {
+  const chip = event.target.closest('[data-ledger-filter]');
+  if (!chip) return;
+  state.ledgerFilter = chip.dataset.ledgerFilter;
+  $$('#ledgerFilterChips .chip').forEach(item => item.classList.toggle('active', item === chip));
+  renderStudentLedger();
+});
+
+['reportMonth', 'reportClass', 'reportFeeType', 'reportMethod'].forEach(id => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('change', () => {
+    state.reportFilters.month = $('#reportMonth').value;
+    state.reportFilters.className = $('#reportClass').value;
+    state.reportFilters.feeType = $('#reportFeeType').value;
+    state.reportFilters.method = $('#reportMethod').value;
+    renderReportGenerator();
+  });
+});
+
+$('#btnPrintReport')?.addEventListener('click', () => {
+  window.print();
+});
+
+const handleFinanceClick = event => {
+  const button = event.target.closest('[data-action]');
+  if (!button) return;
+  const { action, trxId, id } = button.dataset;
+
+  if (action === 'view-receipt') {
+    const tx = state.transactions.find(t => t.id === trxId);
+    if (tx) openReceiptModal(tx);
+  } else if (action === 'quick-collect') {
+    setFinanceTab('collection');
+    if ($('#feeStudent')) {
+      $('#feeStudent').value = id;
+      $('#feeAmount').value = '1500';
+      $('#feeAmount').focus();
+    }
+  } else if (action === 'view-student-receipts') {
+    const studentTxs = state.transactions.filter(t => t.studentId === id);
+    if (studentTxs.length) {
+      openReceiptModal(studentTxs[0]);
+    } else {
+      toast('এই শিক্ষার্থীর কোনো রসিদ পাওয়া যায়নি');
+    }
+  }
+};
+$('#recentTrxList')?.addEventListener('click', handleFinanceClick);
+$('#studentLedgerList')?.addEventListener('click', handleFinanceClick);
+$('#reportTableBody')?.addEventListener('click', handleFinanceClick);
 
 $('#adminModalClose').addEventListener('click', closeModal);
 $('#adminModalBackdrop').addEventListener('click', event => {
