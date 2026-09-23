@@ -11,10 +11,11 @@
   <link rel="stylesheet" href="css/admin.css">
   <link rel="stylesheet" href="css/mobile.css">
   <link rel="stylesheet" href="css/receipt.css">
+  <link rel="stylesheet" href="css/payment.css">
   <link rel="preload" href="assets/fonts/NotoSansBengali-Variable.ttf" as="font" type="font/ttf" crossorigin>
 </head>
 <body class="pay-body">
-  <!-- Entry screen: same one-click pattern as the admin panel. -->
+  <!-- Entry screen: the login page can also sign in here, so this is a fallback, not a wall. -->
   <section class="auth-screen pay-auth-screen" id="payEntry" aria-label="Active Plus পেমেন্ট রিসিভ প্যানেল">
     <div class="auth-topbar">
       <div class="auth-brand">
@@ -59,6 +60,7 @@
           </button>
         </form>
         <p class="pay-entry-note" style="margin-top: 12px;">ডেমো প্রবেশাধিকার — ইউসার আইডি: <strong>APC-PAY-001</strong> • PIN: <strong>১২৩১২৩</strong>। প্যানেলে ঢুকে উপরের লক আইকন থেকে PIN বদলানো যায়।</p>
+        <p class="pay-entry-note">শিক্ষার্থী লগইন পেইজে (<a class="inline-link" href="index.html">index.html</a>) “পেমেন্ট কাউন্টার” ট্যাবে একই আইডি ও PIN দিলে সরাসরি এই প্যানেলে অটো-লগইন হয় — আলাদা করে ফর্ম পূরণ করতে হয় না।</p>
         <p class="auth-footnote">
           <a class="inline-link" href="admin.html">← এডমিন প্যানেল</a>
           <a class="inline-link" href="index.html">← শিক্ষার্থী অ্যাপ</a>
@@ -67,12 +69,12 @@
     </div>
   </section>
 
-  <!-- Payment desk: only search → short profile → payment → receipt. -->
+  <!-- Payment desk: search → short profile → payment → receipt, plus a today summary. -->
   <div class="pay-shell" id="payShell" hidden>
     <header class="pay-topbar">
       <a class="admin-brand" href="payment.html" aria-label="পেমেন্ট রিসিভ প্যানেল">
         <img src="assets/icons/app-logo.png" alt="" width="38" height="38">
-        <span><strong>পেমেন্ট রিসিভ</strong><small>Active Plus Coaching • ডেমো</small></span>
+        <span><strong>পেমেন্ট রিসিভ</strong><small>Active Plus Coaching • কাউন্টার</small></span>
       </a>
       <div class="admin-topbar-actions">
         <span class="admin-demo-badge"><span class="demo-dot"></span>ডেমো মোড</span>
@@ -89,13 +91,38 @@
     </header>
 
     <main class="pay-main">
-      <article class="admin-card finance-search-card">
+      <!-- Counter pulse: what this desk has collected, at a glance. -->
+      <section class="pay-pulse" aria-label="আদায়ের সারাংশ">
+        <div class="pay-pulse-tile is-today">
+          <span class="pay-pulse-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-wallet"></use></svg></span>
+          <div>
+            <p class="pay-pulse-label">আজকের আদায়</p>
+            <p class="pay-pulse-value" id="payTodayAmount">৳০</p>
+            <p class="pay-pulse-sub" id="payTodayCount">এখনও কোনো লেনদেন নেই</p>
+          </div>
+        </div>
+        <div class="pay-pulse-row">
+          <div class="pay-pulse-mini">
+            <p class="pay-pulse-label">এই মাসে</p>
+            <p class="pay-pulse-mini-value" id="payMonthAmount">৳০</p>
+            <p class="pay-pulse-sub" id="payMonthCount">০টি লেনদেন</p>
+          </div>
+          <div class="pay-pulse-mini">
+            <p class="pay-pulse-label">বকেয়া আছে</p>
+            <p class="pay-pulse-mini-value" id="payDueStudents">০ জন</p>
+            <p class="pay-pulse-sub">চলতি মাসের তালিকায়</p>
+          </div>
+        </div>
+      </section>
+
+      <article class="admin-card finance-search-card pay-search-card">
         <header class="admin-card-head">
           <div><p class="eyebrow">Student Search</p><h2>শিক্ষার্থী খুঁজুন</h2></div>
+          <span class="pay-search-kbd" aria-hidden="true">/ চাপুন</span>
         </header>
         <div class="finance-search-body">
           <label for="payStudentSearch">নাম, মোবাইল নম্বর, Student ID অথবা অভিভাবকের মোবাইল</label>
-          <div class="finance-search-input">
+          <div class="finance-search-input pay-search-input">
             <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-search"></use></svg>
             <input id="payStudentSearch" type="search" placeholder="যেমন: রাইসা, 017…, AP-1024 অথবা অভিভাবকের 018…" autocomplete="off" aria-controls="paySearchResults" aria-describedby="paySearchHint">
             <button class="student-search-clear" type="button" id="paySearchClear" aria-label="সার্চ মুছুন" hidden>✕</button>
@@ -104,6 +131,8 @@
           <p id="payLoadError" class="finance-error" role="alert" hidden></p>
           <p id="paySearchStatus" class="finance-hint" role="status" aria-live="polite"></p>
           <div id="paySearchResults" class="fee-search-results"></div>
+          <!-- One tap, no typing: students with dues and the latest payers. -->
+          <div class="pay-picks" id="payQuickPicks" hidden></div>
         </div>
       </article>
 
@@ -111,10 +140,10 @@
         <header class="admin-card-head">
           <div><p class="eyebrow">Student Quick Profile</p><h2>সংক্ষিপ্ত তথ্য ও পেমেন্ট</h2></div>
         </header>
-        <div id="payQuickProfile" class="fee-quick-profile">
+        <div id="payQuickProfile" class="fee-quick-profile pay-quick-profile">
           <p class="admin-empty">উপরে সার্চ করে শিক্ষার্থী নির্বাচন করুন।</p>
         </div>
-        <form id="payCollectionForm" class="fee-form" hidden>
+        <form id="payCollectionForm" class="fee-form pay-form" hidden>
           <input id="payStudent" type="hidden">
           <p id="payPaymentFor" class="finance-payment-for"></p>
 
@@ -136,26 +165,38 @@
             </div>
           </div>
 
-          <div class="form-grid-2">
-            <div>
-              <label for="payFeeAmount">টাকার পরিমাণ (৳) *</label>
-              <input id="payFeeAmount" type="number" min="1" max="10000000" step="1" placeholder="১৫০০" value="1500" required>
-              <div class="quick-amount-row" id="payQuickAmounts" aria-label="দ্রুত পরিমাণ">
-                <button class="quick-amount" type="button" data-fee-quick="due">পূর্ণ বকেয়া</button>
-                <button class="quick-amount" type="button" data-fee-quick="monthly">মাসিক ফি</button>
-                <button class="quick-amount" type="button" data-fee-quick="half">অর্ধেক (আংশিক)</button>
-              </div>
+          <div class="pay-amount-block">
+            <label for="payFeeAmount">টাকার পরিমাণ (৳) *</label>
+            <div class="pay-amount-field">
+              <span class="pay-amount-taka" aria-hidden="true">৳</span>
+              <input id="payFeeAmount" type="number" min="1" max="10000000" step="1" inputmode="numeric" placeholder="১৫০০" value="1500" required>
             </div>
-            <div>
-              <label for="payFeeMethod">পেমেন্ট মাধ্যম *</label>
-              <select id="payFeeMethod" required>
-                <option value="নগদ (Cash)">নগদ (Cash)</option>
-                <option value="বিকাশ (bKash)">বিকাশ (bKash)</option>
-                <option value="নগদ (Nagad)">নগদ (Nagad)</option>
-                <option value="রকেট (Rocket)">রকেট (Rocket)</option>
-                <option value="ব্যাংক ট্রান্সফার">ব্যাংক ট্রান্সফার</option>
-              </select>
+            <div class="quick-amount-row" id="payQuickAmounts" aria-label="দ্রুত পরিমাণ">
+              <button class="quick-amount" type="button" data-fee-quick="due">পূর্ণ বকেয়া</button>
+              <button class="quick-amount" type="button" data-fee-quick="monthly">মাসিক ফি</button>
+              <button class="quick-amount" type="button" data-fee-quick="half">অর্ধেক (আংশিক)</button>
             </div>
+            <!-- Thumb-friendly keypad; it only writes into the amount field above. -->
+            <div class="pay-keypad" id="payKeypad" role="group" aria-label="টাকার পরিমাণের কীপ্যাড">
+              <button type="button" data-pay-key="1">১</button>
+              <button type="button" data-pay-key="2">২</button>
+              <button type="button" data-pay-key="3">৩</button>
+              <button type="button" data-pay-key="4">৪</button>
+              <button type="button" data-pay-key="5">৫</button>
+              <button type="button" data-pay-key="6">৬</button>
+              <button type="button" data-pay-key="7">৭</button>
+              <button type="button" data-pay-key="8">৮</button>
+              <button type="button" data-pay-key="9">৯</button>
+              <button type="button" data-pay-key="00">০০</button>
+              <button type="button" data-pay-key="0">০</button>
+              <button type="button" data-pay-key="back" aria-label="এক ঘর মুছুন">⌫</button>
+            </div>
+          </div>
+
+          <div class="pay-method-block">
+            <span class="pay-block-label" id="payFeeMethodLabel">পেমেন্ট মাধ্যম *</span>
+            <div class="pay-methods" id="payFeeMethodGroup" role="radiogroup" aria-labelledby="payFeeMethodLabel"></div>
+            <input id="payFeeMethod" type="hidden" value="নগদ (Cash)">
           </div>
 
           <div class="form-grid-2">
@@ -170,23 +211,53 @@
           </div>
 
           <p id="paySaveError" class="finance-error" role="alert" hidden></p>
-          <button id="paySaveButton" class="admin-btn primary" type="submit" style="margin-top: 14px;">
-            <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-check-circle"></use></svg>
-            ফি গ্রহণ ও রসিদ তৈরি করুন
-          </button>
+          <div class="pay-form-actions">
+            <button id="payCancelButton" class="admin-btn ghost" type="button">বাতিল</button>
+            <button id="paySaveButton" class="admin-btn primary" type="submit">
+              <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-check-circle"></use></svg>
+              <span id="paySaveLabel">ফি গ্রহণ ও রসিদ তৈরি করুন</span>
+            </button>
+          </div>
         </form>
       </article>
+
+      <article class="admin-card pay-activity-card">
+        <header class="admin-card-head">
+          <div><p class="eyebrow">Today</p><h2>আজকের লেনদেন</h2></div>
+          <button class="pay-activity-refresh" type="button" id="payActivityRefresh" aria-label="তালিকা আবার লোড করুন">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-refresh"></use></svg>
+          </button>
+        </header>
+        <div id="payTodayList" class="pay-activity-list">
+          <p class="admin-empty">আজ এখনও কোনো ফি নেওয়া হয়নি।</p>
+        </div>
+      </article>
     </main>
+
+    <!-- Sticky collect bar: whatever is selected is always one tap away. -->
+    <div class="pay-stickybar" id="payStickyBar" hidden>
+      <div class="pay-sticky-copy">
+        <strong id="payStickyName">—</strong>
+        <small id="payStickyMeta">—</small>
+      </div>
+      <button class="admin-btn primary" type="button" id="payStickyCollect">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-bolt"></use></svg>
+        <span id="payStickyAction">টাকা নিন</span>
+      </button>
+    </div>
   </div>
 
   <!-- Receipt modal: PDF download + one-click WhatsApp image share. -->
   <div class="admin-modal-backdrop" id="payReceiptBackdrop" hidden>
-    <div class="admin-modal" role="dialog" aria-modal="true" aria-labelledby="payReceiptTitle">
-      <header class="admin-modal-header">
-        <div>
-          <p class="eyebrow">Money Receipt</p>
-          <h2 id="payReceiptTitle">মানি রসিদ</h2>
-          <p class="finance-hint" id="payReceiptSub"></p>
+    <div class="admin-modal pay-receipt-modal" role="dialog" aria-modal="true" aria-labelledby="payReceiptTitle">
+      <header class="admin-modal-header pay-receipt-head">
+        <div class="pay-success">
+          <span class="pay-success-ring" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-check"></use></svg></span>
+          <div>
+            <p class="eyebrow">Money Receipt</p>
+            <h2 id="payReceiptTitle">টাকা জমা হয়েছে</h2>
+            <p class="finance-hint" id="payReceiptSub"></p>
+          </div>
         </div>
         <button class="admin-modal-close" type="button" id="payReceiptClose" aria-label="বন্ধ করুন">✕</button>
       </header>
@@ -194,9 +265,19 @@
       <div class="modal-actions receipt-actions">
         <button class="admin-btn primary" type="button" id="payReceiptWhatsApp">
           <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-chat"></use></svg>
-          হোয়াটসঅ্যাপে পাঠান
+          <span id="payReceiptWhatsAppLabel">হোয়াটসঅ্যাপে পাঠান</span>
         </button>
         <button class="admin-btn ghost" type="button" id="payReceiptDownload">রসিদ PDF ডাউনলোড</button>
+      </div>
+      <div class="modal-actions receipt-actions pay-receipt-extra">
+        <button class="admin-btn ghost" type="button" id="payReceiptCopy">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-copy"></use></svg>
+          টেক্সট কপি
+        </button>
+        <button class="admin-btn ghost" type="button" id="payReceiptNew">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-plus"></use></svg>
+          নতুন পেমেন্ট নিন
+        </button>
       </div>
       <p class="receipt-download-hint">এক চাপে রসিদের ছবি শেয়ার মেনুতে খুলবে — WhatsApp বেছে নিলেই শিক্ষার্থীর নম্বরে চলে যাবে। শেয়ার সাপোর্ট না থাকলে ছবি ডাউনলোড হয়ে হোয়াটসঅ্যাপ চ্যাট খুলবে।</p>
     </div>
@@ -236,12 +317,19 @@
       <g id="icon-search"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></g>
       <g id="icon-arrow-right"><path d="M4 12h15"/><path d="m13 6 6 6-6 6"/></g>
       <g id="icon-check-circle"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.4 2.4 4.6-5"/></g>
+      <g id="icon-check"><path d="m5 12.5 4.5 4.5L19 7.5"/></g>
       <g id="icon-grid"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></g>
       <g id="icon-chat"><path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.3 8.9 8.9 0 0 1-3.9-.9L3 20l1.2-4.4a8 8 0 0 1-.7-3.3A8.4 8.4 0 0 1 12 4a8.4 8.4 0 0 1 9 7.5Z"/></g>
       <g id="icon-user"><circle cx="12" cy="8" r="4"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></g>
       <g id="icon-lock"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/></g>
       <g id="icon-eye"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="2.6"/></g>
       <g id="icon-logout"><path d="M14 4h4.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H14"/><path d="M9 8l-4 4 4 4"/><path d="M5 12h10"/></g>
+      <g id="icon-wallet"><path d="M3 8.5A2.5 2.5 0 0 1 5.5 6H18a2 2 0 0 1 2 2v1"/><rect x="3" y="8.5" width="18" height="10.5" rx="2.5"/><path d="M16.5 14h2"/></g>
+      <g id="icon-bolt"><path d="M13 3 5.5 13.5H11L10 21l7.5-10.5H12L13 3Z"/></g>
+      <g id="icon-copy"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M15 5.5A1.5 1.5 0 0 0 13.5 4H6a2 2 0 0 0-2 2v7.5A1.5 1.5 0 0 0 5.5 15"/></g>
+      <g id="icon-plus"><path d="M12 5v14"/><path d="M5 12h14"/></g>
+      <g id="icon-refresh"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v4h-4"/></g>
+      <g id="icon-clock"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></g>
     </defs>
   </svg>
 
