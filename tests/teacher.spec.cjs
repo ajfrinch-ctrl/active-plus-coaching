@@ -66,6 +66,8 @@ test('homework student self-report is visible to teacher, review is visible to s
   const student = await studentPage(context);
   await student.locator('[data-learning-filter=homework]').click();
   await expect(student.locator('#learningList')).toContainText('খাতা/ফাইল জমা নয়');
+  await student.locator('#learningList .learning-card-toggle').click();
+  await expect(student.locator('#learningList .learning-card-details')).toBeVisible();
   await student.locator('[data-complete-homework]').click();
   await expect(student.locator('#learningList .learning-outcome')).toHaveText('সম্পন্ন জানিয়েছে');
   await card.locator('[data-record-action=progress]').click(); await expect(page.locator('[data-progress-id="AP-1024"]')).toHaveValue('done');

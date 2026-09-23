@@ -44,7 +44,8 @@ for (const viewport of [{ width: 320, height: 740 }, { width: 390, height: 844 }
     await page.goto('/admin.html');
     await page.locator('#adminLoginForm button[type=submit]').click();
     await page.locator('.admin-bottom [data-admin-view=finance]').click();
-    await page.locator('[data-finance-tab=reports]').click();
+    await page.locator('#btnFinanceGoReport').click();
+    await expect(page.locator('.admin-view[data-view-panel=reports]')).toBeVisible();
     await page.locator('#reportMonth').selectOption('all');
     const selectors = { header: '.admin-topbar', footer: '.admin-bottom', main: '#adminMain' };
     await barsStayInPlace(page, selectors);

@@ -1,6 +1,6 @@
 const { test, expect } = require('./fixtures.cjs');
 const mobileViews = ['dashboard', 'students', 'finance', 'routine', 'more'];
-const moreViews = ['notices', 'app-management', 'classes', 'exams'];
+const moreViews = ['notices', 'app-management', 'classes', 'exams', 'reports'];
 async function enter(page) {
   await page.goto('/admin.html');
   await page.locator('#adminLoginForm button[type=submit]').click();
@@ -34,7 +34,7 @@ for (const width of [320, 390]) {
       await expect(footer.locator('[aria-current=page]')).toHaveCount(1);
       await expect(footer.locator('[aria-current=page]')).toHaveAttribute('data-admin-view', view);
     }
-    await expect(page.locator('.admin-more-item')).toHaveCount(5);
+    await expect(page.locator('.admin-more-item')).toHaveCount(6);
     for (const view of moreViews) {
       const button = page.locator(`.admin-more-item[data-admin-view="${view}"]`);
       await button.focus();
@@ -49,7 +49,8 @@ for (const width of [320, 390]) {
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     }
     await bottom(page, 'finance');
-    await page.locator('[data-finance-tab=reports]').click();
+    await page.locator('#btnFinanceGoReport').click();
+    await expect(page.locator('.admin-view[data-view-panel=reports]')).toBeVisible();
     await bottom(page, 'dashboard');
     await page.locator('#dashCollectFee').click();
     await expect(page.locator('[data-finance-view=collection]')).toBeVisible();

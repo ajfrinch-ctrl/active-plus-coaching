@@ -1,9 +1,10 @@
-const CACHE_NAME = 'active-plus-student-v41-student-login-header';
+const CACHE_NAME = 'active-plus-student-v48-material-pdf';
 const APP_SHELL = [
   './',
   './index.html',
   './admin.html',
   './teacher.html',
+  './payment.html',
   './styles.css',
   './css/admin.css',
   './css/mobile.css',
@@ -33,11 +34,11 @@ const APP_SHELL = [
   './js/config.js',
   './js/demo-data.js',
   './js/demo-forms.js',
-  './assets/demo-study-notes.txt',
   './js/exam-data.js',
   './js/exam-ui.js',
   './js/exam-manager.js',
   './js/exam-pdf.js',
+  './js/material-pdf.js',
   './js/student-exams.js',
   './js/account-policy.js',
   './js/storage.js',
@@ -59,12 +60,14 @@ const APP_SHELL = [
   './js/fixed-shell.js',
   './js/main.js',
   './js/admin.js',
+  './js/payment.js',
   './js/teacher.js',
   './js/teaching-data.js',
   './js/student-teaching.js',
   './js/admin-data.js',
   './js/finance-data.js',
-  './js/finance-receipt.js'
+  './js/finance-receipt.js',
+  './js/report-generator.js'
 ];
 
 self.addEventListener('install', event => {

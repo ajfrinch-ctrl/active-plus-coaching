@@ -1,6 +1,7 @@
 import { prepareDemoData } from './demo-data.js';
 import { initDemoForms } from './demo-forms.js';
 import { enabledClasses } from './config.js';
+import { loadAppConfig } from './storage.js';
 import { toBanglaNumber as bn } from './ui.js';
 import { initExamManager } from './exam-manager.js';
 import { initFixedShell } from './fixed-shell.js';
@@ -150,7 +151,7 @@ async function save(form, operation, message) {
 }
 function showDetail(a) {
   const link = safeResourceURL(a.resourceURL);
-  openModal(a.title, `<article class="teaching-card"><span class="teaching-kind">${ACTIVITY_TYPES[a.type].label} • ${a.status === 'draft' ? 'খসড়া' : 'প্রকাশিত'}</span><h3>${esc(a.subject)}</h3><small>${esc(a.className)} • ${esc(a.group || 'সব বিভাগ')}</small><p>${esc(activityMeta(a))}</p><small>${esc(a.room)}</small><p class="teaching-body">${esc(a.details || 'অতিরিক্ত নির্দেশনা নেই।')}</p>${link ? `<a class="teaching-resource" href="${esc(link)}" target="_blank" rel="noopener noreferrer">সহায়ক উপকরণ খুলুন ↗</a>` : ''}<div class="teaching-actions"><button type="button" data-record-action="edit" data-id="${esc(a.id)}">সম্পাদনা</button>${ACTIVITY_TYPES[a.type].progress && a.status === 'published' ? `<button type="button" class="primary" data-record-action="progress" data-id="${esc(a.id)}">${ACTIVITY_TYPES[a.type].progress}</button>` : ''}</div></article>`);
+  openModal(a.title, `<article class="teaching-card"><span class="teaching-kind">${ACTIVITY_TYPES[a.type].label} • ${a.status === 'draft' ? 'খসড়া' : 'প্রকাশিত'}</span><h3>${esc(a.subject)}</h3><small>${esc(a.className)} • ${esc(a.group || 'সব বিভাগ')}</small><p>${esc(activityMeta(a))}</p><small>${esc(a.room)}</small><p class="teaching-body">${esc(a.details || 'অতিরিক্ত নির্দেশনা নেই।')}</p>${link ? `<a class="teaching-resource" href="${esc(link)}" target="_blank" rel="noopener noreferrer">সহায়ক উপকরণ খুলুন <svg class="resource-arrow" aria-hidden="true" viewBox="0 0 24 24"><path d="M7 17 17 7M9 7h8v8"/></svg></a>` : ''}<div class="teaching-actions"><button type="button" data-record-action="edit" data-id="${esc(a.id)}">সম্পাদনা</button>${ACTIVITY_TYPES[a.type].progress && a.status === 'published' ? `<button type="button" class="primary" data-record-action="progress" data-id="${esc(a.id)}">${ACTIVITY_TYPES[a.type].progress}</button>` : ''}</div></article>`);
 }
 function showProgress(a) {
   if (a.status !== 'published' || !ACTIVITY_TYPES[a.type].progress) return;
@@ -179,8 +180,27 @@ function showStudent(id) {
 }
 
 ['teacherClassFilter', 'teacherStudentClass'].forEach(id => { $('#' + id).insertAdjacentHTML('beforeend', classOptions()); });
+/* Admin-controlled teacher registration/entry gate (Admin Panel → শিক্ষক রেজিস্ট্রেশন নিয়ন্ত্রণ). */
+const teacherRegistrationOpen = () => loadAppConfig().allowTeacherRegistration !== false;
+function syncTeacherRegistrationNotice() {
+  const open = teacherRegistrationOpen();
+  const notice = $('#teacherRegNotice');
+  if (notice) notice.hidden = open;
+  const button = $('#teacherEnter');
+  if (button) button.disabled = !open;
+}
+syncTeacherRegistrationNotice();
+window.addEventListener('storage', event => {
+  if (event.key === 'active-plus-app-config-v1' || event.key === null) syncTeacherRegistrationNotice();
+});
 $('#teacherEnter').addEventListener('click', async event => {
-  const button = event.currentTarget; button.disabled = true; $('#teacherEntryError').hidden = true;
+  const button = event.currentTarget;
+  if (!teacherRegistrationOpen()) {
+    $('#teacherEntryError').textContent = 'শিক্ষক রেজিস্ট্রেশন ও প্রবেশ এই মুহূর্তে এডমিন কর্তৃক বন্ধ রাখা হয়েছে।';
+    $('#teacherEntryError').hidden = false;
+    return;
+  }
+  button.disabled = true; $('#teacherEntryError').hidden = true;
   if (await reload()) {
     $('#teacherEntry').hidden = true; $('#teacherShell').hidden = false; setView('home');
   } else { $('#teacherEntryError').textContent = 'ডেটা পড়া যায়নি। ব্রাউজারের স্টোরেজ চালু করে আবার চেষ্টা করুন।'; $('#teacherEntryError').hidden = false; }

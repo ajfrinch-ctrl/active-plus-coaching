@@ -6,6 +6,7 @@
     "test:e2e": "playwright test"
   },
   "devDependencies": {
-    "@playwright/test": "1.63.0"
+    "@playwright/test": "1.63.0",
+    "@sparticuz/chromium": "^153.0.0"
   }
 }

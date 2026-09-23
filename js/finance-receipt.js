@@ -45,8 +45,11 @@ async function receiptAssets() {
   return assets;
 }
 
+/** Shared logo + Bengali font loader for every offline canvas PDF (receipts and reports). */
+export function loadBrandAssets() { return receiptAssets(); }
+
 /** Wrap at words; split long IDs/references at grapheme boundaries, not Bangla vowel marks. */
-function wrapText(ctx, text, width) {
+export function wrapText(ctx, text, width) {
   const segmenter = typeof Intl.Segmenter === 'function' ? new Intl.Segmenter('bn', { granularity: 'grapheme' }) : null;
   const lines = [];
   for (const paragraph of String(text ?? '—').split('\n')) {
@@ -110,7 +113,7 @@ export function imagePDF(jpeg, width, height) {
   return new Blob(chunks, { type: 'application/pdf' });
 }
 
-export async function createReceiptPDF(tx) {
+export async function renderReceiptCanvas(tx) {
   const [logo] = await receiptAssets();
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
@@ -174,10 +177,30 @@ export async function createReceiptPDF(tx) {
     divider(y);
     collector.forEach((line, n) => text(line, inset, y + 32 + n * 26, 17, muted, 400));
     text('কর্তৃপক্ষের স্বাক্ষর', width - inset, y + 32, 17, muted, 500, 'right');
+    return canvas;
+  } catch (error) {
+    canvas.width = canvas.height = 0; // Release the large pixel buffer on failure too.
+    throw error;
+  }
+}
+
+export async function createReceiptPDF(tx) {
+  const canvas = await renderReceiptCanvas(tx);
+  try {
     const jpeg = await new Promise((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('Receipt image failed')), 'image/jpeg', 0.94));
     return imagePDF(new Uint8Array(await jpeg.arrayBuffer()), canvas.width, canvas.height);
   } finally {
     canvas.width = canvas.height = 0; // Release the large pixel buffer on mobile.
+  }
+}
+
+/** PNG render of the receipt for chat sharing (WhatsApp), still fully offline. */
+export async function createReceiptPNG(tx) {
+  const canvas = await renderReceiptCanvas(tx);
+  try {
+    return await new Promise((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('Receipt image failed')), 'image/png'));
+  } finally {
+    canvas.width = canvas.height = 0;
   }
 }
 

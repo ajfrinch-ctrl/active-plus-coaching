@@ -64,3 +64,15 @@ test('recovery defaults to 123123, requires original number and persists only af
   await page.locator('#recoveryMobile').fill('01700000000'); await page.locator('#recoveryForm [type=submit]').click();
   await expect(page.locator('#recoveryModal')).toBeHidden(); const account=await saved(page); expect(account.pin).toBe('123123'); expect(account.registrationMobile).toBe('01700000000'); expect(account.additionalMobiles).toEqual(['01811223344']);
 });
+
+test('registration number is fixed in the student info update form', async ({ page }) => {
+  await demo(page); await edit(page);
+  await expect(page.locator('#editRegistrationNo')).toHaveAttribute('readonly', '');
+  const shown = await page.locator('#editRegistrationNo').inputValue();
+  // Even a scripted value cannot leak into the saved profile.
+  await page.locator('#editRegistrationNo').evaluate(el => { el.value = '999999H'; });
+  await page.locator('#profileForm [type=submit]').click();
+  await expect(page.locator('#editModal')).toBeHidden();
+  await edit(page);
+  await expect(page.locator('#editRegistrationNo')).toHaveValue(shown);
+});

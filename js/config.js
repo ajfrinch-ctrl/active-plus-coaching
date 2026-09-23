@@ -22,6 +22,7 @@ export const DEFAULT_APP_SETTINGS = Object.freeze({
   maintenanceMode: false,
   maintenanceMessage: 'সম্মানিত শিক্ষার্থী, অ্যাপটিতে বর্তমানে সিস্টেম আপডেট চলছে। সাময়িক অসুবিধার জন্য আন্তরিকভাবে দুঃখিত।',
   allowRegistration: true,
+  allowTeacherRegistration: true,
   skipSecurityCheck: false,
   tagline: 'শিখতে থাকো, এগিয়ে যাও',
   helplineMobile: '01819486966',
