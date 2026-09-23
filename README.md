@@ -139,9 +139,14 @@ css/
 assets/fonts/
   NotoSansBengali-Variable.ttf  offline UI/PDF-ready Bengali font
 assets/icons/
-  app-logo.png         in-app logo + browser favicon (green ring, black A, red +)
-  install-icon.png     PWA install/app icon (same mark, notched ring)
-  legacy-*             previous logo.svg / icon-192 / icon-512 kept for reference
+  app-logo.png         1254² master mark (green ring, black A, red +) — PDF/receipt printing
+  icon-192.png         PWA "any" icon, 192² (Android install prompt needs this)
+  icon-512.png         PWA "any" icon, 512² (splash/store card)
+  maskable-192.png     Android maskable, artwork inside the 66% safe zone
+  maskable-512.png     Android maskable, artwork inside the 66% safe zone
+  logo-128.png         small in-app header logo (loaded at 30–54 px)
+  apple-touch-icon.png 180² opaque iOS home-screen icon
+  favicon-32/16.png    browser tab icons; favicon.ico at the repo root
 js/
   main.js               application composition root
   login.js              login (mobile + PIN) and auth tab switching
