@@ -13,7 +13,7 @@ export function initDemoForms(warnings = []) {
   }
   const seen = new WeakSet(); let scheduled = false;
   const account = () => { try { return JSON.parse(window.localStorage.getItem('active-plus-account-v1')) || {}; } catch { return {}; } };
-  const notesURL = new URL('../assets/demo-study-notes.txt', import.meta.url).href;
+  const notesURL = new URL('../assets/demo-study-notes.pdf', import.meta.url).href;
   function sample(field) {
     const id = field.id, name = field.name, key = (id || name || '').toLowerCase();
     const identity = account();

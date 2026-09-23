@@ -40,7 +40,7 @@ export function buildDemoExams(now = Date.now(), batch = 'initial') {
   result(exams[3], people[0], {}); result(exams[4], people[0], {});
   return { exams, attempts };
 }
-export function buildDemoTeaching(now = Date.now(), resourceURL = 'https://example.com/demo-study-notes.txt') {
+export function buildDemoTeaching(now = Date.now(), resourceURL = 'https://example.com/demo-study-notes.pdf') {
   const date = offset => todayISO(new Date(now + offset * 86400000)), timestamp = new Date(now).toISOString();
   return [
     ['exam', 'গত ক্লাসের গণিত পরীক্ষা', -1, 'published'], ['homework', 'আজকের বাড়ির কাজ', 1, 'published'],
@@ -70,9 +70,18 @@ export async function prepareDemoData() {
   const errors = [];
   for (const task of [seedExams, () => locked(TEACHING_KEY, async () => {
     const marker = `${TEACHING_KEY}.demo-seeded.v1`;
-    if (window.localStorage.getItem(marker)) return;
+    const notesPDF = new URL('../assets/demo-study-notes.pdf', import.meta.url).href;
     const db = await teachingRepository.list();
-    db.activities.push(...buildDemoTeaching(Date.now(), new URL('../assets/demo-study-notes.txt', import.meta.url).href).filter(a => !db.activities.some(old => old.id === a.id)));
+    // Devices that seeded earlier demo fixtures still hold the retired .txt
+    // link; repoint them so the supplementary-material button stays usable.
+    const stale = db.activities.filter(a => a.demoFixture && typeof a.resourceURL === 'string' && a.resourceURL.endsWith('demo-study-notes.txt'));
+    if (stale.length) {
+      stale.forEach(a => { a.resourceURL = notesPDF; a.updatedAt = new Date().toISOString(); });
+      window.localStorage.setItem(TEACHING_KEY, JSON.stringify(db));
+      window.dispatchEvent(new Event('teaching-data-updated'));
+    }
+    if (window.localStorage.getItem(marker)) return;
+    db.activities.push(...buildDemoTeaching(Date.now(), notesPDF).filter(a => !db.activities.some(old => old.id === a.id)));
     window.localStorage.setItem(TEACHING_KEY, JSON.stringify(db)); window.localStorage.setItem(marker, '1');
   }), () => locked(TRANSACTIONS_KEY, () => {
     // Never add fictional money to an already-saved ledger, even an empty one.

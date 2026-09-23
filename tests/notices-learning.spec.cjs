@@ -128,3 +128,56 @@ test('courses view: half/half filter tiles (odd last full) and tap-to-see detail
   await course.locator('summary').click();
   await expect(course.locator('.course-item-details')).toBeHidden();
 });
+
+test('supplementary material: legacy demo link migrates to the PDF, popup offers a real download', async ({ page }) => {
+  // Simulate a device that seeded demo fixtures while the material was the
+  // retired .txt, and turn demo mode on so prepareDemoData runs its migration.
+  await page.addInitScript(async () => {
+    localStorage.setItem('activePlus.demo.autofill.v1', 'on');
+    const { buildDemoTeaching } = await import('/js/demo-data.js');
+    const activities = buildDemoTeaching(Date.now(), 'https://example.com/demo-study-notes.txt');
+    localStorage.setItem('activePlus.teaching.v1', JSON.stringify({ version: 1, activities }));
+  });
+  await enter(page);
+  await page.locator('.bottom-nav [data-view=courses]').click();
+  // The stored demo fixtures kept their ids, so the migration had to rewrite
+  // the legacy .txt resource links in place instead of re-seeding.
+  await page.locator('[data-learning-filter=suggestion]').click();
+  const card = page.locator('#learningList .learning-card').first();
+  await expect(card.locator('.teaching-resource')).toHaveAttribute('href', /demo-study-notes\.pdf$/);
+  const stored = await page.evaluate(async () => {
+    const { teachingRepository } = await import('/js/teaching-data.js');
+    const db = await teachingRepository.list();
+    return db.activities.filter(a => a.demoFixture).map(a => a.resourceURL);
+  });
+  expect(stored.length).toBeGreaterThan(0);
+  expect(stored.every(url => url.endsWith('demo-study-notes.pdf'))).toBe(true);
+
+  // The button opens the material popup instead of a dead silent new tab.
+  const title = (await card.locator('.learning-card-title').textContent()).trim();
+  expect(title.length).toBeGreaterThan(3);
+  await card.locator('.learning-card-toggle').click();
+  await card.locator('.teaching-resource').click();
+  await expect(page.locator('#resourceModal')).toBeVisible();
+  await expect(page.locator('#resourceModalTitle')).toHaveText(title);
+  await expect(page.locator('#resourceModalMeta')).toContainText('demo-study-notes.pdf');
+
+  // Direct offline download of the bundled PDF.
+  const downloadPromise = page.waitForEvent('download');
+  await page.locator('#resourceDownload').click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe('demo-study-notes.pdf');
+  const path = await download.path();
+  const { statSync, readFileSync } = require('node:fs');
+  expect(statSync(path).size).toBeGreaterThan(10000);
+  expect(readFileSync(path).slice(0, 5).toString()).toBe('%PDF-');
+  const appSource = require('node:fs').readFileSync('js/student-teaching.js', 'utf8');
+  const successMessage = appSource.match(/downloadBlob\(await response\.blob\(\), fileNameOf\(resource\.url\)\);\n\s+status\.textContent = '([^']+)'/)[1];
+  await expect(page.locator('#resourceModalStatus')).toContainText(successMessage.slice(0, 12));
+  await expect(page.locator('#resourceModal')).toBeVisible();
+
+  // Opening in a new tab stays available for materials we cannot fetch.
+  await expect(page.locator('#resourceOpenTab')).toBeEnabled();
+  await page.locator('#resourceModal .modal-action').click();
+  await expect(page.locator('#resourceModal')).toBeHidden();
+});

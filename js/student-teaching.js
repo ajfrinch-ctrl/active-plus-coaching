@@ -1,6 +1,7 @@
 /* Published teacher work, scoped to the signed-in student's class and group.
    No teacher editing controls are mounted in the student app. */
-import { toBanglaNumber as bn, showFeedback } from './ui.js';
+import { toBanglaNumber as bn, showFeedback, openModal, closeModal } from './ui.js';
+import { downloadBlob } from './exam-pdf.js';
 import { teachingRepository, publishedForStudent, ACTIVITY_TYPES, PROGRESS_LABELS, escapeText as esc, displayDate, safeResourceURL, watchTeachingData } from './teaching-data.js';
 
 export function initStudentTeaching({ getStudent }) {
@@ -35,7 +36,7 @@ export function initStudentTeaching({ getStudent }) {
       ${outcome ? `<p class="learning-outcome">${esc(outcome)}</p>` : ''}
       <div class="learning-teacher"><span aria-hidden="true">${esc(Array.from(a.teacherName || 'শ')[0])}</span><small>শিক্ষক • ${esc(a.teacherName)}</small></div>
       ${link || canComplete ? `<div class="learning-card-actions">
-        ${link ? `<a class="teaching-resource" href="${esc(link)}" target="_blank" rel="noopener noreferrer">সহায়ক উপকরণ খুলুন <span aria-hidden="true">↗</span></a>` : ''}
+        ${link ? `<a class="teaching-resource" href="${esc(link)}" target="_blank" rel="noopener noreferrer">সহায়ক উপকরণ খুলুন <svg class="resource-arrow" aria-hidden="true" viewBox="0 0 24 24"><path d="M7 17 17 7M9 7h8v8"/></svg></a>` : ''}
         ${canComplete ? `<div class="teaching-actions"><button class="primary" type="button" data-complete-homework="${esc(a.id)}" ${pending.has(a.id) ? 'disabled' : ''}>${pending.has(a.id) ? 'সংরক্ষণ হচ্ছে…' : 'কাজ সম্পন্ন হয়েছে জানাও'}</button></div><small class="learning-action-note">এটি শুধু সম্পন্ন হওয়ার খবর; খাতা/ফাইল জমা নয়।</small>` : ''}
       </div>` : ''}
       </div>
@@ -102,6 +103,46 @@ export function initStudentTeaching({ getStudent }) {
     try { await teachingRepository.markHomeworkDone(id, getStudent()); showFeedback('কাজ সম্পন্ন হওয়ার খবর সংরক্ষিত হয়েছে'); }
     catch { showFeedback('সংরক্ষণ হয়নি। আবার চেষ্টা করো।'); }
     finally { pending.delete(id); await refresh(); }
+  });
+
+  /* Supplementary materials: a real popup instead of a bare target=_blank
+     link, which silently shows nothing in many in-app browsers and never
+     downloads. The popup tries a direct offline download first and falls
+     back to opening a new tab. */
+  let resource = null;
+  const fileNameOf = url => {
+    try { const name = decodeURIComponent(new URL(url, location.href).pathname.split('/').filter(Boolean).pop() || ''); if (name) return name; } catch { /* fall through */ }
+    return 'sahayok-upokoron';
+  };
+  document.addEventListener('click', event => {
+    const link = event.target.closest('a.teaching-resource');
+    if (!link) return;
+    event.preventDefault();
+    resource = { url: link.href };
+    const card = link.closest('.teaching-card');
+    $('#resourceModalTitle').textContent = card?.querySelector('.learning-card-title')?.textContent.trim() || 'সহায়ক উপকরণ';
+    $('#resourceModalMeta').textContent = `ফাইল: ${fileNameOf(link.href)}`;
+    const status = $('#resourceModalStatus'); status.textContent = ''; status.classList.remove('is-error');
+    openModal('resourceModal');
+  });
+  $('#resourceOpenTab').addEventListener('click', () => {
+    if (resource?.url) window.open(resource.url, '_blank', 'noopener,noreferrer');
+    closeModal('resourceModal');
+  });
+  $('#resourceDownload').addEventListener('click', async () => {
+    if (!resource?.url) return;
+    const button = $('#resourceDownload'), status = $('#resourceModalStatus');
+    button.disabled = true; status.classList.remove('is-error'); status.textContent = 'ডাউনলোড শুরু হচ্ছে…';
+    try {
+      const response = await fetch(resource.url);
+      if (!response.ok) throw new Error('load');
+      downloadBlob(await response.blob(), fileNameOf(resource.url));
+      status.textContent = 'ডাউনলোড শুরু হয়েছে — ডিভাইসের ডাউনলোড ফোল্ডারে পাওয়া যাবে।';
+    } catch {
+      status.classList.add('is-error');
+      status.textContent = 'সরাসরি ডাউনলোড সম্ভব হয়নি — উপকরণটি নতুন ট্যাবে খুলছি।';
+      window.open(resource.url, '_blank', 'noopener,noreferrer');
+    } finally { button.disabled = false; }
   });
   watchTeachingData(refresh);
   refresh();
