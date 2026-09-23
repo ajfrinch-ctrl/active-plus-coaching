@@ -10,7 +10,7 @@ import { teachingRepository, DEMO_TEACHER, ACTIVITY_TYPES, PROGRESS_LABELS, esca
 
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
-const state = { db: { activities: [] }, students: [], view: 'home', status: 'all', ready: false, busy: false, recordLimit: 15 };
+const state = { db: { activities: [] }, students: [], view: 'home', homeClass: 'all', status: 'all', ready: false, busy: false, recordLimit: 15 };
 let modalTrigger, toastTimer;
 const demoWarnings = await prepareDemoData();
 initFixedShell();
@@ -51,9 +51,9 @@ function pendingNote(a) {
   return stats.missing ? `${bn(stats.missing)} জনের উপস্থিতি বাকি` : '';
 }
 /** The home work queue: drafts to publish, marks to give, notebooks to check, attendance to take. */
-function attentionItems() {
+function attentionItems(source = own()) {
   const today = todayISO();
-  return own()
+  return source
     .map(a => ({ a, note: pendingNote(a) }))
     .filter(item => item.note)
     .sort((x, y) => `${y.a.date === today}|${y.a.date}`.localeCompare(`${x.a.date === today}|${x.a.date}`))
@@ -123,7 +123,8 @@ function renderTypeCounts() {
 function renderHome() {
   const today = todayISO();
   $('#teacherToday').textContent = displayDate(today);
-  const records = own();
+  const scope = state.homeClass;
+  const records = own().filter(a => scope === 'all' || a.className === scope);
   const published = records.filter(a => a.status === 'published');
   $('#teacherPublishedCount').textContent = bn(published.length);
   $('#teacherDraftCount').textContent = bn(records.length - published.length);
@@ -134,8 +135,8 @@ function renderHome() {
   $('#teacherTodayClassCount').textContent = bn(todays.length);
   renderTypeCounts();
 
-  const items = attentionItems();
-  $('#teacherAttentionHint').textContent = items.length ? `${bn(items.length)}টি কাজ বাকি` : 'সব কাজ শেষ';
+  const items = attentionItems(records);
+  $('#teacherAttentionHint').textContent = items.length ? `${bn(items.length)}টি কাজ বাকি${scope === 'all' ? '' : ' • ' + esc(scope)}` : (scope === 'all' ? 'সব কাজ শেষ' : `${esc(scope)} — সব কাজ শেষ`);
   $('#teacherAttention').innerHTML = items.length
     ? items.map(({ a, note }) => queueCard(a, note, a.status === 'published' && ACTIVITY_TYPES[a.type].progress ? ACTIVITY_TYPES[a.type].progress : 'সম্পাদনা করুন')).join('')
     : '<p class="teacher-empty teacher-all-clear">সব কাজ শেষ — নম্বর, খাতা দেখা ও উপস্থিতি সব নথিভুক্ত আছে।</p>';
@@ -371,7 +372,7 @@ function showStudent(id) {
   openModal(s.name, `<p class="modal-copy">Student ID: ${esc(s.id)} • ${esc(s.className)} • ${esc(s.group || '—')}</p><div class="teacher-record-list">${records.map(a => `<article class="teaching-card"><small>${ACTIVITY_TYPES[a.type].label}</small><h3>${esc(a.title)}</h3><p>${a.type === 'exam' ? `${bn(a.progress[s.id].value)} / ${bn(a.totalMarks)}` : PROGRESS_LABELS[a.progress[s.id].value] || '—'}</p></article>`).join('') || '<p class="teacher-empty">এখনও কোনো নম্বর বা অগ্রগতি নথিভুক্ত হয়নি।</p>'}</div>`);
 }
 
-['teacherClassFilter', 'teacherStudentClass'].forEach(id => { $('#' + id).insertAdjacentHTML('beforeend', classOptions()); });
+['teacherHomeClass', 'teacherClassFilter', 'teacherStudentClass'].forEach(id => { $('#' + id).insertAdjacentHTML('beforeend', classOptions()); });
 /* Admin-controlled teacher registration/entry gate (Admin Panel → শিক্ষক রেজিস্ট্রেশন নিয়ন্ত্রণ). */
 const teacherRegistrationOpen = () => loadAppConfig().allowTeacherRegistration !== false;
 function syncTeacherRegistrationNotice() {
@@ -402,6 +403,7 @@ $('#teacherExit').addEventListener('click', () => { $('#teacherShell').hidden = 
 $('#teacherRetry').addEventListener('click', reload);
 $('#teacherNewActivity').addEventListener('click', () => showEditor(state.view));
 ['teacherRecordSearch', 'teacherClassFilter'].forEach(id => $('#' + id).addEventListener(id.includes('Search') ? 'input' : 'change', () => { state.recordLimit = 15; renderRecords(); }));
+$('#teacherHomeClass').addEventListener('change', () => { state.homeClass = $('#teacherHomeClass').value; renderHome(); });
 /* Type tabs above the list: switch record type without going back to the nav. */
 $('.teacher-type-tabs').addEventListener('click', event => {
   const tab = event.target.closest('[data-type-tab]'); if (!tab) return;

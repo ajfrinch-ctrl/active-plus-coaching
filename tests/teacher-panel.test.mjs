@@ -179,3 +179,36 @@ test('a class with everything recorded leaves the queue and reads as done', asyn
   // Only the draft exam is left waiting on this tab now.
   assert.equal($('#navDot-exam').textContent, '১');
 });
+
+test('the home screen can be scoped to one class', async () => {
+  const select = () => $('#teacherHomeClass');
+  const pick = value => {
+    select().value = value;
+    select().dispatchEvent(new ctx.window.Event('change', { bubbles: true }));
+  };
+  const digits = text => Number(String(text).replace(/[০-৯]/g, d => '০১২৩৪৫৬৭৮৯'.indexOf(d)));
+  const pendingAll = digits($('#teacherPendingCount').textContent);
+  assert.equal(select().options[0].value, 'all');
+  assert.ok(select().options.length > 5, 'the picker offers every class the app runs');
+
+  // Both classes below have approved students, so both pieces of work are pending.
+  await teachingRepository.saveActivity({ type: 'homework', title: 'দশম শ্রেণির কাজ', subject: 'গণিত', className: 'দশম শ্রেণি', date: todayISO(), time: '20:00', status: 'published', details: 'অধ্যায় ২' });
+  await teachingRepository.saveActivity({ type: 'homework', title: 'অনার্সের কাজ', subject: 'বাংলা', className: 'অনার্স ১ম বর্ষ', date: todayISO(), time: '20:00', status: 'published', details: 'রচনা' });
+  await settle();
+  assert.equal(digits($('#teacherPendingCount').textContent), pendingAll + 2, 'both count while সব শ্রেণি is selected');
+  assert.ok(queueTitle().includes('দশম শ্রেণির কাজ') && queueTitle().includes('অনার্সের কাজ'));
+
+  pick('দশম শ্রেণি');
+  assert.equal(queueTitle().includes('দশম শ্রেণির কাজ'), true);
+  assert.equal(queueTitle().includes('অনার্সের কাজ'), false, 'another class drops out of the queue');
+  assert.equal(digits($('#teacherPendingCount').textContent), pendingAll + 1, 'and out of the counter');
+  assert.match($('#teacherAttentionHint').textContent, /দশম শ্রেণি/, 'the hint names the class');
+
+  pick('অনার্স ১ম বর্ষ');
+  assert.deepEqual(queueTitle(), ['অনার্সের কাজ'], 'that class shows only its own work');
+  assert.equal($('#teacherTodayClassCount').textContent, '০');
+
+  pick('all');
+  assert.equal(digits($('#teacherPendingCount').textContent), pendingAll + 2, 'সব শ্রেণি brings everything back');
+  assert.equal(/শ্রেণি|বর্ষ/.test($('#teacherAttentionHint').textContent), false, 'and the hint stops naming a class');
+});
