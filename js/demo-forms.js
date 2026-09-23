@@ -13,7 +13,6 @@ export function initDemoForms(warnings = []) {
   }
   const seen = new WeakSet(); let scheduled = false;
   const account = () => { try { return JSON.parse(window.localStorage.getItem('active-plus-account-v1')) || {}; } catch { return {}; } };
-  const notesURL = new URL('../assets/demo-study-notes.pdf', import.meta.url).href;
   function sample(field) {
     const id = field.id, name = field.name, key = (id || name || '').toLowerCase();
     const identity = account();
@@ -42,7 +41,7 @@ export function initDemoForms(warnings = []) {
     if (name === 'template') return field.form?.querySelector('[data-copy-template]')?.value || '';
     if (field.type === 'password') return DEFAULT_PIN;
     if (field.type === 'search') return 'ডেমো';
-    if (field.type === 'url' || /resourceurl/.test(key)) return notesURL;
+    if (field.type === 'url' || /resourceurl/.test(key)) return 'https://example.com/class-notes';
     if (field.type === 'email') return 'demo@example.com';
     if (field.type === 'tel' || /mobile|phone/.test(key)) return '01911112222';
     if (field.type === 'date') return /birth/.test(key) ? defaultStudent.birthDate : new Date().toLocaleDateString('en-CA');

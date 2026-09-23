@@ -40,13 +40,13 @@ export function buildDemoExams(now = Date.now(), batch = 'initial') {
   result(exams[3], people[0], {}); result(exams[4], people[0], {});
   return { exams, attempts };
 }
-export function buildDemoTeaching(now = Date.now(), resourceURL = 'https://example.com/demo-study-notes.pdf') {
+export function buildDemoTeaching(now = Date.now()) {
   const date = offset => todayISO(new Date(now + offset * 86400000)), timestamp = new Date(now).toISOString();
   return [
     ['exam', 'গত ক্লাসের গণিত পরীক্ষা', -1, 'published'], ['homework', 'আজকের বাড়ির কাজ', 1, 'published'],
     ['suggestion', 'গণিত সাজেশন ও পড়ার নোট', 0, 'published'], ['routine', 'আজকের সহায়ক গণিত ক্লাস', 0, 'published'], ['exam', 'পরবর্তী ক্লাসের খসড়া পরীক্ষা', 2, 'draft']
   ].map(([type, title, day, status]) => ({
-    ...validateActivity({ type, title: `ডেমো: ${title}`, subject: 'গণিত', className: 'দশম শ্রেণি', group: 'বিজ্ঞান বিভাগ', date: date(day), time: type === 'routine' ? '16:00' : '18:00', duration: 60, totalMarks: 100, status, room: 'রুম ২০৩', details: 'বীজগণিতের প্রথম অধ্যায় পড়বে। অনুশীলনী ১-এর প্রশ্ন সমাধান করবে। এটি অ্যাপ চেক করার নমুনা কাজ।', resourceURL }),
+    ...validateActivity({ type, title: `ডেমো: ${title}`, subject: 'গণিত', className: 'দশম শ্রেণি', group: 'বিজ্ঞান বিভাগ', date: date(day), time: type === 'routine' ? '16:00' : '18:00', duration: 60, totalMarks: 100, status, room: 'রুম ২০৩', details: 'বীজগণিতের প্রথম অধ্যায় পড়বে। অনুশীলনী ১-এর প্রশ্ন সমাধান করবে। এটি অ্যাপ চেক করার নমুনা কাজ।', resourceURL: '' }),
     id: `DEMO-ACT-${type}-${status}`, teacherId: DEMO_TEACHER.id, teacherName: DEMO_TEACHER.name, createdAt: timestamp, updatedAt: timestamp,
     progress: status === 'draft' || type === 'suggestion' ? {} : Object.fromEntries(['AP-1024', '260810021'].map((id, i) => [id, { value: type === 'exam' ? 85 + i * 5 : type === 'homework' ? (i ? 'done' : 'pending') : (i ? 'late' : 'present'), updatedAt: timestamp }])), demoFixture: true
   }));
@@ -70,18 +70,17 @@ export async function prepareDemoData() {
   const errors = [];
   for (const task of [seedExams, () => locked(TEACHING_KEY, async () => {
     const marker = `${TEACHING_KEY}.demo-seeded.v1`;
-    const notesPDF = new URL('../assets/demo-study-notes.pdf', import.meta.url).href;
     const db = await teachingRepository.list();
     // Devices that seeded earlier demo fixtures still hold the retired .txt
     // link; repoint them so the supplementary-material button stays usable.
-    const stale = db.activities.filter(a => a.demoFixture && typeof a.resourceURL === 'string' && a.resourceURL.endsWith('demo-study-notes.txt'));
+    const stale = db.activities.filter(a => a.demoFixture && /demo-study-notes\.(txt|pdf)$/.test(a.resourceURL || ''));
     if (stale.length) {
-      stale.forEach(a => { a.resourceURL = notesPDF; a.updatedAt = new Date().toISOString(); });
+      stale.forEach(a => { a.resourceURL = ''; a.updatedAt = new Date().toISOString(); });
       window.localStorage.setItem(TEACHING_KEY, JSON.stringify(db));
       window.dispatchEvent(new Event('teaching-data-updated'));
     }
     if (window.localStorage.getItem(marker)) return;
-    db.activities.push(...buildDemoTeaching(Date.now(), notesPDF).filter(a => !db.activities.some(old => old.id === a.id)));
+    db.activities.push(...buildDemoTeaching(Date.now()).filter(a => !db.activities.some(old => old.id === a.id)));
     window.localStorage.setItem(TEACHING_KEY, JSON.stringify(db)); window.localStorage.setItem(marker, '1');
   }), () => locked(TRANSACTIONS_KEY, () => {
     // Never add fictional money to an already-saved ledger, even an empty one.

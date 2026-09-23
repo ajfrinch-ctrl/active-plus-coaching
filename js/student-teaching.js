@@ -2,6 +2,7 @@
    No teacher editing controls are mounted in the student app. */
 import { toBanglaNumber as bn, showFeedback, openModal, closeModal } from './ui.js';
 import { downloadBlob } from './exam-pdf.js';
+import { activitySheetPDF, materialFileName } from './material-pdf.js';
 import { teachingRepository, publishedForStudent, ACTIVITY_TYPES, PROGRESS_LABELS, escapeText as esc, displayDate, safeResourceURL, watchTeachingData } from './teaching-data.js';
 
 export function initStudentTeaching({ getStudent }) {
@@ -12,6 +13,7 @@ export function initStudentTeaching({ getStudent }) {
   function card(a, student) {
     const progress = a.progress[student.id];
     const link = safeResourceURL(a.resourceURL);
+    const material = !link && Boolean((a.details || '').trim());
     const outcome = a.type === 'exam' && progress ? `প্রাপ্ত নম্বর: ${bn(progress.value)} / ${bn(a.totalMarks)}` : progress ? PROGRESS_LABELS[progress.value] : '';
     const canComplete = a.type === 'homework' && !['done', 'reviewed'].includes(progress?.value);
     const complete = a.type === 'homework' && ['done', 'reviewed'].includes(progress?.value);
@@ -35,8 +37,8 @@ export function initStudentTeaching({ getStudent }) {
       <p class="teaching-body">${esc(a.details)}</p>
       ${outcome ? `<p class="learning-outcome">${esc(outcome)}</p>` : ''}
       <div class="learning-teacher"><span aria-hidden="true">${esc(Array.from(a.teacherName || 'শ')[0])}</span><small>শিক্ষক • ${esc(a.teacherName)}</small></div>
-      ${link || canComplete ? `<div class="learning-card-actions">
-        ${link ? `<a class="teaching-resource" href="${esc(link)}" target="_blank" rel="noopener noreferrer">সহায়ক উপকরণ খুলুন <svg class="resource-arrow" aria-hidden="true" viewBox="0 0 24 24"><path d="M7 17 17 7M9 7h8v8"/></svg></a>` : ''}
+      ${link || material || canComplete ? `<div class="learning-card-actions">
+        ${link ? `<a class="teaching-resource" href="${esc(link)}" target="_blank" rel="noopener noreferrer">সহায়ক উপকরণ খুলুন <svg class="resource-arrow" aria-hidden="true" viewBox="0 0 24 24"><path d="M7 17 17 7M9 7h8v8"/></svg></a>` : material ? `<a class="teaching-resource" href="#material" data-material="${esc(a.id)}">উপকরণ PDF ডাউনলোড করুন</a>` : ''}
         ${canComplete ? `<div class="teaching-actions"><button class="primary" type="button" data-complete-homework="${esc(a.id)}" ${pending.has(a.id) ? 'disabled' : ''}>${pending.has(a.id) ? 'সংরক্ষণ হচ্ছে…' : 'কাজ সম্পন্ন হয়েছে জানাও'}</button></div><small class="learning-action-note">এটি শুধু সম্পন্ন হওয়ার খবর; খাতা/ফাইল জমা নয়।</small>` : ''}
       </div>` : ''}
       </div>
@@ -105,10 +107,10 @@ export function initStudentTeaching({ getStudent }) {
     finally { pending.delete(id); await refresh(); }
   });
 
-  /* Supplementary materials: a real popup instead of a bare target=_blank
-     link, which silently shows nothing in many in-app browsers and never
-     downloads. The popup tries a direct offline download first and falls
-     back to opening a new tab. */
+  /* Supplementary materials: external files open a popup with a direct
+     download; work without a file generates its own PDF in-app from the
+     bundled Bangla font — fully offline, like every PDF in this app except
+     the payment-portal receipts. */
   let resource = null;
   const fileNameOf = url => {
     try { const name = decodeURIComponent(new URL(url, location.href).pathname.split('/').filter(Boolean).pop() || ''); if (name) return name; } catch { /* fall through */ }
@@ -118,10 +120,12 @@ export function initStudentTeaching({ getStudent }) {
     const link = event.target.closest('a.teaching-resource');
     if (!link) return;
     event.preventDefault();
-    resource = { url: link.href };
+    const activity = link.dataset.material ? db.activities.find(a => a.id === link.dataset.material) : null;
+    resource = activity ? { material: activity } : { url: link.href };
     const card = link.closest('.teaching-card');
     $('#resourceModalTitle').textContent = card?.querySelector('.learning-card-title')?.textContent.trim() || 'সহায়ক উপকরণ';
-    $('#resourceModalMeta').textContent = `ফাইল: ${fileNameOf(link.href)}`;
+    $('#resourceModalMeta').textContent = activity ? `ফাইল: ${materialFileName(activity)}` : `ফাইল: ${fileNameOf(link.href)}`;
+    $('#resourceOpenTab').hidden = Boolean(activity); // nothing to open in a tab for in-app materials
     const status = $('#resourceModalStatus'); status.textContent = ''; status.classList.remove('is-error');
     openModal('resourceModal');
   });
@@ -130,18 +134,25 @@ export function initStudentTeaching({ getStudent }) {
     closeModal('resourceModal');
   });
   $('#resourceDownload').addEventListener('click', async () => {
-    if (!resource?.url) return;
+    if (!resource) return;
     const button = $('#resourceDownload'), status = $('#resourceModalStatus');
-    button.disabled = true; status.classList.remove('is-error'); status.textContent = 'ডাউনলোড শুরু হচ্ছে…';
+    button.disabled = true; status.classList.remove('is-error');
+    status.textContent = resource.material ? 'PDF তৈরি হচ্ছে…' : 'ডাউনলোড শুরু হচ্ছে…';
     try {
-      const response = await fetch(resource.url);
-      if (!response.ok) throw new Error('load');
-      downloadBlob(await response.blob(), fileNameOf(resource.url));
+      if (resource.material) await activitySheetPDF(resource.material);
+      else {
+        const response = await fetch(resource.url);
+        if (!response.ok) throw new Error('load');
+        downloadBlob(await response.blob(), fileNameOf(resource.url));
+      }
       status.textContent = 'ডাউনলোড শুরু হয়েছে — ডিভাইসের ডাউনলোড ফোল্ডারে পাওয়া যাবে।';
     } catch {
       status.classList.add('is-error');
-      status.textContent = 'সরাসরি ডাউনলোড সম্ভব হয়নি — উপকরণটি নতুন ট্যাবে খুলছি।';
-      window.open(resource.url, '_blank', 'noopener,noreferrer');
+      if (resource.material) status.textContent = 'PDF তৈরি হয়নি। আবার চেষ্টা করো।';
+      else {
+        status.textContent = 'সরাসরি ডাউনলোড সম্ভব হয়নি — উপকরণটি নতুন ট্যাবে খুলছি।';
+        window.open(resource.url, '_blank', 'noopener,noreferrer');
+      }
     } finally { button.disabled = false; }
   });
   watchTeachingData(refresh);

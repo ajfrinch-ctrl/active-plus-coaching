@@ -1,4 +1,4 @@
-const CACHE_NAME = 'active-plus-student-v47-resource-popup';
+const CACHE_NAME = 'active-plus-student-v48-material-pdf';
 const APP_SHELL = [
   './',
   './index.html',
@@ -34,11 +34,11 @@ const APP_SHELL = [
   './js/config.js',
   './js/demo-data.js',
   './js/demo-forms.js',
-  './assets/demo-study-notes.pdf',
   './js/exam-data.js',
   './js/exam-ui.js',
   './js/exam-manager.js',
   './js/exam-pdf.js',
+  './js/material-pdf.js',
   './js/student-exams.js',
   './js/account-policy.js',
   './js/storage.js',

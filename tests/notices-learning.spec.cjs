@@ -129,55 +129,59 @@ test('courses view: half/half filter tiles (odd last full) and tap-to-see detail
   await expect(course.locator('.course-item-details')).toBeHidden();
 });
 
-test('supplementary material: legacy demo link migrates to the PDF, popup offers a real download', async ({ page }) => {
-  // Simulate a device that seeded demo fixtures while the material was the
-  // retired .txt, and turn demo mode on so prepareDemoData runs its migration.
+test('material button generates the PDF in-app offline; external links still download', async ({ page }) => {
+  // Simulate a device that seeded demo fixtures while they still pointed at
+  // the retired demo-study-notes file; prepareDemoData must clear those links
+  // so the material button regenerates the sheet in-app instead of 404ing.
   await page.addInitScript(async () => {
     localStorage.setItem('activePlus.demo.autofill.v1', 'on');
     const { buildDemoTeaching } = await import('/js/demo-data.js');
-    const activities = buildDemoTeaching(Date.now(), 'https://example.com/demo-study-notes.txt');
+    const activities = buildDemoTeaching(Date.now()).map(a => ({ ...a, resourceURL: 'https://example.com/demo-study-notes.txt' }));
     localStorage.setItem('activePlus.teaching.v1', JSON.stringify({ version: 1, activities }));
   });
   await enter(page);
   await page.locator('.bottom-nav [data-view=courses]').click();
-  // The stored demo fixtures kept their ids, so the migration had to rewrite
-  // the legacy .txt resource links in place instead of re-seeding.
   await page.locator('[data-learning-filter=suggestion]').click();
-  const card = page.locator('#learningList .learning-card').first();
-  await expect(card.locator('.teaching-resource')).toHaveAttribute('href', /demo-study-notes\.pdf$/);
+
   const stored = await page.evaluate(async () => {
     const { teachingRepository } = await import('/js/teaching-data.js');
     const db = await teachingRepository.list();
-    return db.activities.filter(a => a.demoFixture).map(a => a.resourceURL);
+    return db.activities.filter(a => a.demoFixture).map(a => a.resourceURL || '');
   });
   expect(stored.length).toBeGreaterThan(0);
-  expect(stored.every(url => url.endsWith('demo-study-notes.pdf'))).toBe(true);
+  expect(stored.some(url => url.includes('demo-study-notes'))).toBe(false);
 
-  // The button opens the material popup instead of a dead silent new tab.
-  const title = (await card.locator('.learning-card-title').textContent()).trim();
-  expect(title.length).toBeGreaterThan(3);
+  // No external file: the button generates the sheet PDF inside the app.
+  const card = page.locator('#learningList .learning-card').first();
   await card.locator('.learning-card-toggle').click();
-  await card.locator('.teaching-resource').click();
+  await card.locator('a.teaching-resource[data-material]').click();
   await expect(page.locator('#resourceModal')).toBeVisible();
-  await expect(page.locator('#resourceModalTitle')).toHaveText(title);
-  await expect(page.locator('#resourceModalMeta')).toContainText('demo-study-notes.pdf');
-
-  // Direct offline download of the bundled PDF.
-  const downloadPromise = page.waitForEvent('download');
+  await expect(page.locator('#resourceModalMeta')).toContainText('ActivePlus-material-');
+  const download = page.waitForEvent('download');
   await page.locator('#resourceDownload').click();
-  const download = await downloadPromise;
-  expect(download.suggestedFilename()).toBe('demo-study-notes.pdf');
-  const path = await download.path();
+  const material = await download;
+  expect(material.suggestedFilename()).toMatch(/^ActivePlus-material-[a-z]+-\d{4}-\d{2}-\d{2}\.pdf$/);
+  const materialPath = await material.path();
   const { statSync, readFileSync } = require('node:fs');
-  expect(statSync(path).size).toBeGreaterThan(10000);
-  expect(readFileSync(path).slice(0, 5).toString()).toBe('%PDF-');
-  const appSource = require('node:fs').readFileSync('js/student-teaching.js', 'utf8');
-  const successMessage = appSource.match(/downloadBlob\(await response\.blob\(\), fileNameOf\(resource\.url\)\);\n\s+status\.textContent = '([^']+)'/)[1];
+  expect(statSync(materialPath).size).toBeGreaterThan(10000);
+  expect(readFileSync(materialPath).slice(0, 5).toString()).toBe('%PDF-');
+  const appSource = readFileSync('js/student-teaching.js', 'utf8');
+  const successMessage = appSource.match(/status\.textContent = '([^']+)';\n    \} catch \{/)[1];
   await expect(page.locator('#resourceModalStatus')).toContainText(successMessage.slice(0, 12));
   await expect(page.locator('#resourceModal')).toBeVisible();
-
-  // Opening in a new tab stays available for materials we cannot fetch.
-  await expect(page.locator('#resourceOpenTab')).toBeEnabled();
   await page.locator('#resourceModal .modal-action').click();
   await expect(page.locator('#resourceModal')).toBeHidden();
+
+  // External files still download directly through the same popup.
+  await page.evaluate(async () => {
+    const { teachingRepository: repo } = await import('/js/teaching-data.js');
+    await repo.saveActivity({ type: 'suggestion', title: 'Reference link card', subject: 'গণিত', className: 'দশম শ্রেণি', status: 'published', details: 'নমুনা বিবরণ।', resourceURL: new URL('/assets/icons/app-logo.png', location.href).href });
+  });
+  const external = page.locator('#learningList .learning-card').filter({ hasText: 'Reference link card' });
+  await external.locator('.learning-card-toggle').click();
+  await external.locator('a.teaching-resource:not([data-material])').click();
+  await expect(page.locator('#resourceModalMeta')).toContainText('app-logo.png');
+  const externalDownload = page.waitForEvent('download');
+  await page.locator('#resourceDownload').click();
+  expect((await externalDownload).suggestedFilename()).toBe('app-logo.png');
 });

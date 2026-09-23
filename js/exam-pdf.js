@@ -6,7 +6,7 @@
 import { toBanglaNumber as bn } from './ui.js';
 import { EXAM_TYPES, totalMarks, classExamDate } from './exam-data.js';
 let assets;
-async function loadAssets() {
+export async function loadAssets() {
   if (!assets) assets = Promise.all([
     new FontFace('ExamBangla', `url("${new URL('../assets/fonts/NotoSansBengali-Variable.ttf', import.meta.url).href}")`, { weight: '100 900' }).load().then(font => document.fonts.add(font)),
     (async () => { const logo = new Image(); logo.src = new URL('../assets/icons/app-logo.png', import.meta.url).href; await logo.decode(); return logo; })()
@@ -38,7 +38,7 @@ export function downloadBlob(blob, name) {
   link.href = url; link.download = name; document.body.append(link); link.click(); link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
-function wrap(ctx, text, width) {
+export function wrapText(ctx, text, width) {
   const lines = [], segmenter = typeof Intl.Segmenter === 'function' ? new Intl.Segmenter('bn', { granularity: 'grapheme' }) : null;
   for (const paragraph of String(text).split('\n')) {
     let line = '';
@@ -105,7 +105,7 @@ export async function downloadExamPDF(exam, { solutions = false, attempt = null,
   const drawParagraph = async (content, { bold = false, size = 25, width = CONTENT_W, x = LEFT, color = '#1e2f28' } = {}) => {
     ctx.font = `${bold ? '700 ' : ''}${size}px ExamBangla`;
     const lineHeight = size === 25 ? 39 : 36;
-    for (const line of wrap(ctx, content, width)) {
+    for (const line of wrapText(ctx, content, width)) {
       if (y > BOTTOM) { await finishPage(); y = beginPage({ part: partSolutions ? 'উত্তরপত্র' : 'প্রশ্নপত্র' }); ctx.font = `${bold ? '700 ' : ''}${size}px ExamBangla`; }
       ctx.fillStyle = color; ctx.fillText(line, x, y); y += lineHeight;
     }
@@ -127,7 +127,7 @@ export async function downloadExamPDF(exam, { solutions = false, attempt = null,
       const chosen = solutions && attempt ? options.findIndex(o => o.id === attempt?.answers?.[qid]) : -1;
       const heights = cells.map(({ option, width }) => {
         ctx.font = '24px ExamBangla';
-        return Math.max(30, wrap(ctx, option.text, width - 44).length * 32);
+        return Math.max(30, wrapText(ctx, option.text, width - 44).length * 32);
       });
       const rowHeight = Math.max(40, ...heights);
       cells.forEach(({ option, x, width }, cellIndex) => {
@@ -142,7 +142,7 @@ export async function downloadExamPDF(exam, { solutions = false, attempt = null,
         ctx.fillText(letter, x + 11, y - 3); ctx.textAlign = 'left';
         ctx.font = '24px ExamBangla'; ctx.fillStyle = '#1e2f28';
         if (isChosen) ctx.font = '700 24px ExamBangla';
-        wrap(ctx, option.text, width - 44).forEach((line, i) => ctx.fillText(line, x + 32, y + i * 32));
+        wrapText(ctx, option.text, width - 44).forEach((line, i) => ctx.fillText(line, x + 32, y + i * 32));
       });
       y += rowHeight + 8;
     }
@@ -194,7 +194,7 @@ export async function downloadExamPDF(exam, { solutions = false, attempt = null,
     }
     if (exam.instructions) {
       ctx.font = '19px ExamBangla'; ctx.fillStyle = '#596960';
-      wrap(ctx, exam.instructions, CONTENT_W).forEach(line => { ctx.fillText(line, LEFT, y); y += 28; });
+      wrapText(ctx, exam.instructions, CONTENT_W).forEach(line => { ctx.fillText(line, LEFT, y); y += 28; });
     }
     y += 16;
     const cellW = CONTENT_W / 6;
