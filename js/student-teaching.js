@@ -15,10 +15,17 @@ export function initStudentTeaching({ getStudent }) {
     const canComplete = a.type === 'homework' && !['done', 'reviewed'].includes(progress?.value);
     const complete = a.type === 'homework' && ['done', 'reviewed'].includes(progress?.value);
     const status = a.type === 'homework' ? (complete ? 'সম্পন্ন' : 'কাজ বাকি') : a.type === 'exam' ? (progress ? 'ফলাফল দেওয়া হয়েছে' : 'মূল্যায়ন') : a.type === 'routine' ? 'ক্লাস রুটিন' : 'পড়ার উপকরণ';
+    const when = a.date ? `${a.type === 'homework' ? 'জমার শেষ সময়' : a.type === 'routine' ? 'ক্লাসের সময়' : 'নির্ধারিত তারিখ'}: ${esc(displayDate(a.date))}${a.time ? ` • ${num(a.time)}` : ''}` : a.room ? `স্থান: ${esc(a.room)}` : '';
+    const brief = [when, outcome].filter(Boolean).join(' • ') || 'সব তথ্য দেখতে চাপ দিন';
     return `<article class="teaching-card learning-card learning-${esc(a.type)}" data-learning-id="${esc(a.id)}">
-      <div class="teaching-card-head"><span class="teaching-kind">${ACTIVITY_TYPES[a.type].label}</span><span class="learning-state${complete ? ' is-complete' : ''}">${status}</span></div>
-      <h3>${esc(a.title)}</h3>
-      <p class="learning-subject">${esc(a.subject)} <span>• ${esc(a.className)} • ${esc(a.group || 'সব বিভাগ')}</span></p>
+      <button class="learning-card-toggle" type="button" aria-expanded="false" aria-controls="learning-details-${esc(a.id)}">
+        <span class="teaching-card-head"><span class="teaching-kind">${ACTIVITY_TYPES[a.type].label}</span><span class="learning-state${complete ? ' is-complete' : ''}">${status}</span></span>
+        <strong class="learning-card-title">${esc(a.title)}</strong>
+        <span class="learning-subject">${esc(a.subject)} <span>• ${esc(a.className)} • ${esc(a.group || 'সব বিভাগ')}</span></span>
+        <span class="learning-brief">${brief}</span>
+        <span class="learning-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></span>
+      </button>
+      <div class="learning-card-details" id="learning-details-${esc(a.id)}" hidden>
       ${a.date || a.room || a.totalMarks ? `<div class="learning-meta">
         ${a.date ? `<div><small>${a.type === 'homework' ? 'জমার শেষ সময়' : a.type === 'routine' ? 'ক্লাসের সময়' : 'নির্ধারিত তারিখ'}</small><strong>${esc(displayDate(a.date))}</strong>${a.time ? `<span>${num(a.time)}${a.duration ? ' • ' + num(a.duration) + ' মিনিট' : ''}</span>` : ''}</div>` : ''}
         ${a.room ? `<div><small>স্থান</small><strong>${esc(a.room)}</strong></div>` : ''}
@@ -31,6 +38,7 @@ export function initStudentTeaching({ getStudent }) {
         ${link ? `<a class="teaching-resource" href="${esc(link)}" target="_blank" rel="noopener noreferrer">সহায়ক উপকরণ খুলুন <span aria-hidden="true">↗</span></a>` : ''}
         ${canComplete ? `<div class="teaching-actions"><button class="primary" type="button" data-complete-homework="${esc(a.id)}" ${pending.has(a.id) ? 'disabled' : ''}>${pending.has(a.id) ? 'সংরক্ষণ হচ্ছে…' : 'কাজ সম্পন্ন হয়েছে জানাও'}</button></div><small class="learning-action-note">এটি শুধু সম্পন্ন হওয়ার খবর; খাতা/ফাইল জমা নয়।</small>` : ''}
       </div>` : ''}
+      </div>
     </article>`;
   }
   function render() {
@@ -75,6 +83,17 @@ export function initStudentTeaching({ getStudent }) {
     const button = event.target.closest('[data-learning-filter]'); if (!button) return;
     filter = button.dataset.learningFilter;
     $('#learningFilters').querySelectorAll('button').forEach(el => el.setAttribute('aria-pressed', String(el === button))); render();
+  });
+  /* Tap a card to reveal its details; works on the courses board, the home
+     routine board and the results board alike. The homework-complete button
+     lives inside the revealed details, so this check comes first. */
+  document.addEventListener('click', event => {
+    const toggle = event.target.closest('.learning-card-toggle');
+    if (!toggle) return;
+    const open = toggle.getAttribute('aria-expanded') === 'true';
+    toggle.setAttribute('aria-expanded', String(!open));
+    const details = document.getElementById(toggle.getAttribute('aria-controls'));
+    if (details) details.hidden = open;
   });
   $('#learningList').addEventListener('click', async event => {
     const button = event.target.closest('[data-complete-homework]'); if (!button) return;
