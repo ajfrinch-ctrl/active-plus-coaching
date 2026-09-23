@@ -5,7 +5,7 @@
 import { $, $$, normalizeMobile, normalizeAnswer, setAuthMessage, showFeedback } from './ui.js';
 import { enabledClasses, DEFAULT_PIN } from './config.js';
 import { contactNumber, isContactNumber, normalizeUsername, usernameError, suggestUsername } from './account-policy.js';
-import { saveAccount, saveStudent, generateStudentId, persistSession, setTrustedDevice, usernameTaken, reserveUsername } from './storage.js';
+import { saveAccount, saveStudent, generateStudentId, persistSession, setTrustedDevice, usernameTaken, reserveUsername, releaseUsername } from './storage.js';
 import { switchAuthTab } from './login.js';
 
 function populateRegistrationClasses() {
@@ -132,9 +132,12 @@ function handleRegistration(event, state, onRegistered) {
     status: 'pending',
     createdAt: new Date().toISOString()
   };
-  if (!saveAccount(account)) return setAuthMessage('সংরক্ষণ হয়নি। স্টোরেজ পরীক্ষা করে আবার চেষ্টা করুন।');
-  // Claim the name for this student; once claimed it stays claimed.
+  // Claim the name first, so a failed save never leaves a dangling claim.
   if (!reserveUsername(username, studentId)) return setAuthMessage('এই ইউজারনেমটি এরই মধ্যে অন্য কেউ নিয়েছে। অন্য একটি বেছে নিন।');
+  if (!saveAccount(account)) {
+    releaseUsername(username, studentId);
+    return setAuthMessage('সংরক্ষণ হয়নি। স্টোরেজ পরীক্ষা করে আবার চেষ্টা করুন।');
+  }
   state.account = account;
   state.student = { ...state.student, ...studentData };
   saveStudent(state.student);
