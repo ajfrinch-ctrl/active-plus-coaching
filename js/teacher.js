@@ -10,7 +10,7 @@ import { teachingRepository, DEMO_TEACHER, ACTIVITY_TYPES, PROGRESS_LABELS, esca
 
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
-const state = { db: { activities: [] }, students: [], view: 'home', status: 'all', ready: false, busy: false };
+const state = { db: { activities: [] }, students: [], view: 'home', status: 'all', ready: false, busy: false, recordLimit: 15 };
 let modalTrigger, toastTimer;
 const demoWarnings = await prepareDemoData();
 initFixedShell();
@@ -23,16 +23,55 @@ function toast(message) {
   document.body.append(el); clearTimeout(toastTimer); toastTimer = setTimeout(() => el.remove(), 3200);
 }
 const own = () => state.db.activities.filter(a => a.teacherId === DEMO_TEACHER.id);
+const rosterFor = a => state.students.filter(s => matchesStudent(a, s));
+/** How much of a published activity is still waiting on the teacher. */
+function progressStats(a) {
+  const students = rosterFor(a);
+  const value = s => a.progress?.[s.id]?.value;
+  const recorded = students.filter(s => value(s) !== undefined && value(s) !== '');
+  return {
+    total: students.length,
+    recorded: recorded.length,
+    missing: students.length - recorded.length,
+    toReview: a.type === 'homework' ? students.filter(s => value(s) === 'done').length : 0
+  };
+}
+/** Marks and attendance are only "pending" once the class has actually happened. */
+const isDue = a => String(a.date || '') <= todayISO();
+/** One line of Bengali status per activity; empty string = nothing pending. */
+function pendingNote(a) {
+  if (a.status === 'draft') return 'খসড়া — শিক্ষার্থী এখনও দেখবে না';
+  if (a.type === 'suggestion') return '';
+  const stats = progressStats(a);
+  // Notebooks students already handed in wait on the teacher even before the deadline.
+  if (a.type === 'homework' && stats.toReview) return `${bn(stats.toReview)} জনের খাতা দেখা বাকি`;
+  if (!isDue(a)) return '';
+  if (a.type === 'exam') return stats.missing ? `${bn(stats.missing)} জনের নম্বর বাকি` : '';
+  if (a.type === 'homework') return stats.missing ? `${bn(stats.missing)} জনের অবস্থা বাকি` : '';
+  return stats.missing ? `${bn(stats.missing)} জনের উপস্থিতি বাকি` : '';
+}
+/** The home work queue: drafts to publish, marks to give, notebooks to check, attendance to take. */
+function attentionItems() {
+  const today = todayISO();
+  return own()
+    .map(a => ({ a, note: pendingNote(a) }))
+    .filter(item => item.note)
+    .sort((x, y) => `${y.a.date === today}|${y.a.date}`.localeCompare(`${x.a.date === today}|${x.a.date}`))
+    .slice(0, 6);
+}
 const classOptions = value => enabledClasses.map(c => `<option ${c === value ? 'selected' : ''}>${esc(c)}</option>`).join('');
 function activityMeta(a) {
   const date = `${displayDate(a.date)}${a.time ? ' • ' + bn(a.time) : ''}`;
   return `${a.type === 'homework' ? 'শেষ সময়: ' : ''}${date}${a.duration ? ' • ' + bn(a.duration) + ' মিনিট' : ''}${a.totalMarks ? ' • পূর্ণমান ' + bn(a.totalMarks) : ''}`;
 }
 function recordCard(a) {
+  const stats = a.status === 'published' && a.type !== 'suggestion' ? progressStats(a) : null;
+  const note = pendingNote(a);
   return `<article class="teaching-card" data-activity-id="${esc(a.id)}">
-    <div class="teaching-card-head"><span class="teaching-kind">${ACTIVITY_TYPES[a.type].label}</span><span class="teaching-status ${a.status}">${a.status === 'published' ? 'প্রকাশিত' : 'খসড়া'}</span></div>
+    <div class="teaching-card-head"><span class="teaching-kind">${ACTIVITY_TYPES[a.type].label}</span><span class="teaching-status ${a.status}">${a.status === 'published' ? 'প্রকাশিত' : 'খসড়া'}</span></div>
     <h3>${esc(a.title)}</h3><small>${esc(a.subject)} • ${esc(a.className)} • ${esc(a.group || 'সব বিভাগ')}</small>
     <p>${esc(activityMeta(a))}</p>${a.room ? `<small>স্থান: ${esc(a.room)}</small>` : ''}
+    ${stats && stats.total ? `<p class="teaching-progress-line ${note ? 'pending' : stats.recorded === stats.total ? 'clear' : 'idle'}">অগ্রগতি ${bn(stats.recorded)}/${bn(stats.total)} জন${note ? ' • ' + esc(note) : stats.recorded === stats.total ? ' • সব নথিভুক্ত' : ''}</p>` : note ? `<p class="teaching-progress-line pending">${esc(note)}</p>` : ''}
     <p class="teaching-preview">${esc(a.details)}</p>
     <div class="teaching-actions">
       <button type="button" data-record-action="detail" data-id="${esc(a.id)}">বিস্তারিত</button>
@@ -41,11 +80,71 @@ function recordCard(a) {
       <button class="danger" type="button" data-record-action="delete" data-id="${esc(a.id)}">মুছুন</button>
     </div></article>`;
 }
-function renderHome() {
-  $('#teacherToday').textContent = displayDate(todayISO());
+/* Slim card for the home queue: one tap opens the exact work that is pending. */
+function queueCard(a, note, actionLabel, clear = false) {
+  const progressAction = a.status === 'published' && ACTIVITY_TYPES[a.type].progress ? 'progress' : 'edit';
+  return `<article class="teaching-card teacher-queue-card" data-activity-id="${esc(a.id)}">
+    <div class="teaching-card-head"><span class="teaching-kind">${ACTIVITY_TYPES[a.type].label}</span><span class="teaching-status ${a.status}">${a.date ? esc(dayLabel(a.date)) : ''}</span></div>
+    <h3>${esc(a.title)}</h3>
+    <small>${esc(a.className)} • ${esc(a.group || 'সব বিভাগ')}${a.time ? ' • ' + esc(bn(a.time)) : ''}</small>
+    <p class="teaching-progress-line ${clear ? 'clear' : 'pending'}">${esc(note)}</p>
+    <div class="teaching-actions">
+      <button class="primary" type="button" data-record-action="${progressAction}" data-id="${esc(a.id)}">${actionLabel}</button>
+      <button type="button" data-record-action="detail" data-id="${esc(a.id)}">বিস্তারিত</button>
+    </div></article>`;
+}
+/** Today first, then the nearest upcoming date, then the most recent past date. */
+function byDueDate(a, b) {
+  const today = todayISO();
+  const pastA = a.date < today, pastB = b.date < today;
+  if (pastA !== pastB) return pastA ? 1 : -1;
+  const byDate = String(a.date).localeCompare(String(b.date));
+  return pastA ? -byDate : byDate;
+}
+const dayLabel = date => {
+  if (!date) return '';
+  const shift = days => todayISO(new Date(new Date(`${todayISO()}T12:00:00`).setDate(new Date(`${todayISO()}T12:00:00`).getDate() + days)));
+  if (date === todayISO()) return 'আজ';
+  if (date === shift(1)) return 'আগামীকাল';
+  if (date === shift(-1)) return 'গতকাল';
+  return displayDate(date);
+};
+function renderTypeCounts() {
   const records = own();
-  $('#teacherPublishedCount').textContent = bn(records.filter(a => a.status === 'published').length);
-  $('#teacherDraftCount').textContent = bn(records.filter(a => a.status === 'draft').length);
+  Object.keys(ACTIVITY_TYPES).forEach(type => {
+    const all = records.filter(a => a.type === type);
+    const waiting = all.filter(a => pendingNote(a)).length;
+    const tab = $('#tabCount-' + type);
+    if (tab) tab.textContent = all.length ? bn(all.length) : '';
+    const dot = $('#navDot-' + type);
+    if (dot) { dot.hidden = !waiting; dot.textContent = bn(waiting); }
+  });
+}
+function renderHome() {
+  const today = todayISO();
+  $('#teacherToday').textContent = displayDate(today);
+  const records = own();
+  const published = records.filter(a => a.status === 'published');
+  $('#teacherPublishedCount').textContent = bn(published.length);
+  $('#teacherDraftCount').textContent = bn(records.length - published.length);
+  $('#teacherPendingCount').textContent = bn(records.filter(a => pendingNote(a)).length);
+  const todays = published
+    .filter(a => a.date === today && ['routine', 'exam'].includes(a.type))
+    .sort((a, b) => String(a.time || '').localeCompare(String(b.time || '')));
+  $('#teacherTodayClassCount').textContent = bn(todays.length);
+  renderTypeCounts();
+
+  const items = attentionItems();
+  $('#teacherAttentionHint').textContent = items.length ? `${bn(items.length)}টি কাজ বাকি` : 'সব কাজ শেষ';
+  $('#teacherAttention').innerHTML = items.length
+    ? items.map(({ a, note }) => queueCard(a, note, a.status === 'published' && ACTIVITY_TYPES[a.type].progress ? ACTIVITY_TYPES[a.type].progress : 'সম্পাদনা করুন')).join('')
+    : '<p class="teacher-empty teacher-all-clear">সব কাজ শেষ — নম্বর, খাতা দেখা ও উপস্থিতি সব নথিভুক্ত আছে।</p>';
+  $('#teacherTodayClasses').innerHTML = todays.length
+    ? todays.map(a => {
+        const note = pendingNote(a);
+        return queueCard(a, note || 'এই ক্লাসের নথিভুক্ত করার মতো কিছু বাকি নেই', ACTIVITY_TYPES[a.type].progress || 'সম্পাদনা করুন', !note);
+      }).join('')
+    : '<p class="teacher-empty">আজ কোনো ক্লাস বা পরীক্ষা নেই।</p>';
   $('#teacherRecent').innerHTML = records.slice().sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 5).map(recordCard).join('') || '<p class="teacher-empty">এখনও কোনো কাজ যোগ করেননি। উপরের বাটন থেকে প্রথম কাজটি তৈরি করুন।</p>';
 }
 function renderRecords() {
@@ -55,11 +154,32 @@ function renderRecords() {
   $('#teacherOnlineExamHint').hidden = state.view !== 'exam';
   const query = $('#teacherRecordSearch').value.trim().toLocaleLowerCase();
   const className = $('#teacherClassFilter').value;
-  const list = own().filter(a => a.type === state.view && (state.status === 'all' || a.status === state.status) && (className === 'all' || a.className === className) && `${a.title} ${a.subject}`.toLocaleLowerCase().includes(query));
-  list.sort(state.view === 'routine' ? (a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`) : (a, b) => b.updatedAt.localeCompare(a.updatedAt));
-  $('#teacherRecordCount').textContent = `${bn(list.length)}টি ${ACTIVITY_TYPES[state.view].label}`;
-  $('#teacherRecordList').innerHTML = list.map(recordCard).join('') || '<p class="teacher-empty">কোনো কাজ পাওয়া যায়নি। নতুন কাজ যোগ করুন অথবা ফিল্টার বদলান।</p>';
+  const scoped = own().filter(a => a.type === state.view);
+  const list = scoped.filter(a => (state.status === 'all' || a.status === state.status) && (className === 'all' || a.className === className) && `${a.title} ${a.subject}`.toLocaleLowerCase().includes(query));
+  list.sort(state.view === 'suggestion'
+    ? (a, b) => b.updatedAt.localeCompare(a.updatedAt)
+    : (a, b) => byDueDate(a, b) || String(a.time || '').localeCompare(String(b.time || '')));
+  const publishedCount = scoped.filter(a => a.status === 'published').length;
+  $('#teacherRecordCount').textContent = `${bn(list.length)}টি ${ACTIVITY_TYPES[state.view].label} • প্রকাশিত ${bn(publishedCount)} • খসড়া ${bn(scoped.length - publishedCount)}`;
+
+  const visible = list.slice(0, state.recordLimit);
+  const groups = [];
+  for (const a of visible) {
+    const key = state.view === 'suggestion' ? (a.status === 'published' ? 'প্রকাশিত' : 'খসড়া') : dayLabel(a.date);
+    if (!groups.length || groups.at(-1).key !== key) groups.push({ key, items: [] });
+    groups.at(-1).items.push(a);
+  }
+  $('#teacherRecordList').innerHTML = visible.length
+    ? groups.map(group => `<p class="teacher-group-label">${esc(group.key)}<span>${bn(group.items.length)}টি</span></p>${group.items.map(recordCard).join('')}`).join('')
+    : '<p class="teacher-empty">কোনো কাজ পাওয়া যায়নি। নতুন কাজ যোগ করুন অথবা ফিল্টার বদলান।</p>';
+  const more = $('#teacherRecordMore');
+  if (more) {
+    const remaining = list.length - visible.length;
+    more.hidden = remaining <= 0;
+    more.textContent = remaining > 0 ? `আরও ${bn(remaining)}টি ${ACTIVITY_TYPES[state.view].label} দেখুন` : '';
+  }
 }
+
 function renderStudents() {
   const className = $('#teacherStudentClass').value;
   if (!$('#teacherStudentSearch').value.trim()) {
@@ -74,9 +194,21 @@ function renderStudents() {
 function render() { renderHome(); renderRecords(); renderStudents(); }
 function setView(view) {
   if (!['home', 'more', 'students', 'online-exams', ...Object.keys(ACTIVITY_TYPES)].includes(view)) return;
+  const previous = state.view;
+  // A search typed for one record type must not silently hide the next one.
+  if (ACTIVITY_TYPES[view] && previous !== view) {
+    const search = $('#teacherRecordSearch');
+    if (search) search.value = '';
+    state.recordLimit = 15;
+  }
   state.view = view;
   const panel = ACTIVITY_TYPES[view] ? 'teacherRecords' : { home: 'teacherHome', more: 'teacherMore', students: 'teacherStudents', 'online-exams': 'teacherOnlineExams' }[view];
   $$('.teacher-view').forEach(el => { el.hidden = el.id !== panel; });
+  $$('.teacher-type-tabs [data-type-tab]').forEach(el => {
+    const active = el.dataset.typeTab === view;
+    el.classList.toggle('active', active);
+    el.setAttribute('aria-selected', String(active));
+  });
   $$('.admin-bottom [data-teacher-view]').forEach(el => {
     const active = el.dataset.teacherView === (['suggestion', 'students', 'online-exams'].includes(view) ? 'more' : view);
     el.classList.toggle('active', active);
@@ -155,20 +287,80 @@ function showDetail(a) {
 }
 function showProgress(a) {
   if (a.status !== 'published' || !ACTIVITY_TYPES[a.type].progress) return;
-  const students = state.students.filter(s => matchesStudent(a, s));
-  const options = a.type === 'homework' ? ['pending', 'done', 'reviewed'] : ['present', 'absent', 'late'];
-  openModal(`${ACTIVITY_TYPES[a.type].progress} • ${a.title}`, `<p class="modal-copy">${esc(a.className)} • ${esc(a.group || 'সব বিভাগ')}${a.type === 'exam' ? ` • পূর্ণমান ${bn(a.totalMarks)}। খালি রাখলে নম্বর প্রকাশ হবে না।` : ''}</p>
-    ${students.length ? `<form id="teacherProgressForm"><div class="teacher-progress-list">${students.map((student, index) => {
-      const value = a.progress[student.id]?.value ?? '';
-      return `<div class="teacher-progress-row"><label for="progress-${index}">${esc(student.name)}<small>${esc(student.id)}</small></label>${a.type === 'exam' ? `<input type="number" id="progress-${index}" data-progress-id="${esc(student.id)}" data-original="${esc(value)}" value="${esc(value)}" min="0" max="${a.totalMarks}" step="0.5" placeholder="নম্বর দিন">` : `<select id="progress-${index}" data-progress-id="${esc(student.id)}" data-original="${esc(value)}"><option value="">এখনও নথিভুক্ত হয়নি</option>${options.map(v => `<option value="${v}" ${v === value ? 'selected' : ''}>${PROGRESS_LABELS[v]}</option>`).join('')}</select>`}</div>`;
-    }).join('')}</div><p class="finance-error" id="teacherSaveError" role="alert" hidden></p><div class="modal-actions"><button class="admin-btn primary" type="submit">সংরক্ষণ করুন</button><button class="admin-btn ghost" type="button" data-close-teacher>বাতিল</button></div></form>` : '<p class="teacher-empty">এই শ্রেণি/বিভাগে কোনো অনুমোদিত শিক্ষার্থী নেই।</p>'}`);
-  $('#teacherProgressForm')?.addEventListener('submit', event => {
-    event.preventDefault(); const form = event.currentTarget;
-    if (!form.reportValidity()) return;
-    const entries = Object.fromEntries([...form.querySelectorAll('[data-progress-id]')].filter(el => el.value !== el.dataset.original).map(el => [el.dataset.progressId, el.value]));
-    save(form, () => teachingRepository.saveProgress(a.id, entries), 'শিক্ষার্থীদের অগ্রগতি সংরক্ষণ করা হয়েছে');
+  const students = rosterFor(a);
+  const isExam = a.type === 'exam';
+  const options = isExam ? [] : a.type === 'homework' ? ['pending', 'done', 'reviewed'] : ['present', 'absent', 'late'];
+  const quickFills = isExam
+    ? [{ value: '', label: 'সব ঘর খালি করুন' }]
+    : a.type === 'homework'
+      ? [{ value: 'done', label: 'সবাই জমা দিয়েছে' }, { value: 'reviewed', label: 'সবাই দেখা হয়েছে' }]
+      : [{ value: 'present', label: 'সবাই উপস্থিত' }, { value: 'late', label: 'সবাই দেরিতে' }, { value: 'absent', label: 'সবাই অনুপস্থিত' }];
+
+  openModal(`${ACTIVITY_TYPES[a.type].progress} • ${a.title}`, `<p class="modal-copy">${esc(a.className)} • ${esc(a.group || 'সব বিভাগ')}${isExam ? ` • পূর্ণমান ${bn(a.totalMarks)}। খালি রাখলে নম্বর প্রকাশ হবে না।` : ''}</p>
+    ${students.length ? `<form id="teacherProgressForm">
+      <div class="teacher-progress-bar">
+        <p class="progress-summary" id="teacherProgressSummary" role="status"></p>
+        <div class="teacher-quick-fill">
+          ${quickFills.map(fill => `<button type="button" data-quick-fill="${esc(fill.value)}">${fill.label}</button>`).join('')}
+          <button type="button" id="teacherOnlyMissing" aria-pressed="false">শুধু বাকিরা</button>
+        </div>
+        ${students.length > 6 ? `<label for="teacherProgressSearch">শিক্ষার্থী খুঁজুন</label><input id="teacherProgressSearch" type="search" placeholder="নাম বা Student ID" autocomplete="off">` : ''}
+      </div>
+      <div class="teacher-progress-list">${students.map((student, index) => {
+        const value = a.progress[student.id]?.value ?? '';
+        const search = `${student.name} ${student.id}`.toLocaleLowerCase();
+        return `<div class="teacher-progress-row" data-progress-row data-search="${esc(search)}"><label for="progress-${index}">${esc(student.name)}<small>${esc(student.id)}</small></label>${isExam ? `<input type="number" id="progress-${index}" data-progress-id="${esc(student.id)}" data-original="${esc(value)}" value="${esc(value)}" min="0" max="${a.totalMarks}" step="0.5" placeholder="নম্বর দিন">` : `<select id="progress-${index}" data-progress-id="${esc(student.id)}" data-original="${esc(value)}"><option value="">এখনও নথিভুক্ত হয়নি</option>${options.map(v => `<option value="${v}" ${v === value ? 'selected' : ''}>${PROGRESS_LABELS[v]}</option>`).join('')}</select>`}</div>`;
+      }).join('')}</div>
+      <p class="finance-error" id="teacherSaveError" role="alert" hidden></p>
+      <div class="modal-actions"><button class="admin-btn primary" type="submit">সংরক্ষণ করুন</button><button class="admin-btn ghost" type="button" data-close-teacher>বাতিল</button></div>
+    </form>` : '<p class="teacher-empty">এই শ্রেণি/বিভাগে কোনো অনুমোদিত শিক্ষার্থী নেই।</p>'}`);
+
+  const form = $('#teacherProgressForm');
+  if (!form) return;
+  const rows = () => [...form.querySelectorAll('[data-progress-row]')];
+  const filled = el => el.value !== '';
+  function updateSummary() {
+    const fields = [...form.querySelectorAll('[data-progress-id]')];
+    const done = fields.filter(filled).length;
+    const summary = $('#teacherProgressSummary');
+    if (summary) {
+      summary.textContent = `${bn(students.length)} জনের ${bn(done)} জন নথিভুক্ত` + (done < students.length ? ` • বাকি ${bn(students.length - done)} জন` : ' • সব সম্পূর্ণ');
+      summary.classList.toggle('complete', done >= students.length && students.length > 0);
+    }
+  }
+  function applyRowFilter() {
+    const query = ($('#teacherProgressSearch')?.value || '').trim().toLocaleLowerCase();
+    const onlyMissing = $('#teacherOnlyMissing')?.getAttribute('aria-pressed') === 'true';
+    rows().forEach(row => {
+      const field = row.querySelector('[data-progress-id]');
+      const matchesQuery = !query || row.dataset.search.includes(query);
+      const matchesMissing = !onlyMissing || !filled(field);
+      row.hidden = !(matchesQuery && matchesMissing);
+    });
+  }
+  updateSummary();
+
+  $('#teacherOnlyMissing')?.addEventListener('click', event => {
+    const button = event.currentTarget;
+    button.setAttribute('aria-pressed', String(button.getAttribute('aria-pressed') !== 'true'));
+    applyRowFilter();
+  });
+  $('#teacherProgressSearch')?.addEventListener('input', applyRowFilter);
+  form.querySelectorAll('[data-quick-fill]').forEach(button => button.addEventListener('click', () => {
+    const value = button.dataset.quickFill;
+    rows().filter(row => !row.hidden).forEach(row => { row.querySelector('[data-progress-id]').value = value; });
+    updateSummary(); applyRowFilter();
+  }));
+  form.addEventListener('input', updateSummary);
+  form.addEventListener('change', () => { updateSummary(); applyRowFilter(); });
+  form.addEventListener('submit', event => {
+    event.preventDefault(); const target = event.currentTarget;
+    if (!target.reportValidity()) return;
+    const entries = Object.fromEntries([...target.querySelectorAll('[data-progress-id]')].filter(el => el.value !== el.dataset.original).map(el => [el.dataset.progressId, el.value]));
+    save(target, () => teachingRepository.saveProgress(a.id, entries), 'শিক্ষার্থীদের অগ্রগতি সংরক্ষণ করা হয়েছে');
   });
 }
+
 function showDelete(a) {
   openModal('কাজটি মুছে ফেলবেন?', `<form id="teacherDeleteForm"><p class="modal-copy"><strong>${esc(a.title)}</strong> মুছে গেলে শিক্ষার্থী অ্যাপ থেকেও সরে যাবে। এই কাজের নম্বর, জমার অবস্থা বা উপস্থিতিও মুছে যাবে।</p><p class="finance-error" id="teacherSaveError" role="alert" hidden></p><div class="modal-actions"><button class="admin-btn ghost" type="button" data-close-teacher>না, রাখুন</button><button class="admin-btn primary" type="submit">হ্যাঁ, মুছে ফেলুন</button></div></form>`);
   $('#teacherDeleteForm').addEventListener('submit', event => { event.preventDefault(); save(event.currentTarget, () => teachingRepository.deleteActivity(a.id), 'কাজটি মুছে ফেলা হয়েছে'); });
@@ -209,12 +401,19 @@ $('#teacherEnter').addEventListener('click', async event => {
 $('#teacherExit').addEventListener('click', () => { $('#teacherShell').hidden = true; $('#teacherEntry').hidden = false; $('#teacherEntry').scrollTop = 0; });
 $('#teacherRetry').addEventListener('click', reload);
 $('#teacherNewActivity').addEventListener('click', () => showEditor(state.view));
-['teacherRecordSearch', 'teacherClassFilter'].forEach(id => $('#' + id).addEventListener(id.includes('Search') ? 'input' : 'change', renderRecords));
+['teacherRecordSearch', 'teacherClassFilter'].forEach(id => $('#' + id).addEventListener(id.includes('Search') ? 'input' : 'change', () => { state.recordLimit = 15; renderRecords(); }));
+/* Type tabs above the list: switch record type without going back to the nav. */
+$('.teacher-type-tabs').addEventListener('click', event => {
+  const tab = event.target.closest('[data-type-tab]'); if (!tab) return;
+  state.recordLimit = 15; setView(tab.dataset.typeTab);
+});
+$('#teacherRecordMore').addEventListener('click', () => { state.recordLimit += 15; renderRecords(); });
 ['teacherStudentSearch', 'teacherStudentClass'].forEach(id => $('#' + id).addEventListener(id.includes('Search') ? 'input' : 'change', renderStudents));
 $('#teacherStatusFilter').addEventListener('click', event => {
   const button = event.target.closest('[data-status]'); if (!button) return;
   state.status = button.dataset.status;
-  $$('#teacherStatusFilter button').forEach(el => { el.classList.toggle('active', el === button); el.setAttribute('aria-pressed', String(el === button)); }); renderRecords();
+  $$('#teacherStatusFilter button').forEach(el => { el.classList.toggle('active', el === button); el.setAttribute('aria-pressed', String(el === button)); });
+  state.recordLimit = 15; renderRecords();
 });
 document.addEventListener('click', event => {
   if (state.busy) return;
