@@ -29,13 +29,36 @@
       <div class="auth-panel active">
         <div class="auth-panel-heading">
           <div>
-            <h2>পেমেন্ট রিসিভ প্যানেল</h2>
+            <h2>পেমেন্ট রিসিভ প্রবেশ</h2>
           </div>
         </div>
-        <p class="pay-entry-note">শিক্ষার্থীর নাম, মোবাইল নম্বর, Student ID বা অভিভাবকের মোবাইল দিয়ে খুঁজে দ্রুত ফি গ্রহণ করুন — রসিদ ডাউনলোড ও হোয়াটসঅ্যাপে ছবি পাঠানোর ব্যবস্থাসহ।</p>
-        <button class="auth-submit" type="button" id="payEnterButton">
-          প্যানেলে প্রবেশ করুন <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg>
-        </button>
+        <p class="pay-entry-note">ইউনিক ইউসার আইডি ও PIN দিয়ে প্রবেশ করুন। প্রবেশের পর শিক্ষার্থীর নাম, মোবাইল নম্বর, Student ID বা অভিভাবকের মোবাইল দিয়ে খুঁজে দ্রুত ফি গ্রহণ করা যাবে — রসিদ ডাউনলোড ও হোয়াটসঅ্যাপে ছবি পাঠানোর ব্যবস্থাসহ।</p>
+        <form id="payLoginForm" novalidate>
+          <label for="payLoginUser">পেমেন্ট পোর্টাল ইউসার আইডি</label>
+          <div class="input-wrap">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-user"></use></svg>
+            <input id="payLoginUser" name="username" type="text" autocomplete="username" placeholder="যেমন: APC-PAY-001" required>
+          </div>
+          <label for="payLoginPin">পাসকোড / PIN</label>
+          <div class="input-wrap">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg>
+            <input id="payLoginPin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="6" autocomplete="current-password" placeholder="৪–৬ সংখ্যার PIN" required>
+            <button class="show-pin" type="button" data-toggle-pin="payLoginPin" aria-label="PIN দেখুন">
+              <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg>
+            </button>
+          </div>
+          <div class="form-row">
+            <label class="remember-label">
+              <input type="checkbox" id="rememberPay" checked>
+              <span class="fake-check"></span>এই ডিভাইসে মনে রাখুন
+            </label>
+          </div>
+          <p id="payLoginError" class="finance-error" role="alert" hidden></p>
+          <button class="auth-submit" type="submit">
+            প্রবেশ করুন <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg>
+          </button>
+        </form>
+        <p class="pay-entry-note" style="margin-top: 12px;">ডেমো প্রবেশাধিকার — ইউসার আইডি: <strong>APC-PAY-001</strong> • PIN: <strong>১২৩১২৩</strong>। প্যানেলে ঢুকে উপরের লক আইকন থেকে PIN বদলানো যায়।</p>
         <p class="auth-footnote">
           <a class="inline-link" href="admin.html">← এডমিন প্যানেল</a>
           <a class="inline-link" href="index.html">← শিক্ষার্থী অ্যাপ</a>
@@ -53,9 +76,15 @@
       </a>
       <div class="admin-topbar-actions">
         <span class="admin-demo-badge"><span class="demo-dot"></span>ডেমো মোড</span>
+        <button class="admin-app-link" id="payPinButton" type="button" title="PIN পরিবর্তন" aria-label="PIN পরিবর্তন করুন">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg>
+        </button>
         <a class="admin-app-link" href="admin.html" title="এডমিন প্যানেল" aria-label="এডমিন প্যানেল খুলুন">
           <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-grid"></use></svg>
         </a>
+        <button class="admin-exit" id="payExitButton" type="button" title="প্রস্থান" aria-label="প্রস্থান করুন">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-logout"></use></svg>
+        </button>
       </div>
     </header>
 
@@ -173,6 +202,32 @@
     </div>
   </div>
 
+  <!-- PIN change modal. -->
+  <div class="admin-modal-backdrop" id="payPinBackdrop" hidden>
+    <div class="admin-modal" role="dialog" aria-modal="true" aria-labelledby="payPinTitle">
+      <header class="admin-modal-header">
+        <div>
+          <p class="eyebrow">Security</p>
+          <h2 id="payPinTitle">PIN পরিবর্তন</h2>
+          <p class="finance-hint">ইউসার আইডি অপরিবর্তিত থাকে; শুধু PIN বদলায়।</p>
+        </div>
+        <button class="admin-modal-close" type="button" id="payPinClose" aria-label="বন্ধ করুন">✕</button>
+      </header>
+      <div class="admin-modal-body">
+        <form id="payPinForm" class="fee-form" style="padding: 0;">
+          <label for="payPinCurrent">বর্তমান PIN *</label>
+          <input id="payPinCurrent" type="password" inputmode="numeric" minlength="4" maxlength="6" autocomplete="current-password" required>
+          <label for="payPinNew">নতুন PIN (৪–৬ সংখ্যা) *</label>
+          <input id="payPinNew" type="password" inputmode="numeric" minlength="4" maxlength="6" autocomplete="new-password" required>
+          <label for="payPinConfirm">নতুন PIN আবার লিখুন *</label>
+          <input id="payPinConfirm" type="password" inputmode="numeric" minlength="4" maxlength="6" autocomplete="new-password" required>
+          <p id="payPinError" class="finance-error" role="alert" hidden></p>
+          <button class="admin-btn primary" type="submit" style="margin-top: 14px;">নতুন PIN সংরক্ষণ করুন</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
   <div class="pay-toast" id="payToast" role="status" aria-live="polite" hidden></div>
 
   <!-- Inline icon sprite (same icons the admin panel uses). -->
@@ -183,6 +238,10 @@
       <g id="icon-check-circle"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.4 2.4 4.6-5"/></g>
       <g id="icon-grid"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></g>
       <g id="icon-chat"><path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.3 8.9 8.9 0 0 1-3.9-.9L3 20l1.2-4.4a8 8 0 0 1-.7-3.3A8.4 8.4 0 0 1 12 4a8.4 8.4 0 0 1 9 7.5Z"/></g>
+      <g id="icon-user"><circle cx="12" cy="8" r="4"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></g>
+      <g id="icon-lock"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/></g>
+      <g id="icon-eye"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="2.6"/></g>
+      <g id="icon-logout"><path d="M14 4h4.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H14"/><path d="M9 8l-4 4 4 4"/><path d="M5 12h10"/></g>
     </defs>
   </svg>
 

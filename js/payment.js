@@ -1,6 +1,7 @@
-/* Standalone Payment Receive panel: search → short profile → payment → receipt.
-   Nothing else lives here. Uses the same financeRepository storage contract,
-   receipt renderer and demo dataset as the admin panel, so both stay in sync. */
+/* Standalone Payment Receive panel: unique-ID login → search → short profile
+   → payment → receipt. Nothing else lives here. Uses the same financeRepository
+   storage contract, receipt renderer and demo dataset as the admin panel, so
+   both stay in sync. Credentials live in localStorage and the PIN is changeable. */
 import { prepareDemoData } from './demo-data.js';
 import { adminStudents, feeCategories, paymentMethods } from './admin-data.js';
 import { financeRepository, monthLabel, dateLabel, searchStudents, studentFeeSummary, latinDigits } from './finance-data.js';
@@ -12,6 +13,70 @@ registerServiceWorker();
 
 const bn = toBanglaNumber;
 const $ = selector => document.querySelector(selector);
+const $$ = selector => Array.from(document.querySelectorAll(selector));
+
+/* ---------- Payment portal account (unique user ID + changeable PIN) ---------- */
+
+const PAYMENT_ACCOUNT_KEY = 'activePlus.paymentAccount.v1';
+const PAYMENT_SESSION_KEY = 'activePlus.paymentSession.v1';
+export const PAYMENT_USER_ID = 'APC-PAY-001';
+const DEFAULT_PIN = '123123';
+const REMEMBER_DAYS = 90;
+
+function readJSON(key) {
+  try {
+    const value = window.localStorage.getItem(key);
+    return value ? JSON.parse(value) : null;
+  } catch { return null; }
+}
+
+function writeJSON(key, value) {
+  try { window.localStorage.setItem(key, JSON.stringify(value)); return true; }
+  catch { return false; }
+}
+
+function loadAccount() {
+  const stored = readJSON(PAYMENT_ACCOUNT_KEY);
+  if (stored && stored.userId && typeof stored.pin === 'string') return stored;
+  const account = { userId: stored?.userId || PAYMENT_USER_ID, pin: DEFAULT_PIN };
+  writeJSON(PAYMENT_ACCOUNT_KEY, account);
+  return account;
+}
+
+const digits = value => latinDigits(value).replace(/[^0-9]/g, '');
+
+function pinMatches(input, pin) {
+  return digits(input).length > 0 && digits(input) === pin;
+}
+
+function saveSession(remember) {
+  try {
+    window.sessionStorage.removeItem(PAYMENT_SESSION_KEY);
+    if (remember) {
+      writeJSON(PAYMENT_SESSION_KEY, { expiry: Date.now() + REMEMBER_DAYS * 86400000 });
+    } else {
+      window.localStorage.removeItem(PAYMENT_SESSION_KEY);
+      window.sessionStorage.setItem(PAYMENT_SESSION_KEY, '1');
+    }
+  } catch { /* private browsing: session simply does not survive reload */ }
+}
+
+function hasSession() {
+  try {
+    if (window.sessionStorage.getItem(PAYMENT_SESSION_KEY) === '1') return true;
+    const stored = readJSON(PAYMENT_SESSION_KEY);
+    if (stored?.expiry && Date.now() < stored.expiry) return true;
+    window.localStorage.removeItem(PAYMENT_SESSION_KEY);
+    return false;
+  } catch { return false; }
+}
+
+function clearSession() {
+  try {
+    window.localStorage.removeItem(PAYMENT_SESSION_KEY);
+    window.sessionStorage.removeItem(PAYMENT_SESSION_KEY);
+  } catch { /* no-op */ }
+}
 
 const state = {
   students: adminStudents.map(student => ({ ...student })),
@@ -38,16 +103,102 @@ function toast(message) {
   toast.timer = setTimeout(() => { el.hidden = true; }, 3200);
 }
 
-/* ---------- Entry + data load ---------- */
+/* ---------- Login, logout and PIN change ---------- */
 
-$('#payEnterButton').addEventListener('click', async () => {
+$('#payLoginUser').value = loadAccount().userId;
+$('#payLoginPin').value = DEFAULT_PIN;
+$$('[data-toggle-pin]').forEach(button => {
+  button.addEventListener('click', () => {
+    const input = $(`#${button.dataset.togglePin}`);
+    if (!input) return;
+    input.type = input.type === 'password' ? 'text' : 'password';
+  });
+});
+$$('.input-wrap input').forEach(input => {
+  input.addEventListener('input', () => { $('#payLoginError').hidden = true; });
+});
+
+async function enterPanel(remember) {
   const errors = await prepareDemoData();
   $('#payEntry').hidden = true;
   $('#payShell').hidden = false;
+  saveSession(remember);
   populateMonths();
   await loadTransactions();
   if (errors.length) toast('কিছু নমুনা ডেটা লোড হয়নি; সংরক্ষিত ডেটা অক্ষত আছে।');
   $('#payStudentSearch').focus();
+}
+
+$('#payLoginForm').addEventListener('submit', event => {
+  event.preventDefault();
+  const account = loadAccount();
+  const userId = $('#payLoginUser').value.trim();
+  const pin = $('#payLoginPin').value;
+  if (userId !== account.userId || !pinMatches(pin, account.pin)) {
+    $('#payLoginError').textContent = 'ইউসার আইডি বা PIN সঠিক নয়। আবার চেষ্টা করুন।';
+    $('#payLoginError').hidden = false;
+    $('#payLoginPin').value = '';
+    $('#payLoginPin').focus();
+    return;
+  }
+  $('#payLoginError').hidden = true;
+  enterPanel($('#rememberPay').checked);
+});
+
+$('#payExitButton').addEventListener('click', () => {
+  clearSession();
+  $('#payShell').hidden = true;
+  $('#payEntry').hidden = false;
+  $('#payLoginPin').value = '';
+  $('#payLoginUser').focus();
+  window.scrollTo(0, 0);
+});
+
+/* PIN change: current PIN verified, new PIN confirmed, stored locally. */
+$('#payPinButton').addEventListener('click', () => {
+  $('#payPinForm').reset();
+  $('#payPinError').hidden = true;
+  $('#payPinBackdrop').hidden = false;
+  document.body.classList.add('admin-modal-open');
+  $('#payPinCurrent').focus();
+});
+
+function closePinModal() {
+  $('#payPinBackdrop').hidden = true;
+  document.body.classList.remove('admin-modal-open');
+}
+
+$('#payPinClose').addEventListener('click', closePinModal);
+$('#payPinBackdrop').addEventListener('click', event => {
+  if (event.target === event.currentTarget) closePinModal();
+});
+
+$('#payPinForm').addEventListener('submit', event => {
+  event.preventDefault();
+  const error = message => {
+    $('#payPinError').textContent = message;
+    $('#payPinError').hidden = false;
+  };
+  const account = loadAccount();
+  if (!pinMatches($('#payPinCurrent').value, account.pin)) {
+    error('বর্তমান PIN সঠিক নয়।');
+    return;
+  }
+  const newPin = digits($('#payPinNew').value);
+  if (newPin.length < 4 || newPin.length > 6) {
+    error('নতুন PIN ৪–৬ সংখ্যার হতে হবে।');
+    return;
+  }
+  if (newPin !== digits($('#payPinConfirm').value)) {
+    error('দুইবার লেখা নতুন PIN মিলছে না।');
+    return;
+  }
+  if (!writeJSON(PAYMENT_ACCOUNT_KEY, { userId: account.userId, pin: newPin })) {
+    error('PIN সংরক্ষণ করা যায়নি — ব্রাউজারের স্টোরেজ পরীক্ষা করুন।');
+    return;
+  }
+  closePinModal();
+  toast('PIN পরিবর্তন হয়েছে — পরের বার নতুন PIN দিয়ে প্রবেশ করুন।');
 });
 
 async function loadTransactions() {
@@ -331,3 +482,7 @@ $('#payReceiptWhatsApp').addEventListener('click', async event => {
     button.textContent = label;
   }
 });
+
+/* ---------- Returning session: remembered device opens the desk directly ---------- */
+
+if (hasSession()) enterPanel(true);

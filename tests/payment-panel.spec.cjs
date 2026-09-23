@@ -7,15 +7,88 @@ test.use({ viewport: { width: 390, height: 844 } });
 
 async function enter(page) {
   await page.goto('/payment.html');
-  await page.locator('#payEnterButton').click();
+  await page.locator('#payLoginForm button[type=submit]').click();
   await expect(page.locator('#payShell')).toBeVisible();
 }
 
-test('payment panel is a bare search desk: entry, empty state, no match', async ({ page }) => {
+test('payment portal opens only with the unique user ID and PIN', async ({ page }) => {
   await page.goto('/payment.html');
   await expect(page.locator('#payEntry')).toBeVisible();
-  await page.locator('#payEnterButton').click();
+  // Demo credentials are prefilled for the one-tap demo flow.
+  await expect(page.locator('#payLoginUser')).toHaveValue('APC-PAY-001');
+  await expect(page.locator('#payLoginPin')).toHaveValue('123123');
+
+  // Wrong PIN is rejected with a Bengali message.
+  await page.locator('#payLoginPin').fill('999999');
+  await page.locator('#payLoginForm button[type=submit]').click();
+  await expect(page.locator('#payLoginError')).toContainText('ইউসার আইডি বা PIN সঠিক নয়');
+  await expect(page.locator('#payShell')).toBeHidden();
+
+  // Wrong user ID is rejected too.
+  await page.locator('#payLoginUser').fill('APC-PAY-002');
+  await page.locator('#payLoginPin').fill('123123');
+  await page.locator('#payLoginForm button[type=submit]').click();
+  await expect(page.locator('#payLoginError')).toBeVisible();
+  await expect(page.locator('#payShell')).toBeHidden();
+
+  // Correct credentials open the bare desk: no navigation, no admin views.
+  await page.locator('#payLoginUser').fill('APC-PAY-001');
+  await page.locator('#payLoginPin').fill('123123');
+  await page.locator('#payLoginForm button[type=submit]').click();
   await expect(page.locator('#payShell')).toBeVisible();
+  await expect(page.locator('.admin-bottom, .nav-item, [data-admin-view]')).toHaveCount(0);
+
+  // Remembered session survives a reload without the form.
+  await page.reload();
+  await expect(page.locator('#payShell')).toBeVisible();
+
+  // Exit clears the session and returns to the entry screen.
+  await page.locator('#payExitButton').click();
+  await expect(page.locator('#payEntry')).toBeVisible();
+  await page.reload();
+  await expect(page.locator('#payEntry')).toBeVisible();
+});
+
+test('PIN can be changed from the panel; new PIN logs in, old one is rejected', async ({ page }) => {
+  await enter(page);
+  await page.locator('#payPinButton').click();
+  await expect(page.locator('#payPinBackdrop')).toBeVisible();
+
+  // Wrong current PIN is rejected.
+  await page.locator('#payPinCurrent').fill('111111');
+  await page.locator('#payPinNew').fill('456789');
+  await page.locator('#payPinConfirm').fill('456789');
+  await page.locator('#payPinForm button[type=submit]').click();
+  await expect(page.locator('#payPinError')).toContainText('বর্তমান PIN সঠিক নয়');
+
+  // Mismatched confirmation is rejected.
+  await page.locator('#payPinCurrent').fill('123123');
+  await page.locator('#payPinNew').fill('456789');
+  await page.locator('#payPinConfirm').fill('456780');
+  await page.locator('#payPinForm button[type=submit]').click();
+  await expect(page.locator('#payPinError')).toContainText('মিলছে না');
+
+  // Valid change saves and closes the modal (Bangla digits accepted too).
+  await page.locator('#payPinConfirm').fill('৪৫৬৭৮৯');
+  await page.locator('#payPinForm button[type=submit]').click();
+  await expect(page.locator('#payPinBackdrop')).toBeHidden();
+  await expect(page.locator('#payToast')).toContainText('PIN পরিবর্তন হয়েছে');
+  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('activePlus.paymentAccount.v1')));
+  expect(stored).toEqual({ userId: 'APC-PAY-001', pin: '456789' });
+
+  // Old PIN no longer works; the new one does.
+  await page.locator('#payExitButton').click();
+  await expect(page.locator('#payEntry')).toBeVisible();
+  await page.locator('#payLoginPin').fill('123123');
+  await page.locator('#payLoginForm button[type=submit]').click();
+  await expect(page.locator('#payLoginError')).toBeVisible();
+  await page.locator('#payLoginPin').fill('456789');
+  await page.locator('#payLoginForm button[type=submit]').click();
+  await expect(page.locator('#payShell')).toBeVisible();
+});
+
+test('payment panel is a bare search desk: entry, empty state, no match', async ({ page }) => {
+  await enter(page);
   // Nothing else: no bottom navigation, no admin views.
   await expect(page.locator('.admin-bottom, .nav-item, [data-admin-view]')).toHaveCount(0);
   await expect(page.locator('#payQuickProfile')).toContainText('উপরে সার্চ করে শিক্ষার্থী নির্বাচন করুন');
@@ -112,16 +185,19 @@ test('WhatsApp share: image via Web Share when supported, wa.me fallback otherwi
 
   // Path 2: no share support → PNG download + wa.me chat with the number and text.
   await page.evaluate(() => {
-    navigator.canShare = () => false;
-    navigator.share = undefined;
+    try { delete Navigator.prototype.canShare; } catch {}
+    try { delete Navigator.prototype.share; } catch {}
+    try { delete navigator.canShare; } catch {}
+    try { delete navigator.share; } catch {}
     window.__openUrl = null;
     window.open = url => { window.__openUrl = url; };
   });
   const pngDownload = page.waitForEvent('download');
   await page.locator('#payReceiptWhatsApp').click();
+  // The toast fires after both the download and the chat window opened.
+  await expect(page.locator('#payToast')).toContainText('হোয়াটসঅ্যাপ চ্যাট', { timeout: 10000 });
   const url = await page.evaluate(() => window.__openUrl);
   expect(url).toMatch(/^https:\/\/wa\.me\/8801811223344\?text=/);
   expect(decodeURIComponent(url)).toContain('তহমিদ হাসান');
   expect((await pngDownload).suggestedFilename()).toMatch(/^REC-.*\.png$/);
-  expect(await page.locator('#payToast').textContent()).toContain('হোয়াটসঅ্যাপ');
 });
