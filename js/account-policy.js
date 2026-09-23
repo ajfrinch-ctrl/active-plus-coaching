@@ -3,6 +3,7 @@
    A username is a second login ID the student picks once; like the registration
    mobile it is immutable, so it can be used safely instead of the phone number. */
 import { DEFAULT_PIN } from './config.js';
+import { STAFF_USERNAMES } from './staff-auth.js';
 
 export function contactNumber(value) {
   let number = String(value ?? '').trim().replace(/[০-৯]/g, d => '০১২৩৪৫৬৭৮৯'.indexOf(d)).replace(/[\s()+-]/g, '');
@@ -20,7 +21,8 @@ const USERNAME_PATTERN = /^[a-z][a-z0-9._]{3,19}$/;
 // Reserved so a username can never impersonate a role or the payment counter ID.
 export const RESERVED_USERNAMES = Object.freeze([
   'admin', 'administrator', 'teacher', 'office', 'support', 'help', 'root',
-  'payment', 'counter', 'apcpay', 'activeplus', 'null', 'undefined'
+  'payment', 'counter', 'apcpay', 'activeplus', 'null', 'undefined',
+  ...STAFF_USERNAMES
 ]);
 
 /** Lowercase and space-free: the only stored form of a username. */

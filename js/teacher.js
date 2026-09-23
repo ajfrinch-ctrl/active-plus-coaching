@@ -1,6 +1,5 @@
-import { prepareDemoData } from './demo-data.js';
-import { initDemoForms } from './demo-forms.js';
 import { enabledClasses } from './config.js';
+import { verifyStaffCredentials, saveStaffSession, hasStaffSession, clearStaffSession } from './staff-auth.js';
 import { loadAppConfig } from './storage.js';
 import { toBanglaNumber as bn } from './ui.js';
 import { initExamManager } from './exam-manager.js';
@@ -12,7 +11,6 @@ const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
 const state = { db: { activities: [] }, students: [], view: 'home', homeClass: 'all', status: 'all', ready: false, busy: false, recordLimit: 15 };
 let modalTrigger, toastTimer;
-const demoWarnings = await prepareDemoData();
 initFixedShell();
 initExamManager('#teacherExamWorkspace', 'teacher');
 registerServiceWorker();
@@ -386,20 +384,47 @@ syncTeacherRegistrationNotice();
 window.addEventListener('storage', event => {
   if (event.key === 'active-plus-app-config-v1' || event.key === null) syncTeacherRegistrationNotice();
 });
-$('#teacherEnter').addEventListener('click', async event => {
-  const button = event.currentTarget;
+async function showTeacherShell() {
   if (!teacherRegistrationOpen()) {
     $('#teacherEntryError').textContent = 'শিক্ষক রেজিস্ট্রেশন ও প্রবেশ এই মুহূর্তে এডমিন কর্তৃক বন্ধ রাখা হয়েছে।';
     $('#teacherEntryError').hidden = false;
+    return false;
+  }
+  const button = $('#teacherEnter');
+  if (button) button.disabled = true;
+  $('#teacherEntryError').hidden = true;
+  if (await reload()) {
+    $('#teacherEntry').hidden = true;
+    $('#teacherShell').hidden = false;
+    setView('home');
+    if (button) button.disabled = !teacherRegistrationOpen();
+    return true;
+  }
+  $('#teacherEntryError').textContent = 'ডেটা পড়া যায়নি। ব্রাউজারের স্টোরেজ চালু করে আবার চেষ্টা করুন।';
+  $('#teacherEntryError').hidden = false;
+  if (button) button.disabled = !teacherRegistrationOpen();
+  return false;
+}
+async function openTeacherPanel() {
+  const username = $('#teacherLoginUser')?.value || '';
+  const password = $('#teacherLoginPin')?.value || '';
+  if (!verifyStaffCredentials('teacher', username, password)) {
+    $('#teacherEntryError').textContent = 'ইউজারনেম বা পাসওয়ার্ড সঠিক নয়।';
+    $('#teacherEntryError').hidden = false;
     return;
   }
-  button.disabled = true; $('#teacherEntryError').hidden = true;
-  if (await reload()) {
-    $('#teacherEntry').hidden = true; $('#teacherShell').hidden = false; setView('home');
-  } else { $('#teacherEntryError').textContent = 'ডেটা পড়া যায়নি। ব্রাউজারের স্টোরেজ চালু করে আবার চেষ্টা করুন।'; $('#teacherEntryError').hidden = false; }
-  button.disabled = false;
+  if (await showTeacherShell()) saveStaffSession('teacher', $('#rememberTeacher')?.checked !== false);
+}
+$('#teacherEnter').addEventListener('click', openTeacherPanel);
+$('#teacherLoginForm')?.addEventListener('submit', event => { event.preventDefault(); openTeacherPanel(); });
+$('#teacherExit').addEventListener('click', () => {
+  clearStaffSession('teacher');
+  const pin = $('#teacherLoginPin');
+  if (pin) pin.value = '';
+  $('#teacherShell').hidden = true;
+  $('#teacherEntry').hidden = false;
+  $('#teacherEntry').scrollTop = 0;
 });
-$('#teacherExit').addEventListener('click', () => { $('#teacherShell').hidden = true; $('#teacherEntry').hidden = false; $('#teacherEntry').scrollTop = 0; });
 $('#teacherRetry').addEventListener('click', reload);
 $('#teacherNewActivity').addEventListener('click', () => showEditor(state.view));
 ['teacherRecordSearch', 'teacherClassFilter'].forEach(id => $('#' + id).addEventListener(id.includes('Search') ? 'input' : 'change', () => { state.recordLimit = 15; renderRecords(); }));
@@ -443,4 +468,4 @@ document.addEventListener('keydown', event => {
 });
 watchTeachingData(() => { if (!state.busy && !$('#teacherShell').hidden) reload(); });
 
-initDemoForms(demoWarnings);
+if (hasStaffSession('teacher')) showTeacherShell();

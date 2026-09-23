@@ -1,14 +1,13 @@
-import { prepareDemoData } from './demo-data.js';
-import { initDemoForms } from './demo-forms.js';
-/* One-click dummy Admin Panel for Active Plus Coaching.
-   No password, no PIN: a single tap on the entry button opens the panel.
-   Student data is local demo data; finance transactions persist through
-   financeRepository, which can be replaced by an asynchronous API adapter. */
-import { enabledClasses, schedule, DEFAULT_APP_SETTINGS, ADMIN_ID, DEFAULT_PIN } from './config.js';
+/* Admin panel. Username and password are required; the roster, notices and
+   routine start empty and stay on this device. */
+import { enabledClasses, DEFAULT_APP_SETTINGS, ADMIN_ID, DEFAULT_PIN } from './config.js';
 import { toBanglaNumber } from './ui.js';
-import { adminStudents, adminNotices, classEnrollment, classCodes, dayNames, feeCategories, paymentMethods } from './admin-data.js';
+import { classCodes, dayNames, feeCategories, paymentMethods } from './admin-data.js';
 import { loadAppConfig, saveAppConfig, loadAccount, saveAccount } from './storage.js';
-import { financeRepository, monthLabel, dateLabel, searchStudents, studentFeeSummary, newestTransactions, TRANSACTIONS_KEY } from './finance-data.js';
+import { loadRoster, saveRoster, syncAccountStatus, loadNotices, saveNotices, loadRoutine, saveRoutine } from './office-data.js';
+import { verifyStaffCredentials, saveStaffSession, hasStaffSession, clearStaffSession } from './staff-auth.js';
+import { financeRepository, monthLabel, dateLabel, searchStudents, studentFeeSummary, newestTransactions, stampTransaction, TRANSACTIONS_KEY } from './finance-data.js';
+import { newId } from './database.js';
 import { receiptMarkup, downloadReceipt } from './finance-receipt.js';
 import { downloadReportPDF, downloadCSV } from './report-generator.js';
 import { examRepository, totalMarks, examResults, EXAM_KEY } from './exam-data.js';
@@ -17,7 +16,6 @@ import { initExamManager } from './exam-manager.js';
 import { registerServiceWorker } from './service-worker.js';
 import { initFixedShell } from './fixed-shell.js';
 
-const demoWarnings = await prepareDemoData();
 initFixedShell();
 registerServiceWorker();
 initExamManager('#adminExamWorkspace', 'admin');
@@ -29,21 +27,10 @@ const $$ = selector => Array.from(document.querySelectorAll(selector));
 const REPORT_LIST_PAGE = 20; // report rows shown on screen before "show more"
 
 const state = {
-  students: adminStudents.map(student => ({ ...student })),
-  notices: adminNotices.map(notice => ({ ...notice })),
+  students: loadRoster(),
+  notices: loadNotices(),
   transactions: [],
-  routine: Object.fromEntries(
-    Object.entries(schedule).map(([day, info]) => [
-      day,
-      {
-        ...info,
-        classes: info.classes.map((cls, idx) => ({
-          id: cls.id || `RTN-${day.toUpperCase()}-${String(idx + 1).padStart(2, '0')}`,
-          ...cls
-        }))
-      }
-    ])
-  ),
+  routine: loadRoutine(),
   enabled: new Set(enabledClasses),
   appConfig: loadAppConfig(),
   activeView: 'dashboard',
@@ -81,7 +68,9 @@ function toast(message) {
   toastTimer = window.setTimeout(() => el.remove(), 2800);
 }
 
-/* ---------- One-click entry ---------- */
+function persistStudents() { saveRoster(state.students); }
+function persistNotices() { saveNotices(state.notices); }
+function persistRoutine() { saveRoutine(state.routine); }
 
 function enterPanel() {
   $('#adminEntry').hidden = true;
@@ -92,9 +81,12 @@ function enterPanel() {
 }
 
 function exitPanel() {
+  clearStaffSession('admin');
   $('#adminShell').hidden = true;
   $('#adminEntry').hidden = false;
-  $('#adminEntry').scrollTo({ top: 0, behavior: 'instant' });
+  const pin = $('#adminLoginPin');
+  if (pin) pin.value = '';
+  $('#adminEntry')?.scrollTo({ top: 0, behavior: 'instant' });
 }
 
 /* ---------- View switching ---------- */
@@ -121,8 +113,7 @@ function pendingStudents() {
 }
 
 function renderDashboard() {
-  const totalEnrolled = classEnrollment.reduce((sum, entry) => sum + entry.count, 0);
-  $('#dashStudentCount').textContent = bn(totalEnrolled);
+  $('#dashStudentCount').textContent = bn(state.students.length);
   const pendingCount = pendingStudents().length;
   $('#dashPendingCount').textContent = bn(pendingCount);
   $('#dashPendingCount').classList.toggle('has-pending', pendingCount > 0);
@@ -297,6 +288,8 @@ function setStatus(id, status, message) {
   const student = findStudent(id);
   if (!student) return;
   student.status = status;
+  persistStudents();
+  syncAccountStatus(id, status);
   renderFeeProfile();
   renderFinanceStats();
   renderStudents();
@@ -452,6 +445,7 @@ function saveStudentEdit(student) {
     address: $('#editStudentAddress').value.trim(),
     monthlyFee
   });
+  persistStudents();
   closeModal();
   renderStudents();
   renderFinance();
@@ -538,15 +532,18 @@ function publishNotice(event) {
     toast('নোটিশের শিরোনাম ও বিবরণ দিন');
     return;
   }
-  const noticeUniqueId = `NOT-2609-${String(state.notices.length + 1).padStart(3, '0')}`;
+  const now = new Date();
+  const noticeUniqueId = newId('NOT');
   state.notices.unshift({
     id: noticeUniqueId,
     title,
     body,
     audience,
-    date: '২২ সেপ্টেম্বর ২০২৬'
+    date: dateLabel(now),
+    createdAt: now.toISOString()
   });
   event.target.reset();
+  persistNotices();
   renderNotices();
   renderDashboard();
   toast(`নোটিশ [${noticeUniqueId}] প্রকাশিত হয়েছে`);
@@ -584,13 +581,9 @@ function renderRoutine() {
     classSelect.innerHTML = '<option value="" disabled selected>শ্রেণি নির্বাচন করুন</option>' +
       enabledClasses.map(className => `<option value="${escapeHtml(className)}">${escapeHtml(className)}</option>`).join('');
   }
-  // Teacher dropdown fed from the teachers already in the routine.
-  const teacherSelect = $('#routineTeacher');
-  if (teacherSelect) {
-    const previous = teacherSelect.value;
-    teacherSelect.innerHTML = '<option value="" disabled selected>শিক্ষক নির্বাচন করুন</option>' +
-      routineTeachers().map(teacher => `<option value="${escapeHtml(teacher)}">${escapeHtml(teacher)}</option>`).join('');
-    if (previous && routineTeachers().includes(previous)) teacherSelect.value = previous;
+  const teacherList = $('#routineTeacherList');
+  if (teacherList) {
+    teacherList.innerHTML = routineTeachers().map(teacher => `<option value="${escapeHtml(teacher)}"></option>`).join('');
   }
   // Subject autofill: previously typed subjects become suggestions while typing.
   const subjectList = $('#routineSubjectList');
@@ -621,7 +614,7 @@ function addRoutineClass(event) {
   event.preventDefault();
   const className = $('#routineClass').value;
   const subject = $('#routineSubject').value.trim();
-  const teacher = $('#routineTeacher').value;
+  const teacher = $('#routineTeacher').value.trim();
   const room = $('#routineRoom').value.trim();
   const time = $('#routineTime').value;
   if (!className || !subject || !teacher || !room || !time) {
@@ -629,7 +622,7 @@ function addRoutineClass(event) {
     return;
   }
   const { time: bengaliTime, period } = toBengaliTime(time);
-  const classUniqueId = `RTN-${state.activeDay.toUpperCase()}-${String(state.routine[state.activeDay].classes.length + 1).padStart(2, '0')}`;
+  const classUniqueId = newId('RTN');
   state.routine[state.activeDay].classes.push({
     id: classUniqueId,
     className,
@@ -639,13 +632,15 @@ function addRoutineClass(event) {
     teacher,
     room,
     tag: 'নতুন',
-    tone: 'green'
+    tone: 'green',
+    createdAt: new Date().toISOString()
   });
   // Keep subject and class handy for the next entry; reset only the rest.
   const nextSubject = subject;
   event.target.reset();
   $('#routineTime').value = '18:00';
   $('#routineSubject').value = nextSubject;
+  persistRoutine();
   renderRoutine();
   renderDashboard();
   toast(`${className} • ${subject} [${classUniqueId}] রুটিনে যোগ হয়েছে`);
@@ -656,7 +651,7 @@ function addRoutineClass(event) {
 function renderClasses() {
   $('#classesCount').textContent = `${bn(state.enabled.size)} / ${bn(enabledClasses.length)} চালু`;
   $('#classList').innerHTML = enabledClasses.map(className => {
-    const entry = classEnrollment.find(item => item.className === className);
+    const count = state.students.filter(student => student.className === className && student.status !== 'rejected').length;
     const enabled = state.enabled.has(className);
     const code = classCodes[className] || 'CLS-GEN';
     return `
@@ -666,7 +661,7 @@ function renderClasses() {
             <strong>${className}</strong>
             <span class="audit-id-badge purple">${code}</span>
           </div>
-          <small>${bn(entry ? entry.count : 0)} শিক্ষার্থী</small>
+          <small>${bn(count)} শিক্ষার্থী</small>
         </div>
         <label class="switch" aria-label="${className} চালু বা বন্ধ করুন">
           <input type="checkbox" data-class-name="${className}" ${enabled ? 'checked' : ''}>
@@ -1395,7 +1390,7 @@ async function collectFee(event) {
   const now = new Date();
   const token = crypto.randomUUID();
   const prefix = `${String(now.getFullYear()).slice(-2)}${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const tx = {
+  const tx = stampTransaction({
     id: `TRX-${token}`,
     receiptNo: `REC-${prefix}-${now.getTime().toString(36).toUpperCase()}-${token.slice(0, 8).toUpperCase()}`,
     studentId: student.id,
@@ -1409,7 +1404,7 @@ async function collectFee(event) {
     date: dateLabel(now),
     collectedBy: 'এডমিন',
     note: $('#feeNote').value.trim()
-  };
+  }, now);
   state.savingFee = true;
   form.setAttribute('aria-busy', 'true');
   $('#feeSaveError').hidden = true;
@@ -1646,12 +1641,22 @@ $('#cfgTeacherRegistration')?.addEventListener('change', event => {
 
 $('#adminLoginForm')?.addEventListener('submit', event => {
   event.preventDefault();
+  const username = $('#adminLoginUser')?.value || '';
+  const password = $('#adminLoginPin')?.value || '';
+  if (!verifyStaffCredentials('admin', username, password)) {
+    const box = $('#adminLoginError');
+    if (box) {
+      box.textContent = 'ইউজারনেম বা পাসওয়ার্ড সঠিক নয়।';
+      box.hidden = false;
+    }
+    return;
+  }
+  const box = $('#adminLoginError');
+  if (box) box.hidden = true;
+  saveStaffSession('admin', $('#rememberAdmin')?.checked !== false);
   enterPanel();
 });
-$('#adminEnterButton')?.addEventListener('click', enterPanel);
 $('#adminExitButton')?.addEventListener('click', exitPanel);
-
-$('#adminLoginPin').value = DEFAULT_PIN;
 $$('[data-toggle-pin]').forEach(button => {
   button.addEventListener('click', () => {
     const input = $(`#${button.dataset.togglePin}`);
@@ -1751,6 +1756,7 @@ $('#noticeList').addEventListener('click', event => {
   const button = event.target.closest('[data-action="delete-notice"]');
   if (!button) return;
   state.notices = state.notices.filter(notice => notice.id !== button.dataset.id);
+  persistNotices();
   renderNotices();
   renderDashboard();
   toast('নোটিশ মুছে ফেলা হয়েছে');
@@ -1769,6 +1775,7 @@ $('#routineList').addEventListener('click', event => {
   const button = event.target.closest('[data-action="delete-routine"]');
   if (!button) return;
   state.routine[state.activeDay].classes.splice(Number(button.dataset.index), 1);
+  persistRoutine();
   renderRoutine();
   renderDashboard();
   toast('ক্লাসটি রুটিন থেকে মুছে ফেলা হয়েছে');
@@ -1943,4 +1950,4 @@ window.addEventListener('storage', event => {
   if (event.key === EXAM_KEY || event.key === TEACHING_KEY) loadAcademicData();
 });
 
-initDemoForms(demoWarnings);
+if (hasStaffSession('admin')) enterPanel();

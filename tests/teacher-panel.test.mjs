@@ -5,6 +5,9 @@ import test, { before } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadPage } from './jsdom-harness.mjs';
 import { teachingRepository, todayISO } from '../js/teaching-data.js';
+import { adminStudents } from '../js/admin-data.js';
+import { ROSTER_KEY } from '../js/office-data.js';
+import { STAFF_ACCOUNTS, STAFF_PASSWORD } from '../js/staff-auth.js';
 
 const shift = days => {
   const d = new Date(`${todayISO()}T12:00:00`);
@@ -20,8 +23,12 @@ const cards = sel => $$(`${sel} .teaching-card`);
 const queueTitle = () => $$('#teacherAttention .teaching-card h3').map(el => el.textContent);
 
 before(async () => {
-  ctx = await loadPage('teacher.html', { seed: { 'activePlus.demo.autofill.v1': 'off' } });
+  ctx = await loadPage('teacher.html', {
+    seed: { 'activePlus.demo.autofill.v1': 'off', [ROSTER_KEY]: JSON.stringify(adminStudents) }
+  });
   await import('../js/teacher.js');
+  ctx.type($('#teacherLoginUser'), STAFF_ACCOUNTS.teacher.username);
+  ctx.type($('#teacherLoginPin'), STAFF_PASSWORD);
   ctx.click($('#teacherEnter'));
   await settle();
   assert.equal($('#teacherShell').hidden, false, 'the panel must open');

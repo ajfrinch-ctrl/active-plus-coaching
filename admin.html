@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
   <meta name="theme-color" content="#04795a">
-  <meta name="description" content="Active Plus Coaching ডামি এডমিন প্যানেল — এক ক্লিকে প্রবেশ, সব ডেটা লোকাল ডেমো।">
+  <meta name="description" content="Active Plus Coaching এডমিন প্যানেল — ইউজারনেম ও পাসওয়ার্ড দিয়ে প্রবেশ।">
   <meta name="robots" content="noindex">
-  <title>Active Plus | ডামি এডমিন প্যানেল</title>
+  <title>Active Plus | এডমিন প্যানেল</title>
   <link rel="icon" type="image/png" href="assets/icons/app-logo.png">
   <link rel="stylesheet" href="css/admin.css">
   <link rel="stylesheet" href="css/mobile.css">
@@ -34,16 +34,16 @@
           </div>
         </div>
         <form id="adminLoginForm" novalidate>
-          <label for="adminLoginUser">এডমিন মোবাইল নম্বর / আইডি</label>
+          <label for="adminLoginUser">ইউজারনেম</label>
           <div class="input-wrap">
-            <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-phone"></use></svg>
-            <input id="adminLoginUser" name="username" type="text" placeholder="০১৮১৯৪৮৬৯৬৬" value="01819486966" required>
+            <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-user"></use></svg>
+            <input id="adminLoginUser" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="admin.apc" required>
           </div>
-          <label for="adminLoginPin">পাসকোড / PIN</label>
+          <label for="adminLoginPin">পাসওয়ার্ড</label>
           <div class="input-wrap">
             <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg>
-            <input id="adminLoginPin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="6" autocomplete="current-password" placeholder="৪–৬ সংখ্যার PIN" value="123123" required>
-            <button class="show-pin" type="button" data-toggle-pin="adminLoginPin" aria-label="PIN দেখুন">
+            <input id="adminLoginPin" name="password" type="password" minlength="6" maxlength="32" autocomplete="current-password" placeholder="পাসওয়ার্ড" required>
+            <button class="show-pin" type="button" data-toggle-pin="adminLoginPin" aria-label="পাসওয়ার্ড দেখুন">
               <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg>
             </button>
           </div>
@@ -53,13 +53,11 @@
               <span class="fake-check"></span>এই ডিভাইসে মনে রাখুন
             </label>
           </div>
+          <p id="adminLoginError" class="finance-error" role="alert" hidden></p>
           <button class="auth-submit" type="submit">
             লগইন করুন <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg>
           </button>
         </form>
-        <button class="demo-button" type="button" id="adminEnterButton">
-          <span class="demo-dot"></span> ডামি অ্যাকাউন্টে এক ক্লিকে প্রবেশ
-        </button>
         <p class="auth-footnote">
           <a class="inline-link" href="index.html">← শিক্ষার্থী অ্যাপে ফিরে যান</a>
         </p>
@@ -67,16 +65,15 @@
     </div>
   </section>
 
-  <!-- Admin panel shell: hidden until the one-click entry is used. -->
+  <!-- Admin panel shell: hidden until username and password are accepted. -->
   <div class="admin-shell" id="adminShell" hidden>
     <header class="admin-topbar">
       <div class="admin-topbar-inner">
         <a class="admin-brand" href="admin.html" aria-label="এডমিন প্যানেল">
           <img src="assets/icons/app-logo.png" alt="" width="38" height="38">
-          <span><strong>এডমিন প্যানেল</strong><small>Active Plus Coaching • ডেমো</small></span>
+          <span><strong>এডমিন প্যানেল</strong><small>Active Plus Coaching</small></span>
         </a>
         <div class="admin-topbar-actions">
-          <span class="admin-demo-badge"><span class="demo-dot"></span>ডেমো মোড</span>
           <a class="admin-app-link" href="index.html" title="শিক্ষার্থী অ্যাপ" aria-label="শিক্ষার্থী অ্যাপ খুলুন">
             <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-smartphone"></use></svg>
             <span>শিক্ষার্থী অ্যাপ</span>
@@ -300,9 +297,8 @@
                 <datalist id="routineSubjectList"></datalist>
               </label>
               <label>শিক্ষক *
-                <select id="routineTeacher" required>
-                  <option value="" disabled selected>শিক্ষক নির্বাচন করুন</option>
-                </select>
+                <input id="routineTeacher" type="text" list="routineTeacherList" placeholder="শিক্ষকের নাম" autocomplete="off" required>
+                <datalist id="routineTeacherList"></datalist>
               </label>
               <label>রুম
                 <input id="routineRoom" type="text" placeholder="যেমন: রুম ২০৩" required>
@@ -372,7 +368,7 @@
               <label for="feeStudentSearch">নাম, মোবাইল নম্বর, Student ID অথবা অভিভাবকের মোবাইল</label>
               <div class="finance-search-input">
                 <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-search"></use></svg>
-                <input id="feeStudentSearch" type="search" placeholder="যেমন: রাইসা, 017… অথবা AP-1024" autocomplete="off" aria-controls="feeSearchResults" aria-describedby="feeSearchHint">
+                <input id="feeStudentSearch" type="search" placeholder="নাম, মোবাইল বা Student ID" autocomplete="off" aria-controls="feeSearchResults" aria-describedby="feeSearchHint">
               </div>
               <p id="feeSearchHint" class="finance-hint">শিক্ষার্থী খুঁজুন → প্রোফাইল দেখুন → পেমেন্ট গ্রহণ করুন</p>
               <p id="financeLoadError" class="finance-error" role="alert" hidden></p>
@@ -682,10 +678,6 @@
               <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-smartphone"></use></svg>
               শিক্ষার্থী অ্যাপ দেখুন
             </a>
-            <button class="admin-btn primary" type="button" id="btnSaveTopAppSettings">
-              <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-check-circle"></use></svg>
-              সব সেটিংস সংরক্ষণ করুন
-            </button>
           </div>
         </div>
 

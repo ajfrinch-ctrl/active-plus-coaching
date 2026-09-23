@@ -44,12 +44,14 @@ test('recent payments are chronologically sorted without mutating records; ties 
   assert.equal(copy[4].id, 'TRX-9817');
 });
 
-test('repository seeds once, persists same record shape, merges saves, rejects corruption/failure', async () => {
+test('an empty ledger stays empty; a seeded ledger persists, merges saves and rejects corruption/failure', async () => {
   const storage = new Map();
   globalThis.window = { localStorage: {
     getItem: key => storage.get(key) ?? null,
     setItem: (key, value) => storage.set(key, value)
   } };
+  assert.deepEqual(await financeRepository.listTransactions(), []);
+  storage.set(TRANSACTIONS_KEY, JSON.stringify(initialTransactions));
   const before = await financeRepository.listTransactions();
   const tx = { ...before[0], id: 'unique-one', receiptNo: 'receipt-one', amount: 100 };
   await financeRepository.saveTransaction(tx);

@@ -5,11 +5,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { loadPage } from './jsdom-harness.mjs';
 import { PAYMENT_SESSION_KEY } from '../js/payment-auth.js';
+import { adminStudents } from '../js/admin-data.js';
+import { ROSTER_KEY } from '../js/office-data.js';
 
 test('an existing counter session opens the desk directly and it is usable', async () => {
   const ctx = await loadPage('payment.html', {
     seed: {
       'activePlus.demo.autofill.v1': 'off',
+      [ROSTER_KEY]: JSON.stringify(adminStudents),
       [PAYMENT_SESSION_KEY]: JSON.stringify({ expiry: Date.now() + 60000 })
     }
   });

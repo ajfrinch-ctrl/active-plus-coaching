@@ -4,6 +4,8 @@ import test, { before } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadPage } from './jsdom-harness.mjs';
 import { adminStudents } from '../js/admin-data.js';
+import { ROSTER_KEY } from '../js/office-data.js';
+import { PAYMENT_USER_ID, DEFAULT_PAYMENT_PIN } from '../js/payment-auth.js';
 import { toBanglaNumber as bn } from '../js/ui.js';
 
 const raisa = adminStudents.find(s => s.id === 'AP-1024');
@@ -12,7 +14,9 @@ const opened = [];
 const downloads = [];
 
 before(async () => {
-  ctx = await loadPage('payment.html', { seed: { 'activePlus.demo.autofill.v1': 'off' } });
+  ctx = await loadPage('payment.html', {
+    seed: { 'activePlus.demo.autofill.v1': 'off', [ROSTER_KEY]: JSON.stringify(adminStudents) }
+  });
   // jsdom has no canvas, font loading, blob URLs or popups — those are stubbed.
   const fake = {
     font: '', fillStyle: '', textAlign: 'left', strokeStyle: '', lineWidth: 1,
@@ -32,6 +36,8 @@ before(async () => {
 
   await import('../js/payment.js');
   const { $, $$, submit, click, waitFor } = ctx;
+  ctx.type($('#payLoginUser'), PAYMENT_USER_ID);
+  ctx.type($('#payLoginPin'), DEFAULT_PAYMENT_PIN);
   submit($('#payLoginForm'));
   await waitFor(() => $('#payShell').hidden === false);
   ctx.type($('#payStudentSearch'), 'রাইসা');

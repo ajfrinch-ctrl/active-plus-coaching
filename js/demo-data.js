@@ -5,7 +5,7 @@ import { teachingRepository, TEACHING_KEY, DEMO_TEACHER, validateActivity, today
 import { TRANSACTIONS_KEY, monthLabel, dateLabel } from './finance-data.js';
 export const DEMO_MODE_KEY = 'activePlus.demo.autofill.v1';
 export function demoEnabled() {
-  try { return window.localStorage.getItem(DEMO_MODE_KEY) !== 'off'; } catch { return false; }
+  try { return window.localStorage.getItem(DEMO_MODE_KEY) === 'on'; } catch { return false; }
 }
 const roster = () => adminStudents.filter(s => s.status === 'approved').map(s => ({ id: s.id, name: s.name, className: s.className }));
 export function buildDemoExams(now = Date.now(), batch = 'initial') {

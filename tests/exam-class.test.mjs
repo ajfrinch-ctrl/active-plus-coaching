@@ -6,6 +6,8 @@ import { loadPage } from './jsdom-harness.mjs';
 import { EXAM_KEY, examTemplate, examMatchesClass, validateExam } from '../js/exam-data.js';
 import { enabledClasses } from '../js/config.js';
 import { adminStudents } from '../js/admin-data.js';
+import { ROSTER_KEY } from '../js/office-data.js';
+import { STAFF_ACCOUNTS, STAFF_PASSWORD } from '../js/staff-auth.js';
 
 let ctx, repo;
 const $ = sel => ctx.$(sel);
@@ -17,9 +19,13 @@ const tenth = adminStudents.find(s => s.id === 'AP-1024');            // দশ�
 const honours = adminStudents.find(s => s.id === '260716011');        // অনার্স ১ম বর্ষ
 
 before(async () => {
-  ctx = await loadPage('teacher.html', { seed: { 'activePlus.demo.autofill.v1': 'off' } });
+  ctx = await loadPage('teacher.html', {
+    seed: { 'activePlus.demo.autofill.v1': 'off', [ROSTER_KEY]: JSON.stringify(adminStudents) }
+  });
   repo = (await import('../js/exam-data.js')).examRepository;
   await import('../js/teacher.js');
+  ctx.type($('#teacherLoginUser'), STAFF_ACCOUNTS.teacher.username);
+  ctx.type($('#teacherLoginPin'), STAFF_PASSWORD);
   ctx.click($('#teacherEnter'));
   await settle();
   ctx.click($('[data-teacher-view="online-exams"]'));

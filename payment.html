@@ -33,18 +33,18 @@
             <h2>পেমেন্ট রিসিভ প্রবেশ</h2>
           </div>
         </div>
-        <p class="pay-entry-note">ইউনিক ইউসার আইডি ও PIN দিয়ে প্রবেশ করুন। প্রবেশের পর শিক্ষার্থীর নাম, মোবাইল নম্বর, Student ID বা অভিভাবকের মোবাইল দিয়ে খুঁজে দ্রুত ফি গ্রহণ করা যাবে — রসিদ ডাউনলোড ও হোয়াটসঅ্যাপে ছবি পাঠানোর ব্যবস্থাসহ।</p>
+        <p class="pay-entry-note">ইউজারনেম ও পাসওয়ার্ড দিয়ে প্রবেশ করুন। প্রবেশের পর শিক্ষার্থীর নাম, মোবাইল নম্বর, Student ID বা অভিভাবকের মোবাইল দিয়ে খুঁজে দ্রুত ফি গ্রহণ করা যাবে — রসিদ ডাউনলোড ও হোয়াটসঅ্যাপে ছবি পাঠানোর ব্যবস্থাসহ।</p>
         <form id="payLoginForm" novalidate>
-          <label for="payLoginUser">পেমেন্ট পোর্টাল ইউসার আইডি</label>
+          <label for="payLoginUser">ইউজারনেম</label>
           <div class="input-wrap">
             <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-user"></use></svg>
-            <input id="payLoginUser" name="username" type="text" autocomplete="username" placeholder="যেমন: APC-PAY-001" required>
+            <input id="payLoginUser" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="payment.apc" required>
           </div>
-          <label for="payLoginPin">পাসকোড / PIN</label>
+          <label for="payLoginPin">পাসওয়ার্ড</label>
           <div class="input-wrap">
             <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg>
-            <input id="payLoginPin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="6" autocomplete="current-password" placeholder="৪–৬ সংখ্যার PIN" required>
-            <button class="show-pin" type="button" data-toggle-pin="payLoginPin" aria-label="PIN দেখুন">
+            <input id="payLoginPin" name="password" type="password" minlength="6" maxlength="32" autocomplete="current-password" placeholder="পাসওয়ার্ড" required>
+            <button class="show-pin" type="button" data-toggle-pin="payLoginPin" aria-label="পাসওয়ার্ড দেখুন">
               <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg>
             </button>
           </div>
@@ -59,8 +59,7 @@
             প্রবেশ করুন <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg>
           </button>
         </form>
-        <p class="pay-entry-note" style="margin-top: 12px;">ডেমো প্রবেশাধিকার — ইউসার আইডি: <strong>APC-PAY-001</strong> • PIN: <strong>১২৩১২৩</strong>। প্যানেলে ঢুকে উপরের লক আইকন থেকে PIN বদলানো যায়।</p>
-        <p class="pay-entry-note">শিক্ষার্থী লগইন পেইজে (<a class="inline-link" href="index.html">index.html</a>) “পেমেন্ট কাউন্টার” ট্যাবে একই আইডি ও PIN দিলে সরাসরি এই প্যানেলে অটো-লগইন হয় — আলাদা করে ফর্ম পূরণ করতে হয় না।</p>
+        <p class="pay-entry-note" style="margin-top: 12px;">প্যানেলে ঢুকে উপরের লক আইকন থেকে পাসওয়ার্ড বদলানো যায়।</p>
         <p class="auth-footnote">
           <a class="inline-link" href="admin.html">← এডমিন প্যানেল</a>
           <a class="inline-link" href="index.html">← শিক্ষার্থী অ্যাপ</a>
@@ -77,8 +76,7 @@
         <span><strong>পেমেন্ট রিসিভ</strong><small>Active Plus Coaching • কাউন্টার</small></span>
       </a>
       <div class="admin-topbar-actions">
-        <span class="admin-demo-badge"><span class="demo-dot"></span>ডেমো মোড</span>
-        <button class="admin-app-link" id="payPinButton" type="button" title="PIN পরিবর্তন" aria-label="PIN পরিবর্তন করুন">
+        <button class="admin-app-link" id="payPinButton" type="button" title="পাসওয়ার্ড পরিবর্তন" aria-label="পাসওয়ার্ড পরিবর্তন করুন">
           <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg>
         </button>
         <a class="admin-app-link" href="admin.html" title="এডমিন প্যানেল" aria-label="এডমিন প্যানেল খুলুন">
@@ -124,7 +122,7 @@
           <label for="payStudentSearch">নাম, মোবাইল নম্বর, Student ID অথবা অভিভাবকের মোবাইল</label>
           <div class="finance-search-input pay-search-input">
             <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-search"></use></svg>
-            <input id="payStudentSearch" type="search" placeholder="যেমন: রাইসা, 017…, AP-1024 অথবা অভিভাবকের 018…" autocomplete="off" aria-controls="paySearchResults" aria-describedby="paySearchHint">
+            <input id="payStudentSearch" type="search" placeholder="নাম, মোবাইল, Student ID বা অভিভাবকের নম্বর" autocomplete="off" aria-controls="paySearchResults" aria-describedby="paySearchHint">
             <button class="student-search-clear" type="button" id="paySearchClear" aria-label="সার্চ মুছুন" hidden>✕</button>
           </div>
           <p id="paySearchHint" class="finance-hint">নাম/মোবাইল/ID/অভিভাবকের মোবাইল দিয়ে খুঁজুন → সংক্ষিপ্ত তথ্য → পেমেন্ট গ্রহণ</p>
@@ -289,21 +287,21 @@
       <header class="admin-modal-header">
         <div>
           <p class="eyebrow">Security</p>
-          <h2 id="payPinTitle">PIN পরিবর্তন</h2>
-          <p class="finance-hint">ইউসার আইডি অপরিবর্তিত থাকে; শুধু PIN বদলায়।</p>
+          <h2 id="payPinTitle">পাসওয়ার্ড পরিবর্তন</h2>
+          <p class="finance-hint">ইউজারনেম অপরিবর্তিত থাকে; শুধু পাসওয়ার্ড বদলায়।</p>
         </div>
         <button class="admin-modal-close" type="button" id="payPinClose" aria-label="বন্ধ করুন">✕</button>
       </header>
       <div class="admin-modal-body">
         <form id="payPinForm" class="fee-form" style="padding: 0;">
-          <label for="payPinCurrent">বর্তমান PIN *</label>
-          <input id="payPinCurrent" type="password" inputmode="numeric" minlength="4" maxlength="6" autocomplete="current-password" required>
-          <label for="payPinNew">নতুন PIN (৪–৬ সংখ্যা) *</label>
-          <input id="payPinNew" type="password" inputmode="numeric" minlength="4" maxlength="6" autocomplete="new-password" required>
-          <label for="payPinConfirm">নতুন PIN আবার লিখুন *</label>
-          <input id="payPinConfirm" type="password" inputmode="numeric" minlength="4" maxlength="6" autocomplete="new-password" required>
+          <label for="payPinCurrent">বর্তমান পাসওয়ার্ড *</label>
+          <input id="payPinCurrent" type="password" minlength="6" maxlength="32" autocomplete="current-password" required>
+          <label for="payPinNew">নতুন পাসওয়ার্ড (৬–৩২ অক্ষর) *</label>
+          <input id="payPinNew" type="password" minlength="6" maxlength="32" autocomplete="new-password" required>
+          <label for="payPinConfirm">নতুন পাসওয়ার্ড আবার লিখুন *</label>
+          <input id="payPinConfirm" type="password" minlength="6" maxlength="32" autocomplete="new-password" required>
           <p id="payPinError" class="finance-error" role="alert" hidden></p>
-          <button class="admin-btn primary" type="submit" style="margin-top: 14px;">নতুন PIN সংরক্ষণ করুন</button>
+          <button class="admin-btn primary" type="submit" style="margin-top: 14px;">নতুন পাসওয়ার্ড সংরক্ষণ করুন</button>
         </form>
       </div>
     </div>

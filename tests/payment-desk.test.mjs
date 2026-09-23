@@ -9,9 +9,14 @@ import { loadPage } from './jsdom-harness.mjs';
 import { adminStudents, initialTransactions, paymentMethods } from '../js/admin-data.js';
 import { studentFeeSummary, dateLabel, TRANSACTIONS_KEY } from '../js/finance-data.js';
 import { toBanglaNumber } from '../js/ui.js';
-import { PAYMENT_ACCOUNT_KEY, PAYMENT_SESSION_KEY } from '../js/payment-auth.js';
+import { PAYMENT_ACCOUNT_KEY, PAYMENT_SESSION_KEY, PAYMENT_USER_ID, DEFAULT_PAYMENT_PIN } from '../js/payment-auth.js';
+import { ROSTER_KEY } from '../js/office-data.js';
 
-const DEMO_OFF = { 'activePlus.demo.autofill.v1': 'off' };
+const DEMO_OFF = {
+  'activePlus.demo.autofill.v1': 'off',
+  [ROSTER_KEY]: JSON.stringify(adminStudents),
+  [TRANSACTIONS_KEY]: JSON.stringify(initialTransactions)
+};
 const raisa = adminStudents.find(s => s.id === 'AP-1024');
 const money = value => `৳${toBanglaNumber(Number(value).toLocaleString('en-US'))}`;
 let ctx;
@@ -21,24 +26,26 @@ before(async () => {
   await import('../js/payment.js');
 });
 
-test('entry screen is prefilled with the demo counter ID and rejects a wrong PIN', () => {
+test('entry screen starts blank and rejects a wrong password', () => {
   const { $, submit } = ctx;
   assert.equal($('#payEntry').hidden, false);
   assert.equal($('#payShell').hidden, true);
-  assert.equal($('#payLoginUser').value, 'APC-PAY-001');
-  assert.equal($('#payLoginPin').value, '123123');
+  assert.equal($('#payLoginUser').value, '');
+  assert.equal($('#payLoginPin').value, '');
+  assert.equal($('#payLoginPin').maxLength, 32);
 
-  $('#payLoginPin').value = '999999';
+  $('#payLoginUser').value = PAYMENT_USER_ID;
+  $('#payLoginPin').value = 'wrong-pass';
   submit($('#payLoginForm'));
   assert.equal($('#payLoginError').hidden, false);
-  assert.match($('#payLoginError').textContent, /ইউসার আইডি বা PIN সঠিক নয়/);
+  assert.match($('#payLoginError').textContent, /ইউজারনেম বা পাসওয়ার্ড সঠিক নয়/);
   assert.equal($('#payShell').hidden, true);
 });
 
-test('the counter ID + PIN opens the desk, stores a session and focuses search', async () => {
+test('the counter username + password opens the desk, stores a session and focuses search', async () => {
   const { $, submit, window, waitFor } = ctx;
-  $('#payLoginUser').value = 'apc-pay-001'; // case tolerant
-  $('#payLoginPin').value = '১২৩১২৩'; // Bengali digits
+  $('#payLoginUser').value = 'Payment.APC'; // case tolerant
+  $('#payLoginPin').value = DEFAULT_PAYMENT_PIN;
   submit($('#payLoginForm'));
   await waitFor(() => $('#payShell').hidden === false);
 
@@ -164,13 +171,13 @@ test('PIN can be changed from the desk; the stored account keeps its user ID', a
   type($('#payPinNew'), '456789');
   type($('#payPinConfirm'), '456789');
   submit($('#payPinForm'));
-  assert.match($('#payPinError').textContent, /বর্তমান PIN সঠিক নয়/);
+  assert.match($('#payPinError').textContent, /বর্তমান পাসওয়ার্ড সঠিক নয়/);
 
-  type($('#payPinCurrent'), '123123');
+  type($('#payPinCurrent'), DEFAULT_PAYMENT_PIN);
   submit($('#payPinForm'));
   await waitFor(() => $('#payPinBackdrop').hidden === true);
-  assert.deepEqual(JSON.parse(window.localStorage.getItem(PAYMENT_ACCOUNT_KEY)), { userId: 'APC-PAY-001', pin: '456789' });
-  assert.match($('#payToast').textContent, /PIN পরিবর্তন হয়েছে/);
+  assert.deepEqual(JSON.parse(window.localStorage.getItem(PAYMENT_ACCOUNT_KEY)), { username: PAYMENT_USER_ID, password: '456789' });
+  assert.match($('#payToast').textContent, /পাসওয়ার্ড পরিবর্তন হয়েছে/);
 });
 
 test('exit clears the session and returns to the entry screen', () => {

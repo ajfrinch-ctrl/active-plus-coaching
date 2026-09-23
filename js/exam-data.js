@@ -2,7 +2,8 @@
    A production API must own authorization, time, answer keys and accepted submissions. */
 import { teachingRepository, DEMO_TEACHER } from './teaching-data.js';
 import { enabledClasses } from './config.js';
-export const EXAM_KEY = 'activePlus.exams.v1';
+import { KEYS, readRaw, writeRaw } from './database.js';
+export const EXAM_KEY = KEYS.exams;
 export const EXAM_TYPES = Object.freeze({ mcq: 'MCQ', written: 'লিখিত', short: 'সংক্ষিপ্ত উত্তর' });
 export const EXAM_STATUSES = Object.freeze({ draft: 'খসড়া', pending: 'অনুমোদনের অপেক্ষায়', rejected: 'সংশোধনের জন্য ফেরত', published: 'প্রকাশিত' });
 export const TEACHER_ACTOR = Object.freeze({ role: 'teacher', id: DEMO_TEACHER.id });
@@ -77,7 +78,7 @@ export function validateExam(input) {
   return { title, subject, className, type: input.type, startAt, endAt, lateMinutes, negative: input.type === 'mcq' ? negative : 0, passPercent, instructions, template: input.template, questions };
 }
 function read() {
-  const raw = window.localStorage.getItem(EXAM_KEY);
+  const raw = readRaw(EXAM_KEY);
   if (raw === null) return { version: 1, exams: [], attempts: [] };
   let db; try { db = JSON.parse(raw); } catch { fail('পরীক্ষার সংরক্ষিত ডেটা ক্ষতিগ্রস্ত। ডেটা না মুছে সহায়তা নিন।'); }
   if (db?.version !== 1 || !Array.isArray(db.exams) || !Array.isArray(db.attempts)) fail('পরীক্ষার ডেটা সঠিক নয়।');
@@ -104,7 +105,7 @@ function read() {
   return db;
 }
 async function mutate(fn) {
-  const task = () => { const db = read(); fn(db); window.localStorage.setItem(EXAM_KEY, JSON.stringify(db)); window.dispatchEvent(new Event('exam-data-updated')); return db; };
+  const task = () => { const db = read(); fn(db); writeRaw(EXAM_KEY, JSON.stringify(db)); window.dispatchEvent(new Event('exam-data-updated')); return db; };
   return navigator.locks ? navigator.locks.request(EXAM_KEY, task) : task();
 }
 function examById(db, id) { const e = db.exams.find(e => e.id === id); if (!e) fail('পরীক্ষাটি পাওয়া যায়নি।'); return e; }
