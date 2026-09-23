@@ -1,4 +1,11 @@
 import { toBanglaNumber as bn } from './ui.js';
+import { loadAppConfig } from './storage.js';
+import { APP_TAGLINE, DEFAULT_APP_SETTINGS } from './config.js';
+/* The receipt header shows the institution's own tagline and address. */
+const receiptBrand = () => {
+  const cfg = loadAppConfig();
+  return { tagline: cfg.tagline || APP_TAGLINE, address: cfg.campusAddress || DEFAULT_APP_SETTINGS.campusAddress };
+};
 const escape = value => String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 
 function receiptFields(tx) {
@@ -11,12 +18,14 @@ function receiptFields(tx) {
 }
 
 export function receiptMarkup(tx, logo = 'assets/icons/app-logo.png') {
+  const brand = receiptBrand();
   const fields = receiptFields(tx);
   return `<div class="receipt-modal-box" id="receiptPreviewBox">
     <div class="receipt-header">
       <img class="receipt-logo" src="${escape(logo)}" alt="Active Plus Coaching" width="64" height="64">
       <div class="receipt-brand-title">Active Plus Coaching</div>
-      <div class="receipt-sub">শিখতে থাকো, এগিয়ে যাও • দিনাজপুর</div>
+      <div class="receipt-sub">${escape(brand.tagline)}</div>
+      <div class="receipt-address">${escape(brand.address)}</div>
       <div class="receipt-badge-title">মানি রসিদ (PAID)</div>
     </div>
     <dl class="receipt-meta-grid">${fields.map(([label, value]) => `<div><dt>${label}</dt><dd>${escape(value)}</dd></div>`).join('')}</dl>
@@ -127,10 +136,14 @@ export async function renderReceiptCanvas(tx) {
   });
   ctx.font = '400 17px ReceiptBangla';
   const notes = wrapText(ctx, `নোট: ${tx.note || 'ফি পরিশোধ সম্পন্ন'}`, width - inset * 2);
+  const brand = receiptBrand();
+  ctx.font = '500 15px ReceiptBangla';
+  const addressLines = wrapText(ctx, brand.address, width - inset * 2);
+  const addressStep = 22; // extra address lines push the rest of the header down
   const collector = wrapText(ctx, `আদায়কারী: ${tx.collectedBy || 'এডমিন'}`, columnWidth);
   const rowHeights = [];
   for (let i = 0; i < fields.length; i += 2) rowHeights.push(34 + Math.max(fields[i].lines.length, fields[i + 1].lines.length) * 27);
-  const height = 290 + rowHeights.reduce((sum, h) => sum + h, 0) + 128 + notes.length * 26 + Math.max(68, collector.length * 26 + 24) + 44;
+  const height = 290 + (addressLines.length - 1) * addressStep + rowHeights.reduce((sum, h) => sum + h, 0) + 128 + notes.length * 26 + Math.max(68, collector.length * 26 + 24) + 44;
   // Cap pixel count for older mobile browsers while retaining crisp text for normal receipts.
   const scale = Math.min(2, Math.sqrt(8000000 / (width * height)), 16000 / height);
   canvas.width = Math.ceil(width * scale);
@@ -155,10 +168,12 @@ export async function renderReceiptCanvas(tx) {
   try {
     ctx.drawImage(logo, width / 2 - 42, 38, 84, 84);
     text('Active Plus Coaching', width / 2, 160, 30, forest, 800, 'center');
-    text('শিখতে থাকো, এগিয়ে যাও • দিনাজপুর', width / 2, 192, 17, muted, 500, 'center');
-    text('মানি রসিদ • পরিশোধিত', width / 2, 230, 20, forest, 700, 'center');
-    divider(250);
-    let y = 282;
+    text(brand.tagline, width / 2, 192, 17, muted, 500, 'center');
+    addressLines.forEach((line, n) => text(line, width / 2, 192 + addressStep * (n + 1), 15, muted, 400, 'center'));
+    const headerShift = addressLines.length * addressStep;
+    text('মানি রসিদ • পরিশোধিত', width / 2, 208 + headerShift, 20, forest, 700, 'center');
+    divider(228 + headerShift);
+    let y = 260 + headerShift;
     fields.forEach((field, index) => {
       const x = inset + (index % 2) * (columnWidth + 32);
       text(field.label, x, y, 14, muted, 500);
