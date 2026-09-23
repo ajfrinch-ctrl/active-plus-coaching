@@ -6,7 +6,7 @@ async function edit(page) { await page.locator('.bottom-nav [data-view=profile]'
 async function logout(page) { await page.locator('[data-action=logout]').click(); await page.locator('#logoutConfirmButton').click(); }
 const saved = page => page.evaluate(key => JSON.parse(localStorage.getItem(key)), KEY);
 
-test('registration default PIN and permanent number ignore tampered contact input', async ({ page }) => {
+test('registration default password and permanent number ignore tampered contact input', async ({ page }) => {
   await page.goto('/index.html'); await page.locator('.auth-tab[data-auth-tab=register]').click();
   await expect(page.locator('#regPin')).toHaveValue('123123'); await expect(page.locator('#regPinConfirm')).toHaveValue('123123');
   await page.locator('#regMobile').fill('01711223344'); await page.locator('[data-registration-step="1"] [data-next-step]').click();

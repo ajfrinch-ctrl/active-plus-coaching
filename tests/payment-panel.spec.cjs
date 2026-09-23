@@ -11,17 +11,17 @@ async function enter(page) {
   await expect(page.locator('#payShell')).toBeVisible();
 }
 
-test('payment portal opens only with the unique user ID and PIN', async ({ page }) => {
+test('payment portal opens only with the unique user ID and password', async ({ page }) => {
   await page.goto('/payment.html');
   await expect(page.locator('#payEntry')).toBeVisible();
   // Demo credentials are prefilled for the one-tap demo flow.
   await expect(page.locator('#payLoginUser')).toHaveValue('APC-PAY-001');
   await expect(page.locator('#payLoginPin')).toHaveValue('123123');
 
-  // Wrong PIN is rejected with a Bengali message.
+  // Wrong password is rejected with a Bengali message.
   await page.locator('#payLoginPin').fill('999999');
   await page.locator('#payLoginForm button[type=submit]').click();
-  await expect(page.locator('#payLoginError')).toContainText('ইউসার আইডি বা PIN সঠিক নয়');
+  await expect(page.locator('#payLoginError')).toContainText('ইউসার আইডি বা পাসওয়ার্ড সঠিক নয়');
   await expect(page.locator('#payShell')).toBeHidden();
 
   // Wrong user ID is rejected too.
@@ -42,24 +42,25 @@ test('payment portal opens only with the unique user ID and PIN', async ({ page 
   await page.reload();
   await expect(page.locator('#payShell')).toBeVisible();
 
-  // Exit clears the session and returns to the entry screen.
+  // Logout clears the session and lands on the shared login page.
   await page.locator('#payExitButton').click();
-  await expect(page.locator('#payEntry')).toBeVisible();
-  await page.reload();
+  await page.waitForURL('**/index.html');
+  await expect(page.locator('#authScreen')).toBeVisible();
+  await page.goto('/payment.html');
   await expect(page.locator('#payEntry')).toBeVisible();
 });
 
-test('PIN can be changed from the panel; new PIN logs in, old one is rejected', async ({ page }) => {
+test('the password can be changed from the panel; the new one logs in, the old one is rejected', async ({ page }) => {
   await enter(page);
   await page.locator('#payPinButton').click();
   await expect(page.locator('#payPinBackdrop')).toBeVisible();
 
-  // Wrong current PIN is rejected.
+  // Wrong current password is rejected.
   await page.locator('#payPinCurrent').fill('111111');
   await page.locator('#payPinNew').fill('456789');
   await page.locator('#payPinConfirm').fill('456789');
   await page.locator('#payPinForm button[type=submit]').click();
-  await expect(page.locator('#payPinError')).toContainText('বর্তমান PIN সঠিক নয়');
+  await expect(page.locator('#payPinError')).toContainText('বর্তমান পাসওয়ার্ড সঠিক নয়');
 
   // Mismatched confirmation is rejected.
   await page.locator('#payPinCurrent').fill('123123');
@@ -72,12 +73,14 @@ test('PIN can be changed from the panel; new PIN logs in, old one is rejected', 
   await page.locator('#payPinConfirm').fill('৪৫৬৭৮৯');
   await page.locator('#payPinForm button[type=submit]').click();
   await expect(page.locator('#payPinBackdrop')).toBeHidden();
-  await expect(page.locator('#payToast')).toContainText('PIN পরিবর্তন হয়েছে');
+  await expect(page.locator('#payToast')).toContainText('পাসওয়ার্ড পরিবর্তন হয়েছে');
   const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('activePlus.paymentAccount.v1')));
   expect(stored).toEqual({ userId: 'APC-PAY-001', pin: '456789' });
 
-  // Old PIN no longer works; the new one does.
+  // Old password no longer works; the new one does.
   await page.locator('#payExitButton').click();
+  await page.waitForURL('**/index.html');
+  await page.goto('/payment.html');
   await expect(page.locator('#payEntry')).toBeVisible();
   await page.locator('#payLoginPin').fill('123123');
   await page.locator('#payLoginForm button[type=submit]').click();

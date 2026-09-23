@@ -43,7 +43,7 @@ test('corrupt ledger is rejected and left untouched', () => {
   assert.equal(store.get(KEYS.transactions), 'corrupt-json');
 });
 
-test('account mirror keeps the login PIN on the device and out of the collection', () => {
+test('account mirror keeps the login password on the device and out of the collection', () => {
   setup();
   assert.equal(saveAccount({
     mobile: '01711223344',

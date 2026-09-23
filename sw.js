@@ -1,4 +1,4 @@
-const CACHE_NAME = 'active-plus-student-v48-material-pdf';
+const CACHE_NAME = 'active-plus-student-v53-logout-to-login';
 const APP_SHELL = [
   './',
   './index.html',
@@ -12,8 +12,14 @@ const APP_SHELL = [
   './css/teaching.css',
   './css/receipt.css',
   './manifest.json',
+  './favicon.ico',
+  './assets/icons/logo-128.png',
+  './assets/icons/icon-192.png',
+  './assets/icons/icon-512.png',
+  './assets/icons/maskable-192.png',
+  './assets/icons/maskable-512.png',
+  './assets/icons/apple-touch-icon.png',
   './assets/icons/app-logo.png',
-  './assets/icons/install-icon.png',
   './css/tokens.css',
   './css/pending.css',
   './css/shell.css',

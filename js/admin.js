@@ -5,7 +5,7 @@ import { toBanglaNumber } from './ui.js';
 import { classCodes, dayNames, feeCategories, paymentMethods } from './admin-data.js';
 import { loadAppConfig, saveAppConfig, loadAccount, saveAccount } from './storage.js';
 import { loadRoster, saveRoster, syncAccountStatus, loadNotices, saveNotices, loadRoutine, saveRoutine } from './office-data.js';
-import { verifyStaffCredentials, saveStaffSession, hasStaffSession, clearStaffSession } from './staff-auth.js';
+import { verifyStaffCredentials, saveStaffSession, hasStaffSession, clearStaffSession, goToLoginPage } from './staff-auth.js';
 import { financeRepository, monthLabel, dateLabel, searchStudents, studentFeeSummary, newestTransactions, stampTransaction, TRANSACTIONS_KEY } from './finance-data.js';
 import { newId } from './database.js';
 import { receiptMarkup, downloadReceipt } from './finance-receipt.js';
@@ -82,11 +82,11 @@ function enterPanel() {
 
 function exitPanel() {
   clearStaffSession('admin');
+  // Logout always returns to the shared login page, never to a panel entry form.
   $('#adminShell').hidden = true;
-  $('#adminEntry').hidden = false;
   const pin = $('#adminLoginPin');
   if (pin) pin.value = '';
-  $('#adminEntry')?.scrollTo({ top: 0, behavior: 'instant' });
+  goToLoginPage();
 }
 
 /* ---------- View switching ---------- */
@@ -268,7 +268,7 @@ function renderStudents() {
             ${student.status === 'pending' ? `
               <button class="mini-btn approve" type="button" data-action="approve" data-id="${student.id}">অনুমোদন</button>
               <button class="mini-btn danger" type="button" data-action="reject" data-id="${student.id}">বাতিল</button>` : ''}
-            <button class="mini-btn" type="button" data-action="reset-pin" data-id="${student.id}">PIN রিসেট</button>
+            <button class="mini-btn" type="button" data-action="reset-pin" data-id="${student.id}">পাসওয়ার্ড রিসেট</button>
           </div>
         </div>
       </article>`).join('')
@@ -297,7 +297,7 @@ function setStatus(id, status, message) {
   toast(message);
 }
 
-/* ---------- Student detail and PIN reset modal ---------- */
+/* ---------- Student detail and পাসওয়ার্ড reset modal ---------- */
 
 function openStudentDetail(student) {
   const classCode = classCodes[student.className] || 'CLS-GEN';
@@ -330,7 +330,7 @@ function openStudentDetail(student) {
       <div class="modal-actions">
         ${student.status === 'pending' ? '<button class="admin-btn primary" type="button" data-modal-action="approve">অনুমোদন করুন</button>' : ''}
         <button class="admin-btn primary" type="button" data-modal-action="edit">সম্পাদনা করুন</button>
-        <button class="admin-btn ghost" type="button" data-modal-action="reset-pin">PIN রিসেট</button>
+        <button class="admin-btn ghost" type="button" data-modal-action="reset-pin">পাসওয়ার্ড রিসেট</button>
         <button class="admin-btn ghost" type="button" data-modal-action="close">বন্ধ করুন</button>
       </div>`
   );
@@ -458,9 +458,9 @@ function openPinReset(student) {
   const isLocal = account?.student?.id === student.id || account?.studentId === student.id;
   openModal(
     'অ্যাকাউন্ট নিরাপত্তা',
-    `${student.name} — ডিফল্ট PIN`,
-    `<p class="modal-copy">${isLocal ? 'নিশ্চিত করলে এই ব্রাউজারের অ্যাকাউন্টের PIN নিচের ডিফল্ট PIN হবে। নিবন্ধনের মোবাইল অপরিবর্তিত থাকবে।' : 'ডিফল্ট PIN নিচে দেওয়া আছে। এই শিক্ষার্থীর অ্যাকাউন্ট এই ব্রাউজারে নেই; এটি শুধু ডেমো, আসল PIN পরিবর্তন হবে না।'}</p>
-      <div class="pin-box" aria-label="নতুন PIN">${bn(DEFAULT_PIN)}</div>
+    `${student.name} — ডিফল্ট পাসওয়ার্ড`,
+    `<p class="modal-copy">${isLocal ? 'নিশ্চিত করলে এই ব্রাউজারের অ্যাকাউন্টের পাসওয়ার্ড নিচের ডিফল্ট পাসওয়ার্ড হবে। নিবন্ধনের মোবাইল অপরিবর্তিত থাকবে।' : 'ডিফল্ট পাসওয়ার্ড নিচে দেওয়া আছে। এই শিক্ষার্থীর অ্যাকাউন্ট এই ব্রাউজারে নেই; এটি শুধু ডেমো, আসল পাসওয়ার্ড পরিবর্তন হবে না।'}</p>
+      <div class="pin-box" aria-label="নতুন পাসওয়ার্ড">${bn(DEFAULT_PIN)}</div>
       <p id="pinResetError" class="finance-error" role="alert" hidden></p>
       <div class="modal-actions"><button class="admin-btn primary" type="button" data-modal-action="done">${isLocal ? 'রিসেট নিশ্চিত করুন' : 'বুঝেছি'}</button></div>`
   );
@@ -468,13 +468,13 @@ function openPinReset(student) {
     if (isLocal) {
       const latest = loadAccount();
       if ((latest?.student?.id !== student.id && latest?.studentId !== student.id) || !saveAccount({ ...latest, pin: DEFAULT_PIN })) {
-        $('#pinResetError').textContent = 'PIN সংরক্ষণ হয়নি। আবার চেষ্টা করুন।';
+        $('#pinResetError').textContent = 'পাসওয়ার্ড সংরক্ষণ হয়নি। আবার চেষ্টা করুন।';
         $('#pinResetError').hidden = false;
         return;
       }
     }
     closeModal();
-    toast(isLocal ? `${student.name} এর PIN রিসেট হয়েছে` : 'ডেমো ডিফল্ট PIN দেখানো হয়েছে');
+    toast(isLocal ? `${student.name} এর পাসওয়ার্ড রিসেট হয়েছে` : 'ডেমো ডিফল্ট পাসওয়ার্ড দেখানো হয়েছে');
   });
 }
 

@@ -1,5 +1,5 @@
 /* Direct entry into the Payment Receive desk from the student login page:
-   the counter user ID + PIN typed there must auto-login (no second form),
+   the counter user ID + password typed there must auto-login (no second form),
    and the modernised desk keeps collection to a few taps. */
 const { test, expect } = require('./fixtures.cjs');
 
@@ -16,13 +16,13 @@ test('the login page has a payment counter tab that opens the desk directly', as
   await expect(page.locator('#payPortalUser')).toHaveValue('APC-PAY-001');
   await expect(page.locator('#payPortalPin')).toHaveValue('123123');
 
-  // Wrong PIN stays on the login page with a Bengali message.
+  // Wrong password stays on the login page with a Bengali message.
   await page.locator('#payPortalPin').fill('999999');
   await page.locator('#payPortalLoginForm button[type=submit]').click();
-  await expect(page.locator('#payPortalError')).toContainText('ইউসার আইডি বা PIN সঠিক নয়');
+  await expect(page.locator('#payPortalError')).toContainText('ইউসার আইডি বা পাসওয়ার্ড সঠিক নয়');
   await expect(page).toHaveURL(/index\.html$/);
 
-  // Correct ID + PIN hands the session over and lands on the desk.
+  // Correct ID + password hands the session over and lands on the desk.
   await page.locator('#payPortalPin').fill('123123');
   await page.locator('#payPortalLoginForm button[type=submit]').click();
   await page.waitForURL('**/payment.html');
@@ -33,11 +33,11 @@ test('the login page has a payment counter tab that opens the desk directly', as
 test('the counter ID typed in the student login form also auto-logs into the desk', async ({ page }) => {
   await page.goto('/index.html');
 
-  // A wrong counter PIN is refused with an explanation; the student app stays closed.
+  // A wrong counter password is refused with an explanation; the student app stays closed.
   await page.locator('#loginMobile').fill('APC-PAY-001');
   await page.locator('#loginPin').fill('000000');
   await page.locator('#loginForm button[type=submit]').click();
-  await expect(page.locator('#authMessage')).toContainText('পেমেন্ট পোর্টালের ইউসার আইডি বা PIN সঠিক নয়');
+  await expect(page.locator('#authMessage')).toContainText('পেমেন্ট পোর্টালের ইউসার আইডি বা পাসওয়ার্ড সঠিক নয়');
   await expect(page.locator('#appShell')).toBeHidden();
 
   // The right pair opens the desk without any extra form.

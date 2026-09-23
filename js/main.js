@@ -170,7 +170,9 @@ function leaveApp() {
   clearSession();
   switchAuthTab('login');
   showAuthScreen();
-  setAuthMessage('লগআউট হয়েছে। আবার প্রবেশ করতে মোবাইল নম্বর ও PIN দিন।');
+  // Logout always lands on the login page itself — drop a leftover view hash too.
+  if (window.location.hash) window.history.replaceState(null, '', window.location.pathname + window.location.search);
+  setAuthMessage('লগআউট হয়েছে। আবার প্রবেশ করতে মোবাইল নম্বর ও পাসওয়ার্ড দিন।');
 }
 
 function shouldAutoLogin() {
@@ -182,7 +184,7 @@ function shouldAutoLogin() {
   if (hasSession()) return true;
   // Even if session expired, if account exists and was previously logged in on this device,
   // allow auto-login to avoid asking every time (per user request)
-  // This makes the app not ask PIN every launch
+  // This makes the app not ask পাসওয়ার্ড every launch
   return true;
 }
 

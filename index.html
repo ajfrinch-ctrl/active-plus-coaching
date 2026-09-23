@@ -11,8 +11,10 @@
   <meta name="apple-mobile-web-app-title" content="Active Plus">
   <title>Active Plus | শিক্ষার্থী অ্যাপ</title>
   <link rel="manifest" href="manifest.json">
-  <link rel="icon" type="image/png" href="assets/icons/app-logo.png">
-  <link rel="apple-touch-icon" href="assets/icons/install-icon.png">
+  <link rel="icon" href="favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/icons/favicon-16.png">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="css/mobile.css">
   <link rel="stylesheet" href="css/exams.css">
@@ -21,9 +23,9 @@
 </head>
 <body>
   <!-- Authentication comes first. Credentials and registration data stay on this device. -->
-  <section class="auth-screen" id="authScreen" aria-label="Active Plus শিক্ষার্থী লগইন">
+  <section class="auth-screen" id="authScreen" aria-label="Active Plus লগইন">
     <div class="auth-topbar">
-      <div class="auth-brand"><img src="assets/icons/app-logo.png" alt="Active Plus Coaching logo" width="38" height="38"><span><strong>Active Plus Coaching</strong><small data-fixed-tagline aria-label="শিখতে থাকো, এগিয়ে যাও">শিখতে থাকো, এগিয়ে যাও</small></span></div>
+      <div class="auth-brand"><img src="assets/icons/logo-128.png" alt="Active Plus Coaching logo" width="38" height="38"><span><strong>Active Plus Coaching</strong><small data-fixed-tagline aria-label="শিখতে থাকো, এগিয়ে যাও">শিখতে থাকো, এগিয়ে যাও</small></span></div>
     </div>
     <div class="auth-card">
       <div class="auth-tabs" role="tablist" aria-label="অ্যাকাউন্ট অপশন">
@@ -33,13 +35,13 @@
       <p class="auth-message" id="authMessage" role="status" hidden></p>
 
       <div class="auth-panel active" id="loginPanel" data-auth-panel="login">
-        <div class="auth-panel-heading"><div><h2>শিক্ষার্থী লগইন</h2></div></div>
+        <div class="auth-panel-heading"><div><h2>লগইন</h2></div></div>
         <form id="loginForm" novalidate>
           <label for="loginMobile">ইউজারনেম অথবা মোবাইল নম্বর</label>
           <div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-user"></use></svg><input id="loginMobile" name="mobile" type="text" autocomplete="username" placeholder="ইউজারনেম বা ০১XXXXXXXXX" required></div>
-          <p class="fixed-field-note">নিরাপত্তার জন্য মোবাইল নম্বরের বদলে নিজের ইউজারনেম দিয়ে লগইন করাই ভালো।</p><label for="loginPin">পাসকোড / PIN</label>
-          <div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg><input id="loginPin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="6" autocomplete="current-password" placeholder="৪–৬ সংখ্যার PIN" required><button class="show-pin" type="button" data-toggle-pin="loginPin" aria-label="PIN দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg></button></div>
-          <div class="form-row"><label class="remember-label"><input type="checkbox" id="rememberMe" checked><span class="fake-check"></span>এই ডিভাইসে মনে রাখুন</label><button type="button" class="link-button" id="forgotPinButton">PIN ভুলে গেছেন?</button></div>
+          <p class="fixed-field-note" id="loginHint">শিক্ষার্থী: ইউজারনেম বা মোবাইল নম্বর ও পাসওয়ার্ড। শিক্ষক, এডমিন ও পেমেন্ট কাউন্টার: নিজের ইউজারনেম ও পাসওয়ার্ড দিয়ে এখানেই লগইন করুন।</p><label for="loginPin">পাসওয়ার্ড</label>
+          <div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg><input id="loginPin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="32" autocomplete="current-password" placeholder="৪–৬ সংখ্যার পাসওয়ার্ড" required><button class="show-pin" type="button" data-toggle-pin="loginPin" aria-label="পাসওয়ার্ড দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg></button></div>
+          <div class="form-row"><label class="remember-label"><input type="checkbox" id="rememberMe" checked><span class="fake-check"></span>এই ডিভাইসে মনে রাখুন</label><button type="button" class="link-button" id="forgotPinButton">পাসওয়ার্ড ভুলে গেছেন?</button></div>
           <button class="auth-submit" type="submit">লগইন করুন <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg></button>
         </form>
         <p class="auth-footnote">অ্যাকাউন্ট নেই? <button type="button" class="inline-link" data-auth-tab="register">রেজিস্ট্রেশন করুন</button></p>
@@ -67,10 +69,10 @@
                 <p id="regUsernameStatus" class="username-status" role="status" aria-live="polite"></p>
                 <small id="regUsernameHint" class="fixed-field-note">৪–২০ অক্ষর; ইংরেজি অক্ষর দিয়ে শুরু, তারপর ছোট হাতের অক্ষর/সংখ্যা/ডট/আন্ডারস্কোর। লগইনে মোবাইল নম্বরের বদলে এটি ব্যবহার করা যাবে — নম্বর কাউকে বলতে হবে না।</small>
               </div>
-              <div class="field"><label for="regPin">PIN <i>*</i></label><div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg><input id="regPin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="6" placeholder="৪–৬ সংখ্যার PIN" required><button class="show-pin" type="button" data-toggle-pin="regPin" aria-label="PIN দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg></button></div></div>
-              <div class="field"><label for="regPinConfirm">PIN আবার দিন <i>*</i></label><div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg><input id="regPinConfirm" name="pinConfirm" type="password" inputmode="numeric" minlength="4" maxlength="6" placeholder="PIN মিলান" required><button class="show-pin" type="button" data-toggle-pin="regPinConfirm" aria-label="PIN দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg></button></div></div>
+              <div class="field"><label for="regPin">পাসওয়ার্ড <i>*</i></label><div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg><input id="regPin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="6" placeholder="৪–৬ সংখ্যার পাসওয়ার্ড" required><button class="show-pin" type="button" data-toggle-pin="regPin" aria-label="পাসওয়ার্ড দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg></button></div></div>
+              <div class="field"><label for="regPinConfirm">পাসওয়ার্ড আবার দিন <i>*</i></label><div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg><input id="regPinConfirm" name="pinConfirm" type="password" inputmode="numeric" minlength="4" maxlength="6" placeholder="পাসওয়ার্ড মিলান" required><button class="show-pin" type="button" data-toggle-pin="regPinConfirm" aria-label="পাসওয়ার্ড দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg></button></div></div>
             </div>
-            <p class="fixed-field-note">৪–৬ সংখ্যার PIN দিন। প্রথম মোবাইল নম্বর আর পরিবর্তন করা যাবে না।</p><div class="step-actions"><span></span><button type="button" class="step-next" data-next-step>পরের অংশ <span>→</span></button></div>
+            <p class="fixed-field-note">৪–৬ সংখ্যার পাসওয়ার্ড দিন। প্রথম মোবাইল নম্বর আর পরিবর্তন করা যাবে না।</p><div class="step-actions"><span></span><button type="button" class="step-next" data-next-step>পরের অংশ <span>→</span></button></div>
           </section>
 
           <section class="registration-step" data-registration-step="2" data-step-title="শিক্ষার্থীর পরিচয়" aria-labelledby="stepTwoTitle" hidden>
@@ -110,8 +112,8 @@
             <div class="step-actions"><button type="button" class="step-back" data-previous-step>← আগের অংশ</button><button type="button" class="step-next" data-next-step>পরের অংশ <span>→</span></button></div>
           </section>
 
-          <section class="registration-step" data-registration-step="5" data-step-title="PIN পুনরুদ্ধার" aria-labelledby="stepFiveTitle" hidden>
-            <div class="form-section-title"><span>০৫</span><div><strong id="stepFiveTitle">PIN পুনরুদ্ধার</strong><small>PIN ভুলে গেলে কাজে লাগবে</small></div></div>
+          <section class="registration-step" data-registration-step="5" data-step-title="পাসওয়ার্ড পুনরুদ্ধার" aria-labelledby="stepFiveTitle" hidden>
+            <div class="form-section-title"><span>০৫</span><div><strong id="stepFiveTitle">পাসওয়ার্ড পুনরুদ্ধার</strong><small>পাসওয়ার্ড ভুলে গেলে কাজে লাগবে</small></div></div>
             <div class="field-grid">
               <div class="field full"><label for="securityQuestion">নিরাপত্তা প্রশ্ন <i>*</i></label><select id="securityQuestion" name="securityQuestion" required><option value="">একটি প্রশ্ন বেছে নিন</option><option>তোমার শৈশবের ডাকনাম কী?</option><option>তোমার প্রিয় শিক্ষকের নাম কী?</option><option>তোমার জন্মস্থানের নাম কী?</option><option>তোমার প্রিয় বইয়ের নাম কী?</option></select></div>
               <div class="field full"><label for="securityAnswer">নিরাপত্তা প্রশ্নের উত্তর <i>*</i></label><input id="securityAnswer" name="securityAnswer" type="text" placeholder="উত্তরটি লিখুন" required></div>
@@ -124,24 +126,21 @@
       </div>
 
     </div>
-    <p class="admin-entry-link-wrap"><a class="admin-entry-link" href="admin.html"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-shield"></use></svg> এডমিন প্যানেল</a></p>
-    <p class="admin-entry-link-wrap"><a class="admin-entry-link" href="teacher.html">শিক্ষক প্যানেল</a></p>
-    <p class="admin-entry-link-wrap"><a class="admin-entry-link" href="payment.html"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-wallet"></use></svg> পেমেন্ট রিসিভ</a></p>
   </section>
 
   <!-- A compact, mobile-first app shell. All content is local and works without a network. -->
   <div class="app-shell" id="appShell" hidden>
     <section class="pending-screen" id="pendingScreen" aria-labelledby="pendingTitle">
-      <div class="pending-logo"><img src="assets/icons/app-logo.png" alt="" width="54" height="54"></div>
+      <div class="pending-logo"><img src="assets/icons/logo-128.png" alt="" width="54" height="54"></div>
       <span class="pending-kicker">ACCOUNT RECEIVED</span>
       <h1 id="pendingTitle">রেজিস্ট্রেশন সফল হয়েছে</h1>
       <p>তোমার তথ্য কোচিংয়ে জমা হয়েছে। অনুমোদন না হওয়া পর্যন্ত অ্যাপের ফিচারগুলো বন্ধ থাকবে।</p>
       <div class="pending-id"><small>তোমার ইউনিক স্টুডেন্ট ID</small><strong id="pendingStudentId">—</strong></div>
-      <div class="pending-info"><span>✓</span><p>শিক্ষক বা এডমিন অনুমোদন দিলে এই মোবাইল নম্বর ও PIN দিয়ে আবার লগইন করো।</p></div>
+      <div class="pending-info"><span>✓</span><p>শিক্ষক বা এডমিন অনুমোদন দিলে এই মোবাইল নম্বর ও পাসওয়ার্ড দিয়ে আবার লগইন করো।</p></div>
       <button class="pending-logout" type="button" id="pendingLogout">লগইন পেইজে ফিরে যান</button>
     </section>
     <header class="auth-topbar student-topbar" id="studentHeader">
-      <div class="auth-brand"><img src="assets/icons/app-logo.png" alt="Active Plus Coaching logo" width="38" height="38"><span><strong>Active Plus Coaching</strong><small data-fixed-tagline aria-label="শিখতে থাকো, এগিয়ে যাও">শিখতে থাকো, এগিয়ে যাও</small></span></div>
+      <div class="auth-brand"><img src="assets/icons/logo-128.png" alt="Active Plus Coaching logo" width="38" height="38"><span><strong>Active Plus Coaching</strong><small data-fixed-tagline aria-label="শিখতে থাকো, এগিয়ে যাও">শিখতে থাকো, এগিয়ে যাও</small></span></div>
       <button class="icon-button notification-button" id="notificationButton" type="button" aria-label="নোটিশ দেখুন" aria-haspopup="dialog">
         <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-bell"></use></svg>
         <span class="notification-dot" hidden aria-hidden="true"></span>
@@ -295,7 +294,7 @@
         <article class="contact-card"><div class="contact-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-phone"></use></svg></div><div class="contact-copy"><span>শিক্ষার্থীর মোবাইল</span><strong id="studentMobileValue">নম্বর নেই</strong><small>অভিভাবক · <b id="guardianMobileValue">নম্বর নেই</b></small><small id="studentAdditionalMobiles" hidden></small></div><button class="whatsapp-button" type="button" data-action="whatsapp-share" aria-label="WhatsApp-এ তথ্য শেয়ার করুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-whatsapp"></use></svg><span>WhatsApp</span></button></article>
         <div class="profile-section"><p class="eyebrow">অ্যাকাউন্ট</p><div class="settings-list"><button type="button" data-action="edit-profile"><span class="settings-icon mint"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-user"></use></svg></span><span><strong>ব্যক্তিগত তথ্য</strong><small>নাম, ক্লাস ও বিভাগ</small></span><svg class="setting-arrow" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-chevron-right"></use></svg></button><button type="button" data-action="show-offline"><span class="settings-icon green"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-download"></use></svg></span><span><strong>অফলাইন ডেটা</strong><small>সব ডেটা এই ফোনেই সংরক্ষিত</small></span><span class="saved-tag">সংরক্ষিত</span></button><button type="button" data-action="install"><span class="settings-icon purple"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-smartphone"></use></svg></span><span><strong>অ্যাপ ইনস্টল করুন</strong><small>হোম স্ক্রিন থেকে দ্রুত খুলুন</small></span><svg class="setting-arrow" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-chevron-right"></use></svg></button></div></div>
         <div class="profile-section"><p class="eyebrow">নিরাপত্তা</p><div class="settings-list">
-          <label class="settings-toggle"><span class="settings-icon mint"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-shield"></use></svg></span><span><strong>প্রতিবার PIN চেক বন্ধ রাখুন</strong><small>চালু করলে অ্যাপ খুলতে আর PIN লাগবে না</small></span><span class="toggle-switch"><input type="checkbox" id="skipSecurityToggle"><i></i></span></label>
+          <label class="settings-toggle"><span class="settings-icon mint"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-shield"></use></svg></span><span><strong>প্রতিবার পাসওয়ার্ড চেক বন্ধ রাখুন</strong><small>চালু করলে অ্যাপ খুলতে আর পাসওয়ার্ড লাগবে না</small></span><span class="toggle-switch"><input type="checkbox" id="skipSecurityToggle"><i></i></span></label>
           <label class="settings-toggle"><span class="settings-icon green"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-smartphone"></use></svg></span><span><strong>এই ডিভাইস বিশ্বস্ত</strong><small>৯০ দিন পর্যন্ত লগইন মনে রাখবে</small></span><span class="toggle-switch"><input type="checkbox" id="trustedDeviceToggle" checked><i></i></span></label>
           <button type="button" class="logout-button" data-action="logout"><span class="settings-icon danger"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-logout"></use></svg></span><span><strong>লগআউট</strong><small>এই ডিভাইস থেকে বের হয়ে যান</small></span></button>
         </div></div>
@@ -314,7 +313,7 @@
   </div>
 
   <div class="install-toast" id="installToast" hidden>
-    <span class="install-toast-icon"><img src="assets/icons/app-logo.png" alt="" width="30" height="30"></span><span><strong>অ্যাপ হিসেবে ব্যবহার করুন</strong><small>হোম স্ক্রিনে Active Plus যোগ করুন</small></span><button type="button" id="installButton">ইনস্টল</button><button type="button" class="dismiss-button" id="dismissInstall" aria-label="বন্ধ করুন">×</button>
+    <span class="install-toast-icon"><img src="assets/icons/logo-128.png" alt="" width="30" height="30"></span><span><strong>অ্যাপ হিসেবে ব্যবহার করুন</strong><small>হোম স্ক্রিনে Active Plus যোগ করুন</small></span><button type="button" id="installButton">ইনস্টল</button><button type="button" class="dismiss-button" id="dismissInstall" aria-label="বন্ধ করুন">×</button>
   </div>
 
   <div class="modal-backdrop" id="noticeModal" hidden>
@@ -322,7 +321,7 @@
   </div>
 
   <div class="modal-backdrop" id="logoutModal" hidden>
-    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="logoutModalTitle"><div class="modal-header"><div><p class="eyebrow">অ্যাকাউন্ট</p><h2 id="logoutModalTitle">লগআউট করবেন?</h2></div><button type="button" class="modal-close" data-close-modal="logoutModal" aria-label="বন্ধ করুন">×</button></div><p class="recovery-copy">লগআউট করলে এই ডিভাইস থেকে বের হয়ে যাবেন। আবার প্রবেশ করতে মোবাইল নম্বর ও PIN দিয়ে লগইন করতে হবে।</p><div class="logout-actions"><button class="logout-cancel" type="button" data-close-modal="logoutModal">না, থাকছি</button><button class="logout-confirm" type="button" id="logoutConfirmButton">হ্যাঁ, লগআউট করুন</button></div></section>
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="logoutModalTitle"><div class="modal-header"><div><p class="eyebrow">অ্যাকাউন্ট</p><h2 id="logoutModalTitle">লগআউট করবেন?</h2></div><button type="button" class="modal-close" data-close-modal="logoutModal" aria-label="বন্ধ করুন">×</button></div><p class="recovery-copy">লগআউট করলে এই ডিভাইস থেকে বের হয়ে যাবেন। আবার প্রবেশ করতে মোবাইল নম্বর ও পাসওয়ার্ড দিয়ে লগইন করতে হবে।</p><div class="logout-actions"><button class="logout-cancel" type="button" data-close-modal="logoutModal">না, থাকছি</button><button class="logout-confirm" type="button" id="logoutConfirmButton">হ্যাঁ, লগআউট করুন</button></div></section>
   </div>
   <div class="modal-backdrop" id="resourceModal" hidden>
     <section class="modal" role="dialog" aria-modal="true" aria-labelledby="resourceModalTitle"><div class="modal-header"><div><p class="eyebrow">সহায়ক উপকরণ</p><h2 id="resourceModalTitle">উপকরণ</h2></div><button type="button" class="modal-close" data-close-modal="resourceModal" aria-label="বন্ধ করুন">×</button></div><p id="resourceModalMeta" class="resource-modal-meta"></p><div id="resourceModalBody" class="resource-modal-body"></div><p id="resourceModalStatus" class="resource-modal-status" role="status"></p><div class="logout-actions"><button class="logout-cancel" type="button" id="resourceOpenTab">নতুন ট্যাবে খুলুন</button><button class="logout-confirm resource-download" type="button" id="resourceDownload">ডাউনলোড করুন</button></div><button class="modal-action" type="button" data-close-modal="resourceModal">বন্ধ করুন</button></section>
@@ -355,7 +354,7 @@
   </div>
 
   <div class="modal-backdrop" id="recoveryModal" hidden>
-    <section class="modal edit-modal" role="dialog" aria-modal="true" aria-labelledby="recoveryModalTitle"><div class="modal-header"><div><p class="eyebrow">অ্যাকাউন্ট পুনরুদ্ধার</p><h2 id="recoveryModalTitle">PIN রিসেট করুন</h2></div><button type="button" class="modal-close" data-close-modal="recoveryModal" aria-label="বন্ধ করুন">×</button></div><p class="recovery-copy">রেজিস্ট্রেশনের সময় দেওয়া নিরাপত্তা প্রশ্নের উত্তর দিয়ে নতুন PIN সেট করুন।</p><form id="recoveryForm"><label for="recoveryMobile">ইউজারনেম অথবা মোবাইল নম্বর</label><input id="recoveryMobile" name="mobile" type="text" autocomplete="username" placeholder="ইউজারনেম বা ০১XXXXXXXXX" required><label for="recoveryQuestion">নিরাপত্তা প্রশ্ন</label><select id="recoveryQuestion" name="question" required><option value="">প্রশ্ন নির্বাচন করুন</option><option>তোমার শৈশবের ডাকনাম কী?</option><option>তোমার প্রিয় শিক্ষকের নাম কী?</option><option>তোমার জন্মস্থানের নাম কী?</option><option>তোমার প্রিয় বইয়ের নাম কী?</option></select><label for="recoveryAnswer">উত্তর</label><input id="recoveryAnswer" name="answer" type="text" required><label for="recoveryPin">নতুন PIN</label><div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg><input id="recoveryPin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="6" placeholder="৪–৬ সংখ্যা" required><button class="show-pin" type="button" data-toggle-pin="recoveryPin" aria-label="PIN দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg></button></div><button class="modal-action" type="submit">নতুন PIN সংরক্ষণ করুন</button></form><div class="admin-reset-note"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-help"></use></svg><span>নিরাপত্তা প্রশ্নের উত্তর মনে না থাকলে এডমিন PIN রিসেট করে দিতে পারবেন।</span></div></section>
+    <section class="modal edit-modal" role="dialog" aria-modal="true" aria-labelledby="recoveryModalTitle"><div class="modal-header"><div><p class="eyebrow">অ্যাকাউন্ট পুনরুদ্ধার</p><h2 id="recoveryModalTitle">পাসওয়ার্ড রিসেট করুন</h2></div><button type="button" class="modal-close" data-close-modal="recoveryModal" aria-label="বন্ধ করুন">×</button></div><p class="recovery-copy">রেজিস্ট্রেশনের সময় দেওয়া নিরাপত্তা প্রশ্নের উত্তর দিয়ে নতুন পাসওয়ার্ড সেট করুন।</p><form id="recoveryForm"><label for="recoveryMobile">ইউজারনেম অথবা মোবাইল নম্বর</label><input id="recoveryMobile" name="mobile" type="text" autocomplete="username" placeholder="ইউজারনেম বা ০১XXXXXXXXX" required><label for="recoveryQuestion">নিরাপত্তা প্রশ্ন</label><select id="recoveryQuestion" name="question" required><option value="">প্রশ্ন নির্বাচন করুন</option><option>তোমার শৈশবের ডাকনাম কী?</option><option>তোমার প্রিয় শিক্ষকের নাম কী?</option><option>তোমার জন্মস্থানের নাম কী?</option><option>তোমার প্রিয় বইয়ের নাম কী?</option></select><label for="recoveryAnswer">উত্তর</label><input id="recoveryAnswer" name="answer" type="text" required><label for="recoveryPin">নতুন পাসওয়ার্ড</label><div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg><input id="recoveryPin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="6" placeholder="৪–৬ সংখ্যা" required><button class="show-pin" type="button" data-toggle-pin="recoveryPin" aria-label="পাসওয়ার্ড দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg></button></div><button class="modal-action" type="submit">নতুন পাসওয়ার্ড সংরক্ষণ করুন</button></form><div class="admin-reset-note"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-help"></use></svg><span>নিরাপত্তা প্রশ্নের উত্তর মনে না থাকলে এডমিন পাসওয়ার্ড রিসেট করে দিতে পারবেন।</span></div></section>
   </div>
 
   <!-- Reusable SVG icon sprite. No external fonts or assets are required for offline use. -->
@@ -390,7 +389,6 @@
     <symbol id="icon-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
     <symbol id="icon-logout" viewBox="0 0 24 24"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></symbol>
     <symbol id="icon-shield" viewBox="0 0 24 24"><path d="M12 3 5 6v5.2c0 4.8 3 8 7 9.8 4-1.8 7-5 7-9.8V6l-7-3Z"/><path d="m9 12 2 2 4-4.5"/></symbol>
-    <symbol id="icon-wallet" viewBox="0 0 24 24"><path d="M3 8.5A2.5 2.5 0 0 1 5.5 6H18a2 2 0 0 1 2 2v1"/><rect x="3" y="8.5" width="18" height="10.5" rx="2.5"/><path d="M16.5 14h2"/></symbol>
   </svg>
   <script type="module" src="js/main.js"></script>
 </body>

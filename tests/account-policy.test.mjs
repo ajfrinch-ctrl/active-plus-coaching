@@ -10,7 +10,7 @@ function setup() {
   return { store, fail: () => { broken = true; } };
 }
 for (const role of ['student', 'teacher']) {
-  test(`${role}: first number immutable, contacts append-only, default PIN shared`, () => {
+  test(`${role}: first number immutable, contacts append-only, default password shared`, () => {
     const initial = protectAccountIdentity({ role, mobile: primary });
     assert.equal(initial.pin, '123123');
     const added = appendAccountMobile(initial, '+8801811223344');
