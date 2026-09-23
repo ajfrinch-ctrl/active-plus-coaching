@@ -78,3 +78,26 @@ test('only that class can start the published exam', async () => {
   const after = await repo.startAttempt(id, tenth);
   assert.ok(after.attempts.some(a => a.examId === id && a.studentId === tenth.id), 'the class it was made for can sit it');
 });
+
+test('the exam list can be narrowed to one class', async () => {
+  ctx.click($('#teacherExamWorkspace [data-exam-action="list"]'));
+  await settle();
+  const cards = () => ctx.$$('#teacherExamWorkspace [data-managed-exam]');
+  const pick = value => {
+    const select = ctx.$('#teacherExamWorkspace [data-exam-class-filter]');   // list() rebuilds it
+    select.value = value;
+    select.dispatchEvent(new ctx.window.Event('change', { bubbles: true }));
+  };
+  assert.ok(ctx.$('#teacherExamWorkspace [data-exam-class-filter]'), 'a class filter sits beside the type buttons');
+  assert.equal(cards().length, 1, 'the one saved exam is listed');
+
+  pick(honours.className);
+  assert.equal(cards().length, 0, 'another class hides it');
+  assert.match($('#teacherExamWorkspace').textContent, /এই শ্রেণির কোনো পরীক্ষা নেই/);
+
+  pick(tenth.className);
+  assert.equal(cards().length, 1, 'its own class brings it back');
+
+  pick('all');
+  assert.equal(cards().length, 1);
+});

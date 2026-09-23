@@ -6,7 +6,7 @@ import { enabledClasses } from './config.js';
 export function initExamManager(container, role) {
   const root = document.querySelector(container); if (!root) return;
   const actor = role === 'admin' ? ADMIN_ACTOR : TEACHER_ACTOR;
-  let db = { exams: [], attempts: [] }, view = 'list', selected = null, filter = 'all', busy = false, ready = false;
+  let db = { exams: [], attempts: [] }, view = 'list', selected = null, filter = 'all', classFilter = 'all', busy = false, ready = false;
   root.classList.add('exam-workspace');
   root.innerHTML = '<p class="exam-note">লোকাল ডেমো • প্রশ্ন শিক্ষক তৈরি করবেন, Admin প্রকাশ করবেন। সব শ্রেণির অনুমোদিত শিক্ষার্থী অংশ নিতে পারবে। আলাদা মোবাইলে চালাতে অনলাইন ডেটাবেস প্রয়োজন।</p><p class="exam-error" role="alert" data-exam-error hidden></p><p class="exam-message" role="status" data-exam-message hidden></p><div data-exam-content></div>';
   const $ = selector => root.querySelector(selector), content = $('[data-exam-content]');
@@ -17,10 +17,11 @@ export function initExamManager(container, role) {
   function scrollTop() { root.closest('main')?.scrollTo({ top: 0, behavior: 'instant' }); }
   function list() {
     view = 'list'; selected = null;
-    const exams = db.exams.filter(e => (role === 'admin' || e.teacherId === actor.id) && (filter === 'all' || e.type === filter));
+    const exams = db.exams.filter(e => (role === 'admin' || e.teacherId === actor.id) && (filter === 'all' || e.type === filter) && (classFilter === 'all' || e.className === classFilter));
     content.innerHTML = `${role === 'teacher' ? `<div class="exam-actions">${Object.entries(EXAM_TYPES).map(([type, label]) => button('new-' + type, '+ ' + label, '', 'primary')).join('')}</div>` : '<p class="exam-note">প্রশ্ন ও নম্বর দেখে অনুমোদন দিন। সংশোধন দরকার হলে কারণ লিখে ফেরত দিন।</p>'}
       <div class="exam-actions" aria-label="পরীক্ষার ধরন">${['all', ...Object.keys(EXAM_TYPES)].map(type => `<button type="button" data-exam-action="filter-${type}" aria-pressed="${filter === type}">${type === 'all' ? 'সব' : EXAM_TYPES[type]}</button>`).join('')}</div>
-      <div class="exam-list">${exams.map(e => `<article class="exam-card" data-managed-exam="${esc(e.id)}">${examMeta(e)}${e.reviewNote ? `<p class="exam-error">${esc(e.reviewNote)}</p>` : ''}<div class="exam-actions">${button('detail', role === 'admin' && e.status === 'pending' ? 'পর্যালোচনা করুন' : 'বিস্তারিত', e.id)}${role === 'teacher' && e.status !== 'published' ? button('edit', 'সম্পাদনা', e.id) : ''}${role === 'teacher' && ['draft', 'rejected'].includes(e.status) ? button('request', 'অনুমতির জন্য পাঠান', e.id, 'primary') + button('delete', 'মুছুন', e.id, 'danger') : ''}${e.status === 'published' ? button('report', 'ফলাফল ও রিপোর্ট', e.id) : ''}${role === 'teacher' && e.status === 'published' && e.type !== 'mcq' ? button('grade', 'নম্বর / উপস্থিতি', e.id) : ''}</div></article>`).join('') || '<p class="exam-card">এখনও এই ধরনের পরীক্ষা নেই।</p>'}</div>`;
+      <label class="exam-class-filter">শ্রেণি <select data-exam-class-filter><option value="all">সব শ্রেণি</option>${enabledClasses.map(c => `<option value="${esc(c)}" ${c === classFilter ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
+      <div class="exam-list">${exams.map(e => `<article class="exam-card" data-managed-exam="${esc(e.id)}">${examMeta(e)}${e.reviewNote ? `<p class="exam-error">${esc(e.reviewNote)}</p>` : ''}<div class="exam-actions">${button('detail', role === 'admin' && e.status === 'pending' ? 'পর্যালোচনা করুন' : 'বিস্তারিত', e.id)}${role === 'teacher' && e.status !== 'published' ? button('edit', 'সম্পাদনা', e.id) : ''}${role === 'teacher' && ['draft', 'rejected'].includes(e.status) ? button('request', 'অনুমতির জন্য পাঠান', e.id, 'primary') + button('delete', 'মুছুন', e.id, 'danger') : ''}${e.status === 'published' ? button('report', 'ফলাফল ও রিপোর্ট', e.id) : ''}${role === 'teacher' && e.status === 'published' && e.type !== 'mcq' ? button('grade', 'নম্বর / উপস্থিতি', e.id) : ''}</div></article>`).join('') || `<p class="exam-card">${classFilter === 'all' ? 'এখনও এই ধরনের পরীক্ষা নেই।' : `${esc(classFilter)} — এই শ্রেণির কোনো পরীক্ষা নেই।`}</p>`}</div>`;
   }
   async function reload() {
     try { db = await repo.list(); ready = true; if (view === 'list') list(); else if (view === 'report' && selected) report(db.exams.find(e => e.id === selected), false); }
@@ -76,6 +77,7 @@ export function initExamManager(container, role) {
     $('[name=studentId]').addEventListener('change', event => { const saved = db.attempts.find(a => a.examId === e.id && a.studentId === event.target.value); e.questions.forEach(q => { $(`[name=${q.id}]`).value = saved?.questionScores?.[q.id] ?? ''; }); });
     $('[data-grade-form]').addEventListener('submit', event => { event.preventDefault(); const values = Object.fromEntries(new FormData(event.currentTarget)); const student = students.find(s => s.id === values.studentId); run(() => event.submitter.value === 'absent' ? repo.markWrittenAbsent(e.id, student, actor) : repo.saveWrittenScore(e.id, student, values, actor), 'নম্বর/উপস্থিতি সংরক্ষিত হয়েছে।', () => grade(db.exams.find(item => item.id === e.id))); }); scrollTop();
   }
+  root.addEventListener('change', event => { const select = event.target.closest('[data-exam-class-filter]'); if (!select || busy) return; classFilter = select.value; list(); });
   root.addEventListener('click', async event => {
     const target = event.target.closest('[data-exam-action]'); if (!target || busy) return;
     const action = target.dataset.examAction, e = db.exams.find(e => e.id === target.dataset.id); error(''); message('');
