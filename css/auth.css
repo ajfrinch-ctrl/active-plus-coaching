@@ -14,11 +14,11 @@
 
 @media (max-width: 360px) { .auth-screen { padding-left: 12px; padding-right: 12px; }.auth-card { padding-left: 11px; padding-right: 11px; }.field-grid { gap: 0 6px; }.field input, .field select { font-size: 10px; padding-left: 7px; padding-right: 7px; } }
 
-/* One-click link to the dummy Admin Panel (coaching office) */
-.admin-entry-link-wrap { margin: 14px auto 0; text-align: center; }
-.admin-entry-link { display: inline-flex; align-items: center; gap: 6px; color: #4879a7; font-size: 10px; font-weight: 800; text-decoration: none; }
-.admin-entry-link:hover { text-decoration: underline; }
-.admin-entry-link svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+/* Quiet link between the separate pages (staff panel → student app).
+   Student login keeps no staff shortcut; each panel opens at its own URL. */
+.auth-cross-link { display: inline-flex; align-items: center; gap: 6px; color: #4879a7; font-size: 10px; font-weight: 800; text-decoration: none; }
+.auth-cross-link:hover { text-decoration: underline; }
+.auth-cross-link svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 
 /* Username field: permanent login ID, so the rule is stated next to it. */
 .username-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-top: 5px; }

@@ -1,5 +1,6 @@
-/* The student login page is only for students. Payment and one-click demo
-   entry used to live here; both are gone. The payment desk has its own page. */
+/* The student login page is only for students. Payment, one-click demo entry
+   and the staff-panel shortcuts used to live here; all of them are gone. Each
+   staff page (admin/teacher/payment) opens at its own URL. */
 import test, { before } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadPage } from './jsdom-harness.mjs';
@@ -23,13 +24,17 @@ const session = () => {
   return raw ? JSON.parse(raw) : null;
 };
 
-test('the login card has no demo button and no payment counter tab', () => {
+test('the login card has no demo button, no staff shortcut and no payment counter tab', () => {
   const { $ } = ctx;
   assert.equal($('#demoLoginButton'), null);
   assert.equal($('[data-auth-tab="payment"]'), null);
   assert.equal($('#paymentPanel'), null);
   assert.equal($('#payPortalLoginForm'), null);
   assert.equal($('#payPortalDemoButton'), null);
+  // Staff desks open at their own URLs; the student page offers no way across.
+  for (const href of ['admin.html', 'teacher.html', 'payment.html']) {
+    assert.equal($(`#authScreen a[href="${href}"]`), null);
+  }
   assert.equal($('#loginPanel').hidden, false);
   assert.equal($('#loginMobile').value, '');
   assert.equal($('#loginPin').value, '');

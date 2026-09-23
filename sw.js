@@ -1,4 +1,4 @@
-const CACHE_NAME = 'active-plus-student-v48-material-pdf';
+const CACHE_NAME = 'active-plus-student-v49-student-login-only';
 const APP_SHELL = [
   './',
   './index.html',

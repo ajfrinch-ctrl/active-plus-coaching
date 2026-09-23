@@ -153,8 +153,9 @@ test('teacher page, modules and student feed work offline after precache', async
   await context.setOffline(false);
 });
 
-test('login and Admin More expose the separate panel', async ({ page }) => {
-  await page.goto('/index.html'); await expect(page.locator('#authScreen a[href="teacher.html"]')).toBeVisible();
+test('the student login keeps staff panels out, while Admin More opens the teacher panel', async ({ page }) => {
+  await page.goto('/index.html'); await expect(page.locator('#authScreen')).toBeVisible();
+  await expect(page.locator('#authScreen a[href="admin.html"], #authScreen a[href="teacher.html"], #authScreen a[href="payment.html"]')).toHaveCount(0);
   await page.goto('/admin.html'); await page.locator('#adminLoginForm [type=submit]').click(); await page.locator('.admin-bottom [data-admin-view=more]').click();
   await page.locator('a[href="teacher.html"]').click(); await expect(page.locator('#teacherEnter')).toBeVisible();
 });
