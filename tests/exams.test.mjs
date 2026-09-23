@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { examRepository as repo, EXAM_KEY, examTemplate, parseQuestions, scoreAttempt, retryEligibility, firstAttemptMean, examResults, classExamDate, totalMarks, TEACHER_ACTOR, ADMIN_ACTOR } from '../js/exam-data.js';
+import { examRepository as repo, EXAM_KEY, examTemplate, parseQuestions, MCQ_MARKS, scoreAttempt, retryEligibility, firstAttemptMean, examResults, classExamDate, totalMarks, TEACHER_ACTOR, ADMIN_ACTOR } from '../js/exam-data.js';
 import { pagesPDF } from '../js/exam-pdf.js';
 import { adminStudents } from '../js/admin-data.js';
 const realNow = Date.now;
@@ -26,9 +26,15 @@ async function attempt(e, student, answers = {}) {
 }
 test.afterEach(() => { Date.now = realNow; });
 
-test('three templates parse separate marks, Bangla digits; malformed/duplicate/unsafe type rejected', () => {
-  for (const type of ['mcq', 'written', 'short']) { const questions = parseQuestions(examTemplate(type), type); assert.equal(questions.length, 2); assert.ok(questions[0].marks !== questions[1].marks); }
-  for (const text of ['', 'প্রশ্ন: x', examTemplate('mcq').replace('উত্তর: A', 'উত্তর: E'), examTemplate('mcq').replace('নম্বর: ২', 'নম্বর: -1'), examTemplate('mcq').replace('B: চট্টগ্রাম', 'B: ঢাকা'), examTemplate('mcq') + '\nউত্তর: B']) assert.throws(() => parseQuestions(text, 'mcq'));
+test('MCQ marks are fixed at 1; written/short keep their own weights; malformed input rejected', () => {
+  const mcq = parseQuestions(examTemplate('mcq'), 'mcq');
+  assert.equal(mcq.length, 2);
+  assert.deepEqual(mcq.map(q => q.marks), [MCQ_MARKS, MCQ_MARKS], 'every MCQ question is worth one mark');
+  assert.equal(totalMarks({ questions: mcq }), mcq.length, 'MCQ total equals the question count');
+  assert.equal(examTemplate('mcq').includes('নম্বর'), false, 'the MCQ template no longer asks for marks');
+  for (const type of ['written', 'short']) { const questions = parseQuestions(examTemplate(type), type); assert.equal(questions.length, 2); assert.ok(questions[0].marks !== questions[1].marks); }
+  const withMarks = examTemplate('mcq').replace('A: ঢাকা', 'নম্বর: ২\nA: ঢাকা');
+  for (const text of ['', 'প্রশ্ন: x', examTemplate('mcq').replace('উত্তর: A', 'উত্তর: E'), withMarks, examTemplate('mcq').replace('B: চট্টগ্রাম', 'B: ঢাকা'), examTemplate('mcq') + '\nউত্তর: B']) assert.throws(() => parseQuestions(text, 'mcq'));
   assert.throws(() => parseQuestions(examTemplate('mcq'), 'written'));
 });
 test('teacher drafts → submit → admin rejection/edit/approval; no premature publication', async () => {
@@ -60,26 +66,26 @@ test('different question weights, wrong/unanswered, change answer, zero floor, i
   setup(); const e = await publish(); clock = start;
   const { a } = await attempt(e, one, { q1: 'B', q2: 'C' });
   await repo.saveAnswer(a.id, one.id, 'q1', 'A'); let db = await repo.finishAttempt(a.id, one.id);
-  assert.equal(db.attempts[0].score, 5); assert.equal(db.attempts[0].correct, 2);
+  assert.equal(db.attempts[0].score, 2); assert.equal(db.attempts[0].correct, 2);
   assert.equal((await repo.finishAttempt(a.id, one.id)).attempts.length, 1);
   assert.deepEqual(scoreAttempt(e, { answers: { q1: 'B' } }), { score: 0, correct: 0, wrong: 1, unanswered: 1 });
-  assert.deepEqual(scoreAttempt(e, { answers: { q1: 'B', q2: 'C' } }), { score: 2.5, correct: 1, wrong: 1, unanswered: 0 });
+  assert.deepEqual(scoreAttempt(e, { answers: { q1: 'B', q2: 'C' } }), { score: 0.5, correct: 1, wrong: 1, unanswered: 0 });
 });
 test('running FIRST attempt mean enables one retry only, ignores second scores and keeps best score', async () => {
   setup(); const e = await publish(); clock = start;
   let { a } = await attempt(e, one, { q1: 'A' }); let db = await repo.finishAttempt(a.id, one.id); assert.equal(retryEligibility(db, e, one.id), false);
   ({ a } = await attempt(e, two, { q1: 'A', q2: 'C' })); db = await repo.finishAttempt(a.id, two.id);
-  assert.equal(firstAttemptMean(db, e.id), 3.5); assert.equal(retryEligibility(db, e, one.id), true);
+  assert.equal(firstAttemptMean(db, e.id), 1.5); assert.equal(retryEligibility(db, e, one.id), true);
   clock = start + 20 * 60000; ({ a } = await attempt(e, one, { q1: 'B' })); assert.equal(a.number, 2);
-  db = await repo.finishAttempt(a.id, one.id); assert.equal(firstAttemptMean(db, e.id), 3.5);
-  assert.equal(examResults(db, e).find(a => a.studentId === one.id).score, 2);
+  db = await repo.finishAttempt(a.id, one.id); assert.equal(firstAttemptMean(db, e.id), 1.5);
+  assert.equal(examResults(db, e).find(a => a.studentId === one.id).score, 1);
   assert.equal(retryEligibility(db, e, one.id), false); await assert.rejects(repo.startAttempt(e.id, one));
 });
 test('offline queue survives reload; deadline locks; later sync grades exactly once', async () => {
   setup(); const e = await publish(); clock = start; const { a } = await attempt(e, one, { q1: 'A', q2: 'C' }); navigator.onLine = false;
   clock = end + 1; let db = await repo.syncStudent(one.id); assert.equal(db.attempts[0].status, 'queued'); assert.equal(db.attempts[0].finishedAt, end); assert.equal(db.attempts[0].score, undefined);
   await assert.rejects(repo.saveAnswer(a.id, one.id, 'q1', 'B')); assert.equal((await repo.list()).attempts[0].answers.q1, 'A');
-  clock = end + 86400000; navigator.onLine = true; db = await repo.syncStudent(one.id); assert.equal(db.attempts[0].status, 'submitted'); assert.equal(db.attempts[0].score, 5);
+  clock = end + 86400000; navigator.onLine = true; db = await repo.syncStudent(one.id); assert.equal(db.attempts[0].status, 'submitted'); assert.equal(db.attempts[0].score, 2);
   db = await repo.syncStudent(one.id); assert.equal(db.attempts.length, 1);
 });
 test('written/short next-day physical grading and explicit absence; invalid score cannot overwrite', async () => {

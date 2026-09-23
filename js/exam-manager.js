@@ -48,7 +48,7 @@ export function initExamManager(container, role) {
       ${field('passPercent', 'পাস নম্বরের হার (%)', 'number', 'min="1" max="100" required')}
       <label>নির্দেশনা<textarea name="instructions" maxlength="2000">${esc(data.instructions)}</textarea></label>
       <details><summary>প্রশ্নের টেমপ্লেট দেখুন</summary><textarea data-copy-template readonly aria-label="কপি করার টেমপ্লেট">${esc(examTemplate(type))}</textarea><div class="exam-actions">${button('copy-template', 'টেমপ্লেট কপি করুন')}${button('sample', 'উদাহরণ বসান')}</div><p class="exam-note">প্রশ্ন আলাদা করতে --- দিন। প্রতিটি লেখা একটি লাইনে রাখুন। নম্বর আলাদা হতে পারে। সর্বোচ্চ ১০০ প্রশ্ন; শুধু লেখা।</p></details>
-      <label>টেমপ্লেট অনুযায়ী প্রশ্ন পেস্ট করুন *<textarea name="template" data-question-source rows="12" required maxlength="150000" placeholder="প্রশ্ন: …\nনম্বর: …">${esc(data.template)}</textarea></label>
+      <label>টেমপ্লেট অনুযায়ী প্রশ্ন পেস্ট করুন *<textarea name="template" data-question-source rows="12" required maxlength="150000" placeholder="${type === 'mcq' ? 'প্রশ্ন: …\nA: …\nB: …\nC: …\nD: …\nউত্তর: A' : 'প্রশ্ন: …\nনম্বর: …'}">${esc(data.template)}</textarea><small class="exam-note">${type === 'mcq' ? 'MCQ-তে প্রতি প্রশ্নের নম্বর ১ নির্ধারিত — “নম্বর:” লাইন লিখতে হবে না। মোট নম্বর = প্রশ্ন সংখ্যা।' : 'প্রতি প্রশ্নের নম্বর আলাদা করে লিখুন।'}</small></label>
       <div class="exam-preview" data-parsed-preview aria-live="polite"></div>
       <button type="submit" class="primary">খসড়া সংরক্ষণ করুন</button>
     </form>`;

@@ -10,9 +10,10 @@ const fail = text => { throw new Error(text); };
 const number = text => Number(String(text).replace(/[০-৯]/g, d => '০১২৩৪৫৬৭৮৯'.indexOf(d)));
 const round = value => Math.round((value + Number.EPSILON) * 100) / 100;
 export const totalMarks = exam => round(exam.questions.reduce((sum, q) => sum + q.marks, 0));
+export const MCQ_MARKS = 1; // every MCQ question is worth exactly one mark
 export const examTemplate = type => type === 'mcq'
-  ? 'প্রশ্ন: বাংলাদেশের রাজধানী কোনটি?\nনম্বর: ২\nA: ঢাকা\nB: চট্টগ্রাম\nC: খুলনা\nD: রাজশাহী\nউত্তর: A\n---\nপ্রশ্ন: ৫ + ৩ = কত?\nনম্বর: ৩\nA: ৬\nB: ৭\nC: ৮\nD: ৯\nউত্তর: C'
-  : 'প্রশ্ন: পরিবেশ রক্ষায় গাছের গুরুত্ব লেখো।\nনম্বর: ৫\n---\nপ্রশ্ন: পানি দূষণ রোধের তিনটি উপায় লেখো।\nনম্বর: ৩';
+  ? 'প্রশ্ন: বাংলাদেশের রাজধানী কোনটি?\nA: ঢাকা\nB: চট্টগ্রাম\nC: খুলনা\nD: রাজশাহী\nউত্তর: A\n---\nপ্রশ্ন: ৫ + ৩ = কত?\nA: ৬\nB: ৭\nC: ৮\nD: ৯\nউত্তর: C'
+  : 'প্রশ্ন: পরিবেশ রক্ষায় গাছের গুরুত্ব লেখো।\nনম্বর: ৫\n---\nপ্রশ্ন: পানি দূষণ রোধের তিনটি উপায় লেখো।\nনম্বর: ৩';
 export function parseQuestions(text, type) {
   if (!Object.hasOwn(EXAM_TYPES, type)) fail('পরীক্ষার ধরন নির্বাচন করুন।');
   if (!String(text).trim() || String(text).length > 150000) fail('প্রশ্নের টেমপ্লেট পূরণ করুন (সর্বোচ্চ ১৫০,০০০ অক্ষর)।');
@@ -28,8 +29,13 @@ export function parseQuestions(text, type) {
       if (Object.hasOwn(fields, key)) fail(`প্রশ্ন ${i + 1}: একই ঘর দুবার দেওয়া হয়েছে।`);
       fields[key] = match[2];
     }
-    const marks = number(fields.marks);
-    if (!fields.question || fields.question.length > 1200 || !Number.isFinite(marks) || marks <= 0 || marks > 1000 || round(marks) !== marks) fail(`প্রশ্ন ${i + 1}: প্রশ্নের লেখা ও সঠিক নম্বর দিন (০.০১–১০০০)।`);
+    const marks = type === 'mcq' ? MCQ_MARKS : number(fields.marks);
+    if (!fields.question || fields.question.length > 1200) fail(`প্রশ্ন ${i + 1}: প্রশ্নের লেখা দিন (সর্বোচ্চ ১২০০ অক্ষর)।`);
+    if (type === 'mcq') {
+      if (fields.marks !== undefined && number(fields.marks) !== MCQ_MARKS) fail(`প্রশ্ন ${i + 1}: MCQ-তে প্রতি প্রশ্নের নম্বর ১ নির্ধারিত — “নম্বর:” লাইনটি বাদ দিন।`);
+    } else if (!Number.isFinite(marks) || marks <= 0 || marks > 1000 || round(marks) !== marks) {
+      fail(`প্রশ্ন ${i + 1}: নম্বর ১ থেকে ১০০০-এর মধ্যে পূর্ণসংখ্যা দিন।`);
+    }
     const q = { id: `q${i + 1}`, text: fields.question, marks };
     if (type === 'mcq') {
       const keys = ['A', 'B', 'C', 'D'];
