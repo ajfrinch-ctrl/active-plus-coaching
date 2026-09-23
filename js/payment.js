@@ -618,11 +618,11 @@ $('#payReceiptWhatsApp').addEventListener('click', async event => {
   const filename = `${String(tx.receiptNo || tx.id).replace(/[^\w-]/g, '_')}.png`;
   const message = receiptMessage(tx);
   try {
-    // A wa.me link cannot carry an attachment, so the receipt image is saved
-    // first and the student's own chat opens with the details already typed.
+    // Open the chat inside the tap itself so no popup blocker can swallow it,
+    // then render the receipt image to attach (a wa.me link cannot carry one).
+    window.open(whatsappLink(phone, message), '_blank', 'noopener');
     try { await saveReceiptPNG(await createReceiptPNG(tx), filename); }
     catch { toast('রসিদের ছবি তৈরি হয়নি — শুধু লেখা পাঠানো হচ্ছে।', 'error'); }
-    window.open(whatsappLink(phone, message), '_blank', 'noopener');
     toast(`হোয়াটসঅ্যাপ চ্যাট খুলছে — ${bn(phone)}। রসিদের ছবিটি ডাউনলোড হয়েছে, চ্যাটে যুক্ত করে দিন।`, 'success');
   } catch (error) {
     toast('রসিদ পাঠানো যায়নি। আবার চেষ্টা করুন।', 'error');
