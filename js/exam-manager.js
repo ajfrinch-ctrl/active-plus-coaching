@@ -1,6 +1,7 @@
 import { examRepository as repo, EXAM_TYPES, TEACHER_ACTOR, ADMIN_ACTOR, examTemplate, parseQuestions, totalMarks, watchExams } from './exam-data.js';
 import { examMeta, questionPreview, resultMarkup, downloadResults, esc, num } from './exam-ui.js';
 import { downloadExamPDF } from './exam-pdf.js';
+import { enabledClasses } from './config.js';
 
 export function initExamManager(container, role) {
   const root = document.querySelector(container); if (!root) return;
@@ -38,9 +39,11 @@ export function initExamManager(container, role) {
     const nextDay = new Date(Date.now() + 86400000); nextDay.setHours(18, 0, 0, 0);
     const localTime = ms => { const d = new Date(ms); return new Date(ms - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); };
     const data = e || { type, title: '', subject: '', startAt: nextDay.getTime(), endAt: nextDay.getTime() + 3600000, lateMinutes: 10, negative: 0, passPercent: 33, template: '', instructions: '' };
+    const classOptions = value => `<option value="">শ্রেণি নির্বাচন করুন</option>${enabledClasses.map(c => `<option value="${esc(c)}" ${c === value ? 'selected' : ''}>${esc(c)}</option>`).join('')}`;
     const field = (name, label, kind = 'text', extra = '') => `<label>${label}<input name="${name}" type="${kind}" value="${esc(['startAt', 'endAt'].includes(name) ? localTime(data[name]) : data[name])}" ${extra}></label>`;
     content.innerHTML = `${back()}<h2>${e ? 'সম্পাদনা' : 'নতুন পরীক্ষা'} — ${EXAM_TYPES[type]}</h2><form class="exam-form" data-exam-form>
       ${field('title', 'পরীক্ষার নাম *', 'text', 'required maxlength="150"')}${field('subject', 'একটি বিষয় *', 'text', 'required maxlength="80"')}
+      <label>কোন শ্রেণির জন্য *<select name="className" required>${classOptions(data.className)}</select></label>
       ${field('startAt', type === 'mcq' ? 'শুরুর সময় *' : 'প্রশ্ন ডাউনলোড শুরুর সময় *', 'datetime-local', 'required')}${field('endAt', type === 'mcq' ? 'সবার জন্য শেষ সময় *' : 'আজকের প্রস্তুতির শেষ সময় *', 'datetime-local', 'required')}
       <p class="exam-note">সময় এই মোবাইলের স্থানীয় সময় অনুযায়ী। ${type === 'mcq' ? 'মোট দুইবার; চলমান প্রথম-প্রচেষ্টার গড়ের নিচে থাকলে দ্বিতীয় সুযোগ। সময় বাড়বে না। সেরা নম্বর ফলাফলে থাকবে।' : 'শুরুর তারিখের পরের দিন (বাংলাদেশ সময়) ক্লাসে পরীক্ষা হবে। শিক্ষার্থী PDF নেবে, খাতায় উত্তর দেবে।'}</p>
       ${type === 'mcq' ? field('lateMinutes', 'দেরিতে প্রথম প্রবেশ: শুরুর পর কত মিনিট', 'number', 'required min="1" step="1"') : ''}

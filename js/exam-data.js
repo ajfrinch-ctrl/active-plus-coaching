@@ -1,6 +1,7 @@
 /* Local exam workflow adapter, NOT secure online authentication/proctoring.
    A production API must own authorization, time, answer keys and accepted submissions. */
 import { teachingRepository, DEMO_TEACHER } from './teaching-data.js';
+import { enabledClasses } from './config.js';
 export const EXAM_KEY = 'activePlus.exams.v1';
 export const EXAM_TYPES = Object.freeze({ mcq: 'MCQ', written: 'লিখিত', short: 'সংক্ষিপ্ত উত্তর' });
 export const EXAM_STATUSES = Object.freeze({ draft: 'খসড়া', pending: 'অনুমোদনের অপেক্ষায়', rejected: 'সংশোধনের জন্য ফেরত', published: 'প্রকাশিত' });
@@ -55,9 +56,16 @@ export function classExamDate(startAt) {
   date.setTime(date.getTime() + 86400000);
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka', year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
 }
+/* Exams saved before the class picker existed carry no className and stay
+   visible to every class; new exams name the class they belong to. */
+export function examMatchesClass(exam, className) {
+  return !exam.className || exam.className === className;
+}
 export function validateExam(input) {
   const title = String(input.title || '').trim(), subject = String(input.subject || '').trim();
   if (!title || title.length > 150 || !subject || subject.length > 80) fail('পরীক্ষার নাম ও একটি বিষয় দিন।');
+  const className = String(input.className || '').trim();
+  if (className && !enabledClasses.includes(className)) fail('সঠিক শ্রেণি নির্বাচন করুন।');
   const startAt = Number(input.startAt), endAt = Number(input.endAt), lateMinutes = input.type === 'mcq' ? Number(input.lateMinutes ?? 10) : 0, negative = Number(input.negative ?? 0), passPercent = Number(input.passPercent ?? 33);
   if (!Number.isFinite(startAt) || !Number.isFinite(endAt) || endAt <= startAt || endAt - startAt > 86400000 || startAt < 1577836800000 || endAt > 4102444800000) fail('সঠিক শুরু ও শেষ সময় দিন; সময়কাল সর্বোচ্চ ২৪ ঘণ্টা।');
   if (input.type === 'mcq' && (!Number.isInteger(lateMinutes) || lateMinutes < 1 || lateMinutes * 60000 > endAt - startAt)) fail('দেরিতে প্রবেশের সীমা ১ মিনিট থেকে পরীক্ষার সময়কালের মধ্যে দিন।');
@@ -66,7 +74,7 @@ export function validateExam(input) {
   const instructions = String(input.instructions || '').trim();
   if (instructions.length > 2000) fail('নির্দেশনা সর্বোচ্চ ২০০০ অক্ষরে দিন।');
   const questions = parseQuestions(input.template, input.type);
-  return { title, subject, type: input.type, startAt, endAt, lateMinutes, negative: input.type === 'mcq' ? negative : 0, passPercent, instructions, template: input.template, questions };
+  return { title, subject, className, type: input.type, startAt, endAt, lateMinutes, negative: input.type === 'mcq' ? negative : 0, passPercent, instructions, template: input.template, questions };
 }
 function read() {
   const raw = window.localStorage.getItem(EXAM_KEY);
@@ -188,6 +196,7 @@ export const examRepository = {
     return mutate(db => {
       const e = examById(db, examId), now = Date.now();
       if (e.type !== 'mcq' || e.status !== 'published' || now < e.startAt || now >= e.endAt) fail('এখন পরীক্ষা শুরু করা যাবে না।');
+      if (!examMatchesClass(e, person.className)) fail('এই পরীক্ষাটি তোমার শ্রেণির জন্য নয়।');
       const own = db.attempts.filter(a => a.examId === e.id && a.studentId === person.id);
       if (own.some(a => a.status === 'active')) return;
       if (!own.length && now > e.startAt + e.lateMinutes * 60000) fail('দেরিতে প্রবেশের সময়সীমা শেষ।');

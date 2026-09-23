@@ -1,4 +1,4 @@
-import { examRepository as repo, retryEligibility, firstAttemptMean, examResults, totalMarks, watchExams } from './exam-data.js';
+import { examRepository as repo, examMatchesClass, retryEligibility, firstAttemptMean, examResults, totalMarks, watchExams } from './exam-data.js';
 import { examMeta, resultMarkup, esc, num } from './exam-ui.js';
 import { downloadExamPDF } from './exam-pdf.js';
 
@@ -7,7 +7,7 @@ export function initStudentExams({ getStudent, getAccount }) {
   let db = { exams: [], attempts: [] }, view = 'list', examId = null, attemptId = null, busy = false, ready = false, pdfBusy = false;
   const autoTried = new Set();
   root.classList.add('exam-workspace');
-  root.innerHTML = '<p class="exam-note">সব শ্রেণির জন্য অনলাইন পরীক্ষা • এটি একই ব্রাউজারে চলা লোকাল ডেমো।</p><p class="exam-error" data-exam-error role="alert" hidden></p><p class="exam-message" data-exam-message role="status" hidden></p><p class="exam-auto-notice" data-auto-download role="status"></p><div data-exam-content></div>';
+  root.innerHTML = '<p class="exam-note">নিজের শ্রেণির অনলাইন পরীক্ষা • এটি একই ব্রাউজারে চলা লোকাল ডেমো।</p><p class="exam-error" data-exam-error role="alert" hidden></p><p class="exam-message" data-exam-message role="status" hidden></p><p class="exam-auto-notice" data-auto-download role="status"></p><div data-exam-content></div>';
   const $ = selector => root.querySelector(selector), content = $('[data-exam-content]');
   const activeAccount = () => getAccount()?.status === 'active';
   const button = (action, label, id = '', cls = '') => `<button type="button" class="${cls}" data-student-exam-action="${action}" data-id="${esc(id)}">${label}</button>`;
@@ -18,7 +18,7 @@ export function initStudentExams({ getStudent, getAccount }) {
   function list() {
     view = 'list'; examId = null; attemptId = null;
     if (!activeAccount()) { content.innerHTML = '<p class="exam-card">অনুমোদিত অ্যাকাউন্ট দিয়ে লগইন করতে হবে।</p>'; return; }
-    const exams = db.exams.filter(e => e.status === 'published').sort((a, b) => b.startAt - a.startAt), now = Date.now();
+    const exams = db.exams.filter(e => e.status === 'published' && examMatchesClass(e, getStudent().className)).sort((a, b) => b.startAt - a.startAt), now = Date.now();
     content.innerHTML = `<div class="exam-actions">${button('refresh', 'তালিকা / জমার অবস্থা হালনাগাদ')}</div><div class="exam-list">${exams.map(e => {
       const attempts = own(e), active = attempts.find(a => a.status === 'active'), queued = attempts.some(a => a.status === 'queued');
       const canFirst = !attempts.length && now >= e.startAt && now < e.endAt && now <= e.startAt + e.lateMinutes * 60000;
@@ -89,7 +89,7 @@ export function initStudentExams({ getStudent, getAccount }) {
   }
   async function automaticPDF() {
     if (busy || pdfBusy || !ready || !activeAccount() || document.querySelector('#appShell').hidden || document.visibilityState !== 'visible') return;
-    for (const e of db.exams.filter(e => e.type === 'mcq' && e.status === 'published' && Date.now() >= e.endAt && own(e).some(a => !a.demoFixture))) {
+    for (const e of db.exams.filter(e => e.type === 'mcq' && e.status === 'published' && examMatchesClass(e, getStudent().className) && Date.now() >= e.endAt && own(e).some(a => !a.demoFixture))) {
       const key = `activePlus.examPDF.${e.id}.${getStudent().id}`;
       let done = false; try { done = window.localStorage.getItem(key) === 'started'; } catch { /* Manual download remains available. */ }
       if (done || autoTried.has(key)) continue;
