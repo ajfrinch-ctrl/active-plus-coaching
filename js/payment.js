@@ -520,6 +520,8 @@ function openReceiptModal(tx, student) {
   state.receiptTx = tx;
   state.receiptStudent = student;
   $('#payReceiptSub').textContent = `রসিদ নং: ${tx.receiptNo || tx.id} • ${tx.date}`;
+  const phone = whatsappTarget(student);
+  $('#payReceiptWhatsAppLabel').textContent = phone ? `হোয়াটসঅ্যাপে পাঠান • ${bn(phone)}` : 'হোয়াটসঅ্যাপে পাঠান';
   $('#payReceiptBody').innerHTML = receiptMarkup(tx);
   $('#payReceiptBackdrop').hidden = false;
   document.body.classList.add('admin-modal-open');
@@ -605,25 +607,25 @@ $('#payReceiptWhatsApp').addEventListener('click', async event => {
   const tx = state.receiptTx;
   const student = state.receiptStudent;
   if (!tx || button.disabled) return;
+  const phone = whatsappTarget(student);
+  if (!phone) {
+    toast('এই শিক্ষার্থীর কোনো মোবাইল নম্বর নেই — আগে নম্বর যোগ করুন, নয়তো “টেক্সট কপি” দিয়ে পাঠান।', 'error');
+    return;
+  }
   const text = label.textContent;
   button.disabled = true;
   label.textContent = 'রসিদ প্রস্তুত হচ্ছে…';
   const filename = `${String(tx.receiptNo || tx.id).replace(/[^\w-]/g, '_')}.png`;
+  const message = receiptMessage(tx);
   try {
-    const png = await createReceiptPNG(tx);
-    const file = new File([png], filename, { type: 'image/png' });
-    const message = receiptMessage(tx);
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      // One tap: the OS share sheet opens with the receipt image attached.
-      await navigator.share({ files: [file], text: message, title: 'মানি রসিদ — Active Plus Coaching' });
-    } else {
-      // Fallback: save the image and open the student's WhatsApp chat with the details.
-      await saveReceiptPNG(png, filename);
-      window.open(whatsappLink(whatsappTarget(student), message), '_blank', 'noopener');
-      toast('রসিদের ছবি ডাউনলোড ও হোয়াটসঅ্যাপ চ্যাট খোলা হয়েছে — ছবিটি চ্যাটে পাঠিয়ে দিন।');
-    }
+    // A wa.me link cannot carry an attachment, so the receipt image is saved
+    // first and the student's own chat opens with the details already typed.
+    try { await saveReceiptPNG(await createReceiptPNG(tx), filename); }
+    catch { toast('রসিদের ছবি তৈরি হয়নি — শুধু লেখা পাঠানো হচ্ছে।', 'error'); }
+    window.open(whatsappLink(phone, message), '_blank', 'noopener');
+    toast(`হোয়াটসঅ্যাপ চ্যাট খুলছে — ${bn(phone)}। রসিদের ছবিটি ডাউনলোড হয়েছে, চ্যাটে যুক্ত করে দিন।`, 'success');
   } catch (error) {
-    if (error && error.name !== 'AbortError') toast('রসিদ পাঠানো যায়নি। আবার চেষ্টা করুন।', 'error');
+    toast('রসিদ পাঠানো যায়নি। আবার চেষ্টা করুন।', 'error');
   } finally {
     button.disabled = false;
     label.textContent = text;
