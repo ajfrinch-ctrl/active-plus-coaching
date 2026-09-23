@@ -99,6 +99,10 @@ test('courses view: half/half filter tiles (odd last full) and tap-to-see detail
   // Category tiles: exactly two per row; the lone last tile spans the full row.
   const columns = await page.locator('#learningFilters').evaluate(el => getComputedStyle(el).gridTemplateColumns.trim().split(/\s+/).length);
   expect(columns).toBe(2);
+
+  // Term progress lives at the top, above the auto-selected teacher work board.
+  const progressFirst = await page.evaluate(() => document.querySelector('.course-summary').compareDocumentPosition(document.querySelector('#learningBoard')) & Node.DOCUMENT_POSITION_FOLLOWING);
+  expect(progressFirst).toBeTruthy();
   const rowWidth = await page.locator('#learningFilters').evaluate(el => el.getBoundingClientRect().width);
   const routineTile = await page.locator('[data-learning-filter=routine]').evaluate(el => el.getBoundingClientRect().width);
   const allTile = await page.locator('[data-learning-filter=all]').evaluate(el => el.getBoundingClientRect().width);
@@ -157,6 +161,9 @@ test('material button generates the PDF in-app offline; external links still dow
   await card.locator('a.teaching-resource[data-material]').click();
   await expect(page.locator('#resourceModal')).toBeVisible();
   await expect(page.locator('#resourceModalMeta')).toContainText('ActivePlus-material-');
+  const workText = (await card.locator('.teaching-body').textContent()).trim();
+  await expect(page.locator('#resourceModalBody .teaching-body')).toHaveText(workText);
+  await expect(page.locator('#resourceOpenTab')).toBeHidden();
   const download = page.waitForEvent('download');
   await page.locator('#resourceDownload').click();
   const material = await download;
@@ -179,9 +186,19 @@ test('material button generates the PDF in-app offline; external links still dow
   });
   const external = page.locator('#learningList .learning-card').filter({ hasText: 'Reference link card' });
   await external.locator('.learning-card-toggle').click();
-  await external.locator('a.teaching-resource:not([data-material])').click();
+  await external.locator('a.teaching-resource').click();
   await expect(page.locator('#resourceModalMeta')).toContainText('app-logo.png');
   const externalDownload = page.waitForEvent('download');
   await page.locator('#resourceDownload').click();
   expect((await externalDownload).suggestedFilename()).toBe('app-logo.png');
+});
+
+test('results view: the latest model test summary sits on top', async ({ page }) => {
+  await enter(page);
+  await page.locator('.quick-tile[data-view=results]').click();
+  await expect(page.locator('#resultsView .result-hero')).toBeVisible();
+  const summaryFirst = await page.evaluate(() => document.querySelector('#resultsView .result-hero').compareDocumentPosition(document.querySelector('#teacherResultsBoard')) & Node.DOCUMENT_POSITION_FOLLOWING);
+  expect(summaryFirst).toBeTruthy();
+  const statsAfterHero = await page.evaluate(() => document.querySelector('#resultsView .result-hero').compareDocumentPosition(document.querySelector('#resultsView .result-stats')) & Node.DOCUMENT_POSITION_FOLLOWING);
+  expect(statsAfterHero).toBeTruthy();
 });

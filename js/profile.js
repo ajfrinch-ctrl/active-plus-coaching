@@ -43,7 +43,7 @@ export function openProfileEditor(student) {
 function readEditableStudent(form, current) {
   return {
     ...current,
-    // ID is intentionally copied from current state and never read from a form field.
+    // ID and registration number are fixed: copied from current state, never read from a form field.
     id: current.id,
     name: String(form.get('nameBn') || '').trim(),
     nameBn: String(form.get('nameBn') || '').trim(),
@@ -61,7 +61,7 @@ function readEditableStudent(form, current) {
     major: String(form.get('major') || '').trim(),
     institution: String(form.get('institution') || '').trim(),
     roll: String(form.get('roll') || '').trim(),
-    registrationNo: String(form.get('registrationNo') || '').trim()
+    registrationNo: current.registrationNo
   };
 }
 

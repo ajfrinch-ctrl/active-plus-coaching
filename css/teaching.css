@@ -121,6 +121,10 @@
 .learning-card-actions { border-top: 1px solid var(--line); margin-top: 14px; padding-top: 12px; }
 /* Supplementary-material popup: file name, live download status, actions. */
 .resource-modal-meta { margin: 0; color: var(--ink); font-size: 11px; font-weight: 700; line-height: 1.6; word-break: break-all; }
+/* Full work preview inside the supplementary-material popup. */
+.resource-modal-body { margin-top: 10px; border-top: 1px solid var(--line); }
+.resource-modal-body .learning-meta { margin-top: 10px; }
+.resource-modal-body .teaching-body { margin-top: 10px; font-size: 12px !important; }
 .resource-modal-status { min-height: 14px; margin: 8px 0 0; color: var(--muted); font-size: 10px; font-weight: 700; line-height: 1.5; }
 .resource-modal-status.is-error { color: #c2443d; }
 .logout-actions .resource-download { color: var(--white); background: var(--forest); box-shadow: 0 6px 16px rgba(4, 121, 90, .18); }

@@ -259,6 +259,8 @@
       <section class="view" id="coursesView" data-view-panel="courses" aria-labelledby="coursesTitle">
         <div class="page-intro"><p class="eyebrow">চলমান পড়াশোনা</p><h1 id="coursesTitle">আমার কোর্স</h1><p>প্রতিটি বিষয়ে নিজের অগ্রগতি দেখে নাও।</p></div>
         <button class="exam-link" type="button" data-view="exams">পরীক্ষা দাও<small>MCQ, লিখিত ও সংক্ষিপ্ত পরীক্ষা • সবার ফলাফল</small></button>
+        <p class="teacher-local-note">কোর্সের অগ্রগতিটি পূর্বের ডেমো তথ্য।</p>
+        <div class="course-summary"><div><span class="card-eyebrow">এই টার্মের অগ্রগতি</span><strong>৭৪%</strong><span>আরও একটু নিয়মিত হলেই সেরা ফলাফল!</span></div><div class="summary-bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
         <section class="teaching-board" id="learningBoard" aria-labelledby="learningTitle">
           <div class="learning-heading"><span class="learning-home-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-book"></use></svg></span><div><h2 id="learningTitle">শিক্ষকের দেওয়া কাজ</h2><p id="learningCount" role="status"></p></div></div>
           <div class="learning-summary" id="learningSummary" aria-label="কাজের সারসংক্ষেপ"></div>
@@ -272,8 +274,6 @@
           <p class="learning-error" id="learningError" role="alert" hidden></p>
           <div class="learning-list" id="learningList"></div>
         </section>
-        <p class="teacher-local-note">নিচের কোর্সের অগ্রগতি পূর্বের ডেমো তথ্য।</p>
-        <div class="course-summary"><div><span class="card-eyebrow">এই টার্মের অগ্রগতি</span><strong>৭৪%</strong><span>আরও একটু নিয়মিত হলেই সেরা ফলাফল!</span></div><div class="summary-bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
         <div class="course-filter"><span>সকল বিষয়</span><small>তথ্য দেখতে কোর্সে চাপ দিন</small></div>
         <div class="course-list">
           <details class="course-item">
@@ -306,10 +306,10 @@
       <section class="view" id="resultsView" data-view-panel="results" aria-labelledby="resultsTitle">
         <div class="page-intro"><p class="eyebrow">তোমার পারফরম্যান্স</p><h1 id="resultsTitle">ফলাফল</h1><p>পরিশ্রমের ফলাফল, এক নজরে।</p></div>
         <button class="exam-link" type="button" data-view="exams">অনলাইন পরীক্ষার ফলাফল দেখো →</button>
-        <section class="teaching-board" id="teacherResultsBoard" aria-labelledby="teacherResultsTitle" hidden><h2 id="teacherResultsTitle">শিক্ষকের দেওয়া ফলাফল</h2><div class="learning-list" id="teacherResultsList"></div></section>
-        <p class="teacher-local-note">নিচের সারাংশটি পূর্বের ডেমো পরীক্ষার তথ্য।</p>
+        <p class="teacher-local-note">উপরের সারাংশটি পূর্বের ডেমো পরীক্ষার তথ্য।</p>
         <div class="result-hero"><div><span class="card-eyebrow">সর্বশেষ মডেল টেস্ট</span><h2>মোট স্কোর <strong>৮৬%</strong></h2><p>তোমার অবস্থান: <b>১২তম</b> · মোট শিক্ষার্থী ৪৮ জন</p></div><span class="trophy"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-award"></use></svg></span></div>
         <div class="result-stats"><div><small>মোট পরীক্ষা</small><strong>০৮</strong></div><div><small>সর্বোচ্চ স্কোর</small><strong>৯৪%</strong></div><div><small>উন্নতি</small><strong class="up">+৮%</strong></div></div>
+        <section class="teaching-board" id="teacherResultsBoard" aria-labelledby="teacherResultsTitle" hidden><h2 id="teacherResultsTitle">শিক্ষকের দেওয়া ফলাফল</h2><div class="learning-list" id="teacherResultsList"></div></section>
         <div class="section-heading section-heading-spaced"><div><p class="eyebrow">সাম্প্রতিক</p><h2>পরীক্ষার ফলাফল</h2></div><button type="button" class="text-button" data-action="all-results">সব দেখুন</button></div>
         <div class="results-list">
           <article class="result-row"><span class="result-badge green">ম</span><div><strong>মাসিক পরীক্ষা · সেপ্টেম্বর</strong><small>০৮ সেপ্টেম্বর ২০২৬</small></div><b>৮৬<small>%</small></b><span class="result-arrow">→</span></article>
@@ -355,7 +355,7 @@
     <section class="modal" role="dialog" aria-modal="true" aria-labelledby="logoutModalTitle"><div class="modal-header"><div><p class="eyebrow">অ্যাকাউন্ট</p><h2 id="logoutModalTitle">লগআউট করবেন?</h2></div><button type="button" class="modal-close" data-close-modal="logoutModal" aria-label="বন্ধ করুন">×</button></div><p class="recovery-copy">লগআউট করলে এই ডিভাইস থেকে বের হয়ে যাবেন। আবার প্রবেশ করতে মোবাইল নম্বর ও PIN দিয়ে লগইন করতে হবে।</p><div class="logout-actions"><button class="logout-cancel" type="button" data-close-modal="logoutModal">না, থাকছি</button><button class="logout-confirm" type="button" id="logoutConfirmButton">হ্যাঁ, লগআউট করুন</button></div></section>
   </div>
   <div class="modal-backdrop" id="resourceModal" hidden>
-    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="resourceModalTitle"><div class="modal-header"><div><p class="eyebrow">সহায়ক উপকরণ</p><h2 id="resourceModalTitle">উপকরণ</h2></div><button type="button" class="modal-close" data-close-modal="resourceModal" aria-label="বন্ধ করুন">×</button></div><p id="resourceModalMeta" class="resource-modal-meta"></p><p id="resourceModalStatus" class="resource-modal-status" role="status"></p><div class="logout-actions"><button class="logout-cancel" type="button" id="resourceOpenTab">নতুন ট্যাবে খুলুন</button><button class="logout-confirm resource-download" type="button" id="resourceDownload">ডাউনলোড করুন</button></div><button class="modal-action" type="button" data-close-modal="resourceModal">বন্ধ করুন</button></section>
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="resourceModalTitle"><div class="modal-header"><div><p class="eyebrow">সহায়ক উপকরণ</p><h2 id="resourceModalTitle">উপকরণ</h2></div><button type="button" class="modal-close" data-close-modal="resourceModal" aria-label="বন্ধ করুন">×</button></div><p id="resourceModalMeta" class="resource-modal-meta"></p><div id="resourceModalBody" class="resource-modal-body"></div><p id="resourceModalStatus" class="resource-modal-status" role="status"></p><div class="logout-actions"><button class="logout-cancel" type="button" id="resourceOpenTab">নতুন ট্যাবে খুলুন</button><button class="logout-confirm resource-download" type="button" id="resourceDownload">ডাউনলোড করুন</button></div><button class="modal-action" type="button" data-close-modal="resourceModal">বন্ধ করুন</button></section>
   </div>
 
   <div class="modal-backdrop" id="editModal" hidden>
@@ -377,7 +377,7 @@
         <div class="field full"><label for="editMajor">বিষয় / বিভাগ</label><input id="editMajor" name="major" type="text"></div>
         <div class="field"><label for="editInstitution">শিক্ষা প্রতিষ্ঠান</label><input id="editInstitution" name="institution" type="text"></div>
         <div class="field"><label for="editRoll">রোল নম্বর</label><input id="editRoll" name="roll" type="text"></div>
-        <div class="field full"><label for="editRegistrationNo">রেজিস্ট্রেশন নম্বর</label><input id="editRegistrationNo" name="registrationNo" type="text"></div>
+        <div class="field full"><label for="editRegistrationNo">রেজিস্ট্রেশন নম্বর</label><div class="locked-input"><input id="editRegistrationNo" name="registrationNo" type="text" readonly><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg></div></div>
       </div>
       <button class="modal-action" type="submit">তথ্য সংরক্ষণ করুন</button>
     </form><p class="form-note"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg> Student ID সিস্টেম থেকে তৈরি হয়, তাই এটি অপরিবর্তনযোগ্য।</p></section>

@@ -38,7 +38,7 @@ export function initStudentTeaching({ getStudent }) {
       ${outcome ? `<p class="learning-outcome">${esc(outcome)}</p>` : ''}
       <div class="learning-teacher"><span aria-hidden="true">${esc(Array.from(a.teacherName || 'শ')[0])}</span><small>শিক্ষক • ${esc(a.teacherName)}</small></div>
       ${link || material || canComplete ? `<div class="learning-card-actions">
-        ${link ? `<a class="teaching-resource" href="${esc(link)}" target="_blank" rel="noopener noreferrer">সহায়ক উপকরণ খুলুন <svg class="resource-arrow" aria-hidden="true" viewBox="0 0 24 24"><path d="M7 17 17 7M9 7h8v8"/></svg></a>` : material ? `<a class="teaching-resource" href="#material" data-material="${esc(a.id)}">উপকরণ PDF ডাউনলোড করুন</a>` : ''}
+        ${link ? `<a class="teaching-resource" data-material="${esc(a.id)}" href="${esc(link)}" target="_blank" rel="noopener noreferrer">সহায়ক উপকরণ খুলুন <svg class="resource-arrow" aria-hidden="true" viewBox="0 0 24 24"><path d="M7 17 17 7M9 7h8v8"/></svg></a>` : material ? `<a class="teaching-resource" href="#material" data-material="${esc(a.id)}">উপকরণ PDF ডাউনলোড করুন</a>` : ''}
         ${canComplete ? `<div class="teaching-actions"><button class="primary" type="button" data-complete-homework="${esc(a.id)}" ${pending.has(a.id) ? 'disabled' : ''}>${pending.has(a.id) ? 'সংরক্ষণ হচ্ছে…' : 'কাজ সম্পন্ন হয়েছে জানাও'}</button></div><small class="learning-action-note">এটি শুধু সম্পন্ন হওয়ার খবর; খাতা/ফাইল জমা নয়।</small>` : ''}
       </div>` : ''}
       </div>
@@ -107,25 +107,36 @@ export function initStudentTeaching({ getStudent }) {
     finally { pending.delete(id); await refresh(); }
   });
 
-  /* Supplementary materials: external files open a popup with a direct
-     download; work without a file generates its own PDF in-app from the
-     bundled Bangla font — fully offline, like every PDF in this app except
-     the payment-portal receipts. */
+  /* Supplementary materials: the popup shows the full teacher work and the
+     button below auto-downloads it — external files through a direct fetch,
+     work without a file generates its own PDF in-app from the bundled Bangla
+     font (the payment portal is the only place that renders images). */
   let resource = null;
   const fileNameOf = url => {
     try { const name = decodeURIComponent(new URL(url, location.href).pathname.split('/').filter(Boolean).pop() || ''); if (name) return name; } catch { /* fall through */ }
     return 'sahayok-upokoron';
   };
+  const workBody = a => {
+    const rows = [];
+    if (a.date) rows.push(`<div><small>${a.type === 'homework' ? 'জমার শেষ সময়' : a.type === 'routine' ? 'ক্লাসের সময়' : 'নির্ধারিত তারিখ'}</small><strong>${esc(displayDate(a.date))}</strong>${a.time ? `<span>${num(a.time)}</span>` : ''}</div>`);
+    if (a.room) rows.push(`<div><small>স্থান</small><strong>${esc(a.room)}</strong></div>`);
+    if (a.totalMarks) rows.push(`<div><small>পূর্ণমান</small><strong>${num(a.totalMarks)}</strong></div>`);
+    return `${rows.length ? `<div class="learning-meta">${rows.join('')}</div>` : ''}<p class="teaching-body">${esc(a.details || 'অতিরিক্ত নির্দেশনা নেই।')}</p>${a.teacherName ? `<div class="learning-teacher"><span aria-hidden="true">${esc(Array.from(a.teacherName || 'শ')[0])}</span><small>শিক্ষক • ${esc(a.teacherName)}</small></div>` : ''}`;
+  };
   document.addEventListener('click', event => {
     const link = event.target.closest('a.teaching-resource');
     if (!link) return;
     event.preventDefault();
-    const activity = link.dataset.material ? db.activities.find(a => a.id === link.dataset.material) : null;
-    resource = activity ? { material: activity } : { url: link.href };
+    const activity = db.activities.find(a => a.id === link.dataset.material) || null;
+    const url = activity ? safeResourceURL(activity.resourceURL) : link.href;
+    resource = { url: url || null, material: activity };
     const card = link.closest('.teaching-card');
     $('#resourceModalTitle').textContent = card?.querySelector('.learning-card-title')?.textContent.trim() || 'সহায়ক উপকরণ';
-    $('#resourceModalMeta').textContent = activity ? `ফাইল: ${materialFileName(activity)}` : `ফাইল: ${fileNameOf(link.href)}`;
-    $('#resourceOpenTab').hidden = Boolean(activity); // nothing to open in a tab for in-app materials
+    $('#resourceModalMeta').textContent = activity
+      ? `ফাইল: ${url ? fileNameOf(url) : materialFileName(activity)}`
+      : `ফাইল: ${fileNameOf(link.href)}`;
+    $('#resourceModalBody').innerHTML = activity ? workBody(activity) : '';
+    $('#resourceOpenTab').hidden = !url; // in-app materials have nothing to open in a tab
     const status = $('#resourceModalStatus'); status.textContent = ''; status.classList.remove('is-error');
     openModal('resourceModal');
   });
@@ -137,24 +148,23 @@ export function initStudentTeaching({ getStudent }) {
     if (!resource) return;
     const button = $('#resourceDownload'), status = $('#resourceModalStatus');
     button.disabled = true; status.classList.remove('is-error');
-    status.textContent = resource.material ? 'PDF তৈরি হচ্ছে…' : 'ডাউনলোড শুরু হচ্ছে…';
+    status.textContent = resource.url ? 'ডাউনলোড শুরু হচ্ছে…' : 'PDF তৈরি হচ্ছে…';
     try {
-      if (resource.material) await activitySheetPDF(resource.material);
-      else {
+      if (resource.url) {
         const response = await fetch(resource.url);
         if (!response.ok) throw new Error('load');
         downloadBlob(await response.blob(), fileNameOf(resource.url));
-      }
+      } else await activitySheetPDF(resource.material);
       status.textContent = 'ডাউনলোড শুরু হয়েছে — ডিভাইসের ডাউনলোড ফোল্ডারে পাওয়া যাবে।';
     } catch {
       status.classList.add('is-error');
-      if (resource.material) status.textContent = 'PDF তৈরি হয়নি। আবার চেষ্টা করো।';
-      else {
+      if (resource.url) {
         status.textContent = 'সরাসরি ডাউনলোড সম্ভব হয়নি — উপকরণটি নতুন ট্যাবে খুলছি।';
         window.open(resource.url, '_blank', 'noopener,noreferrer');
-      }
+      } else status.textContent = 'PDF তৈরি হয়নি। আবার চেষ্টা করো।';
     } finally { button.disabled = false; }
   });
+
   watchTeachingData(refresh);
   refresh();
   return refresh;
