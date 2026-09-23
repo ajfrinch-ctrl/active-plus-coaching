@@ -3,12 +3,13 @@ import assert from 'node:assert/strict';
 import { examRepository as repo, EXAM_KEY, examTemplate, parseQuestions, MCQ_MARKS, scoreAttempt, retryEligibility, firstAttemptMean, examResults, classExamDate, totalMarks, TEACHER_ACTOR, ADMIN_ACTOR } from '../js/exam-data.js';
 import { pagesPDF } from '../js/exam-pdf.js';
 import { adminStudents } from '../js/admin-data.js';
+import { ROSTER_KEY } from '../js/office-data.js';
 const realNow = Date.now;
 let clock;
 const start = new Date('2026-10-01T10:00:00Z').getTime(), end = start + 3600000;
 const [one, two, three] = adminStudents.filter(s => s.status === 'approved');
 function setup() {
-  const store = new Map(); let fail = false, events = 0;
+  const store = new Map([[ROSTER_KEY, JSON.stringify(adminStudents)]]); let fail = false, events = 0;
   clock = start - 3600000; Date.now = () => clock;
   Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { onLine: true } });
   globalThis.window = { localStorage: { getItem: key => store.get(key) ?? null, setItem: (key, value) => { if (fail) throw new Error('quota'); store.set(key, value); } }, dispatchEvent: () => events++ };

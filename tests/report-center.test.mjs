@@ -5,12 +5,22 @@
 import test, { before } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadPage } from './jsdom-harness.mjs';
+import { adminStudents, initialTransactions } from '../js/admin-data.js';
+import { ROSTER_KEY } from '../js/office-data.js';
+import { TRANSACTIONS_KEY } from '../js/finance-data.js';
 
 let ctx;
 
 before(async () => {
-  ctx = await loadPage('admin.html', { seed: { 'activePlus.demo.autofill.v1': 'off' } });
+  ctx = await loadPage('admin.html', {
+    seed: {
+      'activePlus.demo.autofill.v1': 'off',
+      [ROSTER_KEY]: JSON.stringify(adminStudents),
+      [TRANSACTIONS_KEY]: JSON.stringify(initialTransactions)
+    }
+  });
   await import('../js/admin.js');
+  await ctx.waitFor(() => ctx.$('#reportTrxCount').textContent === '৪ টি');
 });
 
 const text = selector => ctx.$(selector).textContent;

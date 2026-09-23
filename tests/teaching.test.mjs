@@ -3,9 +3,10 @@ import assert from 'node:assert/strict';
 import { teachingRepository as repo, TEACHING_KEY, validateActivity, matchesStudent, publishedForStudent, safeResourceURL, searchTeachingStudents } from '../js/teaching-data.js';
 import { adminStudents } from '../js/admin-data.js';
 import { STORAGE_KEYS } from '../js/config.js';
+import { ROSTER_KEY } from '../js/office-data.js';
 
 function setup() {
-  const storage = new Map(); let writes = 0, events = 0, failWrite = false;
+  const storage = new Map([[ROSTER_KEY, JSON.stringify(adminStudents)]]); let writes = 0, events = 0, failWrite = false;
   globalThis.window = { localStorage: { getItem: key => storage.get(key) ?? null, setItem: (key, value) => { if (failWrite) throw new Error('quota'); storage.set(key, value); writes++; } }, dispatchEvent: () => events++ };
   return { storage, get writes() { return writes; }, get events() { return events; }, fail() { failWrite = true; } };
 }

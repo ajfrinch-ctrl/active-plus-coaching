@@ -29,6 +29,7 @@ before(async () => {
     seed: { 'activePlus.demo.autofill.v1': 'off', [TRANSACTIONS_KEY]: JSON.stringify(seeded) }
   });
   await import('../js/admin.js');
+  await ctx.waitFor(() => ctx.$('#reportTrxCount').textContent === '২৫ টি');
 });
 
 const rows = () => ctx.$$('#reportCollectionList .report-payment').length;

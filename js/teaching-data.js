@@ -1,9 +1,10 @@
 /* Local academic repository. Keep the existing Student and Transaction schemas intact.
    These async methods can be replaced with authenticated API calls later. */
 import { enabledClasses, STORAGE_KEYS } from './config.js';
-import { adminStudents } from './admin-data.js';
+import { loadRoster } from './office-data.js';
+import { KEYS, readRaw, writeRaw } from './database.js';
 
-export const TEACHING_KEY = 'activePlus.teaching.v1';
+export const TEACHING_KEY = KEYS.teaching;
 export const DEMO_TEACHER = Object.freeze({ id: 'TCH-001', name: 'মো. সাইফুল ইসলাম' });
 export const ACTIVITY_TYPES = Object.freeze({
   exam: { label: 'পরীক্ষা', plural: 'পরীক্ষা', progress: 'নম্বর দিন' },
@@ -65,7 +66,7 @@ export function validateActivity(input) {
 }
 function minutes(time) { const [h, m] = time.split(':').map(Number); return h * 60 + m; }
 function readData() {
-  const raw = window.localStorage.getItem(TEACHING_KEY);
+  const raw = readRaw(TEACHING_KEY);
   if (raw === null) return { version: 1, activities: [] };
   let db;
   try { db = JSON.parse(raw); } catch { fail('শিক্ষকের সংরক্ষিত ডেটা পড়া যাচ্ছে না। ডেটা না মুছে সহায়তা নিন।'); }
@@ -86,12 +87,12 @@ function readData() {
   return db;
 }
 function roster() {
-  const students = adminStudents.filter(s => s.status === 'approved').map(s => ({ ...s }));
-  // Include the current approved student account without changing the original dataset.
+  const students = loadRoster().filter(s => s.status === 'approved').map(s => ({ ...s }));
+  // Include the current approved student account without changing stored office records.
   try {
     const account = JSON.parse(window.localStorage.getItem(STORAGE_KEYS.account) || 'null');
     if (account?.status === 'active' && typeof account.student?.id === 'string' && /^[A-Za-z0-9-]{1,80}$/.test(account.student.id) && typeof account.student.name === 'string' && account.student.name.trim() && enabledClasses.includes(account.student.className)) {
-      const current = { ...account.student, mobile: account.student.studentMobile, status: 'approved' };
+      const current = { ...account.student, mobile: account.student.studentMobile || account.mobile, status: 'approved' };
       const index = students.findIndex(s => s.id === current.id);
       if (index < 0) students.push(current); else students[index] = { ...students[index], ...current };
     }
@@ -102,7 +103,7 @@ async function mutate(change) {
   const save = () => {
     const db = readData();
     change(db);
-    window.localStorage.setItem(TEACHING_KEY, JSON.stringify(db));
+    writeRaw(TEACHING_KEY, JSON.stringify(db));
     window.dispatchEvent(new Event('teaching-data-updated'));
     return db;
   };

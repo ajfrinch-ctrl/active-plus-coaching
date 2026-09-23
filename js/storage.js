@@ -1,6 +1,7 @@
-/* One place for local persistence. Replacing these adapters with an API later keeps UI modules unchanged. */
+/* Device account, session and username index. Document collections live in database.js. */
 import { protectAccountIdentity, normalizeUsername } from './account-policy.js';
 import { STORAGE_KEYS, defaultStudent, DEFAULT_APP_SETTINGS } from './config.js';
+import { rememberAccount } from './database.js';
 
 function getStorage(type = 'local') {
   try { return type === 'session' ? window.sessionStorage : window.localStorage; }
@@ -42,6 +43,7 @@ export function persistAccount(account) {
   const previous = raw === null ? null : JSON.parse(raw);
   const value = protectAccountIdentity(account, previous);
   storage.setItem(STORAGE_KEYS.account, JSON.stringify(value));
+  rememberAccount(value);
   return value;
 }
 
@@ -230,5 +232,7 @@ export function generateStudentId(className) {
     sequence = Number(getStorage()?.getItem(STORAGE_KEYS.idSequence) || '0') + 1;
     getStorage()?.setItem(STORAGE_KEYS.idSequence, String(sequence));
   } catch { /* first sequence is a safe fallback */ }
-  return `${year}${month}${classCodes[className] || '0'}${String(sequence).padStart(3, '0')}`;
+  const salt = (globalThis.crypto?.randomUUID?.() || Math.random().toString(16).slice(2))
+    .replace(/-/g, '').slice(0, 4).toUpperCase();
+  return `${year}${month}${classCodes[className] || '0'}${salt}${String(sequence).padStart(3, '0')}`;
 }

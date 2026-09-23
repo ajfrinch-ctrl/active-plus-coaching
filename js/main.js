@@ -1,5 +1,3 @@
-import { prepareDemoData } from './demo-data.js';
-import { initDemoForms } from './demo-forms.js';
 /* Application composition root. Feature modules can be replaced independently.
    Updated: don't ask security check every time - auto-login for trusted devices. */
 import { APP_TAGLINE } from './config.js';
@@ -22,7 +20,6 @@ import { initFixedShell } from './fixed-shell.js';
 import { initStudentExams } from './student-exams.js';
 import { initStudentTeaching } from './student-teaching.js';
 
-const demoWarnings = await prepareDemoData();
 initFixedShell();
 
 const appConfig = loadAppConfig();
@@ -203,13 +200,7 @@ initInstallPrompt();
 registerServiceWorker();
 initLogin({
   state,
-  onAuthenticated: enterApp,
-  onDemo: () => {
-    // Demo now persists long-term so user isn't asked every time
-    persistSession(true);
-    enterApp();
-    showFeedback('ডামি অ্যাকাউন্টে প্রবেশ করা হয়েছে — এখন থেকে PIN চাওয়া হবে না');
-  }
+  onAuthenticated: enterApp
 });
 initRegister({
   state,
@@ -242,5 +233,3 @@ if (['home', 'routine', 'courses', 'results', 'profile', 'exams'].includes(hashV
 } else if (['home', 'routine', 'courses', 'results', 'profile', 'exams'].includes(hashView)) {
   setView(hashView);
 }
-
-initDemoForms(demoWarnings);

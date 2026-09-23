@@ -4,6 +4,7 @@ import test, { before } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadPage } from './jsdom-harness.mjs';
 import { EXAM_KEY, examTemplate, totalMarks } from '../js/exam-data.js';
+import { STAFF_ACCOUNTS, STAFF_PASSWORD } from '../js/staff-auth.js';
 
 let ctx;
 const $ = sel => ctx.$(sel);
@@ -13,6 +14,8 @@ const storedExam = () => JSON.parse(ctx.window.localStorage.getItem(EXAM_KEY)).e
 before(async () => {
   ctx = await loadPage('teacher.html', { seed: { 'activePlus.demo.autofill.v1': 'off' } });
   await import('../js/teacher.js');
+  ctx.type($('#teacherLoginUser'), STAFF_ACCOUNTS.teacher.username);
+  ctx.type($('#teacherLoginPin'), STAFF_PASSWORD);
   ctx.click($('#teacherEnter'));
   await settle();
   ctx.click($('[data-teacher-view="online-exams"]'));

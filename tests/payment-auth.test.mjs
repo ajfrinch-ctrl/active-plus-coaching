@@ -34,25 +34,29 @@ function freshBrowser() {
   return window;
 }
 
-test('demo counter account is created on first use and verifies the ID + PIN pair', () => {
+test('the payment desk verifies payment.apc without writing an account until the password changes', () => {
   const browser = freshBrowser();
-  assert.deepEqual(loadPaymentAccount(), { userId: PAYMENT_USER_ID, pin: DEFAULT_PAYMENT_PIN });
-  assert.deepEqual(JSON.parse(browser.localStorage.getItem(PAYMENT_ACCOUNT_KEY)), { userId: 'APC-PAY-001', pin: '123123' });
+  assert.equal(PAYMENT_USER_ID, 'payment.apc');
+  assert.equal(DEFAULT_PAYMENT_PIN, 'Apc@2026');
+  assert.deepEqual(loadPaymentAccount(), {
+    userId: 'payment.apc', username: 'payment.apc', pin: 'Apc@2026', password: 'Apc@2026'
+  });
+  assert.equal(browser.localStorage.getItem(PAYMENT_ACCOUNT_KEY), null);
 
-  assert.equal(verifyPaymentCredentials('APC-PAY-001', '123123'), true);
-  assert.equal(verifyPaymentCredentials('  apc-pay-001 ', '123123'), true); // case/space tolerant
-  assert.equal(verifyPaymentCredentials('APC-PAY-001', '১২৩১২৩'), true); // Bengali digits
-  assert.equal(verifyPaymentCredentials('APC-PAY-001', '123124'), false);
-  assert.equal(verifyPaymentCredentials('APC-PAY-002', '123123'), false);
-  assert.equal(verifyPaymentCredentials('APC-PAY-001', ''), false);
-  assert.equal(verifyPaymentCredentials('01700000000', '123123'), false);
+  assert.equal(verifyPaymentCredentials('payment.apc', 'Apc@2026'), true);
+  assert.equal(verifyPaymentCredentials('  Payment.APC ', 'Apc@2026'), true);
+  assert.equal(verifyPaymentCredentials('payment.apc', 'wrong'), false);
+  assert.equal(verifyPaymentCredentials('admin.apc', 'Apc@2026'), false);
+  assert.equal(verifyPaymentCredentials('payment.apc', ''), false);
+  assert.equal(verifyPaymentCredentials('01700000000', 'Apc@2026'), false);
 });
 
-test('counter ID is recognised without creating the account; mobile numbers are not', () => {
+test('the payment username is recognised without creating the account; other names are not', () => {
   const browser = freshBrowser();
-  assert.equal(isPaymentUserId('APC-PAY-001'), true);
-  assert.equal(isPaymentUserId('apc-pay-001'), true);
-  assert.equal(isPaymentUserId('APC-PAY 001'), true);
+  assert.equal(isPaymentUserId('payment.apc'), true);
+  assert.equal(isPaymentUserId('Payment.APC'), true);
+  assert.equal(isPaymentUserId('payment apc'), false);
+  assert.equal(isPaymentUserId('APC-PAY-001'), false);
   assert.equal(isPaymentUserId('01700000000'), false);
   assert.equal(isPaymentUserId('রাইসা'), false);
   assert.equal(isPaymentUserId(''), false);
@@ -101,25 +105,25 @@ test('expired sessions are dropped, and unreadable storage counts as signed out'
   clearPaymentSession(); // must not throw
 });
 
-test('PIN change keeps the user ID, accepts Bengali digits and rejects bad input', () => {
+test('password change keeps the username and rejects a short or mismatched password', () => {
   const browser = freshBrowser();
-  assert.deepEqual(changePaymentPin('111111', '456789', '456789'), { ok: false, error: 'বর্তমান PIN সঠিক নয়।' });
-  assert.deepEqual(changePaymentPin('123123', '123', '123'), { ok: false, error: 'নতুন PIN ৪–৬ সংখ্যার হতে হবে।' });
-  assert.deepEqual(changePaymentPin('123123', '456789', '456780'), { ok: false, error: 'দুইবার লেখা নতুন PIN মিলছে না।' });
+  assert.deepEqual(changePaymentPin('wrong', '456789', '456789'), { ok: false, error: 'বর্তমান পাসওয়ার্ড সঠিক নয়।' });
+  assert.deepEqual(changePaymentPin('Apc@2026', '123', '123'), { ok: false, error: 'নতুন পাসওয়ার্ড ৬–৩২ অক্ষরের হতে হবে।' });
+  assert.deepEqual(changePaymentPin('Apc@2026', '456789', '456780'), { ok: false, error: 'দুইবার লেখা নতুন পাসওয়ার্ড মিলছে না।' });
 
-  assert.deepEqual(changePaymentPin('১২৩১২৩', '৪৫৬৭৮৯', '456789'), { ok: true, pin: '456789' });
-  assert.deepEqual(JSON.parse(browser.localStorage.getItem(PAYMENT_ACCOUNT_KEY)), { userId: 'APC-PAY-001', pin: '456789' });
-  assert.equal(verifyPaymentCredentials('APC-PAY-001', '123123'), false);
-  assert.equal(verifyPaymentCredentials('APC-PAY-001', '456789'), true);
+  assert.deepEqual(changePaymentPin('Apc@2026', '456789', '456789'), { ok: true, pin: '456789', password: '456789' });
+  assert.deepEqual(JSON.parse(browser.localStorage.getItem(PAYMENT_ACCOUNT_KEY)), { username: 'payment.apc', password: '456789' });
+  assert.equal(verifyPaymentCredentials('payment.apc', 'Apc@2026'), false);
+  assert.equal(verifyPaymentCredentials('payment.apc', '456789'), true);
 });
 
-test('PIN change reports a storage failure instead of pretending to save', () => {
+test('password change reports a storage failure instead of pretending to save', () => {
   freshBrowser();
   loadPaymentAccount();
   window.localStorage.setItem = () => { throw new Error('QuotaExceededError'); };
   assert.deepEqual(
-    changePaymentPin('123123', '456789', '456789'),
-    { ok: false, error: 'PIN সংরক্ষণ করা যায়নি — ব্রাউজারের স্টোরেজ পরীক্ষা করুন।' }
+    changePaymentPin('Apc@2026', '456789', '456789'),
+    { ok: false, error: 'পাসওয়ার্ড সংরক্ষণ করা যায়নি — ব্রাউজারের স্টোরেজ পরীক্ষা করুন।' }
   );
 });
 

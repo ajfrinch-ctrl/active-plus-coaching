@@ -1,19 +1,14 @@
-/* Standalone Payment Receive desk: unique-ID login → search → short profile
-   → payment → receipt, with a today summary, one-tap picks and an amount
-   keypad so a counter can collect in three taps. Nothing else lives here.
-   Uses the same financeRepository storage contract, receipt renderer and demo
-   dataset as the admin panel, so both stay in sync. Credentials come from
-   payment-auth.js — the student login page can sign this desk in too. */
-import { prepareDemoData } from './demo-data.js';
-import { adminStudents, feeCategories, paymentMethods } from './admin-data.js';
-import { financeRepository, monthLabel, dateLabel, searchStudents, studentFeeSummary, latinDigits } from './finance-data.js';
+/* Standalone Payment Receive desk: username login → search → short profile
+   → payment → receipt. The only login is this page. Students come from the
+   office roster, which starts empty. */
+import { feeCategories, paymentMethods } from './admin-data.js';
+import { loadRoster } from './office-data.js';
+import { financeRepository, monthLabel, dateLabel, searchStudents, studentFeeSummary, latinDigits, stampTransaction } from './finance-data.js';
 import { receiptMarkup, downloadReceipt, createReceiptPNG } from './finance-receipt.js';
 import { toBanglaNumber } from './ui.js';
 import { registerServiceWorker } from './service-worker.js';
 import {
   PAYMENT_USER_ID,
-  DEFAULT_PAYMENT_PIN,
-  loadPaymentAccount,
   verifyPaymentCredentials,
   savePaymentSession,
   hasPaymentSession,
@@ -31,7 +26,7 @@ const $$ = selector => Array.from(document.querySelectorAll(selector));
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 
 const state = {
-  students: adminStudents.map(student => ({ ...student })),
+  students: [],
   transactions: [],
   ready: false,
   saving: false,
@@ -60,8 +55,6 @@ function toast(message, tone = 'info') {
 
 /* ---------- Login, logout and PIN change ---------- */
 
-$('#payLoginUser').value = loadPaymentAccount().userId;
-$('#payLoginPin').value = DEFAULT_PAYMENT_PIN;
 $$('[data-toggle-pin]').forEach(button => {
   button.addEventListener('click', () => {
     const input = $(`#${button.dataset.togglePin}`);
@@ -74,15 +67,16 @@ $$('.input-wrap input').forEach(input => {
 });
 
 async function enterPanel(remember) {
-  const errors = await prepareDemoData();
+  state.students = loadRoster();
   $('#payEntry').hidden = true;
   $('#payShell').hidden = false;
   savePaymentSession(remember);
   renderMethodPills();
   populateMonths();
-  await loadTransactions();
-  if (errors.length) toast('কিছু নমুনা ডেটা লোড হয়নি; সংরক্ষিত ডেটা অক্ষত আছে।');
+  // Focus as soon as the desk is visible. Waiting for the ledger load lets the
+  // caret land late (or never, if the counter starts typing immediately).
   $('#payStudentSearch').focus();
+  await loadTransactions();
 }
 
 $('#payLoginForm').addEventListener('submit', event => {
@@ -90,7 +84,7 @@ $('#payLoginForm').addEventListener('submit', event => {
   const userId = $('#payLoginUser').value.trim();
   const pin = $('#payLoginPin').value;
   if (!verifyPaymentCredentials(userId, pin)) {
-    $('#payLoginError').textContent = 'ইউসার আইডি বা PIN সঠিক নয়। আবার চেষ্টা করুন।';
+    $('#payLoginError').textContent = 'ইউজারনেম বা পাসওয়ার্ড সঠিক নয়। আবার চেষ্টা করুন।';
     $('#payLoginError').hidden = false;
     $('#payLoginPin').value = '';
     $('#payLoginPin').focus();
@@ -140,7 +134,7 @@ $('#payPinForm').addEventListener('submit', event => {
     return;
   }
   closePinModal();
-  toast('PIN পরিবর্তন হয়েছে — পরের বার নতুন PIN দিয়ে প্রবেশ করুন।', 'success');
+  toast('পাসওয়ার্ড পরিবর্তন হয়েছে — পরের বার নতুন পাসওয়ার্ড দিয়ে প্রবেশ করুন।', 'success');
 });
 
 async function loadTransactions() {
@@ -466,7 +460,7 @@ $('#payCollectionForm').addEventListener('submit', async event => {
   const now = new Date();
   const token = crypto.randomUUID();
   const prefix = `${String(now.getFullYear()).slice(-2)}${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const tx = {
+  const tx = stampTransaction({
     id: `TRX-${token}`,
     receiptNo: `REC-${prefix}-${now.getTime().toString(36).toUpperCase()}-${token.slice(0, 8).toUpperCase()}`,
     studentId: student.id,
@@ -480,7 +474,7 @@ $('#payCollectionForm').addEventListener('submit', async event => {
     date: dateLabel(now),
     collectedBy: 'পেমেন্ট কাউন্টার',
     note: $('#payFeeNote').value.trim()
-  };
+  }, now);
   state.saving = true;
   form.setAttribute('aria-busy', 'true');
   $('#paySaveError').hidden = true;

@@ -29,7 +29,6 @@
       <div class="auth-tabs" role="tablist" aria-label="অ্যাকাউন্ট অপশন">
         <button class="auth-tab active" type="button" data-auth-tab="login" role="tab" aria-selected="true">লগইন</button>
         <button class="auth-tab" type="button" data-auth-tab="register" role="tab" aria-selected="false">রেজিস্ট্রেশন</button>
-        <button class="auth-tab" type="button" data-auth-tab="payment" role="tab" aria-selected="false">পেমেন্ট কাউন্টার</button>
       </div>
       <p class="auth-message" id="authMessage" role="status" hidden></p>
 
@@ -38,14 +37,12 @@
         <form id="loginForm" novalidate>
           <label for="loginMobile">ইউজারনেম অথবা মোবাইল নম্বর</label>
           <div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-user"></use></svg><input id="loginMobile" name="mobile" type="text" autocomplete="username" placeholder="ইউজারনেম বা ০১XXXXXXXXX" required></div>
-          <p class="fixed-field-note">নিরাপত্তার জন্য মোবাইল নম্বরের বদলে নিজের ইউজারনেম দিয়ে লগইন করাই ভালো। নতুন অ্যাকাউন্টের ডিফল্ট PIN: ১২৩১২৩</p><label for="loginPin">পাসকোড / PIN</label>
+          <p class="fixed-field-note">নিরাপত্তার জন্য মোবাইল নম্বরের বদলে নিজের ইউজারনেম দিয়ে লগইন করাই ভালো।</p><label for="loginPin">পাসকোড / PIN</label>
           <div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg><input id="loginPin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="6" autocomplete="current-password" placeholder="৪–৬ সংখ্যার PIN" required><button class="show-pin" type="button" data-toggle-pin="loginPin" aria-label="PIN দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg></button></div>
           <div class="form-row"><label class="remember-label"><input type="checkbox" id="rememberMe" checked><span class="fake-check"></span>এই ডিভাইসে মনে রাখুন</label><button type="button" class="link-button" id="forgotPinButton">PIN ভুলে গেছেন?</button></div>
           <button class="auth-submit" type="submit">লগইন করুন <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg></button>
         </form>
-        <button class="demo-button" type="button" id="demoLoginButton"><span class="demo-dot"></span> ডামি অ্যাকাউন্টে এক ক্লিকে প্রবেশ</button>
         <p class="auth-footnote">অ্যাকাউন্ট নেই? <button type="button" class="inline-link" data-auth-tab="register">রেজিস্ট্রেশন করুন</button></p>
-        <p class="auth-footnote">কোচিং কাউন্টার? <button type="button" class="inline-link" data-auth-tab="payment">পেমেন্ট রিসিভ প্যানেলে সরাসরি ঢুকুন</button></p>
       </div>
 
       <div class="auth-panel" id="registerPanel" data-auth-panel="register" hidden>
@@ -70,10 +67,10 @@
                 <p id="regUsernameStatus" class="username-status" role="status" aria-live="polite"></p>
                 <small id="regUsernameHint" class="fixed-field-note">৪–২০ অক্ষর; ইংরেজি অক্ষর দিয়ে শুরু, তারপর ছোট হাতের অক্ষর/সংখ্যা/ডট/আন্ডারস্কোর। লগইনে মোবাইল নম্বরের বদলে এটি ব্যবহার করা যাবে — নম্বর কাউকে বলতে হবে না।</small>
               </div>
-              <div class="field"><label for="regPin">ডিফল্ট PIN <i>*</i></label><div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg><input id="regPin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="6" placeholder="PIN দিন" value="123123" required><button class="show-pin" type="button" data-toggle-pin="regPin" aria-label="PIN দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg></button></div></div>
-              <div class="field"><label for="regPinConfirm">PIN আবার দিন <i>*</i></label><div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg><input id="regPinConfirm" name="pinConfirm" type="password" inputmode="numeric" minlength="4" maxlength="6" placeholder="PIN মিলান" value="123123" required><button class="show-pin" type="button" data-toggle-pin="regPinConfirm" aria-label="PIN দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg></button></div></div>
+              <div class="field"><label for="regPin">PIN <i>*</i></label><div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg><input id="regPin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="6" placeholder="৪–৬ সংখ্যার PIN" required><button class="show-pin" type="button" data-toggle-pin="regPin" aria-label="PIN দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg></button></div></div>
+              <div class="field"><label for="regPinConfirm">PIN আবার দিন <i>*</i></label><div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg><input id="regPinConfirm" name="pinConfirm" type="password" inputmode="numeric" minlength="4" maxlength="6" placeholder="PIN মিলান" required><button class="show-pin" type="button" data-toggle-pin="regPinConfirm" aria-label="PIN দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg></button></div></div>
             </div>
-            <p class="fixed-field-note">ডিফল্ট PIN: ১২৩১২৩। চাইলে নিজের PIN দিন। প্রথম মোবাইল নম্বর আর পরিবর্তন করা যাবে না।</p><div class="step-actions"><span></span><button type="button" class="step-next" data-next-step>পরের অংশ <span>→</span></button></div>
+            <p class="fixed-field-note">৪–৬ সংখ্যার PIN দিন। প্রথম মোবাইল নম্বর আর পরিবর্তন করা যাবে না।</p><div class="step-actions"><span></span><button type="button" class="step-next" data-next-step>পরের অংশ <span>→</span></button></div>
           </section>
 
           <section class="registration-step" data-registration-step="2" data-step-title="শিক্ষার্থীর পরিচয়" aria-labelledby="stepTwoTitle" hidden>
@@ -126,27 +123,10 @@
         <p class="auth-footnote">আগে থেকেই অ্যাকাউন্ট আছে? <button type="button" class="inline-link" data-auth-tab="login">লগইন করুন</button></p>
       </div>
 
-      <!-- Payment counter: same user ID + PIN as payment.html, straight into the desk. -->
-      <div class="auth-panel" id="paymentPanel" data-auth-panel="payment" hidden>
-        <div class="auth-panel-heading"><div><h2>পেমেন্ট রিসিভ কাউন্টার</h2><p>আইডি ও PIN দিলেই অটো-লগইন</p></div></div>
-        <p class="register-intro">কোচিংয়ের পেমেন্ট কাউন্টারের ইউনিক ইউসার আইডি ও PIN দিন। যাচাই হলেই আলাদা লগইন ফর্ম ছাড়াই সরাসরি পেমেন্ট রিসিভ প্যানেলে ঢুকে যাবেন — শিক্ষার্থী খুঁজে ফি নেওয়া ও রসিদ পাঠানো যাবে।</p>
-        <form id="payPortalLoginForm" novalidate>
-          <label for="payPortalUser">পেমেন্ট পোর্টাল ইউসার আইডি</label>
-          <div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-user"></use></svg><input id="payPortalUser" name="payUser" type="text" autocomplete="username" placeholder="যেমন: APC-PAY-001" required></div>
-          <p class="fixed-field-note">শিক্ষার্থী লগইন ঘরেও এই আইডি ও PIN দিলে সরাসরি পেমেন্ট প্যানেলে চলে যাবেন।</p>
-          <label for="payPortalPin">পাসকোড / PIN</label>
-          <div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg><input id="payPortalPin" name="payPin" type="password" inputmode="numeric" minlength="4" maxlength="6" autocomplete="current-password" placeholder="৪–৬ সংখ্যার PIN" required><button class="show-pin" type="button" data-toggle-pin="payPortalPin" aria-label="PIN দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg></button></div>
-          <div class="form-row"><label class="remember-label"><input type="checkbox" id="payPortalRemember" checked><span class="fake-check"></span>এই ডিভাইসে মনে রাখুন</label></div>
-          <p id="payPortalError" class="auth-message" role="alert" hidden></p>
-          <button class="auth-submit" type="submit">পেমেন্ট প্যানেলে সরাসরি প্রবেশ <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg></button>
-        </form>
-        <button class="demo-button" type="button" id="payPortalDemoButton"><span class="demo-dot"></span> ডেমো আইডি APC-PAY-001 দিয়ে এক ক্লিকে ঢুকুন</button>
-        <p class="auth-footnote">ডেমো প্রবেশাধিকার — ইউসার আইডি: <strong>APC-PAY-001</strong> • PIN: <strong>১২৩১২৩</strong>। প্যানেলের ভেতরে লক আইকন থেকে PIN বদলানো যায়।</p>
-      </div>
     </div>
-    <p class="admin-entry-link-wrap"><a class="admin-entry-link" href="admin.html"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-shield"></use></svg> কোচিং অফিস? ডামি এডমিন প্যানেলে এক ক্লিকে ঢুকুন</a></p>
-    <p class="admin-entry-link-wrap"><a class="admin-entry-link" href="teacher.html">শিক্ষক? আলাদা শিক্ষক প্যানেলে প্রবেশ করুন →</a></p>
-    <p class="admin-entry-link-wrap"><a class="admin-entry-link" href="payment.html"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-wallet"></use></svg> পেমেন্ট রিসিভ কাউন্টার? সরাসরি প্যানেলে প্রবেশ →</a></p>
+    <p class="admin-entry-link-wrap"><a class="admin-entry-link" href="admin.html"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-shield"></use></svg> এডমিন প্যানেল</a></p>
+    <p class="admin-entry-link-wrap"><a class="admin-entry-link" href="teacher.html">শিক্ষক প্যানেল</a></p>
+    <p class="admin-entry-link-wrap"><a class="admin-entry-link" href="payment.html"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-wallet"></use></svg> পেমেন্ট রিসিভ</a></p>
   </section>
 
   <!-- A compact, mobile-first app shell. All content is local and works without a network. -->
@@ -156,7 +136,7 @@
       <span class="pending-kicker">ACCOUNT RECEIVED</span>
       <h1 id="pendingTitle">রেজিস্ট্রেশন সফল হয়েছে</h1>
       <p>তোমার তথ্য কোচিংয়ে জমা হয়েছে। অনুমোদন না হওয়া পর্যন্ত অ্যাপের ফিচারগুলো বন্ধ থাকবে।</p>
-      <div class="pending-id"><small>তোমার ইউনিক স্টুডেন্ট ID</small><strong id="pendingStudentId">২৬০৯০০১</strong></div>
+      <div class="pending-id"><small>তোমার ইউনিক স্টুডেন্ট ID</small><strong id="pendingStudentId">—</strong></div>
       <div class="pending-info"><span>✓</span><p>শিক্ষক বা এডমিন অনুমোদন দিলে এই মোবাইল নম্বর ও PIN দিয়ে আবার লগইন করো।</p></div>
       <button class="pending-logout" type="button" id="pendingLogout">লগইন পেইজে ফিরে যান</button>
     </section>
@@ -174,10 +154,10 @@
         <article class="welcome-card">
           <div class="welcome-copy">
             <p class="welcome-greeting" id="dayGreeting">শুভ সকাল</p>
-            <h1 id="homeTitle"><span id="studentName">রাইসা</span></h1>
+            <h1 id="homeTitle"><span id="studentName">শিক্ষার্থী</span></h1>
             <p class="welcome-advice" id="dailyAdvice">আজকের শেখা হোক আরও গোছানো।</p>
           </div>
-          <button class="welcome-avatar" type="button" data-view="profile" aria-label="প্রোফাইল খুলুন"><span id="avatarInitial">র</span></button>
+          <button class="welcome-avatar" type="button" data-view="profile" aria-label="প্রোফাইল খুলুন"><span id="avatarInitial">শি</span></button>
         </article>
 
         <button class="exam-link" type="button" data-view="exams">পরীক্ষা দাও →<small>প্রকাশিত পরীক্ষা, প্রশ্নপত্র ও ফলাফল</small></button>
@@ -188,39 +168,39 @@
               <span class="home-hero-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-trending"></use></svg></span>
               <h2>আজকের পড়াশোনা</h2>
             </div>
-            <span class="home-date-pill" id="homeScheduleDate">আজ, ২১ সেপ্টেম্বর</span>
+            <span class="home-date-pill" id="homeScheduleDate">আজ</span>
           </div>
           <div class="home-stats" aria-label="শিক্ষার্থীর পরিসংখ্যান">
             <div class="home-stat tone-mint">
               <span class="home-stat-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-check-circle"></use></svg></span>
               <p class="home-stat-label">উপস্থিতি</p>
-              <p class="home-stat-value">৯২%</p>
+              <p class="home-stat-value">—</p>
               <p class="home-stat-sub">এই মাসে</p>
             </div>
             <div class="home-stat tone-blue">
               <span class="home-stat-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-trending"></use></svg></span>
               <p class="home-stat-label">গড় ফলাফল</p>
-              <p class="home-stat-value">৮৬%</p>
+              <p class="home-stat-value">—</p>
               <p class="home-stat-sub">সর্বশেষ পরীক্ষা</p>
             </div>
             <div class="home-stat tone-amber">
               <span class="home-stat-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-clipboard"></use></svg></span>
               <p class="home-stat-label">বাকি কাজ</p>
-              <p class="home-stat-value">০৩টি</p>
+              <p class="home-stat-value">—</p>
               <p class="home-stat-sub">এই সপ্তাহে</p>
             </div>
           </div>
           <div class="home-hero-foot">
-            <span class="home-hero-track" aria-hidden="true"><i style="width: 68%"></i></span>
+            <span class="home-hero-track" aria-hidden="true"><i style="width: 0%"></i></span>
             <div class="home-hero-foot-copy">
               <span class="home-hero-foot-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-clipboard"></use></svg></span>
               <span>
                 <p class="home-hero-foot-label">সাপ্তাহিক অগ্রগতি</p>
-                <p class="home-hero-foot-sub">৪ / ৬ কাজ সম্পন্ন</p>
+                <p class="home-hero-foot-sub">এখনও কোনো কাজ নেই</p>
               </span>
             </div>
             <div class="home-hero-foot-side">
-              <strong>৬৮%</strong>
+              <strong>০%</strong>
               <button type="button" class="home-hero-link" data-action="continue">চালিয়ে যাও <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg></button>
             </div>
           </div>
@@ -253,15 +233,7 @@
             <button type="button" class="home-link-pill" data-view="routine">সব দেখুন <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg></button>
           </div>
           <div class="home-list-card">
-            <button class="home-row" type="button" data-action="class-details">
-              <span class="home-row-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-book"></use></svg></span>
-              <span class="home-row-copy">
-                <small>পরবর্তী ক্লাস • আজ</small>
-                <strong>উচ্চতর গণিত</strong>
-                <small class="sub">মো. সাইফুল ইসলাম • রুম ২০৩</small>
-              </span>
-              <span class="home-row-side"><strong>০৪:৩০</strong><small>বিকেল</small></span>
-            </button>
+            <p class="teacher-empty">এখনও কোনো ক্লাস নির্ধারিত হয়নি। রুটিন থেকে দেখে নাও।</p>
           </div>
         </section>
 
@@ -271,8 +243,8 @@
       <!-- ROUTINE -->
       <section class="view" id="routineView" data-view-panel="routine" aria-labelledby="routineTitle">
         <div class="page-intro"><p class="eyebrow">সপ্তাহের পরিকল্পনা</p><h1 id="routineTitle">ক্লাস রুটিন</h1><p>তোমার ক্লাসগুলো এক জায়গায়, একদম সহজে।</p></div>
-        <section class="teaching-board" id="teacherRoutineBoard" aria-labelledby="teacherRoutineTitle" hidden><h2 id="teacherRoutineTitle">শিক্ষকের নির্ধারিত ক্লাস</h2><p>তারিখ অনুযায়ী ক্লাস ও উপস্থিতি। নিচে আগের ডেমো সাপ্তাহিক রুটিন।</p><div class="learning-list" id="teacherRoutineList"></div></section>
-        <div class="class-context"><span class="mini-avatar">দ</span><span><small>বর্তমান ক্লাস</small><strong id="routineClass">দশম শ্রেণি · বিজ্ঞান</strong></span><button type="button" data-view="profile" aria-label="ক্লাসের প্রোফাইল দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-chevron-right"></use></svg></button></div>
+        <section class="teaching-board" id="teacherRoutineBoard" aria-labelledby="teacherRoutineTitle" hidden><h2 id="teacherRoutineTitle">শিক্ষকের নির্ধারিত ক্লাস</h2><p>তারিখ অনুযায়ী ক্লাস ও উপস্থিতি। অফিসের রুটিন এখানে দেখা যাবে।</p><div class="learning-list" id="teacherRoutineList"></div></section>
+        <div class="class-context"><span class="mini-avatar">দ</span><span><small>বর্তমান ক্লাস</small><strong id="routineClass">শ্রেণি এখনও যোগ হয়নি</strong></span><button type="button" data-view="profile" aria-label="ক্লাসের প্রোফাইল দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-chevron-right"></use></svg></button></div>
         <div class="day-tabs" role="tablist" aria-label="সপ্তাহের দিন">
           <button class="day-tab active" type="button" data-day="sat" role="tab"><small>শনি</small><strong>২১</strong></button>
           <button class="day-tab" type="button" data-day="sun" role="tab"><small>রবি</small><strong>২২</strong></button>
@@ -281,7 +253,7 @@
           <button class="day-tab" type="button" data-day="wed" role="tab"><small>বুধ</small><strong>২৫</strong></button>
           <button class="day-tab" type="button" data-day="thu" role="tab"><small>বৃহস্পতি</small><strong>২৬</strong></button>
         </div>
-        <div class="routine-date"><span class="calendar-dot"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-calendar"></use></svg></span><span id="routineDate">শনিবার, ২১ সেপ্টেম্বর ২০২৬</span><span class="class-count" id="classCount">৩টি ক্লাস</span></div>
+        <div class="routine-date"><span class="calendar-dot"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-calendar"></use></svg></span><span id="routineDate">শনিবার, ২১ সেপ্টেম্বর ২০২৬</span><span class="class-count" id="classCount">০টি ক্লাস</span></div>
         <div class="routine-list" id="routineList"></div>
         <div class="empty-routine" id="emptyRoutine" hidden><span>☕</span><strong>আজ কোনো ক্লাস নেই</strong><p>এই দিনটি নিজের পড়াশোনার জন্য কাজে লাগাও।</p></div>
       </section>
@@ -290,8 +262,6 @@
       <section class="view" id="coursesView" data-view-panel="courses" aria-labelledby="coursesTitle">
         <div class="page-intro"><p class="eyebrow">চলমান পড়াশোনা</p><h1 id="coursesTitle">আমার কোর্স</h1><p>প্রতিটি বিষয়ে নিজের অগ্রগতি দেখে নাও।</p></div>
         <button class="exam-link" type="button" data-view="exams">পরীক্ষা দাও<small>MCQ, লিখিত ও সংক্ষিপ্ত পরীক্ষা • সবার ফলাফল</small></button>
-        <p class="teacher-local-note">কোর্সের অগ্রগতিটি পূর্বের ডেমো তথ্য।</p>
-        <div class="course-summary"><div><span class="card-eyebrow">এই টার্মের অগ্রগতি</span><strong>৭৪%</strong><span>আরও একটু নিয়মিত হলেই সেরা ফলাফল!</span></div><div class="summary-bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
         <section class="teaching-board" id="learningBoard" aria-labelledby="learningTitle">
           <div class="learning-heading"><span class="learning-home-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-book"></use></svg></span><div><h2 id="learningTitle">শিক্ষকের দেওয়া কাজ</h2><p id="learningCount" role="status"></p></div></div>
           <div class="learning-summary" id="learningSummary" aria-label="কাজের সারসংক্ষেপ"></div>
@@ -305,29 +275,6 @@
           <p class="learning-error" id="learningError" role="alert" hidden></p>
           <div class="learning-list" id="learningList"></div>
         </section>
-        <div class="course-filter"><span>সকল বিষয়</span><small>তথ্য দেখতে কোর্সে চাপ দিন</small></div>
-        <div class="course-list">
-          <details class="course-item">
-            <summary><span class="subject-icon subject-green">গ</span><span class="course-item-info"><strong>উচ্চতর গণিত</strong><small>সাইফুল ইসলাম · ১২টি অধ্যায়</small><span class="mini-progress"><i style="width: 82%"></i></span></span><span class="course-item-side"><b>৮২<small>%</small></b><span class="course-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></span></span></summary>
-            <div class="course-item-details"><div><small>চলতি অধ্যায়</small><strong>অধ্যায় ১০ • অধঃপাতন ও সরলরেখা</strong></div><div><small>সর্বশেষ কুইজ</small><strong>৮০% • অক্টোবরের সাপ্তাহিক পরীক্ষা</strong></div><div><small>পরের ক্লাস</small><strong>শনিবার • বিকাল ৪টা • রুম ২০৩</strong></div></div>
-          </details>
-          <details class="course-item">
-            <summary><span class="subject-icon subject-blue">প</span><span class="course-item-info"><strong>পদার্থবিজ্ঞান</strong><small>তানভীর আহমেদ · ১০টি অধ্যায়</small><span class="mini-progress"><i style="width: 70%"></i></span></span><span class="course-item-side"><b>৭০<small>%</small></b><span class="course-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></span></span></summary>
-            <div class="course-item-details"><div><small>চলতি অধ্যায়</small><strong>অধ্যায় ৭ • গতিবিদ্যা</strong></div><div><small>সর্বশেষ কুইজ</small><strong>৭৫% • গতিবিদ্যা শর্ট মার্কস</strong></div><div><small>পরের ক্লাস</small><strong>রবিবার • সন্ধ্যা ৬টা • রুম ২০৫</strong></div></div>
-          </details>
-          <details class="course-item">
-            <summary><span class="subject-icon subject-yellow">র</span><span class="course-item-info"><strong>রসায়ন</strong><small>ফারহানা ইয়াসমিন · ০৮টি অধ্যায়</small><span class="mini-progress"><i style="width: 64%"></i></span></span><span class="course-item-side"><b>৬৪<small>%</small></b><span class="course-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></span></span></summary>
-            <div class="course-item-details"><div><small>চলতি অধ্যায়</small><strong>অধ্যায় ৬ • রাসায়নিক বিক্রিয়া</strong></div><div><small>সর্বশেষ কুইজ</small><strong>৬৫% • বিক্রিয়ার হার</strong></div><div><small>পরের ক্লাস</small><strong>সোমবার • বিকাল ৫টা • রুম ২০৩</strong></div></div>
-          </details>
-          <details class="course-item">
-            <summary><span class="subject-icon subject-purple">ব</span><span class="course-item-info"><strong>বাংলা</strong><small>মাহমুদা আক্তার · ১৪টি অধ্যায়</small><span class="mini-progress"><i style="width: 76%"></i></span></span><span class="course-item-side"><b>৭৬<small>%</small></b><span class="course-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></span></span></summary>
-            <div class="course-item-details"><div><small>চলতি অধ্যায়</small><strong>অধ্যায় ১১ • ছোটগল্প: প্রতিদান</strong></div><div><small>সর্বশেষ কুইজ</small><strong>৭৮% • ব্যাকরণ অনুশীলনী</strong></div><div><small>পরের ক্লাস</small><strong>মঙ্গলবার • বিকাল ৪:৩০ • রুম ২০৬</strong></div></div>
-          </details>
-          <details class="course-item">
-            <summary><span class="subject-icon subject-coral">ই</span><span class="course-item-info"><strong>ইংরেজি</strong><small>নুসরাত জাহান · ১১টি অধ্যায়</small><span class="mini-progress"><i style="width: 61%"></i></span></span><span class="course-item-side"><b>৬১<small>%</small></b><span class="course-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></span></span></summary>
-            <div class="course-item-details"><div><small>চলতি অধ্যায়</small><strong>Chapter 8 • Tense &amp; Narration</strong></div><div><small>সর্বশেষ কুইজ</small><strong>৬০% • Grammar quiz</strong></div><div><small>পরের ক্লাস</small><strong>বুধবার • বিকাল ৫টা • রুম ২০৭</strong></div></div>
-          </details>
-        </div>
       </section>
 
       <!-- RESULTS -->
@@ -337,23 +284,15 @@
       <section class="view" id="resultsView" data-view-panel="results" aria-labelledby="resultsTitle">
         <div class="page-intro"><p class="eyebrow">তোমার পারফরম্যান্স</p><h1 id="resultsTitle">ফলাফল</h1><p>পরিশ্রমের ফলাফল, এক নজরে।</p></div>
         <button class="exam-link" type="button" data-view="exams">অনলাইন পরীক্ষার ফলাফল দেখো →</button>
-        <p class="teacher-local-note">উপরের সারাংশটি পূর্বের ডেমো পরীক্ষার তথ্য।</p>
-        <div class="result-hero"><div><span class="card-eyebrow">সর্বশেষ মডেল টেস্ট</span><h2>মোট স্কোর <strong>৮৬%</strong></h2><p>তোমার অবস্থান: <b>১২তম</b> · মোট শিক্ষার্থী ৪৮ জন</p></div><span class="trophy"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-award"></use></svg></span></div>
-        <div class="result-stats"><div><small>মোট পরীক্ষা</small><strong>০৮</strong></div><div><small>সর্বোচ্চ স্কোর</small><strong>৯৪%</strong></div><div><small>উন্নতি</small><strong class="up">+৮%</strong></div></div>
+        <p class="teacher-local-note">শিক্ষক ফলাফল দিলে নিচের তালিকায় দেখা যাবে।</p>
         <section class="teaching-board" id="teacherResultsBoard" aria-labelledby="teacherResultsTitle" hidden><h2 id="teacherResultsTitle">শিক্ষকের দেওয়া ফলাফল</h2><div class="learning-list" id="teacherResultsList"></div></section>
-        <div class="section-heading section-heading-spaced"><div><p class="eyebrow">সাম্প্রতিক</p><h2>পরীক্ষার ফলাফল</h2></div><button type="button" class="text-button" data-action="all-results">সব দেখুন</button></div>
-        <div class="results-list">
-          <article class="result-row"><span class="result-badge green">ম</span><div><strong>মাসিক পরীক্ষা · সেপ্টেম্বর</strong><small>০৮ সেপ্টেম্বর ২০২৬</small></div><b>৮৬<small>%</small></b><span class="result-arrow">→</span></article>
-          <article class="result-row"><span class="result-badge blue">প</span><div><strong>পদার্থবিজ্ঞান অধ্যায় ৪</strong><small>০২ সেপ্টেম্বর ২০২৬</small></div><b>৮৮<small>%</small></b><span class="result-arrow">→</span></article>
-          <article class="result-row"><span class="result-badge orange">গ</span><div><strong>গণিত সাপ্তাহিক পরীক্ষা</strong><small>২৮ আগস্ট ২০২৬</small></div><b>৯২<small>%</small></b><span class="result-arrow">→</span></article>
-        </div>
       </section>
 
       <!-- PROFILE -->
       <section class="view" id="profileView" data-view-panel="profile" aria-labelledby="profileTitle">
         <div class="page-intro profile-intro"><p class="eyebrow">তোমার তথ্য</p><h1 id="profileTitle">প্রোফাইল</h1><p>তোমার শিক্ষার্থী অ্যাকাউন্টের তথ্য।</p></div>
-        <article class="profile-card"><div class="profile-avatar" id="profileAvatar">র</div><div><h2 id="profileName">রাইসা ইসলাম</h2><p id="profileMeta">দশম শ্রেণি · বিজ্ঞান বিভাগ</p><span class="student-id">ID: <b id="studentId">AP-1024</b></span><span class="student-id username-chip" id="profileUsernameWrap" hidden>@<b id="profileUsername">raisa.islam</b></span></div><button class="edit-button" type="button" data-action="edit-profile" aria-label="প্রোফাইল সম্পাদনা"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-edit"></use></svg></button></article>
-        <article class="contact-card"><div class="contact-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-phone"></use></svg></div><div class="contact-copy"><span>শিক্ষার্থীর মোবাইল</span><strong id="studentMobileValue">০১৭০০০০০০০০</strong><small>অভিভাবক · <b id="guardianMobileValue">০১৮০০০০০০০০</b></small><small id="studentAdditionalMobiles" hidden></small></div><button class="whatsapp-button" type="button" data-action="whatsapp-share" aria-label="WhatsApp-এ তথ্য শেয়ার করুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-whatsapp"></use></svg><span>WhatsApp</span></button></article>
+        <article class="profile-card"><div class="profile-avatar" id="profileAvatar">শি</div><div><h2 id="profileName">শিক্ষার্থী</h2><p id="profileMeta">শ্রেণি এখনও যোগ হয়নি</p><span class="student-id">ID: <b id="studentId">—</b></span><span class="student-id username-chip" id="profileUsernameWrap" hidden>@<b id="profileUsername"></b></span></div><button class="edit-button" type="button" data-action="edit-profile" aria-label="প্রোফাইল সম্পাদনা"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-edit"></use></svg></button></article>
+        <article class="contact-card"><div class="contact-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-phone"></use></svg></div><div class="contact-copy"><span>শিক্ষার্থীর মোবাইল</span><strong id="studentMobileValue">নম্বর নেই</strong><small>অভিভাবক · <b id="guardianMobileValue">নম্বর নেই</b></small><small id="studentAdditionalMobiles" hidden></small></div><button class="whatsapp-button" type="button" data-action="whatsapp-share" aria-label="WhatsApp-এ তথ্য শেয়ার করুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-whatsapp"></use></svg><span>WhatsApp</span></button></article>
         <div class="profile-section"><p class="eyebrow">অ্যাকাউন্ট</p><div class="settings-list"><button type="button" data-action="edit-profile"><span class="settings-icon mint"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-user"></use></svg></span><span><strong>ব্যক্তিগত তথ্য</strong><small>নাম, ক্লাস ও বিভাগ</small></span><svg class="setting-arrow" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-chevron-right"></use></svg></button><button type="button" data-action="show-offline"><span class="settings-icon green"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-download"></use></svg></span><span><strong>অফলাইন ডেটা</strong><small>সব ডেটা এই ফোনেই সংরক্ষিত</small></span><span class="saved-tag">সংরক্ষিত</span></button><button type="button" data-action="install"><span class="settings-icon purple"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-smartphone"></use></svg></span><span><strong>অ্যাপ ইনস্টল করুন</strong><small>হোম স্ক্রিন থেকে দ্রুত খুলুন</small></span><svg class="setting-arrow" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-chevron-right"></use></svg></button></div></div>
         <div class="profile-section"><p class="eyebrow">নিরাপত্তা</p><div class="settings-list">
           <label class="settings-toggle"><span class="settings-icon mint"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-shield"></use></svg></span><span><strong>প্রতিবার PIN চেক বন্ধ রাখুন</strong><small>চালু করলে অ্যাপ খুলতে আর PIN লাগবে না</small></span><span class="toggle-switch"><input type="checkbox" id="skipSecurityToggle"><i></i></span></label>

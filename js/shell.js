@@ -5,7 +5,7 @@ import { $, $$, scrollToTop, toBanglaNumber } from './ui.js';
 export function renderStudent(student) {
   const firstName = String(student.name || 'শিক্ষার্থী').trim().split(/\s+/)[0] || 'শিক্ষার্থী';
   const initial = firstName.charAt(0) || 'শি';
-  const meta = `${student.className} · ${student.group}`;
+  const meta = [student.className, student.group].filter(Boolean).join(' · ') || 'শ্রেণি এখনও যোগ হয়নি';
 
   $('#studentName') && ($('#studentName').textContent = firstName);
   $('#avatarInitial') && ($('#avatarInitial').textContent = initial);

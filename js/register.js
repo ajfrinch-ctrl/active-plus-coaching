@@ -3,9 +3,10 @@
    The student also picks a permanent username here — a login ID that never
    changes, so the phone number does not have to be shared to log in. */
 import { $, $$, normalizeMobile, normalizeAnswer, setAuthMessage, showFeedback } from './ui.js';
-import { enabledClasses, DEFAULT_PIN } from './config.js';
+import { enabledClasses } from './config.js';
 import { contactNumber, isContactNumber, normalizeUsername, usernameError, suggestUsername } from './account-policy.js';
 import { saveAccount, saveStudent, generateStudentId, persistSession, setTrustedDevice, usernameTaken, reserveUsername, releaseUsername } from './storage.js';
+import { upsertLocalAccount } from './office-data.js';
 import { switchAuthTab } from './login.js';
 
 function populateRegistrationClasses() {
@@ -141,6 +142,7 @@ function handleRegistration(event, state, onRegistered) {
   state.account = account;
   state.student = { ...state.student, ...studentData };
   saveStudent(state.student);
+  upsertLocalAccount();
   persistSession(true);
   setTrustedDevice(true);
   formElement.reset();
@@ -199,7 +201,6 @@ function initRegistrationSteps() {
 
 export function initRegister({ state, onRegistered }) {
   populateRegistrationClasses();
-  ['regPin', 'regPinConfirm'].forEach(id => { const field = $('#' + id); if (field) field.value = field.defaultValue = DEFAULT_PIN; });
   initFixedContactMobile();
   initUsernameField();
   const registerSteps = initRegistrationSteps();

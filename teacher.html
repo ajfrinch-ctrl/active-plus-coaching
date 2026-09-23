@@ -17,14 +17,20 @@
   <section class="auth-screen admin-auth-screen" id="teacherEntry" aria-labelledby="teacherEntryTitle">
     <header class="auth-topbar"><div class="auth-brand"><img src="assets/icons/app-logo.png" alt="" width="38" height="38"><span><strong>Active Plus Coaching</strong><small>শিখতে থাকো, এগিয়ে যাও</small></span></div></header>
     <article class="auth-card teacher-entry-card">
-      <span class="badge badge-approved">শিক্ষক প্যানেল • লোকাল ডেমো</span>
+      <span class="badge badge-approved">শিক্ষক প্যানেল</span>
       <h1 id="teacherEntryTitle">শেখানোর সব কাজ,<br>এক জায়গায়</h1>
       <p>পরীক্ষা, বাড়ির কাজ, সাজেশন ও রুটিন তৈরি করুন। নম্বর, জমার অবস্থা এবং উপস্থিতি রাখুন।</p>
-      <div class="teacher-identity"><span class="student-avatar" aria-hidden="true">স</span><div><strong>মো. সাইফুল ইসলাম</strong><small>ডেমো শিক্ষক • TCH-001</small></div></div>
       <p id="teacherRegNotice" class="finance-error" role="status" hidden>এডমিন কর্তৃক শিক্ষক রেজিস্ট্রেশন ও প্যানেল প্রবেশ সাময়িকভাবে বন্ধ রাখা হয়েছে। খুলতে এডমিন প্যানেল → আরও → শিক্ষার্থী অ্যাপ ম্যানেজমেন্ট → শিক্ষক রেজিস্ট্রেশন নিয়ন্ত্রণ চালু করুন।</p>
-      <button class="auth-submit" type="button" id="teacherEnter">শিক্ষক প্যানেলে প্রবেশ করুন →</button>
+      <form id="teacherLoginForm" novalidate>
+        <label for="teacherLoginUser">ইউজারনেম</label>
+        <div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-user"></use></svg><input id="teacherLoginUser" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="teacher.apc" required></div>
+        <label for="teacherLoginPin">পাসওয়ার্ড</label>
+        <div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg><input id="teacherLoginPin" name="password" type="password" minlength="6" maxlength="32" autocomplete="current-password" placeholder="পাসওয়ার্ড" required><button class="show-pin" type="button" data-toggle-pin="teacherLoginPin" aria-label="পাসওয়ার্ড দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg></button></div>
+        <div class="form-row"><label class="remember-label"><input type="checkbox" id="rememberTeacher" checked><span class="fake-check"></span>এই ডিভাইসে মনে রাখুন</label></div>
+        <button class="auth-submit" type="button" id="teacherEnter">শিক্ষক প্যানেলে প্রবেশ করুন →</button>
+      </form>
       <p id="teacherEntryError" class="finance-error" role="alert" hidden></p>
-      <p class="teacher-local-note">এটি প্রকৃত শিক্ষক লগইন নয়। ডেটা শুধু এই ব্রাউজারে থাকে; অন্য মোবাইলে পাঠাতে অনলাইন ডেটাবেস লাগবে।</p>
+      <p class="teacher-local-note">ডেটা এই ব্রাউজারে থাকে। অন্য মোবাইলে পাঠাতে অনলাইন ডেটাবেস লাগবে।</p>
     </article>
     <p class="auth-footnote"><a href="index.html" class="admin-entry-link">শিক্ষার্থী অ্যাপে ফিরুন</a></p>
   </section>
@@ -37,7 +43,7 @@
     <main class="admin-main" id="teacherMain">
       <div id="teacherDataError" class="finance-error" role="alert" hidden>ডেটা পড়া যায়নি। <button id="teacherRetry" class="mini-btn" type="button">আবার চেষ্টা করুন</button></div>
       <section id="teacherHome" class="teacher-view" aria-labelledby="teacherHomeTitle">
-        <div class="page-intro"><div><p class="eyebrow" id="teacherToday"></p><h1 id="teacherHomeTitle">স্বাগতম, সাইফুল স্যার</h1><p class="finance-hint">আপনার ক্লাস ও শিক্ষার্থীদের কাজ</p></div><span class="badge badge-pending">লোকাল ডেমো</span></div>
+        <div class="page-intro"><div><p class="eyebrow" id="teacherToday"></p><h1 id="teacherHomeTitle">স্বাগতম</h1><p class="finance-hint">আপনার ক্লাস ও শিক্ষার্থীদের কাজ</p></div><span class="badge badge-pending">শিক্ষক</span></div>
 
         <div class="teacher-summary">
           <div><span>প্রকাশিত কাজ</span><strong id="teacherPublishedCount">০</strong></div>
