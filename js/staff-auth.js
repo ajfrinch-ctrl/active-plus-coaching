@@ -78,6 +78,12 @@ export function hasStaffSession(role) {
   } catch { return false; }
 }
 
+/* Logging out never drops anyone on a panel's own entry screen: every role signs
+   in on index.html, so that is where a logout returns to. */
+export function goToLoginPage() {
+  window.location.assign('index.html');
+}
+
 export function clearStaffSession(role) {
   const spec = STAFF_ACCOUNTS[role];
   if (!spec) return;

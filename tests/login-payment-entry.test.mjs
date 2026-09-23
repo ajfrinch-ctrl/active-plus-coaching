@@ -125,6 +125,30 @@ test('the panel a staff member was handed to opens without a second form', async
   assert.equal(panel.$('#adminShell').hidden, false);
 });
 
+/* Logout is not a step back to a panel's own form: every panel drops the
+   session and returns to the shared login page (index.html). */
+for (const [panel, script, exitButton, role] of [
+  ['admin.html', '../js/admin.js', '#adminExitButton', 'admin'],
+  ['teacher.html', '../js/teacher.js', '#teacherExit', 'teacher'],
+  ['payment.html', '../js/payment.js', '#payExitButton', 'payment']
+]) {
+  test(`logging out of ${panel} goes to the login page`, async () => {
+    const page = await loadPage(panel, {
+      seed: { ...DEMO_OFF, [STAFF_ACCOUNTS[role].sessionKey]: JSON.stringify({ expiry: Date.now() + 86400000, role }) }
+    });
+    // Cache-bust: the previous test already evaluated admin.js against another
+    // document, and a cached module would bind its handlers to that old DOM.
+    await import(`${script}?logout=${role}`);
+    assert.equal(page.window.localStorage.getItem(STAFF_ACCOUNTS[role].sessionKey) !== null, true, 'session was there to begin with');
+    page.click(page.$(exitButton));
+    assert.equal(page.window.localStorage.getItem(STAFF_ACCOUNTS[role].sessionKey), null);
+    assert.equal(page.window.sessionStorage.getItem(STAFF_ACCOUNTS[role].sessionKey), null);
+    assert.equal(page.jsdomErrors.some(error => /navigation/i.test(error)), true, 'the panel must hand over to the login page');
+    // The panel never falls back to showing its own entry form.
+    assert.equal(page.$('#adminEntry, #teacherEntry, #payEntry')?.hidden, true);
+  });
+}
+
 test('typing a staff username switches the password box to a keyboard layout', async () => {
   await open();
   const { $, type } = ctx;

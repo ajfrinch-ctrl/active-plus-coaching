@@ -1,5 +1,5 @@
 import { enabledClasses } from './config.js';
-import { verifyStaffCredentials, saveStaffSession, hasStaffSession, clearStaffSession } from './staff-auth.js';
+import { verifyStaffCredentials, saveStaffSession, hasStaffSession, clearStaffSession, goToLoginPage } from './staff-auth.js';
 import { loadAppConfig } from './storage.js';
 import { toBanglaNumber as bn } from './ui.js';
 import { initExamManager } from './exam-manager.js';
@@ -419,11 +419,11 @@ $('#teacherEnter').addEventListener('click', openTeacherPanel);
 $('#teacherLoginForm')?.addEventListener('submit', event => { event.preventDefault(); openTeacherPanel(); });
 $('#teacherExit').addEventListener('click', () => {
   clearStaffSession('teacher');
+  // Logout always returns to the shared login page, never to a panel entry form.
+  $('#teacherShell').hidden = true;
   const pin = $('#teacherLoginPin');
   if (pin) pin.value = '';
-  $('#teacherShell').hidden = true;
-  $('#teacherEntry').hidden = false;
-  $('#teacherEntry').scrollTop = 0;
+  goToLoginPage();
 });
 $('#teacherRetry').addEventListener('click', reload);
 $('#teacherNewActivity').addEventListener('click', () => showEditor(state.view));

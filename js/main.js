@@ -170,6 +170,8 @@ function leaveApp() {
   clearSession();
   switchAuthTab('login');
   showAuthScreen();
+  // Logout always lands on the login page itself — drop a leftover view hash too.
+  if (window.location.hash) window.history.replaceState(null, '', window.location.pathname + window.location.search);
   setAuthMessage('লগআউট হয়েছে। আবার প্রবেশ করতে মোবাইল নম্বর ও পাসওয়ার্ড দিন।');
 }
 

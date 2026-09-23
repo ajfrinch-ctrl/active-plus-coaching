@@ -5,7 +5,7 @@ import { toBanglaNumber } from './ui.js';
 import { classCodes, dayNames, feeCategories, paymentMethods } from './admin-data.js';
 import { loadAppConfig, saveAppConfig, loadAccount, saveAccount } from './storage.js';
 import { loadRoster, saveRoster, syncAccountStatus, loadNotices, saveNotices, loadRoutine, saveRoutine } from './office-data.js';
-import { verifyStaffCredentials, saveStaffSession, hasStaffSession, clearStaffSession } from './staff-auth.js';
+import { verifyStaffCredentials, saveStaffSession, hasStaffSession, clearStaffSession, goToLoginPage } from './staff-auth.js';
 import { financeRepository, monthLabel, dateLabel, searchStudents, studentFeeSummary, newestTransactions, stampTransaction, TRANSACTIONS_KEY } from './finance-data.js';
 import { newId } from './database.js';
 import { receiptMarkup, downloadReceipt } from './finance-receipt.js';
@@ -82,11 +82,11 @@ function enterPanel() {
 
 function exitPanel() {
   clearStaffSession('admin');
+  // Logout always returns to the shared login page, never to a panel entry form.
   $('#adminShell').hidden = true;
-  $('#adminEntry').hidden = false;
   const pin = $('#adminLoginPin');
   if (pin) pin.value = '';
-  $('#adminEntry')?.scrollTo({ top: 0, behavior: 'instant' });
+  goToLoginPage();
 }
 
 /* ---------- View switching ---------- */

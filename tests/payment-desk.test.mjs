@@ -180,12 +180,16 @@ test('the password can be changed from the desk; the stored account keeps its us
   assert.match($('#payToast').textContent, /পাসওয়ার্ড পরিবর্তন হয়েছে/);
 });
 
-test('exit clears the session and returns to the entry screen', () => {
-  const { $, click, window } = ctx;
+test('logout clears the session and goes to the shared login page', () => {
+  const { $, click, window, jsdomErrors } = ctx;
+  assert.equal(jsdomErrors.some(e => /navigation/i.test(e)), false);
   click($('#payExitButton'));
   assert.equal($('#payShell').hidden, true);
-  assert.equal($('#payEntry').hidden, false);
   assert.equal($('#payStickyBar').hidden, true);
   assert.equal(window.localStorage.getItem(PAYMENT_SESSION_KEY), null);
   assert.equal(window.sessionStorage.getItem(PAYMENT_SESSION_KEY), null);
+  // jsdom cannot navigate, so the attempt itself is the assertion.
+  assert.equal(jsdomErrors.some(e => /navigation/i.test(e)), true);
+  // And the page really targets the login page.
+  assert.match(window.document.querySelector('#payExitButton').outerHTML, /লগআউট/);
 });

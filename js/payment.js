@@ -1,12 +1,14 @@
 /* Standalone Payment Receive desk: username login → search → short profile
-   → payment → receipt. The only login is this page. Students come from the
-   office roster, which starts empty. */
+   → payment → receipt. The counter can sign in here or on the shared login
+   page (index.html); logging out returns there. Students come from the office
+   roster, which starts empty. */
 import { feeCategories, paymentMethods } from './admin-data.js';
 import { loadRoster } from './office-data.js';
 import { financeRepository, monthLabel, dateLabel, searchStudents, studentFeeSummary, latinDigits, stampTransaction } from './finance-data.js';
 import { receiptMarkup, downloadReceipt, createReceiptPNG } from './finance-receipt.js';
 import { toBanglaNumber } from './ui.js';
 import { registerServiceWorker } from './service-worker.js';
+import { goToLoginPage } from './staff-auth.js';
 import {
   PAYMENT_USER_ID,
   verifyPaymentCredentials,
@@ -100,10 +102,9 @@ $('#payExitButton').addEventListener('click', () => {
   closeCollectionForm();
   $('#payStickyBar').hidden = true;
   $('#payShell').hidden = true;
-  $('#payEntry').hidden = false;
   $('#payLoginPin').value = '';
-  $('#payLoginUser').focus();
-  window.scrollTo(0, 0);
+  // Logout always returns to the shared login page, never to a panel entry form.
+  goToLoginPage();
 });
 
 /* পাসওয়ার্ড change: current পাসওয়ার্ড verified, new পাসওয়ার্ড confirmed, stored locally. */

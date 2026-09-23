@@ -42,10 +42,11 @@ test('payment portal opens only with the unique user ID and password', async ({ 
   await page.reload();
   await expect(page.locator('#payShell')).toBeVisible();
 
-  // Exit clears the session and returns to the entry screen.
+  // Logout clears the session and lands on the shared login page.
   await page.locator('#payExitButton').click();
-  await expect(page.locator('#payEntry')).toBeVisible();
-  await page.reload();
+  await page.waitForURL('**/index.html');
+  await expect(page.locator('#authScreen')).toBeVisible();
+  await page.goto('/payment.html');
   await expect(page.locator('#payEntry')).toBeVisible();
 });
 
@@ -78,6 +79,8 @@ test('the password can be changed from the panel; the new one logs in, the old o
 
   // Old password no longer works; the new one does.
   await page.locator('#payExitButton').click();
+  await page.waitForURL('**/index.html');
+  await page.goto('/payment.html');
   await expect(page.locator('#payEntry')).toBeVisible();
   await page.locator('#payLoginPin').fill('123123');
   await page.locator('#payLoginForm button[type=submit]').click();
