@@ -54,15 +54,19 @@
     <div class="col after">
       <header><span class="dot"></span> পরে <small>PR #11 — আমার ব্রাঞ্চ</small></header>
       <div class="phone"><iframe id="after" src="after-login.html" title="নতুন লগইন পেইজ"></iframe></div>
-      <p class="note">ওই তিনটি লিংক নেই। লগইন কার্ড শেষ, তারপর সোজা অ্যাপের অংশ — বাকি সব হুবহু আগের মতো।</p>
+      <p class="note">ওই তিনটি লিংক নেই — বরং <strong>একই ফর্মে সবার প্রবেশ</strong>:
+        শিক্ষার্থী ইউজারনেম/মোবাইল + PIN দিয়ে, আর শিক্ষক / এডমিন / পেমেন্ট কাউন্টার নিজের ইউজারনেম
+        (<code>teacher.apc</code> / <code>admin.apc</code> / <code>payment.apc</code>) + পাসওয়ার্ড দিয়ে।
+        সেশন আগে জমা হয়, তাই প্যানেল দ্বিতীয় ফর্ম ছাড়াই খোলে। নিচের হিন্ট লাইনটাই সেটা জানায়।</p>
     </div>
   </div>
 
   <section class="changes">
-    <h2>ঠিক কী কী বদলেছে (৭ ফাইল, +২০ −১৮)</h2>
+    <h2>ঠিক কী কী বদলেছে</h2>
     <table>
       <tr><th>ফাইল</th><th>বদল</th></tr>
-      <tr><td><code>index.html</code></td><td>৩টি <code>&lt;p class="admin-entry-link-wrap"&gt;</code> লিংক মুছে ফেলা + অব্যবহৃত <code>#icon-wallet</code> আইকন</td></tr>
+            <tr><td><code>index.html</code></td><td>৩টি স্টাফ লিংক মুছে ফেলা + অব্যবহৃত <code>#icon-wallet</code> আইকন; PIN ঘর এখন ৩২ অক্ষর (স্টাফ পাসওয়ার্ড), নিচে এক লাইনের ভূমিকা-হিন্ট</td></tr>
+      <tr><td><code>js/login.js</code></td><td>এক ফর্মে সবার প্রবেশ: সংরক্ষিত ইউজারনেম মিললেই সেই প্যানেলে সেশন জমা করে হ্যান্ডঅফ; শিক্ষার্থী ফ্লো অপরিবর্তিত</td></tr>
       <tr><td><code>css/auth.css</code></td><td><code>.admin-entry-link-wrap</code> রুল মুছে ফেলা; <code>.admin-entry-link</code> → <code>.auth-cross-link</code></td></tr>
       <tr><td><code>teacher.html</code></td><td>নতুন ক্লাস নাম (১ লাইন)</td></tr>
       <tr><td><code>sw.js</code></td><td>cache <code>v48 → v49</code> (ইনস্টল করা অ্যাপ পুরোনো পেইজ আটকে না রাখে)</td></tr>
@@ -107,7 +111,7 @@
         flag.id = 'clean-flag';
         flag.style.cssText = 'margin:12px 4px 0;padding:7px 10px;border:2px dashed #2f7d5b;border-radius:9px;' +
           'background:#eaf7ee;color:#24553f;font:800 11px/1.6 "Noto Sans Bengali",sans-serif;text-align:center;';
-        flag.textContent = '✓ কার্ডের নিচে আর কোনো স্টাফ লিংক নেই';
+        flag.textContent = '✓ কার্ডের নিচে লিংক নেই — একই ফর্মেই সবার প্রবেশ';
         if (screen) screen.appendChild(flag);
         if (screen && !screen.dataset.scrolled) { screen.dataset.scrolled = '1'; screen.scrollTop = screen.scrollHeight; }
       }

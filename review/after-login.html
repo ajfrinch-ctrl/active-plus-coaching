@@ -14,7 +14,7 @@
 <body>
 <section class="auth-screen" id="authScreen" aria-label="Active Plus শিক্ষার্থী লগইন">
     <div class="auth-topbar">
-      <div class="auth-brand"><img src="/assets/icons/app-logo.png" alt="Active Plus Coaching logo" width="38" height="38"><span><strong>Active Plus Coaching</strong><small data-fixed-tagline aria-label="শিখতে থাকো, এগিয়ে যাও">শিখতে থাকো, এগিয়ে যাও</small></span></div>
+      <div class="auth-brand"><img src="/assets/icons/logo-128.png" alt="Active Plus Coaching logo" width="38" height="38"><span><strong>Active Plus Coaching</strong><small data-fixed-tagline aria-label="শিখতে থাকো, এগিয়ে যাও">শিখতে থাকো, এগিয়ে যাও</small></span></div>
     </div>
     <div class="auth-card">
       <div class="auth-tabs" role="tablist" aria-label="অ্যাকাউন্ট অপশন">
@@ -28,8 +28,8 @@
         <form id="loginForm" novalidate>
           <label for="loginMobile">ইউজারনেম অথবা মোবাইল নম্বর</label>
           <div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-user"></use></svg><input id="loginMobile" name="mobile" type="text" autocomplete="username" placeholder="ইউজারনেম বা ০১XXXXXXXXX" required></div>
-          <p class="fixed-field-note">নিরাপত্তার জন্য মোবাইল নম্বরের বদলে নিজের ইউজারনেম দিয়ে লগইন করাই ভালো।</p><label for="loginPin">পাসকোড / PIN</label>
-          <div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg><input id="loginPin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="6" autocomplete="current-password" placeholder="৪–৬ সংখ্যার PIN" required><button class="show-pin" type="button" data-toggle-pin="loginPin" aria-label="PIN দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg></button></div>
+          <p class="fixed-field-note" id="loginHint">শিক্ষার্থী: ইউজারনেম বা মোবাইল নম্বর ও PIN। শিক্ষক, এডমিন ও পেমেন্ট কাউন্টার: নিজের ইউজারনেম ও পাসওয়ার্ড দিয়ে এখানেই লগইন করুন।</p><label for="loginPin">পাসকোড / PIN / পাসওয়ার্ড</label>
+          <div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg><input id="loginPin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="32" autocomplete="current-password" placeholder="৪–৬ সংখ্যার PIN" required><button class="show-pin" type="button" data-toggle-pin="loginPin" aria-label="PIN দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg></button></div>
           <div class="form-row"><label class="remember-label"><input type="checkbox" id="rememberMe" checked><span class="fake-check"></span>এই ডিভাইসে মনে রাখুন</label><button type="button" class="link-button" id="forgotPinButton">PIN ভুলে গেছেন?</button></div>
           <button class="auth-submit" type="submit">লগইন করুন <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg></button>
         </form>
