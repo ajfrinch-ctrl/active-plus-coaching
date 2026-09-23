@@ -1,6 +1,6 @@
 /* Payment Receive desk, driven through the real payment.html + js/payment.js in
    jsdom: entry guard, search, one-tap collection (keypad + method pill), the
-   durable save, receipt modal, today summary/activity, PIN change and exit.
+   durable save, receipt modal, today summary/activity, password change and exit.
    The Playwright spec (tests/payment-panel.spec.cjs) covers the browser-only
    bits: PDF download, canvas PNG and the Web Share/wa.me paths. */
 import test, { before } from 'node:test';
@@ -162,7 +162,7 @@ test('receipt text can be copied for a quick WhatsApp paste', async () => {
   click($('#payReceiptClose'));
 });
 
-test('PIN can be changed from the desk; the stored account keeps its user ID', async () => {
+test('the password can be changed from the desk; the stored account keeps its user ID', async () => {
   const { $, click, type, submit, waitFor, window } = ctx;
   click($('#payPinButton'));
   assert.equal($('#payPinBackdrop').hidden, false);

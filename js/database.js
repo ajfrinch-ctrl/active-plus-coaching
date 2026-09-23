@@ -1,7 +1,7 @@
 /* Document database for Active Plus.
    Collection names below are the Firestore names to use later.
    This adapter only talks to localStorage. Do not import the Firebase SDK here.
-   Passwords, PINs and security answers stay on this device — never copy them
+   Passwords and security answers stay on this device — never copy them
    into a synced collection. */
 
 export const COLLECTIONS = Object.freeze({
@@ -157,7 +157,7 @@ export function syncableAccount(account) {
   };
 }
 
-/** Mirror the device account into a student-id map, without the PIN. */
+/** Mirror the device account into a student-id map, without the password. */
 export function rememberAccount(account) {
   const doc = syncableAccount(account);
   if (!doc) return false;

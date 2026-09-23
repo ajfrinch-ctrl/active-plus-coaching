@@ -119,7 +119,7 @@ test('login accepts the username, in any case, and still accepts the mobile numb
   type($('#loginMobile'), 'raisa.islam');
   type($('#loginPin'), '999999');
   submit($('#loginForm'));
-  assert.equal(loggedIn, 2, 'a wrong PIN must be rejected');
+  assert.equal(loggedIn, 2, 'a wrong password must be rejected');
   assert.match($('#authMessage').textContent, /সঠিক নয়/);
 
   state.account = null;

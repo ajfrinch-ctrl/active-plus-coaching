@@ -55,7 +55,7 @@
       <header><span class="dot"></span> পরে <small>PR #11 — আমার ব্রাঞ্চ</small></header>
       <div class="phone"><iframe id="after" src="after-login.html" title="নতুন লগইন পেইজ"></iframe></div>
       <p class="note">ওই তিনটি লিংক নেই — বরং <strong>একই ফর্মে সবার প্রবেশ</strong>:
-        শিক্ষার্থী ইউজারনেম/মোবাইল + PIN দিয়ে, আর শিক্ষক / এডমিন / পেমেন্ট কাউন্টার নিজের ইউজারনেম
+        শিক্ষার্থী ইউজারনেম/মোবাইল + ৪–৬ সংখ্যার পাসওয়ার্ড দিয়ে, আর শিক্ষক / এডমিন / পেমেন্ট কাউন্টার নিজের ইউজারনেম
         (<code>teacher.apc</code> / <code>admin.apc</code> / <code>payment.apc</code>) + পাসওয়ার্ড দিয়ে।
         সেশন আগে জমা হয়, তাই প্যানেল দ্বিতীয় ফর্ম ছাড়াই খোলে। নিচের হিন্ট লাইনটাই সেটা জানায়।</p>
     </div>
@@ -63,9 +63,10 @@
 
   <section class="changes">
     <h2>ঠিক কী কী বদলেছে</h2>
+    <p style="margin:-4px 0 10px;color:var(--muted);font-size:12.5px">এছাড়া পুরো অ্যাপে “PIN/পাসকোড” শব্দ বাদ দিয়ে সব জায়গায় “পাসওয়ার্ড” করা হয়েছে (login, registration, recovery, প্রোফাইল সেটিংস, লগআউট বার্তা, এডমিনের রিসেট বাটন)।</p>
     <table>
       <tr><th>ফাইল</th><th>বদল</th></tr>
-            <tr><td><code>index.html</code></td><td>৩টি স্টাফ লিংক মুছে ফেলা + অব্যবহৃত <code>#icon-wallet</code> আইকন; PIN ঘর এখন ৩২ অক্ষর (স্টাফ পাসওয়ার্ড), নিচে এক লাইনের ভূমিকা-হিন্ট</td></tr>
+            <tr><td><code>index.html</code></td><td>৩টি স্টাফ লিংক মুছে ফেলা + অব্যবহৃত <code>#icon-wallet</code> আইকন; “PIN/পাসকোড” শব্দ বাদ — সব জায়গায় “পাসওয়ার্ড”; ঘরটি ৩২ অক্ষর, নিচে এক লাইনের ভূমিকা-হিন্ট</td></tr>
       <tr><td><code>js/login.js</code></td><td>এক ফর্মে সবার প্রবেশ: সংরক্ষিত ইউজারনেম মিললেই সেই প্যানেলে সেশন জমা করে হ্যান্ডঅফ; শিক্ষার্থী ফ্লো অপরিবর্তিত</td></tr>
       <tr><td><code>css/auth.css</code></td><td><code>.admin-entry-link-wrap</code> রুল মুছে ফেলা; <code>.admin-entry-link</code> → <code>.auth-cross-link</code></td></tr>
       <tr><td><code>teacher.html</code></td><td>নতুন ক্লাস নাম (১ লাইন)</td></tr>

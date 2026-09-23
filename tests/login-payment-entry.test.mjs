@@ -125,7 +125,7 @@ test('the panel a staff member was handed to opens without a second form', async
   assert.equal(panel.$('#adminShell').hidden, false);
 });
 
-test('typing a staff username switches the PIN box to a password keyboard', async () => {
+test('typing a staff username switches the password box to a keyboard layout', async () => {
   await open();
   const { $, type } = ctx;
   assert.equal($('#loginPin').getAttribute('inputmode'), 'numeric');

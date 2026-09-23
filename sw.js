@@ -1,4 +1,4 @@
-const CACHE_NAME = 'active-plus-student-v51-one-login-page';
+const CACHE_NAME = 'active-plus-student-v52-password-wording';
 const APP_SHELL = [
   './',
   './index.html',

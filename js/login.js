@@ -1,5 +1,5 @@
 /* Login feature: one door for everyone.
-   A student signs in with username/mobile + PIN and lands in the student app.
+   A student signs in with username/mobile + password and lands in the student app.
    Staff (admin, teacher, payment counter) sign in on the same form with their
    reserved username + password; the session is written first, so the panel
    opens directly on arrival — no second credential prompt. */
@@ -11,7 +11,7 @@ import { STAFF_ACCOUNTS, normalizeStaffUsername, verifyStaffCredentials, saveSta
 const STAFF_PANEL = Object.freeze({ admin: 'admin.html', teacher: 'teacher.html', payment: 'payment.html' });
 const STAFF_LABEL = Object.freeze({ admin: 'এডমিন প্যানেল', teacher: 'শিক্ষক প্যানেল', payment: 'পেমেন্ট রিসিভ প্যানেল' });
 const STAFF_ID_HINT = 'স্টাফ লগইন';
-const DEFAULT_ID_HINT = 'শিক্ষার্থী: ইউজারনেম বা মোবাইল নম্বর ও PIN। শিক্ষক, এডমিন ও পেমেন্ট কাউন্টার: নিজের ইউজারনেম ও পাসওয়ার্ড দিয়ে এখানেই লগইন করুন।';
+const DEFAULT_ID_HINT = 'শিক্ষার্থী: ইউজারনেম বা মোবাইল নম্বর ও পাসওয়ার্ড। শিক্ষক, এডমিন ও পেমেন্ট কাউন্টার: নিজের ইউজারনেম ও পাসওয়ার্ড দিয়ে এখানেই লগইন করুন।';
 
 export function staffRoleFor(value) {
   const typed = normalizeStaffUsername(value);
@@ -39,7 +39,7 @@ export function switchAuthTab(tab) {
   scrollToTop();
 }
 
-/* The same box takes a 4–6 digit student PIN or a staff password, so the
+/* The same box takes a 4–6 digit student password or a staff password, so the
    keyboard and the hint follow what is being typed. */
 function syncLoginHints() {
   const idInput = $('#loginMobile');
@@ -47,7 +47,7 @@ function syncLoginHints() {
   if (!idInput || !pinInput) return;
   const role = staffRoleFor(idInput.value);
   pinInput.setAttribute('inputmode', role ? 'text' : 'numeric');
-  pinInput.setAttribute('placeholder', role ? 'পাসওয়ার্ড' : '৪–৬ সংখ্যার PIN');
+  pinInput.setAttribute('placeholder', role ? 'পাসওয়ার্ড' : '৪–৬ সংখ্যার পাসওয়ার্ড');
   const hint = $('#loginHint');
   if (hint) {
     hint.textContent = role
@@ -93,7 +93,7 @@ function handleLogin(event, state, onAuthenticated) {
   const mobile = contactNumber(typedId);
   state.account = loadAccount() || state.account;
   if ((!username && !mobile) || pin.length < 4) {
-    setAuthMessage('ইউজারনেম বা মোবাইল নম্বর এবং ৪–৬ সংখ্যার PIN সঠিকভাবে দিন।');
+    setAuthMessage('ইউজারনেম বা মোবাইল নম্বর এবং ৪–৬ সংখ্যার পাসওয়ার্ড সঠিকভাবে দিন।');
     return;
   }
   if (!state.account) {
@@ -104,7 +104,7 @@ function handleLogin(event, state, onAuthenticated) {
   const byUsername = Boolean(username) && Boolean(knownUsername) && username === knownUsername;
   const byMobile = isContactNumber(mobile) && mobile === (state.account.registrationMobile || state.account.mobile);
   if ((!byUsername && !byMobile) || pin !== state.account.pin) {
-    setAuthMessage('ইউজারনেম/মোবাইল নম্বর অথবা PIN সঠিক নয়। আবার চেষ্টা করুন।');
+    setAuthMessage('ইউজারনেম/মোবাইল নম্বর অথবা পাসওয়ার্ড সঠিক নয়। আবার চেষ্টা করুন।');
     return;
   }
   state.student = { ...state.student, ...(state.account.student || {}) };

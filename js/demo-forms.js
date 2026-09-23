@@ -89,7 +89,7 @@ export function initDemoForms(warnings = []) {
   document.addEventListener('reset', event => { requestAnimationFrame(() => { event.target.querySelectorAll('input, select, textarea').forEach(el => seen.delete(el)); fill(); }); }, true);
   for (const host of document.querySelectorAll('#appMain, #adminMain, #teacherMain, #authScreen, #adminEntry, #teacherEntry')) {
     const note = document.createElement('details'); note.className = 'demo-preview-note';
-    note.innerHTML = '<summary>ডেমো ডেটা চালু • PIN ১২৩১২৩</summary><p>সব উদাহরণ পরীক্ষার জন্য। কিছুই নিজে থেকে জমা, প্রকাশ বা পেমেন্ট হবে না। পুরোনো তথ্য অপরিবর্তিত আছে।</p><div><button type="button" data-demo-fill>খালি ঘরে নমুনা বসান</button><button type="button" data-demo-fresh>নতুন সময়ের পরীক্ষার নমুনা</button><button type="button" data-demo-off>নমুনা অটোফিল বন্ধ করুন</button></div><p data-demo-status role="status"></p>';
+    note.innerHTML = '<summary>ডেমো ডেটা চালু • পাসওয়ার্ড ১২৩১২৩</summary><p>সব উদাহরণ পরীক্ষার জন্য। কিছুই নিজে থেকে জমা, প্রকাশ বা পেমেন্ট হবে না। পুরোনো তথ্য অপরিবর্তিত আছে।</p><div><button type="button" data-demo-fill>খালি ঘরে নমুনা বসান</button><button type="button" data-demo-fresh>নতুন সময়ের পরীক্ষার নমুনা</button><button type="button" data-demo-off>নমুনা অটোফিল বন্ধ করুন</button></div><p data-demo-status role="status"></p>';
     note.querySelector('[data-demo-status]').textContent = warnings[0] || '';
     note.querySelector('[data-demo-fill]').addEventListener('click', () => fill(true));
     note.querySelector('[data-demo-fresh]').addEventListener('click', async event => {

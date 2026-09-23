@@ -1,5 +1,5 @@
 /* Registration feature: step-by-step student self-registration with auto Student ID.
-   Updated: auto-login after registration so PIN check isn't needed immediately.
+   Updated: auto-login after registration so the password check isn't needed immediately.
    The student also picks a permanent username here — a login ID that never
    changes, so the phone number does not have to be shared to log in. */
 import { $, $$, normalizeMobile, normalizeAnswer, setAuthMessage, showFeedback } from './ui.js';
@@ -92,8 +92,8 @@ function handleRegistration(event, state, onRegistered) {
   const usernameProblem = usernameError(username);
   if (usernameProblem) return setAuthMessage(usernameProblem);
   if (usernameTaken(username)) return setAuthMessage('এই ইউজারনেমটি আগেই নেওয়া হয়েছে। অন্য একটি বেছে নিন — এটি পরে বদলানো যাবে না।');
-  if (!/^\d{4,6}$/.test(pin)) return setAuthMessage('PIN অবশ্যই ৪ থেকে ৬ সংখ্যার হতে হবে।');
-  if (pin !== pinConfirm) return setAuthMessage('দুটি PIN এক নয়। আবার মিলিয়ে দিন।');
+  if (!/^\d{4,6}$/.test(pin)) return setAuthMessage('পাসওয়ার্ড অবশ্যই ৪ থেকে ৬ সংখ্যার হতে হবে।');
+  if (pin !== pinConfirm) return setAuthMessage('দুটি পাসওয়ার্ড এক নয়। আবার মিলিয়ে দিন।');
   if (state.account) return setAuthMessage('এই ডিভাইসে ইতিমধ্যে একটি অ্যাকাউন্ট আছে। লগইন করুন অথবা এডমিনের সাহায্য নিন।');
 
   const className = String(form.get('className') || '');

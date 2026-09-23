@@ -53,7 +53,7 @@ function toast(message, tone = 'info') {
   toast.timer = setTimeout(() => { el.hidden = true; }, 3400);
 }
 
-/* ---------- Login, logout and PIN change ---------- */
+/* ---------- Login, logout and পাসওয়ার্ড change ---------- */
 
 $$('[data-toggle-pin]').forEach(button => {
   button.addEventListener('click', () => {
@@ -106,7 +106,7 @@ $('#payExitButton').addEventListener('click', () => {
   window.scrollTo(0, 0);
 });
 
-/* PIN change: current PIN verified, new PIN confirmed, stored locally. */
+/* পাসওয়ার্ড change: current পাসওয়ার্ড verified, new পাসওয়ার্ড confirmed, stored locally. */
 $('#payPinButton').addEventListener('click', () => {
   $('#payPinForm').reset();
   $('#payPinError').hidden = true;

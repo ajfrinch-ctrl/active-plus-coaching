@@ -102,7 +102,7 @@ function initSecurityToggle() {
       if (skipToggle.checked) {
         persistSession(true);
         setTrustedDevice(true);
-        showFeedback('এখন থেকে প্রতিবার PIN চাওয়া হবে না');
+        showFeedback('এখন থেকে প্রতিবার পাসওয়ার্ড চাওয়া হবে না');
       } else {
         showFeedback('নিরাপত্তা চেক আবার চালু করা হয়েছে');
       }

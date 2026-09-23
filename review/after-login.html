@@ -12,7 +12,7 @@
   <style>body{margin:0;background:#eef1ee}.auth-screen{max-width:480px;margin:0 auto}</style>
 </head>
 <body>
-<section class="auth-screen" id="authScreen" aria-label="Active Plus শিক্ষার্থী লগইন">
+<section class="auth-screen" id="authScreen" aria-label="Active Plus লগইন">
     <div class="auth-topbar">
       <div class="auth-brand"><img src="/assets/icons/logo-128.png" alt="Active Plus Coaching logo" width="38" height="38"><span><strong>Active Plus Coaching</strong><small data-fixed-tagline aria-label="শিখতে থাকো, এগিয়ে যাও">শিখতে থাকো, এগিয়ে যাও</small></span></div>
     </div>
@@ -24,13 +24,13 @@
       <p class="auth-message" id="authMessage" role="status" hidden></p>
 
       <div class="auth-panel active" id="loginPanel" data-auth-panel="login">
-        <div class="auth-panel-heading"><div><h2>শিক্ষার্থী লগইন</h2></div></div>
+        <div class="auth-panel-heading"><div><h2>লগইন</h2></div></div>
         <form id="loginForm" novalidate>
           <label for="loginMobile">ইউজারনেম অথবা মোবাইল নম্বর</label>
           <div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-user"></use></svg><input id="loginMobile" name="mobile" type="text" autocomplete="username" placeholder="ইউজারনেম বা ০১XXXXXXXXX" required></div>
-          <p class="fixed-field-note" id="loginHint">শিক্ষার্থী: ইউজারনেম বা মোবাইল নম্বর ও PIN। শিক্ষক, এডমিন ও পেমেন্ট কাউন্টার: নিজের ইউজারনেম ও পাসওয়ার্ড দিয়ে এখানেই লগইন করুন।</p><label for="loginPin">পাসকোড / PIN / পাসওয়ার্ড</label>
-          <div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg><input id="loginPin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="32" autocomplete="current-password" placeholder="৪–৬ সংখ্যার PIN" required><button class="show-pin" type="button" data-toggle-pin="loginPin" aria-label="PIN দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg></button></div>
-          <div class="form-row"><label class="remember-label"><input type="checkbox" id="rememberMe" checked><span class="fake-check"></span>এই ডিভাইসে মনে রাখুন</label><button type="button" class="link-button" id="forgotPinButton">PIN ভুলে গেছেন?</button></div>
+          <p class="fixed-field-note" id="loginHint">শিক্ষার্থী: ইউজারনেম বা মোবাইল নম্বর ও পাসওয়ার্ড। শিক্ষক, এডমিন ও পেমেন্ট কাউন্টার: নিজের ইউজারনেম ও পাসওয়ার্ড দিয়ে এখানেই লগইন করুন।</p><label for="loginPin">পাসওয়ার্ড</label>
+          <div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg><input id="loginPin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="32" autocomplete="current-password" placeholder="৪–৬ সংখ্যার পাসওয়ার্ড" required><button class="show-pin" type="button" data-toggle-pin="loginPin" aria-label="পাসওয়ার্ড দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg></button></div>
+          <div class="form-row"><label class="remember-label"><input type="checkbox" id="rememberMe" checked><span class="fake-check"></span>এই ডিভাইসে মনে রাখুন</label><button type="button" class="link-button" id="forgotPinButton">পাসওয়ার্ড ভুলে গেছেন?</button></div>
           <button class="auth-submit" type="submit">লগইন করুন <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg></button>
         </form>
         <p class="auth-footnote">অ্যাকাউন্ট নেই? <button type="button" class="inline-link" data-auth-tab="register">রেজিস্ট্রেশন করুন</button></p>
@@ -58,10 +58,10 @@
                 <p id="regUsernameStatus" class="username-status" role="status" aria-live="polite"></p>
                 <small id="regUsernameHint" class="fixed-field-note">৪–২০ অক্ষর; ইংরেজি অক্ষর দিয়ে শুরু, তারপর ছোট হাতের অক্ষর/সংখ্যা/ডট/আন্ডারস্কোর। লগইনে মোবাইল নম্বরের বদলে এটি ব্যবহার করা যাবে — নম্বর কাউকে বলতে হবে না।</small>
               </div>
-              <div class="field"><label for="regPin">PIN <i>*</i></label><div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg><input id="regPin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="6" placeholder="৪–৬ সংখ্যার PIN" required><button class="show-pin" type="button" data-toggle-pin="regPin" aria-label="PIN দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg></button></div></div>
-              <div class="field"><label for="regPinConfirm">PIN আবার দিন <i>*</i></label><div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg><input id="regPinConfirm" name="pinConfirm" type="password" inputmode="numeric" minlength="4" maxlength="6" placeholder="PIN মিলান" required><button class="show-pin" type="button" data-toggle-pin="regPinConfirm" aria-label="PIN দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg></button></div></div>
+              <div class="field"><label for="regPin">পাসওয়ার্ড <i>*</i></label><div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg><input id="regPin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="6" placeholder="৪–৬ সংখ্যার পাসওয়ার্ড" required><button class="show-pin" type="button" data-toggle-pin="regPin" aria-label="পাসওয়ার্ড দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg></button></div></div>
+              <div class="field"><label for="regPinConfirm">পাসওয়ার্ড আবার দিন <i>*</i></label><div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg><input id="regPinConfirm" name="pinConfirm" type="password" inputmode="numeric" minlength="4" maxlength="6" placeholder="পাসওয়ার্ড মিলান" required><button class="show-pin" type="button" data-toggle-pin="regPinConfirm" aria-label="পাসওয়ার্ড দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg></button></div></div>
             </div>
-            <p class="fixed-field-note">৪–৬ সংখ্যার PIN দিন। প্রথম মোবাইল নম্বর আর পরিবর্তন করা যাবে না।</p><div class="step-actions"><span></span><button type="button" class="step-next" data-next-step>পরের অংশ <span>→</span></button></div>
+            <p class="fixed-field-note">৪–৬ সংখ্যার পাসওয়ার্ড দিন। প্রথম মোবাইল নম্বর আর পরিবর্তন করা যাবে না।</p><div class="step-actions"><span></span><button type="button" class="step-next" data-next-step>পরের অংশ <span>→</span></button></div>
           </section>
 
           <section class="registration-step" data-registration-step="2" data-step-title="শিক্ষার্থীর পরিচয়" aria-labelledby="stepTwoTitle" hidden>
@@ -101,8 +101,8 @@
             <div class="step-actions"><button type="button" class="step-back" data-previous-step>← আগের অংশ</button><button type="button" class="step-next" data-next-step>পরের অংশ <span>→</span></button></div>
           </section>
 
-          <section class="registration-step" data-registration-step="5" data-step-title="PIN পুনরুদ্ধার" aria-labelledby="stepFiveTitle" hidden>
-            <div class="form-section-title"><span>০৫</span><div><strong id="stepFiveTitle">PIN পুনরুদ্ধার</strong><small>PIN ভুলে গেলে কাজে লাগবে</small></div></div>
+          <section class="registration-step" data-registration-step="5" data-step-title="পাসওয়ার্ড পুনরুদ্ধার" aria-labelledby="stepFiveTitle" hidden>
+            <div class="form-section-title"><span>০৫</span><div><strong id="stepFiveTitle">পাসওয়ার্ড পুনরুদ্ধার</strong><small>পাসওয়ার্ড ভুলে গেলে কাজে লাগবে</small></div></div>
             <div class="field-grid">
               <div class="field full"><label for="securityQuestion">নিরাপত্তা প্রশ্ন <i>*</i></label><select id="securityQuestion" name="securityQuestion" required><option value="">একটি প্রশ্ন বেছে নিন</option><option>তোমার শৈশবের ডাকনাম কী?</option><option>তোমার প্রিয় শিক্ষকের নাম কী?</option><option>তোমার জন্মস্থানের নাম কী?</option><option>তোমার প্রিয় বইয়ের নাম কী?</option></select></div>
               <div class="field full"><label for="securityAnswer">নিরাপত্তা প্রশ্নের উত্তর <i>*</i></label><input id="securityAnswer" name="securityAnswer" type="text" placeholder="উত্তরটি লিখুন" required></div>
