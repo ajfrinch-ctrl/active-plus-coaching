@@ -1,5 +1,5 @@
 /* One place for local persistence. Replacing these adapters with an API later keeps UI modules unchanged. */
-import { protectAccountIdentity } from './account-policy.js';
+import { protectAccountIdentity, normalizeUsername } from './account-policy.js';
 import { STORAGE_KEYS, defaultStudent, DEFAULT_APP_SETTINGS } from './config.js';
 
 function getStorage(type = 'local') {
@@ -47,6 +47,43 @@ export function persistAccount(account) {
 
 export function saveAccount(account) {
   try { persistAccount(account); return true; } catch { return false; }
+}
+
+/* ---------- Username registry ----------
+   Device-local claim table so two accounts on the same phone cannot pick the
+   same username. A real server replaces these four helpers with one API call. */
+
+export function readUsernameIndex() {
+  return readJSON(STORAGE_KEYS.usernames, {}) || {};
+}
+
+export function usernameOwner(username) {
+  const name = normalizeUsername(username);
+  if (!name) return null;
+  return readUsernameIndex()[name] || null;
+}
+
+export function usernameTaken(username) {
+  return Boolean(usernameOwner(username));
+}
+
+/** Claim the name for this owner; false when somebody else already holds it. */
+export function reserveUsername(username, owner) {
+  const name = normalizeUsername(username);
+  if (!name || !owner) return false;
+  const index = readUsernameIndex();
+  if (index[name] && index[name] !== owner) return false;
+  index[name] = owner;
+  return writeJSON(STORAGE_KEYS.usernames, index);
+}
+
+/** Only the owner can release a claim (keeps a name from being reused silently). */
+export function releaseUsername(username, owner) {
+  const name = normalizeUsername(username);
+  const index = readUsernameIndex();
+  if (!name || index[name] !== owner) return false;
+  delete index[name];
+  return writeJSON(STORAGE_KEYS.usernames, index);
 }
 
 const SESSION_DAYS_REMEMBER = 90;

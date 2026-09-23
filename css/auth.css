@@ -19,3 +19,15 @@
 .admin-entry-link { display: inline-flex; align-items: center; gap: 6px; color: #4879a7; font-size: 10px; font-weight: 800; text-decoration: none; }
 .admin-entry-link:hover { text-decoration: underline; }
 .admin-entry-link svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Username field: permanent login ID, so the rule is stated next to it. */
+.username-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-top: 5px; }
+.username-lock-note { display: inline-flex; align-items: center; gap: 4px; color: var(--muted-2); font-size: 8.5px; font-weight: 700; }
+.username-lock-note svg { width: 11px; height: 11px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.username-status { margin: 5px 0 0; font-size: 9px; font-weight: 800; line-height: 1.5; }
+.username-status:empty { display: none; }
+.username-status.is-ok { color: #2f7d5b; }
+.username-status.is-bad { color: #a33e30; }
+.field .locked-input { position: relative; display: flex; align-items: center; }
+.field .locked-input input { padding-right: 32px; color: var(--forest); background: rgba(223, 242, 230, .7); cursor: not-allowed; }
+.field .locked-input svg { position: absolute; right: 9px; width: 14px; height: 14px; fill: none; stroke: var(--forest); stroke-width: 1.8; pointer-events: none; }

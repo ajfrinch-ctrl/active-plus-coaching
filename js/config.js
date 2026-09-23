@@ -10,6 +10,7 @@ export const STORAGE_KEYS = Object.freeze({
   skipSecurity: 'active-plus-skip-security-v1',
   installDismissed: 'active-plus-install-dismissed',
   idSequence: 'active-plus-id-sequence',
+  usernames: 'active-plus-usernames-v1',
   weather: 'active-plus-weather-v1',
   appConfig: 'active-plus-app-config-v1'
 });
@@ -54,6 +55,7 @@ export const defaultStudent = Object.freeze({
   className: 'দশম শ্রেণি',
   group: 'বিজ্ঞান বিভাগ',
   id: 'AP-1024',
+  username: 'raisa.islam',
   studentMobile: '01700000000',
   guardianMobile: '01800000000',
   fatherName: 'আব্দুল করিম', motherName: 'সালমা বেগম', guardianName: 'আব্দুল করিম',

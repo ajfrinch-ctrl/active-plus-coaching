@@ -18,6 +18,7 @@ export function initDemoForms(warnings = []) {
     const identity = account();
     const values = {
       loginMobile: identity.mobile || defaultStudent.studentMobile, loginPin: DEFAULT_PIN,
+      regUsername: 'raisa.demo',
       regMobile: defaultStudent.studentMobile, nameBn: defaultStudent.nameBn, nameEn: defaultStudent.nameEn,
       fatherName: defaultStudent.fatherName, motherName: defaultStudent.motherName, guardianName: defaultStudent.guardianName,
       birthDate: defaultStudent.birthDate, guardianMobile: defaultStudent.guardianMobile, address: defaultStudent.address,

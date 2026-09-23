@@ -1,6 +1,7 @@
 /* Local exam workflow adapter, NOT secure online authentication/proctoring.
    A production API must own authorization, time, answer keys and accepted submissions. */
 import { teachingRepository, DEMO_TEACHER } from './teaching-data.js';
+import { enabledClasses } from './config.js';
 export const EXAM_KEY = 'activePlus.exams.v1';
 export const EXAM_TYPES = Object.freeze({ mcq: 'MCQ', written: 'লিখিত', short: 'সংক্ষিপ্ত উত্তর' });
 export const EXAM_STATUSES = Object.freeze({ draft: 'খসড়া', pending: 'অনুমোদনের অপেক্ষায়', rejected: 'সংশোধনের জন্য ফেরত', published: 'প্রকাশিত' });
@@ -10,9 +11,10 @@ const fail = text => { throw new Error(text); };
 const number = text => Number(String(text).replace(/[০-৯]/g, d => '০১২৩৪৫৬৭৮৯'.indexOf(d)));
 const round = value => Math.round((value + Number.EPSILON) * 100) / 100;
 export const totalMarks = exam => round(exam.questions.reduce((sum, q) => sum + q.marks, 0));
+export const MCQ_MARKS = 1; // every MCQ question is worth exactly one mark
 export const examTemplate = type => type === 'mcq'
-  ? 'প্রশ্ন: বাংলাদেশের রাজধানী কোনটি?\nনম্বর: ২\nA: ঢাকা\nB: চট্টগ্রাম\nC: খুলনা\nD: রাজশাহী\nউত্তর: A\n---\nপ্রশ্ন: ৫ + ৩ = কত?\nনম্বর: ৩\nA: ৬\nB: ৭\nC: ৮\nD: ৯\nউত্তর: C'
-  : 'প্রশ্ন: পরিবেশ রক্ষায় গাছের গুরুত্ব লেখো।\nনম্বর: ৫\n---\nপ্রশ্ন: পানি দূষণ রোধের তিনটি উপায় লেখো।\nনম্বর: ৩';
+  ? 'প্রশ্ন: বাংলাদেশের রাজধানী কোনটি?\nA: ঢাকা\nB: চট্টগ্রাম\nC: খুলনা\nD: রাজশাহী\nউত্তর: A\n---\nপ্রশ্ন: ৫ + ৩ = কত?\nA: ৬\nB: ৭\nC: ৮\nD: ৯\nউত্তর: C'
+  : 'প্রশ্ন: পরিবেশ রক্ষায় গাছের গুরুত্ব লেখো।\nনম্বর: ৫\n---\nপ্রশ্ন: পানি দূষণ রোধের তিনটি উপায় লেখো।\nনম্বর: ৩';
 export function parseQuestions(text, type) {
   if (!Object.hasOwn(EXAM_TYPES, type)) fail('পরীক্ষার ধরন নির্বাচন করুন।');
   if (!String(text).trim() || String(text).length > 150000) fail('প্রশ্নের টেমপ্লেট পূরণ করুন (সর্বোচ্চ ১৫০,০০০ অক্ষর)।');
@@ -28,8 +30,13 @@ export function parseQuestions(text, type) {
       if (Object.hasOwn(fields, key)) fail(`প্রশ্ন ${i + 1}: একই ঘর দুবার দেওয়া হয়েছে।`);
       fields[key] = match[2];
     }
-    const marks = number(fields.marks);
-    if (!fields.question || fields.question.length > 1200 || !Number.isFinite(marks) || marks <= 0 || marks > 1000 || round(marks) !== marks) fail(`প্রশ্ন ${i + 1}: প্রশ্নের লেখা ও সঠিক নম্বর দিন (০.০১–১০০০)।`);
+    const marks = type === 'mcq' ? MCQ_MARKS : number(fields.marks);
+    if (!fields.question || fields.question.length > 1200) fail(`প্রশ্ন ${i + 1}: প্রশ্নের লেখা দিন (সর্বোচ্চ ১২০০ অক্ষর)।`);
+    if (type === 'mcq') {
+      if (fields.marks !== undefined && number(fields.marks) !== MCQ_MARKS) fail(`প্রশ্ন ${i + 1}: MCQ-তে প্রতি প্রশ্নের নম্বর ১ নির্ধারিত — “নম্বর:” লাইনটি বাদ দিন।`);
+    } else if (!Number.isFinite(marks) || marks <= 0 || marks > 1000 || round(marks) !== marks) {
+      fail(`প্রশ্ন ${i + 1}: নম্বর ১ থেকে ১০০০-এর মধ্যে পূর্ণসংখ্যা দিন।`);
+    }
     const q = { id: `q${i + 1}`, text: fields.question, marks };
     if (type === 'mcq') {
       const keys = ['A', 'B', 'C', 'D'];
@@ -49,9 +56,16 @@ export function classExamDate(startAt) {
   date.setTime(date.getTime() + 86400000);
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka', year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
 }
+/* Exams saved before the class picker existed carry no className and stay
+   visible to every class; new exams name the class they belong to. */
+export function examMatchesClass(exam, className) {
+  return !exam.className || exam.className === className;
+}
 export function validateExam(input) {
   const title = String(input.title || '').trim(), subject = String(input.subject || '').trim();
   if (!title || title.length > 150 || !subject || subject.length > 80) fail('পরীক্ষার নাম ও একটি বিষয় দিন।');
+  const className = String(input.className || '').trim();
+  if (className && !enabledClasses.includes(className)) fail('সঠিক শ্রেণি নির্বাচন করুন।');
   const startAt = Number(input.startAt), endAt = Number(input.endAt), lateMinutes = input.type === 'mcq' ? Number(input.lateMinutes ?? 10) : 0, negative = Number(input.negative ?? 0), passPercent = Number(input.passPercent ?? 33);
   if (!Number.isFinite(startAt) || !Number.isFinite(endAt) || endAt <= startAt || endAt - startAt > 86400000 || startAt < 1577836800000 || endAt > 4102444800000) fail('সঠিক শুরু ও শেষ সময় দিন; সময়কাল সর্বোচ্চ ২৪ ঘণ্টা।');
   if (input.type === 'mcq' && (!Number.isInteger(lateMinutes) || lateMinutes < 1 || lateMinutes * 60000 > endAt - startAt)) fail('দেরিতে প্রবেশের সীমা ১ মিনিট থেকে পরীক্ষার সময়কালের মধ্যে দিন।');
@@ -60,7 +74,7 @@ export function validateExam(input) {
   const instructions = String(input.instructions || '').trim();
   if (instructions.length > 2000) fail('নির্দেশনা সর্বোচ্চ ২০০০ অক্ষরে দিন।');
   const questions = parseQuestions(input.template, input.type);
-  return { title, subject, type: input.type, startAt, endAt, lateMinutes, negative: input.type === 'mcq' ? negative : 0, passPercent, instructions, template: input.template, questions };
+  return { title, subject, className, type: input.type, startAt, endAt, lateMinutes, negative: input.type === 'mcq' ? negative : 0, passPercent, instructions, template: input.template, questions };
 }
 function read() {
   const raw = window.localStorage.getItem(EXAM_KEY);
@@ -182,6 +196,7 @@ export const examRepository = {
     return mutate(db => {
       const e = examById(db, examId), now = Date.now();
       if (e.type !== 'mcq' || e.status !== 'published' || now < e.startAt || now >= e.endAt) fail('এখন পরীক্ষা শুরু করা যাবে না।');
+      if (!examMatchesClass(e, person.className)) fail('এই পরীক্ষাটি তোমার শ্রেণির জন্য নয়।');
       const own = db.attempts.filter(a => a.examId === e.id && a.studentId === person.id);
       if (own.some(a => a.status === 'active')) return;
       if (!own.length && now > e.startAt + e.lateMinutes * 60000) fail('দেরিতে প্রবেশের সময়সীমা শেষ।');

@@ -26,6 +26,8 @@ const bn = toBanglaNumber;
 const $ = selector => document.querySelector(selector);
 const $$ = selector => Array.from(document.querySelectorAll(selector));
 
+const REPORT_LIST_PAGE = 20; // report rows shown on screen before "show more"
+
 const state = {
   students: adminStudents.map(student => ({ ...student })),
   notices: adminNotices.map(notice => ({ ...notice })),
@@ -55,7 +57,8 @@ const state = {
     month: monthLabel(),
     className: 'all',
     feeType: 'all',
-    method: 'all'
+    method: 'all',
+    listLimit: REPORT_LIST_PAGE
   },
   filter: 'all',
   classFilter: 'all',
@@ -922,7 +925,15 @@ function renderReportGenerator() {
   $('#reportTrxCount').textContent = `${bn(filtered.length)} টি`;
   $('#reportGrandTotal').textContent = money(total);
   $('#reportAverage').textContent = money(filtered.length ? Math.round(total / filtered.length) : 0);
-  $('#reportCollectionList').innerHTML = filtered.length ? filtered.map(tx => `
+  const limit = state.reportFilters.listLimit;
+  const visible = filtered.slice(0, limit);
+  const moreButton = $('#reportListMore');
+  if (moreButton) {
+    const remaining = filtered.length - visible.length;
+    moreButton.hidden = remaining <= 0;
+    moreButton.textContent = remaining > 0 ? `আরও ${bn(Math.min(REPORT_LIST_PAGE, remaining))} টি লেনদেন দেখুন` : '';
+  }
+  $('#reportCollectionList').innerHTML = visible.length ? visible.map(tx => `
     <article class="report-payment" role="listitem">
       <div class="report-payment-head"><strong>${escapeHtml(tx.studentName)}</strong><b>${money(Number(tx.amount))}</b></div>
       <small>${escapeHtml(tx.studentId)} • ${escapeHtml(tx.className)}</small>
@@ -1831,6 +1842,25 @@ $('#ledgerSearch')?.addEventListener('input', renderStudentLedger);
     state.reportFilters.method = $('#reportMethod').value;
     renderReportGenerator();
   });
+});
+
+function resetReportFilters() {
+  state.reportFilters.month = monthLabel();
+  state.reportFilters.className = 'all';
+  state.reportFilters.feeType = 'all';
+  state.reportFilters.method = 'all';
+  state.reportFilters.listLimit = REPORT_LIST_PAGE;
+  $('#reportMonth').value = state.reportFilters.month;
+  $('#reportClass').value = 'all';
+  $('#reportFeeType').value = 'all';
+  $('#reportMethod').value = 'all';
+  renderReportGenerator();
+}
+
+$('#reportFiltersReset')?.addEventListener('click', resetReportFilters);
+$('#reportListMore')?.addEventListener('click', () => {
+  state.reportFilters.listLimit += REPORT_LIST_PAGE;
+  renderReportGenerator();
 });
 
 /* Report Center downloads (PDF + CSV) and class report → student list shortcut */

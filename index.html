@@ -29,21 +29,23 @@
       <div class="auth-tabs" role="tablist" aria-label="অ্যাকাউন্ট অপশন">
         <button class="auth-tab active" type="button" data-auth-tab="login" role="tab" aria-selected="true">লগইন</button>
         <button class="auth-tab" type="button" data-auth-tab="register" role="tab" aria-selected="false">রেজিস্ট্রেশন</button>
+        <button class="auth-tab" type="button" data-auth-tab="payment" role="tab" aria-selected="false">পেমেন্ট কাউন্টার</button>
       </div>
       <p class="auth-message" id="authMessage" role="status" hidden></p>
 
       <div class="auth-panel active" id="loginPanel" data-auth-panel="login">
         <div class="auth-panel-heading"><div><h2>শিক্ষার্থী লগইন</h2></div></div>
         <form id="loginForm" novalidate>
-          <label for="loginMobile">মোবাইল নম্বর</label>
-          <div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-phone"></use></svg><input id="loginMobile" name="mobile" type="tel" inputmode="numeric" autocomplete="tel" placeholder="০১XXXXXXXXX" required></div>
-          <p class="fixed-field-note">নতুন অ্যাকাউন্টের ডিফল্ট PIN: ১২৩১২৩</p><label for="loginPin">পাসকোড / PIN</label>
+          <label for="loginMobile">ইউজারনেম অথবা মোবাইল নম্বর</label>
+          <div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-user"></use></svg><input id="loginMobile" name="mobile" type="text" autocomplete="username" placeholder="ইউজারনেম বা ০১XXXXXXXXX" required></div>
+          <p class="fixed-field-note">নিরাপত্তার জন্য মোবাইল নম্বরের বদলে নিজের ইউজারনেম দিয়ে লগইন করাই ভালো। নতুন অ্যাকাউন্টের ডিফল্ট PIN: ১২৩১২৩</p><label for="loginPin">পাসকোড / PIN</label>
           <div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg><input id="loginPin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="6" autocomplete="current-password" placeholder="৪–৬ সংখ্যার PIN" required><button class="show-pin" type="button" data-toggle-pin="loginPin" aria-label="PIN দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg></button></div>
           <div class="form-row"><label class="remember-label"><input type="checkbox" id="rememberMe" checked><span class="fake-check"></span>এই ডিভাইসে মনে রাখুন</label><button type="button" class="link-button" id="forgotPinButton">PIN ভুলে গেছেন?</button></div>
           <button class="auth-submit" type="submit">লগইন করুন <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg></button>
         </form>
         <button class="demo-button" type="button" id="demoLoginButton"><span class="demo-dot"></span> ডামি অ্যাকাউন্টে এক ক্লিকে প্রবেশ</button>
         <p class="auth-footnote">অ্যাকাউন্ট নেই? <button type="button" class="inline-link" data-auth-tab="register">রেজিস্ট্রেশন করুন</button></p>
+        <p class="auth-footnote">কোচিং কাউন্টার? <button type="button" class="inline-link" data-auth-tab="payment">পেমেন্ট রিসিভ প্যানেলে সরাসরি ঢুকুন</button></p>
       </div>
 
       <div class="auth-panel" id="registerPanel" data-auth-panel="register" hidden>
@@ -58,6 +60,16 @@
             <div class="form-section-title"><span>০১</span><div><strong id="stepOneTitle">অ্যাকাউন্ট তথ্য</strong><small>লগইনের জন্য ব্যবহার হবে</small></div></div>
             <div class="field-grid">
               <div class="field full"><label for="regMobile">মোবাইল নম্বর <i>*</i></label><div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-phone"></use></svg><input id="regMobile" name="mobile" type="tel" inputmode="numeric" autocomplete="tel" placeholder="০১XXXXXXXXX" required></div></div>
+              <div class="field full">
+                <label for="regUsername">ইউজারনেম <i>*</i></label>
+                <div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-user"></use></svg><input id="regUsername" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" minlength="4" maxlength="20" placeholder="যেমন: raisa.islam" aria-describedby="regUsernameHint" required></div>
+                <div class="username-row">
+                  <button class="link-button" type="button" id="regUsernameSuggest">নাম থেকে সাজেশন নিন</button>
+                  <span class="username-lock-note"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg> একবার সেট হলে আর বদলানো যাবে না</span>
+                </div>
+                <p id="regUsernameStatus" class="username-status" role="status" aria-live="polite"></p>
+                <small id="regUsernameHint" class="fixed-field-note">৪–২০ অক্ষর; ইংরেজি অক্ষর দিয়ে শুরু, তারপর ছোট হাতের অক্ষর/সংখ্যা/ডট/আন্ডারস্কোর। লগইনে মোবাইল নম্বরের বদলে এটি ব্যবহার করা যাবে — নম্বর কাউকে বলতে হবে না।</small>
+              </div>
               <div class="field"><label for="regPin">ডিফল্ট PIN <i>*</i></label><div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg><input id="regPin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="6" placeholder="PIN দিন" value="123123" required><button class="show-pin" type="button" data-toggle-pin="regPin" aria-label="PIN দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg></button></div></div>
               <div class="field"><label for="regPinConfirm">PIN আবার দিন <i>*</i></label><div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg><input id="regPinConfirm" name="pinConfirm" type="password" inputmode="numeric" minlength="4" maxlength="6" placeholder="PIN মিলান" value="123123" required><button class="show-pin" type="button" data-toggle-pin="regPinConfirm" aria-label="PIN দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg></button></div></div>
             </div>
@@ -113,9 +125,28 @@
         </form>
         <p class="auth-footnote">আগে থেকেই অ্যাকাউন্ট আছে? <button type="button" class="inline-link" data-auth-tab="login">লগইন করুন</button></p>
       </div>
+
+      <!-- Payment counter: same user ID + PIN as payment.html, straight into the desk. -->
+      <div class="auth-panel" id="paymentPanel" data-auth-panel="payment" hidden>
+        <div class="auth-panel-heading"><div><h2>পেমেন্ট রিসিভ কাউন্টার</h2><p>আইডি ও PIN দিলেই অটো-লগইন</p></div></div>
+        <p class="register-intro">কোচিংয়ের পেমেন্ট কাউন্টারের ইউনিক ইউসার আইডি ও PIN দিন। যাচাই হলেই আলাদা লগইন ফর্ম ছাড়াই সরাসরি পেমেন্ট রিসিভ প্যানেলে ঢুকে যাবেন — শিক্ষার্থী খুঁজে ফি নেওয়া ও রসিদ পাঠানো যাবে।</p>
+        <form id="payPortalLoginForm" novalidate>
+          <label for="payPortalUser">পেমেন্ট পোর্টাল ইউসার আইডি</label>
+          <div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-user"></use></svg><input id="payPortalUser" name="payUser" type="text" autocomplete="username" placeholder="যেমন: APC-PAY-001" required></div>
+          <p class="fixed-field-note">শিক্ষার্থী লগইন ঘরেও এই আইডি ও PIN দিলে সরাসরি পেমেন্ট প্যানেলে চলে যাবেন।</p>
+          <label for="payPortalPin">পাসকোড / PIN</label>
+          <div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg><input id="payPortalPin" name="payPin" type="password" inputmode="numeric" minlength="4" maxlength="6" autocomplete="current-password" placeholder="৪–৬ সংখ্যার PIN" required><button class="show-pin" type="button" data-toggle-pin="payPortalPin" aria-label="PIN দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg></button></div>
+          <div class="form-row"><label class="remember-label"><input type="checkbox" id="payPortalRemember" checked><span class="fake-check"></span>এই ডিভাইসে মনে রাখুন</label></div>
+          <p id="payPortalError" class="auth-message" role="alert" hidden></p>
+          <button class="auth-submit" type="submit">পেমেন্ট প্যানেলে সরাসরি প্রবেশ <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg></button>
+        </form>
+        <button class="demo-button" type="button" id="payPortalDemoButton"><span class="demo-dot"></span> ডেমো আইডি APC-PAY-001 দিয়ে এক ক্লিকে ঢুকুন</button>
+        <p class="auth-footnote">ডেমো প্রবেশাধিকার — ইউসার আইডি: <strong>APC-PAY-001</strong> • PIN: <strong>১২৩১২৩</strong>। প্যানেলের ভেতরে লক আইকন থেকে PIN বদলানো যায়।</p>
+      </div>
     </div>
     <p class="admin-entry-link-wrap"><a class="admin-entry-link" href="admin.html"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-shield"></use></svg> কোচিং অফিস? ডামি এডমিন প্যানেলে এক ক্লিকে ঢুকুন</a></p>
     <p class="admin-entry-link-wrap"><a class="admin-entry-link" href="teacher.html">শিক্ষক? আলাদা শিক্ষক প্যানেলে প্রবেশ করুন →</a></p>
+    <p class="admin-entry-link-wrap"><a class="admin-entry-link" href="payment.html"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-wallet"></use></svg> পেমেন্ট রিসিভ কাউন্টার? সরাসরি প্যানেলে প্রবেশ →</a></p>
   </section>
 
   <!-- A compact, mobile-first app shell. All content is local and works without a network. -->
@@ -321,7 +352,7 @@
       <!-- PROFILE -->
       <section class="view" id="profileView" data-view-panel="profile" aria-labelledby="profileTitle">
         <div class="page-intro profile-intro"><p class="eyebrow">তোমার তথ্য</p><h1 id="profileTitle">প্রোফাইল</h1><p>তোমার শিক্ষার্থী অ্যাকাউন্টের তথ্য।</p></div>
-        <article class="profile-card"><div class="profile-avatar" id="profileAvatar">র</div><div><h2 id="profileName">রাইসা ইসলাম</h2><p id="profileMeta">দশম শ্রেণি · বিজ্ঞান বিভাগ</p><span class="student-id">ID: <b id="studentId">AP-1024</b></span></div><button class="edit-button" type="button" data-action="edit-profile" aria-label="প্রোফাইল সম্পাদনা"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-edit"></use></svg></button></article>
+        <article class="profile-card"><div class="profile-avatar" id="profileAvatar">র</div><div><h2 id="profileName">রাইসা ইসলাম</h2><p id="profileMeta">দশম শ্রেণি · বিজ্ঞান বিভাগ</p><span class="student-id">ID: <b id="studentId">AP-1024</b></span><span class="student-id username-chip" id="profileUsernameWrap" hidden>@<b id="profileUsername">raisa.islam</b></span></div><button class="edit-button" type="button" data-action="edit-profile" aria-label="প্রোফাইল সম্পাদনা"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-edit"></use></svg></button></article>
         <article class="contact-card"><div class="contact-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-phone"></use></svg></div><div class="contact-copy"><span>শিক্ষার্থীর মোবাইল</span><strong id="studentMobileValue">০১৭০০০০০০০০</strong><small>অভিভাবক · <b id="guardianMobileValue">০১৮০০০০০০০০</b></small><small id="studentAdditionalMobiles" hidden></small></div><button class="whatsapp-button" type="button" data-action="whatsapp-share" aria-label="WhatsApp-এ তথ্য শেয়ার করুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-whatsapp"></use></svg><span>WhatsApp</span></button></article>
         <div class="profile-section"><p class="eyebrow">অ্যাকাউন্ট</p><div class="settings-list"><button type="button" data-action="edit-profile"><span class="settings-icon mint"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-user"></use></svg></span><span><strong>ব্যক্তিগত তথ্য</strong><small>নাম, ক্লাস ও বিভাগ</small></span><svg class="setting-arrow" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-chevron-right"></use></svg></button><button type="button" data-action="show-offline"><span class="settings-icon green"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-download"></use></svg></span><span><strong>অফলাইন ডেটা</strong><small>সব ডেটা এই ফোনেই সংরক্ষিত</small></span><span class="saved-tag">সংরক্ষিত</span></button><button type="button" data-action="install"><span class="settings-icon purple"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-smartphone"></use></svg></span><span><strong>অ্যাপ ইনস্টল করুন</strong><small>হোম স্ক্রিন থেকে দ্রুত খুলুন</small></span><svg class="setting-arrow" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-chevron-right"></use></svg></button></div></div>
         <div class="profile-section"><p class="eyebrow">নিরাপত্তা</p><div class="settings-list">
@@ -369,7 +400,8 @@
         <div class="field full"><label for="editGuardianName">অভিভাবকের নাম</label><input id="editGuardianName" name="guardianName" type="text"></div>
         <div class="field"><label for="editBirthDate">জন্মতারিখ</label><input id="editBirthDate" name="birthDate" type="date"></div>
         <div class="field"><label for="editGender">লিঙ্গ</label><select id="editGender" name="gender"><option value="">নির্বাচন করুন</option><option>পুরুষ</option><option>নারী</option><option>অন্যান্য</option></select></div>
-        <div class="field full"><label for="editStudentMobile">প্রথম নিবন্ধনের মোবাইল (স্থায়ী)</label><input id="editStudentMobile" name="studentMobile" type="tel" inputmode="numeric" readonly aria-describedby="primaryMobileNote"><small id="primaryMobileNote" class="fixed-field-note">এই নম্বর মুছতে বা বদলাতে পারবেন না। লগইনে এই নম্বরই ব্যবহার করুন।</small></div><div class="field full"><label for="editAdditionalMobile">নতুন মোবাইল নম্বর যোগ করুন</label><input id="editAdditionalMobile" name="additionalMobile" type="tel" inputmode="tel" placeholder="০১XXXXXXXXX" autocomplete="tel"><small class="fixed-field-note">আগের নম্বরগুলো থাকবে; নতুন নম্বর শুধু যোগাযোগের জন্য।</small><small id="editAdditionalMobiles"></small></div>
+        <div class="field full"><label for="editStudentMobile">প্রথম নিবন্ধনের মোবাইল (স্থায়ী)</label><input id="editStudentMobile" name="studentMobile" type="tel" inputmode="numeric" readonly aria-describedby="primaryMobileNote"><small id="primaryMobileNote" class="fixed-field-note">এই নম্বর মুছতে বা বদলাতে পারবেন না। লগইনে এই নম্বরই ব্যবহার করুন।</small></div>
+        <div class="field full"><label for="editUsername">ইউজারনেম (স্থায়ী)</label><div class="locked-input"><input id="editUsername" name="username" type="text" autocomplete="off" readonly aria-describedby="editUsernameNote"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg></div><small id="editUsernameNote" class="fixed-field-note">ইউজারনেম স্থায়ী — বদলানো যাবে না। লগইনে এটি ব্যবহার করলে মোবাইল নম্বর দিতে হয় না।</small></div><div class="field full"><label for="editAdditionalMobile">নতুন মোবাইল নম্বর যোগ করুন</label><input id="editAdditionalMobile" name="additionalMobile" type="tel" inputmode="tel" placeholder="০১XXXXXXXXX" autocomplete="tel"><small class="fixed-field-note">আগের নম্বরগুলো থাকবে; নতুন নম্বর শুধু যোগাযোগের জন্য।</small><small id="editAdditionalMobiles"></small></div>
         <div class="field"><label for="editGuardianMobile">অভিভাবকের মোবাইল</label><input id="editGuardianMobile" name="guardianMobile" type="tel" inputmode="numeric"></div>
         <div class="field full"><label for="editAddress">সম্পূর্ণ ঠিকানা</label><textarea id="editAddress" name="address" rows="3"></textarea></div>
         <div class="field"><label for="classInput">শ্রেণি / বর্ষ</label><select id="classInput" name="className" required></select></div>
@@ -384,7 +416,7 @@
   </div>
 
   <div class="modal-backdrop" id="recoveryModal" hidden>
-    <section class="modal edit-modal" role="dialog" aria-modal="true" aria-labelledby="recoveryModalTitle"><div class="modal-header"><div><p class="eyebrow">অ্যাকাউন্ট পুনরুদ্ধার</p><h2 id="recoveryModalTitle">PIN রিসেট করুন</h2></div><button type="button" class="modal-close" data-close-modal="recoveryModal" aria-label="বন্ধ করুন">×</button></div><p class="recovery-copy">রেজিস্ট্রেশনের সময় দেওয়া নিরাপত্তা প্রশ্নের উত্তর দিয়ে নতুন PIN সেট করুন।</p><form id="recoveryForm"><label for="recoveryMobile">মোবাইল নম্বর</label><input id="recoveryMobile" name="mobile" type="tel" inputmode="numeric" placeholder="০১XXXXXXXXX" required><label for="recoveryQuestion">নিরাপত্তা প্রশ্ন</label><select id="recoveryQuestion" name="question" required><option value="">প্রশ্ন নির্বাচন করুন</option><option>তোমার শৈশবের ডাকনাম কী?</option><option>তোমার প্রিয় শিক্ষকের নাম কী?</option><option>তোমার জন্মস্থানের নাম কী?</option><option>তোমার প্রিয় বইয়ের নাম কী?</option></select><label for="recoveryAnswer">উত্তর</label><input id="recoveryAnswer" name="answer" type="text" required><label for="recoveryPin">নতুন PIN</label><div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg><input id="recoveryPin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="6" placeholder="৪–৬ সংখ্যা" required><button class="show-pin" type="button" data-toggle-pin="recoveryPin" aria-label="PIN দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg></button></div><button class="modal-action" type="submit">নতুন PIN সংরক্ষণ করুন</button></form><div class="admin-reset-note"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-help"></use></svg><span>নিরাপত্তা প্রশ্নের উত্তর মনে না থাকলে এডমিন PIN রিসেট করে দিতে পারবেন।</span></div></section>
+    <section class="modal edit-modal" role="dialog" aria-modal="true" aria-labelledby="recoveryModalTitle"><div class="modal-header"><div><p class="eyebrow">অ্যাকাউন্ট পুনরুদ্ধার</p><h2 id="recoveryModalTitle">PIN রিসেট করুন</h2></div><button type="button" class="modal-close" data-close-modal="recoveryModal" aria-label="বন্ধ করুন">×</button></div><p class="recovery-copy">রেজিস্ট্রেশনের সময় দেওয়া নিরাপত্তা প্রশ্নের উত্তর দিয়ে নতুন PIN সেট করুন।</p><form id="recoveryForm"><label for="recoveryMobile">ইউজারনেম অথবা মোবাইল নম্বর</label><input id="recoveryMobile" name="mobile" type="text" autocomplete="username" placeholder="ইউজারনেম বা ০১XXXXXXXXX" required><label for="recoveryQuestion">নিরাপত্তা প্রশ্ন</label><select id="recoveryQuestion" name="question" required><option value="">প্রশ্ন নির্বাচন করুন</option><option>তোমার শৈশবের ডাকনাম কী?</option><option>তোমার প্রিয় শিক্ষকের নাম কী?</option><option>তোমার জন্মস্থানের নাম কী?</option><option>তোমার প্রিয় বইয়ের নাম কী?</option></select><label for="recoveryAnswer">উত্তর</label><input id="recoveryAnswer" name="answer" type="text" required><label for="recoveryPin">নতুন PIN</label><div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg><input id="recoveryPin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="6" placeholder="৪–৬ সংখ্যা" required><button class="show-pin" type="button" data-toggle-pin="recoveryPin" aria-label="PIN দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg></button></div><button class="modal-action" type="submit">নতুন PIN সংরক্ষণ করুন</button></form><div class="admin-reset-note"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-help"></use></svg><span>নিরাপত্তা প্রশ্নের উত্তর মনে না থাকলে এডমিন PIN রিসেট করে দিতে পারবেন।</span></div></section>
   </div>
 
   <!-- Reusable SVG icon sprite. No external fonts or assets are required for offline use. -->
@@ -419,6 +451,7 @@
     <symbol id="icon-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
     <symbol id="icon-logout" viewBox="0 0 24 24"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></symbol>
     <symbol id="icon-shield" viewBox="0 0 24 24"><path d="M12 3 5 6v5.2c0 4.8 3 8 7 9.8 4-1.8 7-5 7-9.8V6l-7-3Z"/><path d="m9 12 2 2 4-4.5"/></symbol>
+    <symbol id="icon-wallet" viewBox="0 0 24 24"><path d="M3 8.5A2.5 2.5 0 0 1 5.5 6H18a2 2 0 0 1 2 2v1"/><rect x="3" y="8.5" width="18" height="10.5" rx="2.5"/><path d="M16.5 14h2"/></symbol>
   </svg>
   <script type="module" src="js/main.js"></script>
 </body>

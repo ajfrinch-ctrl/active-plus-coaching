@@ -753,14 +753,67 @@ body.admin-modal-open { overflow: hidden; }
 /* ---------- Report Center ---------- */
 
 .reports-intro-hint { margin: -6px 0 14px; }
+
+/* Two labelled groups: money first, students/academics after. */
+.reports-group-title {
+  margin: 22px 0 10px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--line);
+  color: var(--forest);
+  font-size: 13px;
+  letter-spacing: .02em;
+}
+.reports-group-title:first-of-type { margin-top: 6px; }
+
 .report-card-head { align-items: flex-start; }
 .report-card .report-filters { border-radius: 0; }
-.quick-report-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin-top: 14px; }
-.quick-report-card { padding: 16px; }
-.quick-report-desc { color: var(--muted); font-size: 11.5px; line-height: 1.6; }
-.quick-report-meta { margin-top: 8px; padding: 8px 12px; border: 1px solid var(--mint-strong); border-radius: 10px; color: var(--forest); background: var(--mint); font-size: 11px; font-weight: 800; overflow-wrap: anywhere; }
+.report-card .quick-report-desc { margin: 0 16px; }
+.report-filters-foot { display: flex; align-items: flex-end; }
+.filter-reset { width: 100%; min-height: 44px; }
+
+/* The live list stays short; everything still lands in the download. */
+.report-list-more {
+  display: block;
+  width: calc(100% - 32px);
+  min-height: 42px;
+  margin: 0 16px 16px;
+  border: 1px dashed var(--mint-strong);
+  border-radius: 12px;
+  color: var(--forest);
+  background: var(--mint);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.report-list-more:disabled { opacity: .6; }
+
+/* Uniform card anatomy so the group reads as one set, not seven odd boxes. */
+.quick-report-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin-top: 4px; }
+.quick-report-card { display: flex; flex-direction: column; padding: 16px; }
+.quick-report-desc { color: var(--muted); font-size: 11.5px; line-height: 1.6; min-height: 34px; }
+.quick-report-meta {
+  margin-top: auto;
+  padding: 8px 12px;
+  border: 1px solid var(--mint-strong);
+  border-radius: 10px;
+  color: var(--forest);
+  background: var(--mint);
+  font-size: 12px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
 .quick-report-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .quick-report-actions .mini-btn { min-height: 38px; padding: 0 14px; }
+
+/* Wider screens: filters and cards share the row instead of stacking. */
+@media (min-width: 720px) {
+  .report-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .report-filters-foot { grid-column: 1 / -1; }
+  .filter-reset { width: auto; padding: 0 18px; }
+  .quick-report-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  .report-collection-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .report-list-more { width: auto; margin: 0 16px 16px; padding: 0 22px; justify-self: center; }
+}
 
 /* ---------- Teacher registration control ---------- */
 

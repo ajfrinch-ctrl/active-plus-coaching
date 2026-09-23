@@ -134,3 +134,125 @@
 .learning-card-actions .teaching-actions:first-child { margin-top: 0; }
 .learning-card-actions button { width: 100%; }
 .learning-card-actions .learning-action-note { font-size: 10px; text-align: center; margin-top: 8px; }
+
+/* ---------- Teacher panel: work queue, grouping and bulk marking ---------- */
+
+/* Home summary holds four tiles; quick actions wrap instead of squeezing. */
+/* Three create buttons still fit one row on a 320px screen (288px content). */
+.teacher-quick-actions button { flex: 1 1 30%; min-width: 88px; }
+
+/* Pending-work dot on the bottom nav so unfinished work is visible anywhere. */
+.admin-bottom-item .nav-chip { position: relative; }
+.nav-dot {
+  position: absolute;
+  top: -4px;
+  right: -6px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 99px;
+  background: #b34834;
+  color: #fff;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 16px;
+  text-align: center;
+}
+.nav-dot[hidden] { display: none; }
+
+/* Queue cards: one line of what is missing, one tap to fix it. */
+.teacher-queue-card { border-color: var(--mint-strong); }
+.teacher-queue-card .teaching-actions button { flex: 1 1 auto; }
+
+.teaching-progress-line { margin-top: 8px; padding: 7px 10px; border-radius: 9px; font-size: 12px; font-weight: 700; }
+.teaching-progress-line.pending { background: #fdf1e7; color: #a35a20; }
+.teaching-progress-line.clear { background: var(--mint); color: var(--forest); }
+.teacher-all-clear { border-style: solid; border-color: var(--mint-strong); background: var(--mint); color: var(--forest); }
+
+/* Type tabs + date groups make the flat record list scannable. */
+.teacher-type-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 12px 0 0; }
+.teacher-type-tabs button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--white);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.teacher-type-tabs button.active { border-color: var(--forest); background: var(--mint); color: var(--forest); }
+.teacher-type-tabs .tab-count {
+  min-width: 22px;
+  padding: 2px 6px;
+  border-radius: 99px;
+  background: var(--mint-2);
+  color: var(--forest);
+  font-size: 11px;
+  font-weight: 800;
+  text-align: center;
+}
+.teacher-type-tabs .tab-count:empty { display: none; }
+.teacher-group-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 16px 0 -4px;
+  padding-bottom: 6px;
+  border-bottom: 1px dashed var(--line);
+  color: var(--forest);
+  font-size: 12.5px;
+  font-weight: 800;
+}
+.teacher-group-label:first-child { margin-top: 4px; }
+.teacher-group-label span { color: var(--muted); font-size: 11px; font-weight: 700; }
+.teacher-list-more {
+  display: block;
+  width: 100%;
+  min-height: 42px;
+  margin-top: 12px;
+  border: 1px dashed var(--mint-strong);
+  border-radius: 12px;
+  background: var(--mint);
+  color: var(--forest);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.teacher-list-more[hidden] { display: none; }
+
+/* Grouped labels inside the "আরও" menu. */
+.teacher-menu-label {
+  padding: 12px 14px 0;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .04em;
+}
+
+/* Bulk marking: summary, quick fill and search above the student rows. */
+.teacher-progress-bar { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--mint-strong); border-radius: 12px; background: var(--mint); }
+.progress-summary { font-size: 12.5px; font-weight: 800; color: #a35a20; }
+.progress-summary.complete { color: var(--forest); }
+.teacher-quick-fill { display: flex; flex-wrap: wrap; gap: 8px; }
+.teacher-quick-fill button {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  background: var(--white);
+  color: var(--forest);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+}
+.teacher-quick-fill button[aria-pressed="true"] { border-color: var(--forest); background: var(--forest); color: #fff; }
+.teacher-progress-bar label { font-size: 12px; font-weight: 700; }
+.teacher-progress-row[hidden] { display: none; }
+.teaching-progress-line.idle { background: var(--mint-2); color: var(--muted); }

@@ -14,6 +14,13 @@ export function renderStudent(student) {
   $('#profileMeta') && ($('#profileMeta').textContent = meta);
   $('#routineClass') && ($('#routineClass').textContent = meta);
   $('#studentId') && ($('#studentId').textContent = student.id);
+  const usernameChip = $('#profileUsername');
+  const usernameWrap = $('#profileUsernameWrap');
+  if (usernameChip && usernameWrap) {
+    const username = student.username || loadAccount()?.username || '';
+    usernameChip.textContent = username;
+    usernameWrap.hidden = !username;
+  }
   $('#studentMobileValue') && ($('#studentMobileValue').textContent = toBanglaNumber(student.studentMobile || 'নম্বর নেই'));
   $('#guardianMobileValue') && ($('#guardianMobileValue').textContent = toBanglaNumber(student.guardianMobile || 'নম্বর নেই'));
   const additional = $('#studentAdditionalMobiles');

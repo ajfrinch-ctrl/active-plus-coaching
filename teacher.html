@@ -38,16 +38,44 @@
       <div id="teacherDataError" class="finance-error" role="alert" hidden>ডেটা পড়া যায়নি। <button id="teacherRetry" class="mini-btn" type="button">আবার চেষ্টা করুন</button></div>
       <section id="teacherHome" class="teacher-view" aria-labelledby="teacherHomeTitle">
         <div class="page-intro"><div><p class="eyebrow" id="teacherToday"></p><h1 id="teacherHomeTitle">স্বাগতম, সাইফুল স্যার</h1><p class="finance-hint">আপনার ক্লাস ও শিক্ষার্থীদের কাজ</p></div><span class="badge badge-pending">লোকাল ডেমো</span></div>
-        <div class="teacher-summary"><div><span>প্রকাশিত কাজ</span><strong id="teacherPublishedCount">০</strong></div><div><span>খসড়া</span><strong id="teacherDraftCount">০</strong></div></div>
-        <div class="teacher-quick-actions"><button class="admin-btn primary" type="button" data-new-activity="exam">+ পরীক্ষা তৈরি</button><button class="admin-btn ghost" type="button" data-new-activity="homework">+ বাড়ির কাজ</button></div>
+
+        <div class="teacher-summary">
+          <div><span>প্রকাশিত কাজ</span><strong id="teacherPublishedCount">০</strong></div>
+          <div><span>খসড়া</span><strong id="teacherDraftCount">০</strong></div>
+          <div><span>মূল্যায়ন বাকি</span><strong id="teacherPendingCount">০</strong></div>
+          <div><span>আজকের ক্লাস</span><strong id="teacherTodayClassCount">০</strong></div>
+        </div>
+
+        <div class="teacher-toolbar">
+          <label for="teacherHomeClass">কোন শ্রেণির কাজ দেখবেন</label><select id="teacherHomeClass"><option value="all">সব শ্রেণি</option></select>
+        </div>
+
+        <div class="teacher-quick-actions">
+          <button class="admin-btn primary" type="button" data-new-activity="exam">+ পরীক্ষা</button>
+          <button class="admin-btn ghost" type="button" data-new-activity="homework">+ বাড়ির কাজ</button>
+          <button class="admin-btn ghost" type="button" data-new-activity="routine">+ ক্লাস</button>
+        </div>
+
+        <div class="teacher-section-heading"><h2>মনোযোগ দরকার</h2><small id="teacherAttentionHint">বাকি কাজ</small></div>
+        <div id="teacherAttention" class="teacher-record-list"></div>
+
+        <div class="teacher-section-heading"><h2>আজকের ক্লাস</h2><small>সময় অনুযায়ী সাজানো</small></div>
+        <div id="teacherTodayClasses" class="teacher-record-list"></div>
+
         <div class="teacher-section-heading"><h2>সাম্প্রতিক কাজ</h2><small>সর্বশেষ ৫টি</small></div>
         <div id="teacherRecent" class="teacher-record-list"></div>
-        <p class="teacher-local-note">প্রকাশিত কাজ একই ব্রাউজারের সংশ্লিষ্ট শ্রেণির শিক্ষার্থী অ্যাপে দেখা যাবে। খসড়া শুধু এখানে থাকে।</p>
+        <p class="teacher-local-note">প্রকাশিত কাজ একই ব্রাউজারের সংশ্লিষ্ট শ্রেণির শিক্ষার্থী অ্যাপে দেখা যাবে। খসড়া শুধু এখানে থাকে।</p>
       </section>
       <section id="teacherRecords" class="teacher-view" aria-labelledby="teacherRecordsTitle" hidden>
         <button class="admin-more-back" id="teacherRecordsBack" type="button" data-teacher-view="more" hidden>← আরও-তে ফিরুন</button>
         <div class="page-intro"><div><p class="eyebrow">একাডেমিক ব্যবস্থাপনা</p><h1 id="teacherRecordsTitle">পরীক্ষা</h1></div><button id="teacherNewActivity" class="admin-btn primary" type="button">+ নতুন যোগ করুন</button></div>
         <p id="teacherOnlineExamHint" class="teacher-local-note" hidden>এটি আগের ক্লাস পরীক্ষার নথি। অনুমোদনসহ অনলাইন পরীক্ষা তৈরি করতে <button class="mini-btn" type="button" data-teacher-view="online-exams">পরীক্ষা নিন →</button></p>
+        <div class="teacher-type-tabs" role="tablist" aria-label="কাজের ধরন">
+          <button type="button" role="tab" data-type-tab="exam">পরীক্ষা <span class="tab-count" id="tabCount-exam"></span></button>
+          <button type="button" role="tab" data-type-tab="homework">বাড়ির কাজ <span class="tab-count" id="tabCount-homework"></span></button>
+          <button type="button" role="tab" data-type-tab="routine">ক্লাস রুটিন <span class="tab-count" id="tabCount-routine"></span></button>
+          <button type="button" role="tab" data-type-tab="suggestion">সাজেশন <span class="tab-count" id="tabCount-suggestion"></span></button>
+        </div>
         <div class="teacher-toolbar">
           <label for="teacherRecordSearch">শিরোনাম বা বিষয় দিয়ে খুঁজুন</label><input id="teacherRecordSearch" type="search" placeholder="কাজ খুঁজুন…" autocomplete="off">
           <label for="teacherClassFilter">শ্রেণি</label><select id="teacherClassFilter"><option value="all">সব শ্রেণি</option></select>
@@ -55,13 +83,17 @@
         </div>
         <p id="teacherRecordCount" class="finance-hint" role="status"></p>
         <div id="teacherRecordList" class="teacher-record-list"></div>
+        <button id="teacherRecordMore" class="teacher-list-more" type="button" hidden></button>
       </section>
       <section id="teacherMore" class="teacher-view" aria-labelledby="teacherMoreTitle" hidden>
         <div class="page-intro"><div><p class="eyebrow">সহায়ক কাজ</p><h1 id="teacherMoreTitle">আরও</h1></div></div>
         <nav class="admin-more-menu admin-card" aria-label="শিক্ষকের আরও কাজ">
+          <p class="teacher-menu-label">পরীক্ষা ও উপকরণ</p>
           <button class="admin-more-item" type="button" data-teacher-view="online-exams"><span class="admin-more-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-clipboard"></use></svg></span><span class="admin-more-copy"><strong>পরীক্ষা নিন</strong><small>MCQ, লিখিত ও সংক্ষিপ্ত প্রশ্ন তৈরি করে অনুমতি নিন</small></span><span aria-hidden="true">→</span></button>
           <button class="admin-more-item" type="button" data-teacher-view="suggestion"><span class="admin-more-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-book"></use></svg></span><span class="admin-more-copy"><strong>সাজেশন ও সহায়ক উপকরণ</strong><small>নোট, নির্দেশনা ও পড়ার লিংক দিন</small></span><span aria-hidden="true">→</span></button>
+          <p class="teacher-menu-label">শিক্ষার্থী</p>
           <button class="admin-more-item" type="button" data-teacher-view="students"><span class="admin-more-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-users"></use></svg></span><span class="admin-more-copy"><strong>শিক্ষার্থী তালিকা</strong><small>অনুমোদিত শিক্ষার্থী খুঁজুন</small></span><span aria-hidden="true">→</span></button>
+          <p class="teacher-menu-label">যাচাই</p>
           <a class="admin-more-item" href="index.html"><span class="admin-more-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-smartphone"></use></svg></span><span class="admin-more-copy"><strong>শিক্ষার্থী অ্যাপ দেখুন</strong><small>প্রকাশিত কাজ যাচাই করুন</small></span><span aria-hidden="true">→</span></a>
         </nav>
         <p class="teacher-local-note">এই প্যানেল শুধু একাডেমিক কাজের জন্য। অর্থব্যবস্থাপনা, ভর্তি অনুমোদন ও অ্যাপ সেটিংস Admin প্যানেলে থাকবে।</p>
@@ -78,9 +110,9 @@
       </section>
     </main>
     <nav class="admin-bottom" aria-label="শিক্ষক মোবাইল নেভিগেশন"><button class="admin-bottom-item active" type="button" data-teacher-view="home" aria-current="page"><span class="nav-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-home"></use></svg></span><span>হোম</span></button>
-<button class="admin-bottom-item" type="button" data-teacher-view="exam" ><span class="nav-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-clipboard"></use></svg></span><span>পরীক্ষা</span></button>
-<button class="admin-bottom-item" type="button" data-teacher-view="homework" ><span class="nav-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-book"></use></svg></span><span>বাড়ির কাজ</span></button>
-<button class="admin-bottom-item" type="button" data-teacher-view="routine" ><span class="nav-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-calendar"></use></svg></span><span>রুটিন</span></button>
+<button class="admin-bottom-item" type="button" data-teacher-view="exam" ><span class="nav-chip"><i class="nav-dot" id="navDot-exam" hidden></i><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-clipboard"></use></svg></span><span>পরীক্ষা</span></button>
+<button class="admin-bottom-item" type="button" data-teacher-view="homework" ><span class="nav-chip"><i class="nav-dot" id="navDot-homework" hidden></i><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-book"></use></svg></span><span>বাড়ির কাজ</span></button>
+<button class="admin-bottom-item" type="button" data-teacher-view="routine" ><span class="nav-chip"><i class="nav-dot" id="navDot-routine" hidden></i><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-calendar"></use></svg></span><span>রুটিন</span></button>
 <button class="admin-bottom-item" type="button" data-teacher-view="more" ><span class="nav-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-more"></use></svg></span><span>আরও</span></button>
 </nav>
   </div>

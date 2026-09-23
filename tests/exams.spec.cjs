@@ -2,7 +2,7 @@ const { test, expect } = require('./fixtures.cjs');
 const fs = require('node:fs/promises');
 const KEY = 'activePlus.exams.v1';
 const t0 = new Date('2026-10-01T09:00:00Z'), start = new Date('2026-10-01T10:00:00Z'), end = new Date('2026-10-01T11:00:00Z');
-const template = 'প্রশ্ন: বাংলাদেশের রাজধানী কোনটি?\nনম্বর: ২\nA: ঢাকা\nB: চট্টগ্রাম\nC: খুলনা\nD: রাজশাহী\nউত্তর: A\n---\nপ্রশ্ন: ৫ + ৩ = কত?\nনম্বর: ৩\nA: ৬\nB: ৭\nC: ৮\nD: ৯\nউত্তর: C';
+const template = 'প্রশ্ন: বাংলাদেশের রাজধানী কোনটি?\nA: ঢাকা\nB: চট্টগ্রাম\nC: খুলনা\nD: রাজশাহী\nউত্তর: A\n---\nপ্রশ্ন: ৫ + ৩ = কত?\nA: ৬\nB: ৭\nC: ৮\nD: ৯\nউত্তর: C';
 test.use({ viewport: { width: 390, height: 844 }, timezoneId: 'UTC' });
 async function teacher(page) {
   await page.clock.setFixedTime(t0); await page.goto('/teacher.html'); await page.locator('#teacherEnter').click(); await page.locator('.admin-bottom [data-teacher-view=more]').click(); await page.locator('#teacherMore [data-teacher-view=online-exams]').click();
@@ -16,6 +16,7 @@ async function student(context) {
 async function createUI(page, type = 'mcq', title = 'সমন্বিত অনলাইন পরীক্ষা') {
   const root = page.locator('#teacherExamWorkspace'); await root.locator(`[data-exam-action=new-${type}]`).click();
   await root.locator('[name=title]').fill(title); await root.locator('[name=subject]').fill('গণিত');
+  await root.locator('[name=className]').selectOption('দশম শ্রেণি'); // the demo student's class
   await root.locator('[name=startAt]').fill('2026-10-01T10:00'); await root.locator('[name=endAt]').fill('2026-10-01T11:00');
   await root.locator('[name=template]').fill(type === 'mcq' ? template : 'প্রশ্ন: পরিবেশ রক্ষায় গাছের গুরুত্ব লেখো।\nনম্বর: ৫\n---\nপ্রশ্ন: পানি দূষণ রোধের তিনটি উপায় লেখো।\nনম্বর: ৩');
   await expect(root.locator('[data-parsed-preview]')).toContainText('২টি প্রশ্ন');
@@ -45,7 +46,7 @@ test('teacher paste → admin approval → mobile MCQ, immediate public score, n
   await pupil.clock.setFixedTime(start);
   await pupil.locator('[data-student-exam-action=start]').click(); await expect(pupil.locator('.exam-question')).toHaveCount(2); await expect(pupil.locator('[data-answer-question]')).toHaveCount(8);
   await pupil.locator('[data-answer-question=q1][value=B]').check(); await pupil.locator('[data-answer-question=q2][value=C]').check(); await finish(pupil);
-  await expect(pupil.locator('#studentExamWorkspace')).toContainText('২.৫ / ৫'); await expect(pupil.locator('.exam-results')).toContainText('রাইসা ইসলাম');
+  await expect(pupil.locator('#studentExamWorkspace')).toContainText('০.৫ / ২'); await expect(pupil.locator('.exam-results')).toContainText('রাইসা ইসলাম');
   await expect(pupil.locator('.exam-results')).not.toContainText('01700000000'); await expect(pupil.locator('[data-student-exam-action=solutions]')).toHaveCount(0);
   expect(errors).toEqual([]);
 });
@@ -58,7 +59,7 @@ test('running average unlocks one retake, all questions persist and only best sc
   await expect(pupil.locator('[data-student-exam-action=start]')).toBeVisible(); await pupil.locator('[data-student-exam-action=start]').click();
   await pupil.locator('[data-answer-question=q1][value=B]').check(); await finish(pupil);
   await expect(pupil.locator('#studentExamWorkspace')).toContainText('তোমার প্রচেষ্টা ২'); await expect(pupil.locator('[data-student-exam-action=start]')).toHaveCount(0);
-  const mine = pupil.locator('.exam-results .exam-card').filter({has:pupil.getByRole('heading',{name:'রাইসা ইসলাম'})}); await expect(mine).toContainText('২ / ৫');
+  const mine = pupil.locator('.exam-results .exam-card').filter({has:pupil.getByRole('heading',{name:'রাইসা ইসলাম'})}); await expect(mine).toContainText('১ / ২');
 });
 
 test('offline reload resumes same shuffled answers, deadline locks and online reconnect syncs once', async ({ page, context }) => {
@@ -72,7 +73,7 @@ test('offline reload resumes same shuffled answers, deadline locks and online re
   await expect.poll(()=>pupil.evaluate(key=>JSON.parse(localStorage.getItem(key)).attempts[0].status,KEY)).toBe('queued');
   await expect(pupil.locator('[data-answer-question]')).toHaveCount(0);
   await context.setOffline(false); await expect.poll(()=>pupil.evaluate(key=>JSON.parse(localStorage.getItem(key)).attempts[0].status,KEY)).toBe('submitted');
-  const attempts = await pupil.evaluate(key=>JSON.parse(localStorage.getItem(key)).attempts,KEY); expect(attempts).toHaveLength(1); expect(attempts[0].score).toBe(5);
+  const attempts = await pupil.evaluate(key=>JSON.parse(localStorage.getItem(key)).attempts,KEY); expect(attempts).toHaveLength(1); expect(attempts[0].score).toBe(2);
 });
 
 test('global deadline auto-submits and auto-downloads a real Bengali answer PDF', async ({ page, context }) => {

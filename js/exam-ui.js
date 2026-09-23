@@ -6,7 +6,7 @@ export { esc };
 export const num = value => esc(bn(value));
 export const when = value => new Date(value).toLocaleString('bn-BD', { dateStyle: 'medium', timeStyle: 'short' });
 export function examMeta(e) {
-  return `<span class="exam-tag">${EXAM_TYPES[e.type]}</span><span class="exam-tag">${EXAM_STATUSES[e.status]}</span><h3>${esc(e.title)}</h3><p>${esc(e.subject)} • সব শ্রেণি • পূর্ণমান ${num(totalMarks(e))}</p><small>শুরু: ${esc(when(e.startAt))}<br>শেষ: ${esc(when(e.endAt))}</small>${e.type !== 'mcq' ? `<p class="exam-note">প্রশ্ন ডাউনলোড করে পরের দিন ক্লাসে পরীক্ষা: ${esc(classExamDate(e.startAt))}</p>` : ''}`;
+  return `<span class="exam-tag">${EXAM_TYPES[e.type]}</span><span class="exam-tag">${EXAM_STATUSES[e.status]}</span><h3>${esc(e.title)}</h3><p>${esc(e.subject)} • ${esc(e.className || 'সব শ্রেণি')} • পূর্ণমান ${num(totalMarks(e))}</p><small>শুরু: ${esc(when(e.startAt))}<br>শেষ: ${esc(when(e.endAt))}</small>${e.type !== 'mcq' ? `<p class="exam-note">প্রশ্ন ডাউনলোড করে পরের দিন ক্লাসে পরীক্ষা: ${esc(classExamDate(e.startAt))}</p>` : ''}`;
 }
 export function questionPreview(e, answers = false) {
   return `<div class="exam-question-list">${e.questions.map((q, i) => `<article class="exam-question"><small>প্রশ্ন ${num(i + 1)} • ${num(q.marks)} নম্বর</small><p>${esc(q.text)}</p>${q.options ? q.options.map(o => `<p>${o.id}. ${esc(o.text)}</p>`).join('') : ''}${answers && q.answer ? `<strong>সঠিক উত্তর: ${q.answer}</strong>` : ''}</article>`).join('')}</div>`;

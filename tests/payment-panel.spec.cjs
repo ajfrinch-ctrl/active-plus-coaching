@@ -1,6 +1,6 @@
 /* Payment Receive panel: guarded search (name/mobile/ID/guardian), short profile,
    payment save through the shared financeRepository, receipt PDF and the
-   one-click WhatsApp image share (share API + wa.me fallback). */
+   one-click WhatsApp hand-off straight to the student's own number. */
 const { test, expect } = require('./fixtures.cjs');
 
 test.use({ viewport: { width: 390, height: 844 } });
@@ -154,7 +154,7 @@ test('profile shows brief info, payment saves, receipt PDF downloads', async ({ 
   await expect(page.locator('#payQuickProfile .fee-balance-grid')).toContainText('৳২,৩০০');
 });
 
-test('WhatsApp share: image via Web Share when supported, wa.me fallback otherwise', async ({ page }) => {
+test('WhatsApp share goes straight to the student number, even when Web Share exists', async ({ page }) => {
   await enter(page);
   await page.locator('#payStudentSearch').fill('তহমিদ');
   await page.locator('#paySearchResults .fee-search-result').click();
@@ -163,41 +163,23 @@ test('WhatsApp share: image via Web Share when supported, wa.me fallback otherwi
   await page.locator('#paySaveButton').click();
   await expect(page.locator('#payReceiptBackdrop')).toBeVisible();
 
-  // Path 1: share API supported → the PNG receipt is handed to the share sheet.
+  // The share API being available must not change the target: the button opens
+  // the student's own chat and saves the receipt image next to it.
   await page.evaluate(() => {
     window.__shared = null;
+    window.__openUrl = null;
     navigator.canShare = data => Boolean(data.files);
     navigator.share = async data => { window.__shared = data; };
-  });
-  await page.locator('#payReceiptWhatsApp').click();
-  await expect.poll(() => page.evaluate(() => Boolean(window.__shared))).toBe(true);
-  const shared = await page.evaluate(() => ({
-    name: window.__shared.files[0].name,
-    type: window.__shared.files[0].type,
-    size: window.__shared.files[0].size,
-    text: window.__shared.text
-  }));
-  expect(shared.name).toMatch(/^REC-.*\.png$/);
-  expect(shared.type).toBe('image/png');
-  expect(shared.size).toBeGreaterThan(10000);
-  expect(shared.text).toContain('তহমিদ হাসান');
-  expect(shared.text).toContain('রসিদ নং');
-
-  // Path 2: no share support → PNG download + wa.me chat with the number and text.
-  await page.evaluate(() => {
-    try { delete Navigator.prototype.canShare; } catch {}
-    try { delete Navigator.prototype.share; } catch {}
-    try { delete navigator.canShare; } catch {}
-    try { delete navigator.share; } catch {}
-    window.__openUrl = null;
     window.open = url => { window.__openUrl = url; };
   });
   const pngDownload = page.waitForEvent('download');
   await page.locator('#payReceiptWhatsApp').click();
-  // The toast fires after both the download and the chat window opened.
   await expect(page.locator('#payToast')).toContainText('হোয়াটসঅ্যাপ চ্যাট', { timeout: 10000 });
+  expect(await page.evaluate(() => window.__shared)).toBeNull();
+
   const url = await page.evaluate(() => window.__openUrl);
   expect(url).toMatch(/^https:\/\/wa\.me\/8801811223344\?text=/);
   expect(decodeURIComponent(url)).toContain('তহমিদ হাসান');
+  expect(decodeURIComponent(url)).toContain('রসিদ নং');
   expect((await pngDownload).suggestedFilename()).toMatch(/^REC-.*\.png$/);
 });
