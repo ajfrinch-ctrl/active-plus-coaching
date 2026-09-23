@@ -6,7 +6,7 @@
 import { $, $$, setAuthMessage, scrollToTop } from './ui.js';
 import { demoEnabled } from './demo-data.js';
 import { defaultStudent, DEFAULT_PIN } from './config.js';
-import { contactNumber } from './account-policy.js';
+import { contactNumber, isContactNumber, normalizeUsername } from './account-policy.js';
 import { persistAccount, loadAccount, saveStudent, persistSession, setTrustedDevice, isSecurityCheckDisabled } from './storage.js';
 import {
   PAYMENT_USER_ID,
@@ -52,25 +52,30 @@ function handleLogin(event, state, onAuthenticated) {
       enterPaymentPortal($('#rememberMe')?.checked !== false);
       return;
     }
-    setAuthMessage('পেমেন্ট পোর্টালের ইউসার আইডি বা PIN সঠিক নয়। শিক্ষার্থী লগইনের জন্য মোবাইল নম্বর দিন।');
+    setAuthMessage('পেমেন্ট পোর্টালের ইউসার আইডি বা PIN সঠিক নয়। শিক্ষার্থী লগইনের জন্য ইউজারনেম বা মোবাইল নম্বর দিন।');
     return;
   }
-  const mobile = contactNumber(form.get('mobile'));
+  // A student signs in with either the permanent username or the mobile number.
+  const username = normalizeUsername(typedId);
+  const mobile = contactNumber(typedId);
   state.account = loadAccount() || state.account;
-  if (!mobile || pin.length < 4) {
-    setAuthMessage('মোবাইল নম্বর ও ৪–৬ সংখ্যার PIN সঠিকভাবে দিন।');
+  if ((!username && !mobile) || pin.length < 4) {
+    setAuthMessage('ইউজারনেম বা মোবাইল নম্বর এবং ৪–৬ সংখ্যার PIN সঠিকভাবে দিন।');
     return;
   }
-  if (!state.account && demoEnabled() && mobile === defaultStudent.studentMobile && pin === DEFAULT_PIN) {
+  if (!state.account && demoEnabled() && (mobile === defaultStudent.studentMobile || username === DEMO_USERNAME) && pin === DEFAULT_PIN) {
     try { state.account = persistAccount(demoAccount()); }
-    catch { setAuthMessage('ডেমো অ্যাকাউন্ট সংরক্ষণ হয়নি।'); return; }
+    catch { setAuthMessage('ডেমো অ্যাকাউন্ট সংরক্ষণ হয়নি।'); return; }
   }
   if (!state.account) {
     setAuthMessage('এই ডিভাইসে কোনো অ্যাকাউন্ট নেই। আগে রেজিস্ট্রেশন করুন।');
     return;
   }
-  if (mobile !== state.account.mobile || pin !== state.account.pin) {
-    setAuthMessage('মোবাইল নম্বর অথবা PIN সঠিক নয়। আবার চেষ্টা করুন।');
+  const knownUsername = normalizeUsername(state.account.username || state.account.student?.username || '');
+  const byUsername = Boolean(username) && Boolean(knownUsername) && username === knownUsername;
+  const byMobile = isContactNumber(mobile) && mobile === (state.account.registrationMobile || state.account.mobile);
+  if ((!byUsername && !byMobile) || pin !== state.account.pin) {
+    setAuthMessage('ইউজারনেম/মোবাইল নম্বর অথবা PIN সঠিক নয়। আবার চেষ্টা করুন।');
     return;
   }
   state.student = { ...state.student, ...(state.account.student || {}) };
@@ -91,14 +96,16 @@ function initPinVisibility() {
   });
 }
 
+export const DEMO_USERNAME = defaultStudent.username || 'raisa.islam';
+
 function demoAccount() {
-  return { mobile: defaultStudent.studentMobile, pin: DEFAULT_PIN, status: 'active', student: { ...defaultStudent }, securityQuestion: 'তোমার শৈশবের ডাকনাম কী?', securityAnswer: 'রাইসা', additionalMobiles: ['01900000000'], demoFixture: true };
+  return { mobile: defaultStudent.studentMobile, username: DEMO_USERNAME, pin: DEFAULT_PIN, status: 'active', student: { ...defaultStudent, username: DEMO_USERNAME }, securityQuestion: 'তোমার শৈশবের ডাকনাম কী?', securityAnswer: 'রাইসা', additionalMobiles: ['01900000000'], demoFixture: true };
 }
 
 function initDemoLogin(state, onDemo) {
   $('#demoLoginButton')?.addEventListener('click', () => {
     if (loadAccount()) return setAuthMessage('এই ডিভাইসে অ্যাকাউন্ট আছে। নিজের নিবন্ধিত নম্বর দিয়ে লগইন করুন।');
-    const account = demoEnabled() ? demoAccount() : { mobile: '01700000000', pin: DEFAULT_PIN, status: 'active', student: { ...defaultStudent } };
+    const account = demoEnabled() ? demoAccount() : { mobile: '01700000000', username: DEMO_USERNAME, pin: DEFAULT_PIN, status: 'active', student: { ...defaultStudent, username: DEMO_USERNAME } };
     try { state.account = persistAccount(account); }
     catch { return setAuthMessage('ডেমো অ্যাকাউন্ট সংরক্ষণ হয়নি। স্টোরেজ পরীক্ষা করুন।'); }
     state.student = { ...defaultStudent };

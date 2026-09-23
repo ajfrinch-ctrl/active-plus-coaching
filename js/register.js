@@ -1,9 +1,11 @@
 /* Registration feature: step-by-step student self-registration with auto Student ID.
-   Updated: auto-login after registration so PIN check isn't needed immediately. */
+   Updated: auto-login after registration so PIN check isn't needed immediately.
+   The student also picks a permanent username here — a login ID that never
+   changes, so the phone number does not have to be shared to log in. */
 import { $, $$, normalizeMobile, normalizeAnswer, setAuthMessage, showFeedback } from './ui.js';
 import { enabledClasses, DEFAULT_PIN } from './config.js';
-import { contactNumber, isContactNumber } from './account-policy.js';
-import { saveAccount, saveStudent, generateStudentId, persistSession, setTrustedDevice } from './storage.js';
+import { contactNumber, isContactNumber, normalizeUsername, usernameError, suggestUsername } from './account-policy.js';
+import { saveAccount, saveStudent, generateStudentId, persistSession, setTrustedDevice, usernameTaken, reserveUsername } from './storage.js';
 import { switchAuthTab } from './login.js';
 
 function populateRegistrationClasses() {
@@ -28,6 +30,51 @@ function initFixedContactMobile() {
   sync();
 }
 
+/* Live username feedback: the name is permanent, so the rule shows while typing. */
+function initUsernameField() {
+  const field = $('#regUsername');
+  if (!field) return;
+  const status = $('#regUsernameStatus');
+  const setStatus = (message, ok) => {
+    if (!status) return;
+    status.textContent = message;
+    status.classList.toggle('is-ok', Boolean(ok));
+    status.classList.toggle('is-bad', !ok);
+  };
+  const check = () => {
+    const typed = normalizeUsername(field.value);
+    field.setCustomValidity('');
+    if (!typed) { setStatus('', false); return true; }
+    const problem = usernameError(typed);
+    if (problem) { setStatus(problem, false); return false; }
+    if (usernameTaken(typed)) {
+      const message = 'এই ইউজারনেমটি আগেই নেওয়া হয়েছে — অন্য একটি বেছে নিন।';
+      setStatus(message, false);
+      return false;
+    }
+    setStatus('✓ এই ইউজারনেমটি নেওয়া যাবে', true);
+    return true;
+  };
+  field.addEventListener('input', check);
+  field.addEventListener('blur', () => {
+    // Normalise once the field loses focus; the stored form is lowercase.
+    const typed = normalizeUsername(field.value);
+    if (typed && !usernameError(typed)) field.value = typed;
+    check();
+  });
+  $('#regUsernameSuggest')?.addEventListener('click', () => {
+    const from = suggestUsername($('#nameEn')?.value, $('#nameBn')?.value);
+    if (!from || usernameError(from)) return setStatus('আগে ইংরেজি নাম লিখুন, তারপর সাজেশন নিন।', false);
+    let candidate = from;
+    let suffix = 2;
+    while (usernameTaken(candidate) && suffix < 100) candidate = `${from.slice(0, 17)}${suffix++}`;
+    field.value = candidate;
+    field.dispatchEvent(new Event('input', { bubbles: true }));
+    field.focus();
+  });
+  return check;
+}
+
 function handleRegistration(event, state, onRegistered) {
   event.preventDefault();
   const formElement = event.currentTarget;
@@ -39,7 +86,11 @@ function handleRegistration(event, state, onRegistered) {
   const mobile = contactNumber(form.get('mobile'));
   const pin = String(form.get('pin') || '');
   const pinConfirm = String(form.get('pinConfirm') || '');
+  const username = normalizeUsername(form.get('username'));
   if (!isContactNumber(mobile)) return setAuthMessage('সঠিক মোবাইল নম্বর দিন।');
+  const usernameProblem = usernameError(username);
+  if (usernameProblem) return setAuthMessage(usernameProblem);
+  if (usernameTaken(username)) return setAuthMessage('এই ইউজারনেমটি আগেই নেওয়া হয়েছে। অন্য একটি বেছে নিন — এটি পরে বদলানো যাবে না।');
   if (!/^\d{4,6}$/.test(pin)) return setAuthMessage('PIN অবশ্যই ৪ থেকে ৬ সংখ্যার হতে হবে।');
   if (pin !== pinConfirm) return setAuthMessage('দুটি PIN এক নয়। আবার মিলিয়ে দিন।');
   if (state.account) return setAuthMessage('এই ডিভাইসে ইতিমধ্যে একটি অ্যাকাউন্ট আছে। লগইন করুন অথবা এডমিনের সাহায্য নিন।');
@@ -53,6 +104,7 @@ function handleRegistration(event, state, onRegistered) {
     className,
     group: String(form.get('group') || ''),
     id: studentId,
+    username,
     fatherName: String(form.get('fatherName') || '').trim(),
     motherName: String(form.get('motherName') || '').trim(),
     guardianName: String(form.get('guardianName') || '').trim(),
@@ -71,6 +123,7 @@ function handleRegistration(event, state, onRegistered) {
     mobile,
     registrationMobile: mobile,
     additionalMobiles: [],
+    username,
     pin,
     securityQuestion: String(form.get('securityQuestion') || ''),
     securityAnswer: normalizeAnswer(form.get('securityAnswer')),
@@ -80,6 +133,8 @@ function handleRegistration(event, state, onRegistered) {
     createdAt: new Date().toISOString()
   };
   if (!saveAccount(account)) return setAuthMessage('সংরক্ষণ হয়নি। স্টোরেজ পরীক্ষা করে আবার চেষ্টা করুন।');
+  // Claim the name for this student; once claimed it stays claimed.
+  if (!reserveUsername(username, studentId)) return setAuthMessage('এই ইউজারনেমটি এরই মধ্যে অন্য কেউ নিয়েছে। অন্য একটি বেছে নিন।');
   state.account = account;
   state.student = { ...state.student, ...studentData };
   saveStudent(state.student);
@@ -90,11 +145,11 @@ function handleRegistration(event, state, onRegistered) {
   $('#pendingStudentId').textContent = studentId;
   if (onRegistered) {
     onRegistered();
-    showFeedback(`রেজিস্ট্রেশন সফল — ID: ${studentId}`);
+    showFeedback(`রেজিস্ট্রেশন সফল — ID: ${studentId} • ইউজারনেম: ${username}`);
   } else {
     switchAuthTab('login');
-    $('#loginMobile').value = mobile;
-    setAuthMessage(`রেজিস্ট্রেশন সফল। তোমার ইউনিক Student ID: ${studentId}`, true);
+    $('#loginMobile').value = username;
+    setAuthMessage(`রেজিস্ট্রেশন সফল। ইউনিক Student ID: ${studentId} • লগইনে ইউজারনেম “${username}” ব্যবহার করো — এটি আর বদলানো যাবে না।`, true);
   }
 }
 
@@ -143,6 +198,7 @@ export function initRegister({ state, onRegistered }) {
   populateRegistrationClasses();
   ['regPin', 'regPinConfirm'].forEach(id => { const field = $('#' + id); if (field) field.value = field.defaultValue = DEFAULT_PIN; });
   initFixedContactMobile();
+  initUsernameField();
   const registerSteps = initRegistrationSteps();
   $('#regClass')?.addEventListener('change', toggleMajorField);
   $('#registrationForm')?.addEventListener('submit', event => handleRegistration(event, state, onRegistered));

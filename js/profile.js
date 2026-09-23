@@ -27,6 +27,14 @@ export function openProfileEditor(student) {
   setValue('editGender', student.gender);
   const account = loadAccount();
   setValue('editStudentMobile', account?.registrationMobile || account?.mobile || student.studentMobile);
+  // The username is permanent: shown locked, never read back from the form.
+  setValue('editUsername', account?.username || student.username || '');
+  const usernameNote = $('#editUsernameNote');
+  if (usernameNote) {
+    usernameNote.textContent = (account?.username || student.username)
+      ? 'ইউজারনেম স্থায়ী — বদলানো যাবে না। লগইনে এটি ব্যবহার করলে মোবাইল নম্বর দিতে হয় না।'
+      : 'এই অ্যাকাউন্টে ইউজারনেম নেই; পুরোনো অ্যাকাউন্টে মোবাইল নম্বর দিয়েই লগইন হবে।';
+  }
   setValue('editAdditionalMobile', '');
   $('#editAdditionalMobiles').textContent = (account?.additionalMobiles || []).join(' • ') || 'এখনও অতিরিক্ত নম্বর নেই';
   setValue('editGuardianMobile', student.guardianMobile);
@@ -54,6 +62,8 @@ function readEditableStudent(form, current) {
     birthDate: String(form.get('birthDate') || ''),
     gender: String(form.get('gender') || ''),
     studentMobile: current.studentMobile,
+    // Immutable identifiers: never taken from the form.
+    username: current.username,
     guardianMobile: normalizeMobile(form.get('guardianMobile')),
     address: String(form.get('address') || '').trim(),
     className: String(form.get('className') || ''),
