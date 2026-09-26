@@ -136,6 +136,8 @@ css/
   theme.css             time-of-day topbar strip tint
   typography.css        local font and mobile reading sizes
   scroll-header.css      scroll-aware topbar transition
+  liquid-glass.css      Global Glass Design System — সব portal-এ একই glass material,
+                        water-drop icon, floating bottom bar ও animation (presentation only)
 assets/fonts/
   NotoSansBengali-Variable.ttf  offline UI/PDF-ready Bengali font
 assets/icons/
@@ -172,6 +174,42 @@ js/
 ```
 
 ভবিষ্যতে Admin Panel-এর **শিক্ষার্থী অ্যাপ ম্যানেজমেন্ট** অংশ থেকে enabled class, routine, course, notice ও result data নিয়ন্ত্রণ করার জন্য config ও storage adapter আলাদা রাখা হয়েছে। API যুক্ত করার সময় মূল UI feature files বদলানোর প্রয়োজন হবে না।
+
+## Glass Design System (`css/liquid-glass.css`)
+
+চারটি portal — শিক্ষার্থী (`index.html`), শিক্ষক (`teacher.html`), এডমিন (`admin.html`)
+ও পেমেন্ট (`payment.html`) — একই visual language ব্যবহার করে। পুরো design system একটি
+ফাইলে থাকে এবং প্রতিটি পেজে **সবার শেষে** load হয়, তাই এক জায়গায় পরিবর্তন করলেই সব
+portal-এ একই সঙ্গে প্রয়োগ হয়।
+
+এটি **presentation layer only** — কোনো markup hook, script, data key, route বা
+business logic এখানে নেই। শুধু existing element-গুলোর চেহারা বদলায়।
+
+| অংশ | কী করে |
+| --- | --- |
+| 01 Tokens | glass material, depth, blur budget, radius ও motion-এর CSS variable |
+| 02 Ambient background | soft gradient + তিনটি low-contrast blurred blob (transform-only animation) |
+| 03 Surfaces | দুই স্তরের glass — tier 1 (backdrop-blur card) ও tier 2 (translucent tile, blur ছাড়া) |
+| 04 Top bars | চারটি portal-এর header-এ একই frosted material |
+| 05 Bottom navigation | floating, rounded, safe-area-aware glass bar; active icon বড় + glow |
+| 06 Water-drop icons | icon chip-এ highlight, inner shadow ও subtle idle float |
+| 07 Tiles / rows / More | feature grid, list row ও "আরও" menu-র glass row |
+| 08 Buttons | primary liquid-green ও secondary clear-glass, tap-এ scale feedback |
+| 09 Forms | translucent input, পরিষ্কার focus glow (validation অপরিবর্তিত) |
+| 10 Modal / toast | backdrop blur, glass dialog, glass notification |
+| 11 Loading | `aria-busy` / `.is-loading` / `.glass-shimmer`-এ হালকা shimmer |
+| 12 Guards | contrast, focus ring, 44px touch target, 320–430px overflow, reduced-motion, print |
+| 13 Dark glass | `html[data-theme="dark"]`-এ একই language, শুধু inverted (opt-in) |
+
+নিয়ম:
+
+- Animation শুধু `transform`, `opacity` ও `filter` ব্যবহার করে — low-end Android-এ smooth।
+- `backdrop-filter` শুধু navigation, modal ও প্রধান card-এ; nested tile-এ শুধু translucency।
+- `prefers-reduced-motion` ও print/PDF path-এ সব animation ও blur বন্ধ।
+- যে browser `backdrop-filter` সমর্থন করে না, সেখানে solid fallback background।
+- Content-Security-Policy মেনে external stylesheet `'self'` থেকেই আসে; কোনো CDN নেই।
+- Manifest, service worker ও offline architecture অপরিবর্তিত; শুধু নতুন CSS ফাইলটি
+  `sw.js`-এর precache তালিকায় যোগ করা হয়েছে (cache name bump করে)।
 
 ## লোকালি চালানো
 

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'active-plus-student-v54-logout-to-login';
+const CACHE_NAME = 'active-plus-student-v55-glass-ui';
 const APP_SHELL = [
   './',
   './index.html',
@@ -36,6 +36,7 @@ const APP_SHELL = [
   './css/theme.css',
   './css/typography.css',
   './css/scroll-header.css',
+  './css/liquid-glass.css',
   './assets/fonts/NotoSansBengali-Variable.ttf',
   './js/config.js',
   './js/password-hash.js',
