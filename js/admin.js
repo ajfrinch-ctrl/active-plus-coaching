@@ -17,6 +17,8 @@ import { initExamManager } from './exam-manager.js';
 import { registerServiceWorker } from './service-worker.js';
 import { initFixedShell } from './fixed-shell.js';
 import { escapeHtml } from './sanitize.js';
+import { createAccess, CAPABILITIES, routeFromHash } from './admin-permissions.js';
+import { initAdminPanelShell } from './admin-panel-ui.js';
 
 initFixedShell();
 registerServiceWorker();
@@ -56,6 +58,12 @@ const state = {
   query: ''
 };
 
+/* ---------- Role-based access ----------
+   `access` is the single gate for what this panel may show and where it may
+   navigate. It is rebuilt from the signed-in staff record's role every time the
+   panel opens; the default matches admin.html until that record is read. */
+let access = createAccess('admin');
+
 /* ---------- Feedback toast ---------- */
 
 let toastTimer;
@@ -91,11 +99,19 @@ function showBootstrapCredentials(accounts) {
   $('#bootstrapCredentialsBackdrop').hidden = false;
 }
 
-function enterPanel({ bootstrapCredentials = [] } = {}) {
+async function enterPanel({ bootstrapCredentials = [] } = {}) {
   $('#adminEntry').hidden = true;
   $('#adminShell').hidden = false;
+  // The capability set follows the role stored in the account record — the
+  // existing role system is never modified, only read.
+  const account = await readStaffAccount('admin');
+  access = createAccess(account?.role || 'admin');
+  initAdminPanelShell({ access, onNavigate: navigate });
   renderAll();
-  setView(state.activeView);
+  // A deep link (admin.html#finance) opens only when this role may see it;
+  // anything else falls back to the first permitted tab.
+  const route = routeFromHash(window.location.hash);
+  setView(route && access.allowsView(route) ? route : state.activeView);
   toast('এডমিন প্যানেলে সফলভাবে প্রবেশ করা হয়েছে');
   if (bootstrapCredentials.length) showBootstrapCredentials(bootstrapCredentials);
   else readStaffAccount('admin')
@@ -115,18 +131,64 @@ function exitPanel() {
 /* ---------- View switching ---------- */
 
 const moreViews = new Set(['notices', 'app-management', 'classes', 'exams', 'reports']);
+
+/**
+ * Open one Admin Panel view.
+ * Returns false (and changes nothing) when the role may not open it or when the
+ * view is not in the DOM — this is the route guard behind every menu item,
+ * shortcut, tile and hash link.
+ */
 function setView(view) {
-  if (!$$('.admin-view').some(panel => panel.dataset.viewPanel === view)) return;
-  state.activeView = view;
-  $$('.admin-view').forEach(panel => panel.classList.toggle('active', panel.dataset.viewPanel === view));
+  const target = String(view || '').trim();
+  if (!access.allowsView(target)) return false;
+  if (!$$('.admin-view').some(panel => panel.dataset.viewPanel === target)) return false;
+  state.activeView = target;
+  $$('.admin-view').forEach(panel => panel.classList.toggle('active', panel.dataset.viewPanel === target));
   $$('.admin-bottom-item').forEach(item => {
-    const isMore = item.classList.contains('admin-bottom-item') && item.dataset.adminView === 'more' && moreViews.has(view);
-    const active = item.dataset.adminView === view || isMore;
+    const isMore = item.dataset.adminView === 'more' && moreViews.has(target);
+    const active = item.dataset.adminView === target || isMore;
     item.classList.toggle('active', active);
     if (active) item.setAttribute('aria-current', 'page');
     else item.removeAttribute('aria-current');
   });
   $('#adminMain').scrollTo({ top: 0, behavior: 'instant' });
+  return true;
+}
+
+/**
+ * One navigation path for every entry point (bottom bar, "More" menu, dashboard
+ * tiles, shortcuts, back buttons and hash links). Permission is checked before
+ * anything moves, so an unauthorised destination can never be opened — not even
+ * by a hand-typed URL or a stale bookmark.
+ */
+function navigate(view, source) {
+  const target = String(view || '').trim();
+  if (!access.allowsView(target)) {
+    toast('এই বিভাগে প্রবেশের অনুমতি আপনার Role-এ নেই।');
+    setView(access.defaultView());
+    return false;
+  }
+  if (source?.dataset?.studentScope === 'pending') {
+    state.filter = 'pending';
+    state.query = '';
+    state.classFilter = 'all';
+    if ($('#studentSearch')) $('#studentSearch').value = '';
+    const classSelect = $('#studentClassFilter');
+    if (classSelect) classSelect.value = 'all';
+    $$('#studentFilterChips .chip').forEach(chip => chip.classList.toggle('active', chip.dataset.studentFilter === 'pending'));
+    renderStudents();
+  }
+  if (!setView(target)) return false;
+  if (target === 'finance' && source?.dataset?.adminAction === 'collect') {
+    setFinanceTab('collection');
+    $('#feeStudentSearch')?.focus({ preventScroll: true });
+  }
+  if (source?.matches?.('.admin-more-item, .admin-more-back')) {
+    const heading = $('.admin-view.active h1');
+    heading?.setAttribute('tabindex', '-1');
+    heading?.focus({ preventScroll: true });
+  }
+  return true;
 }
 
 /* ---------- Dashboard ---------- */
@@ -137,9 +199,13 @@ function pendingStudents() {
 
 function renderDashboard() {
   $('#dashStudentCount').textContent = bn(state.students.length);
-  const pendingCount = pendingStudents().length;
-  $('#dashPendingCount').textContent = bn(pendingCount);
-  $('#dashPendingCount').classList.toggle('has-pending', pendingCount > 0);
+  // The approval queue belongs to the Manager portal, so the shortcut is only
+  // drawn for roles that may decide on a student (js/admin-permissions.js).
+  if (access.has(CAPABILITIES.STUDENTS_APPROVE) && $('#dashPendingCount')) {
+    const pendingCount = pendingStudents().length;
+    $('#dashPendingCount').textContent = bn(pendingCount);
+    $('#dashPendingCount').classList.toggle('has-pending', pendingCount > 0);
+  }
   $('#dashClassCount').textContent = bn(state.enabled.size);
   const today = new Date();
   $('#adminTodayDate').textContent = dateLabel(today);
@@ -280,7 +346,6 @@ function renderStudents() {
           <div class="student-actions">
             <button class="mini-btn" type="button" data-action="view" data-id="${student.id}">তথ্য দেখুন</button>
             <button class="mini-btn" type="button" data-action="edit" data-id="${student.id}">সম্পাদনা</button>
-            ${student.status === 'pending' ? '<small class="manager-approval-note">সিদ্ধান্ত: Manager</small>' : ''}
             <button class="mini-btn" type="button" data-action="reset-pin" data-id="${student.id}">পাসওয়ার্ড রিসেট</button>
           </div>
         </div>
@@ -328,7 +393,6 @@ function openStudentDetail(student) {
         <div><dt>অগ্রগতি</dt><dd>${performance}</dd></div>
       </dl>
       <div class="modal-actions">
-        ${student.status === 'pending' ? '<p class="manager-approval-note">এই সিদ্ধান্ত শুধু Manager দিতে পারবেন।</p>' : ''}
         <button class="admin-btn primary" type="button" data-modal-action="edit">সম্পাদনা করুন</button>
         <button class="admin-btn ghost" type="button" data-modal-action="reset-pin">পাসওয়ার্ড রিসেট</button>
         <button class="admin-btn ghost" type="button" data-modal-action="close">বন্ধ করুন</button>
@@ -338,9 +402,7 @@ function openStudentDetail(student) {
   actions.forEach(button => {
     button.addEventListener('click', () => {
       const action = button.dataset.modalAction;
-      if (action === 'approve') {
-        toast('শিক্ষার্থী অনুমোদন শুধু Manager দিতে পারবেন।');
-      } else if (action === 'reset-pin') {
+      if (action === 'reset-pin') {
         openPinReset(student);
         return;
       } else if (action === 'edit') {
@@ -1505,7 +1567,7 @@ function renderAppManagement() {
   if ($('#cfgSkipSecurity')) $('#cfgSkipSecurity').checked = cfg.skipSecurityCheck !== false;
   renderTeacherRegistrationControl(cfg);
   if ($('#appStatusLiveBadge')) {
-    $('#appStatusLiveBadge').textContent = cfg.maintenanceMode ? '🔴 রক্ষণাবেক্ষণ মোড' : '🟢 অ্যাপ লাইভ';
+    $('#appStatusLiveBadge').textContent = cfg.maintenanceMode ? 'রক্ষণাবেক্ষণ মোড' : 'অ্যাপ লাইভ';
     $('#appStatusLiveBadge').className = `badge ${cfg.maintenanceMode ? 'badge-rejected' : 'badge-approved'}`;
   }
 
@@ -1603,14 +1665,20 @@ function resetAppSettingsToDefault() {
 
 /* ---------- Render everything ---------- */
 
+/** A view is rendered only while it exists — the capability layer removes the
+ *  sections this role may not see, and every render follows it. */
+function viewExists(view) {
+  return Boolean($(`.admin-view[data-view-panel="${view}"]`));
+}
+
 function renderAll() {
-  renderDashboard();
-  renderStudents();
-  renderNotices();
-  renderRoutine();
-  renderClasses();
-  renderFinance();
-  renderAppManagement();
+  if (viewExists('dashboard')) renderDashboard();
+  if (viewExists('students')) renderStudents();
+  if (viewExists('notices')) renderNotices();
+  if (viewExists('routine')) renderRoutine();
+  if (viewExists('classes')) renderClasses();
+  if (viewExists('finance')) renderFinance();
+  if (viewExists('app-management')) renderAppManagement();
 }
 
 /* ---------- Wiring ---------- */
@@ -1622,7 +1690,7 @@ $('#btnResetAppSettings')?.addEventListener('click', resetAppSettingsToDefault);
 $('#cfgMaintenanceMode')?.addEventListener('change', event => {
   const isMaint = event.target.checked;
   if ($('#appStatusLiveBadge')) {
-    $('#appStatusLiveBadge').textContent = isMaint ? '🔴 রক্ষণাবেক্ষণ মোড' : '🟢 অ্যাপ লাইভ';
+    $('#appStatusLiveBadge').textContent = isMaint ? 'রক্ষণাবেক্ষণ মোড' : 'অ্যাপ লাইভ';
     $('#appStatusLiveBadge').className = `badge ${isMaint ? 'badge-rejected' : 'badge-approved'}`;
   }
 });
@@ -1648,7 +1716,7 @@ async function enterAdminPanel(remember, bootstrapCredentials = []) {
     }
     return;
   }
-  enterPanel({ bootstrapCredentials });
+  await enterPanel({ bootstrapCredentials });
 }
 
 $('#initialAdminForm')?.addEventListener('submit', async event => {
@@ -1724,36 +1792,28 @@ $$('[data-toggle-pin]').forEach(button => {
   });
 });
 
-$$('.admin-bottom-item').forEach(item => {
-  item.addEventListener('click', () => setView(item.dataset.adminView));
-});
-
+/* Bottom-bar tabs and "More" menu rows are rebuilt by the permission model
+   (js/admin-panel-ui.js) and call `navigate` themselves; the markup-driven
+   shortcuts below are wired once. */
 $$('[data-admin-view]').forEach(button => {
   if (button.classList.contains('admin-bottom-item')) return;
-  button.addEventListener('click', () => {
-    if (button.dataset.studentScope === 'pending') {
-      state.filter = 'pending';
-      state.query = '';
-      state.classFilter = 'all';
-      $('#studentSearch').value = '';
-      const classSelect = $('#studentClassFilter');
-      if (classSelect) classSelect.value = 'all';
-      $$('#studentFilterChips .chip').forEach(chip => chip.classList.toggle('active', chip.dataset.studentFilter === 'pending'));
-      renderStudents();
-    }
-    setView(button.dataset.adminView);
-    if (button.matches('.admin-more-item, .admin-more-back')) {
-      const heading = $('.admin-view.active h1');
-      heading?.setAttribute('tabindex', '-1');
-      heading?.focus({ preventScroll: true });
-    }
-  });
+  if (button.classList.contains('admin-more-item')) return;
+  button.addEventListener('click', () => navigate(button.dataset.adminView, button));
 });
 
-$('#dashCollectFee').addEventListener('click', () => {
-  setView('finance');
+// Deep links: admin.html#finance opens Finance, an unauthorised or unknown
+// #route is refused and the panel stays on the first permitted tab.
+window.addEventListener('hashchange', () => {
+  if ($('#adminShell')?.hidden !== false) return; // panel closed → nothing to open
+  const route = routeFromHash(window.location.hash);
+  if (!route) return;
+  navigate(route, null);
+});
+
+$('#dashCollectFee')?.addEventListener('click', event => {
+  if (!navigate('finance', event.currentTarget)) return;
   setFinanceTab('collection');
-  $('#feeStudentSearch').focus({ preventScroll: true });
+  $('#feeStudentSearch')?.focus({ preventScroll: true });
 });
 
 $('#studentSearch').addEventListener('input', event => {
@@ -1796,9 +1856,9 @@ const studentAction = event => {
   const { action, id } = button.dataset;
   const student = findStudent(id);
   if (!student) return;
-  if (action === 'approve' || action === 'reject') {
-    toast('শিক্ষার্থী অনুমোদন শুধু Manager দিতে পারবেন।');
-  } else if (action === 'view') {
+  // approve/reject handled by the Manager portal only — this panel never shows
+  // those actions, so an injected click simply does nothing.
+  if (action === 'view') {
     openStudentDetail(student);
   } else if (action === 'edit') {
     openStudentEdit(student);
@@ -2028,6 +2088,6 @@ async function initAdminEntry() {
     return;
   }
   // Existing device-bound session opens the panel without asking again.
-  if (await hasStaffSession('admin')) enterPanel();
+  if (await hasStaffSession('admin')) await enterPanel();
 }
 initAdminEntry();

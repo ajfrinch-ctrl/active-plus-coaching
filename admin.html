@@ -19,6 +19,9 @@
   <link rel="stylesheet" href="css/liquid-glass.css">
   <link rel="stylesheet" href="css/icon-experience.css">
   <link rel="stylesheet" href="css/app-redesign.css">
+  <!-- Admin Panel shell: permission-driven navigation, icon grid and typography.
+       Loaded last so the panel always speaks the shared design language. -->
+  <link rel="stylesheet" href="css/admin-panel-ui.css">
   <link rel="preload" href="assets/fonts/NotoSansBengali-Variable.ttf" as="font" type="font/ttf" crossorigin>
 </head>
 <body>
@@ -144,7 +147,7 @@
               <p class="tile-value" id="dashClassCount">—</p>
             </div>
           </div>
-          <button class="admin-hero-foot" type="button" data-admin-view="students" data-student-scope="pending">
+          <button class="admin-hero-foot" type="button" data-admin-view="students" data-student-scope="pending" data-admin-cap="students.approve">
             <span class="admin-hero-foot-copy">
               <span class="admin-hero-foot-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-clipboard"></use></svg></span>
               <span>
@@ -155,7 +158,10 @@
             <strong id="dashPendingCount">—</strong>
           </button>
         </article>
-        <button class="admin-dashboard-collect" id="dashCollectFee" type="button">
+        <!-- Permission-driven section grid: one large icon + one clear label per
+             section, rendered only for the capabilities this role holds. -->
+        <div class="admin-feature-grid" id="adminFeatureGrid" aria-label="অনুমোদিত বিভাগসমূহ"></div>
+        <button class="admin-dashboard-collect" id="dashCollectFee" type="button" data-admin-cap="finance.collect">
           <span class="admin-dashboard-collect-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-wallet"></use></svg></span>
           <span><strong>ফি গ্রহণ করুন</strong><small>শিক্ষার্থী খুঁজে পেমেন্ট নিন</small></span>
           <svg class="admin-menu-arrow" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg>
@@ -195,28 +201,30 @@
           <div><p class="eyebrow">অন্যান্য সেবা</p><h1 id="moreTitle">আরও</h1></div>
         </div>
         <nav class="admin-more-menu admin-card" aria-label="আরও এডমিন অপশন">
-          <button class="admin-more-item" type="button" data-admin-view="exams"><span class="admin-more-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-clipboard"></use></svg></span><span class="admin-more-copy"><strong>পরীক্ষা নিন</strong><small>প্রশ্ন অনুমোদন, প্রকাশ ও পরীক্ষার রিপোর্ট</small></span><span aria-hidden="true">→</span></button>
-          <button class="admin-more-item" type="button" data-admin-view="notices">
+          <button class="admin-more-item" type="button" data-admin-view="exams" data-admin-cap="exams.view"><span class="admin-more-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-clipboard"></use></svg></span><span class="admin-more-copy"><strong>পরীক্ষা</strong><small>পরীক্ষার তালিকা ও ফলাফল রিপোর্ট</small></span><span class="admin-menu-arrow" aria-hidden="true">→</span></button>
+          <button class="admin-more-item" type="button" data-admin-view="notices" data-admin-cap="notices.manage">
             <span class="admin-more-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-megaphone"></use></svg></span>
             <span class="admin-more-copy"><strong>নোটিশ</strong><small>নোটিশ প্রকাশ ও ব্যবস্থাপনা</small></span>
             <svg class="admin-menu-arrow" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg>
           </button>
-          <button class="admin-more-item" type="button" data-admin-view="reports">
+          <button class="admin-more-item" type="button" data-admin-view="reports" data-admin-cap="reports.view">
             <span class="admin-more-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-receipt"></use></svg></span>
             <span class="admin-more-copy"><strong>রিপোর্ট জেনারেটর</strong><small>প্রয়োজনীয় সব রিপোর্ট PDF/CSV ডাউনলোড</small></span>
             <svg class="admin-menu-arrow" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg>
           </button>
-          <button class="admin-more-item" type="button" data-admin-view="app-management">
+          <button class="admin-more-item" type="button" data-admin-view="app-management" data-admin-cap="app.manage">
             <span class="admin-more-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-smartphone"></use></svg></span>
             <span class="admin-more-copy"><strong>শিক্ষার্থী অ্যাপ</strong><small>অ্যাপের অবস্থা ও কন্ট্রোল</small></span>
             <svg class="admin-menu-arrow" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg>
           </button>
-          <button class="admin-more-item" type="button" data-admin-view="classes">
+          <button class="admin-more-item" type="button" data-admin-view="classes" data-admin-cap="classes.manage">
             <span class="admin-more-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-sliders"></use></svg></span>
             <span class="admin-more-copy"><strong>ক্লাস সেটিংস</strong><small>ক্লাস চালু বা বন্ধ করুন</small></span>
             <svg class="admin-menu-arrow" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg>
           </button>
-          <a class="admin-more-item teacher-panel-link" href="teacher.html">
+          <!-- Teacher-only entry point: removed unless the role holds the
+               teaching capability (see js/admin-permissions.js). -->
+          <a class="admin-more-item teacher-panel-link" href="teacher.html" data-admin-view="teaching" data-admin-cap="teaching.panel">
             <span class="admin-more-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-book"></use></svg></span>
             <span class="admin-more-copy"><strong>শিক্ষক প্যানেল</strong><small>পরীক্ষা, বাড়ির কাজ, সাজেশন ও রুটিন</small></span>
             <span aria-hidden="true">→</span>
@@ -226,7 +234,7 @@
 
       <section class="admin-view" data-view-panel="exams" aria-labelledby="adminExamsTitle">
         <button class="admin-more-back" type="button" data-admin-view="more">← আরও-তে ফিরুন</button>
-        <div class="page-intro"><div><p class="eyebrow">অনলাইন পরীক্ষা ব্যবস্থাপনা</p><h1 id="adminExamsTitle">পরীক্ষা নিন</h1></div></div>
+        <div class="page-intro"><div><p class="eyebrow">অনলাইন পরীক্ষা</p><h1 id="adminExamsTitle">পরীক্ষা</h1></div></div>
         <div id="adminExamWorkspace"></div>
       </section>
       <!-- Students -->
@@ -395,7 +403,7 @@
           <article class="admin-card finance-search-card">
             <header class="admin-card-head">
               <div><p class="eyebrow">Student Search</p><h2>শিক্ষার্থী খুঁজুন</h2></div>
-              <a class="mini-btn pay-panel-link" href="payment.html" title="পেমেন্ট রিসিভ প্যানেল">পেমেন্ট রিসিভ প্যানেল</a>
+              <a class="mini-btn pay-panel-link" href="payment.html" title="পেমেন্ট রিসিভ প্যানেল" data-admin-cap="payment.panel">পেমেন্ট রিসিভ প্যানেল</a>
             </header>
             <div class="finance-search-body">
               <label for="feeStudentSearch">নাম, মোবাইল নম্বর, Student ID অথবা অভিভাবকের মোবাইল</label>
@@ -719,7 +727,7 @@
           <article class="admin-card">
             <header class="admin-card-head">
               <div><p class="eyebrow">Status & Access</p><h2>অ্যাপ স্ট্যাটাস ও এক্সেস কন্ট্রোল</h2></div>
-              <span class="badge badge-approved" id="appStatusLiveBadge">🟢 অ্যাপ লাইভ</span>
+              <span class="badge badge-approved" id="appStatusLiveBadge">অ্যাপ লাইভ</span>
             </header>
             <div class="app-setting-group">
               <label class="app-toggle-item">
@@ -830,7 +838,7 @@
             <div class="app-setting-group">
               <label class="app-toggle-item">
                 <div class="app-toggle-copy">
-                  <strong>📅 ক্লাস রুটিন মডিউল</strong>
+                  <strong><img class="app-toggle-icon" src="assets/icons/admin/routine.png" alt="" width="22" height="22"> ক্লাস রুটিন মডিউল</strong>
                   <small>শিক্ষার্থীদের সাপ্তাহিক ক্লাস রুটিন ও সময়সূচি ট্যাব</small>
                 </div>
                 <span class="toggle-switch">
@@ -841,7 +849,7 @@
 
               <label class="app-toggle-item">
                 <div class="app-toggle-copy">
-                  <strong>📚 কোর্স ও লেকচার শিট মডিউল</strong>
+                  <strong><img class="app-toggle-icon" src="assets/icons/admin/classes.png" alt="" width="22" height="22"> কোর্স ও লেকচার শিট মডিউল</strong>
                   <small>বিষয়ভিত্তিক অধ্যায় ও শিট ডাউনলোডের তালিকা ট্যাব</small>
                 </div>
                 <span class="toggle-switch">
@@ -852,7 +860,7 @@
 
               <label class="app-toggle-item">
                 <div class="app-toggle-copy">
-                  <strong>🏆 পরীক্ষার ফলাফল ও মেধা তালিকা</strong>
+                  <strong><img class="app-toggle-icon" src="assets/icons/admin/reports.png" alt="" width="22" height="22"> পরীক্ষার ফলাফল ও মেধা তালিকা</strong>
                   <small>মডেল টেস্ট ও সাপ্তাহিক পরীক্ষার রেজাল্ট কার্ড ট্যাব</small>
                 </div>
                 <span class="toggle-switch">
@@ -863,7 +871,7 @@
 
               <label class="app-toggle-item">
                 <div class="app-toggle-copy">
-                  <strong>📲 অ্যাপ ইনস্টলেশন প্রম্পট (PWA)</strong>
+                  <strong><img class="app-toggle-icon" src="assets/icons/admin/app.png" alt="" width="22" height="22"> অ্যাপ ইনস্টলেশন প্রম্পট (PWA)</strong>
                   <small>শিক্ষার্থী ফোনে হোম স্ক্রিনে অ্যাপ ইনস্টল করার পরামর্শ দেখাবে</small>
                 </div>
                 <span class="toggle-switch">
@@ -976,20 +984,22 @@
       </section>
     </main>
 
+    <!-- Rebuilt by js/admin-panel-ui.js from the signed-in role's capabilities:
+         icons, labels, order and visibility all come from the permission model. -->
     <nav class="admin-bottom" aria-label="এডমিন মোবাইল নেভিগেশন">
-      <button class="admin-bottom-item active" type="button" data-admin-view="dashboard" aria-current="page">
+      <button class="admin-bottom-item active" type="button" data-admin-view="dashboard" data-admin-cap="dashboard.view" aria-current="page">
         <span class="nav-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-home"></use></svg></span>
         <span>ড্যাশবোর্ড</span>
       </button>
-      <button class="admin-bottom-item" type="button" data-admin-view="students">
+      <button class="admin-bottom-item" type="button" data-admin-view="students" data-admin-cap="students.view">
         <span class="nav-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-users"></use></svg></span>
         <span>শিক্ষার্থী</span>
       </button>
-      <button class="admin-bottom-item" type="button" data-admin-view="finance">
+      <button class="admin-bottom-item" type="button" data-admin-view="finance" data-admin-cap="finance.view">
         <span class="nav-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-wallet"></use></svg></span>
         <span>হিসাব</span>
       </button>
-      <button class="admin-bottom-item" type="button" data-admin-view="routine">
+      <button class="admin-bottom-item" type="button" data-admin-view="routine" data-admin-cap="routine.manage">
         <span class="nav-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-calendar"></use></svg></span>
         <span>রুটিন</span>
       </button>

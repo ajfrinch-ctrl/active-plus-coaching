@@ -1,5 +1,10 @@
-const CACHE_NAME = 'active-plus-student-v62-manager-portal';
+const CACHE_NAME = 'active-plus-student-v66-populated-role-demo';
 const APP_SHELL = [
+  './offline-roles.html',
+  './css/offline-roles.css',
+  './js/offline-role-store.js',
+  './js/offline-role-demo.js',
+  './js/offline-role-ui.js',
   './',
   './index.html',
   './admin.html',
@@ -44,8 +49,21 @@ const APP_SHELL = [
   './assets/icons/glass/support.png',
   './assets/icons/glass/card.png',
   './assets/icons/glass/logout.png',
+  './assets/icons/admin/dashboard.png',
+  './assets/icons/admin/users.png',
+  './assets/icons/admin/finance.png',
+  './assets/icons/admin/payment.png',
+  './assets/icons/admin/reports.png',
+  './assets/icons/admin/notices.png',
+  './assets/icons/admin/classes.png',
+  './assets/icons/admin/app.png',
+  './assets/icons/admin/exams.png',
+  './assets/icons/admin/routine.png',
+  './assets/icons/admin/more.png',
+  './assets/icons/admin/logout.png',
   './css/icon-experience.css',
   './css/app-redesign.css',
+  './css/admin-panel-ui.css',
   './css/tokens.css',
   './css/pending.css',
   './css/shell.css',
@@ -112,7 +130,9 @@ const APP_SHELL = [
   './js/office-data.js',
   './js/finance-data.js',
   './js/finance-receipt.js',
-  './js/report-generator.js'
+  './js/report-generator.js',
+  './js/admin-permissions.js',
+  './js/admin-panel-ui.js'
 ];
 
 self.addEventListener('install', event => {

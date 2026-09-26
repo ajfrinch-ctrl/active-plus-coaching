@@ -22,8 +22,14 @@ for (const width of [320, 390]) {
     await expect(page.locator('#adminTodayDate')).toHaveText('২২ সেপ্টেম্বর ২০২৬');
     await expect(page.locator('#adminTodayDate')).toHaveAttribute('datetime', '2026-09-22');
     await expect(page.locator('.admin-hero-stats .admin-stat-tile')).toHaveCount(2);
-    await expect(page.locator('#dashPendingCount')).toHaveText('৩');
+    // Student approval is a Manager decision: the queue shortcut never renders.
+    await expect(page.locator('.admin-hero-foot, #dashPendingCount')).toHaveCount(0);
     await expect(page.locator('#dashAppStatusRow, #dashTodayList, #dashPendingList, #dashNoticeCount')).toHaveCount(0);
+    // Permission grid: one generated icon + one label per allowed section.
+    const tiles = page.locator('#adminFeatureGrid .admin-feature-tile');
+    await expect(tiles).toHaveCount(8);
+    expect(await tiles.locator('img').evaluateAll(images => images.every(image => image.naturalWidth > 0))).toBe(true);
+    expect(await tiles.locator('.admin-feature-label').evaluateAll(labels => labels.every(label => label.textContent.trim().length > 1))).toBe(true);
     const shortcut = await page.locator('#dashCollectFee').boundingBox();
     const footerBox = await footer.boundingBox();
     expect(shortcut.y + shortcut.height).toBeLessThan(footerBox.y);
@@ -34,7 +40,17 @@ for (const width of [320, 390]) {
       await expect(footer.locator('[aria-current=page]')).toHaveCount(1);
       await expect(footer.locator('[aria-current=page]')).toHaveAttribute('data-admin-view', view);
     }
-    await expect(page.locator('.admin-more-item')).toHaveCount(6);
+    // Every footer tab shows its generated icon (no emoji, no empty chip).
+    const icons = page.locator('.admin-bottom img.nav-icon');
+    await expect(icons).toHaveCount(5);
+    expect(await icons.evaluateAll(images => images.every(image => image.naturalWidth > 0))).toBe(true);
+    // The selected tab is visibly larger than the idle ones, and it stays that way.
+    const activeIcon = await page.locator('.admin-bottom [aria-current=page] img.nav-icon').boundingBox();
+    const idleIcon = await page.locator('.admin-bottom button:not([aria-current=page]) img.nav-icon').first().boundingBox();
+    expect(activeIcon.width).toBeGreaterThan(idleIcon.width);
+
+    await expect(page.locator('.admin-more-item')).toHaveCount(5);
+    await expect(page.locator('.teacher-panel-link')).toHaveCount(0);
     for (const view of moreViews) {
       const button = page.locator(`.admin-more-item[data-admin-view="${view}"]`);
       await button.focus();
@@ -60,21 +76,39 @@ for (const width of [320, 390]) {
   });
 }
 
-test('pending summary opens pending-only list and updates after approval', async ({ page }) => {
+test('the roster keeps its read-only status filter without any approval control', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await enter(page);
   await bottom(page, 'students');
   await page.locator('#studentSearch').fill('রাইসা');
   await page.locator('[data-student-filter=approved]').click();
   await bottom(page, 'dashboard');
-  await page.locator('.admin-hero-foot').click();
-  await expect(page.locator('#studentSearch')).toHaveValue('');
+  // The Manager-only approval queue is not part of this panel at all.
+  await expect(page.locator('.admin-hero-foot, #dashPendingCount')).toHaveCount(0);
+  await bottom(page, 'students');
+  await page.locator('[data-student-filter=pending]').click();
   await expect(page.locator('[data-student-filter=pending]')).toHaveClass(/active/);
   await expect(page.locator('#studentList .student-row')).toHaveCount(3);
-  await page.locator('#studentList [data-action=approve]').first().click();
-  await expect(page.locator('#studentList .student-row')).toHaveCount(2);
-  await bottom(page, 'dashboard');
-  await expect(page.locator('#dashPendingCount')).toHaveText('২');
+  // Records stay readable; the decision itself is taken in manager.html.
+  await expect(page.locator('#studentList [data-action=view]')).toHaveCount(3);
+  await expect(page.locator('#studentList [data-action=approve], #studentList [data-action=reject]')).toHaveCount(0);
+  await expect(page.locator('.manager-approval-note')).toHaveCount(0);
+});
+
+test('a hash route opens only what this role may open', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await enter(page);
+  await expect(page.locator('.admin-view[data-view-panel=dashboard]')).toBeVisible();
+  await page.evaluate(() => { window.location.hash = '#finance'; });
+  await expect(page.locator('.admin-view[data-view-panel=finance]')).toBeVisible();
+  await expect(page.locator('.admin-bottom [aria-current=page]')).toHaveAttribute('data-admin-view', 'finance');
+  // Unknown or foreign routes never move the panel.
+  await page.evaluate(() => { window.location.hash = '#approvals'; });
+  await expect(page.locator('.admin-view[data-view-panel=finance]')).toBeVisible();
+  await page.evaluate(() => { window.location.hash = '#teaching'; });
+  await expect(page.locator('.admin-view[data-view-panel=finance]')).toBeVisible();
+  // Nothing role-foreign is in the DOM in the first place.
+  await expect(page.locator('.teacher-panel-link, .pay-panel-link')).toHaveCount(0);
 });
 
 test('secondary controls remain functional and dashboard updates without removed nodes', async ({ page }) => {
