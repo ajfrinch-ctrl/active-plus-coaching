@@ -2,11 +2,24 @@
    A student signs in with username/mobile + password and lands in the student app.
    Staff (admin, teacher, payment counter) sign in on the same form with their
    reserved username + password; the session is written first, so the panel
-   opens directly on arrival — no second credential prompt. */
+   opens directly on arrival — no second credential prompt.
+
+   Security (Phase 1): passwords are checked against PBKDF2 hashes, legacy
+   plaintext records are upgraded on the spot, and a role that has never set a
+   password — or whose password is due for a change — gets the shared staff
+   password dialog before the panel opens. */
+
 import { $, $$, setAuthMessage, scrollToTop } from './ui.js';
 import { contactNumber, isContactNumber, normalizeUsername } from './account-policy.js';
-import { persistAccount, loadAccount, saveStudent, persistSession, setTrustedDevice, isSecurityCheckDisabled, loadAppConfig } from './storage.js';
-import { STAFF_ACCOUNTS, normalizeStaffUsername, verifyStaffCredentials, saveStaffSession } from './staff-auth.js';
+import {
+  loadAccount, saveStudent, persistSession, setTrustedDevice,
+  isSecurityCheckDisabled, loadAppConfig, verifyAccountPassword, upgradeAccountSecrets
+} from './storage.js';
+import {
+  STAFF_ACCOUNTS, normalizeStaffUsername, authenticateStaff, saveStaffSession
+} from './staff-auth.js';
+import { openStaffPasswordDialog } from './staff-password-dialog.js';
+import { isPasswordRecord } from './password-hash.js';
 
 const STAFF_PANEL = Object.freeze({ admin: 'admin.html', teacher: 'teacher.html', payment: 'payment.html' });
 const STAFF_LABEL = Object.freeze({ admin: 'এডমিন প্যানেল', teacher: 'শিক্ষক প্যানেল', payment: 'পেমেন্ট রিসিভ প্যানেল' });
@@ -57,26 +70,48 @@ function syncLoginHints() {
   }
 }
 
-function handleStaffLogin(role, typedId, pin) {
-  if (!verifyStaffCredentials(role, typedId, pin)) {
-    setAuthMessage(`${STAFF_LABEL[role]}র ইউজারনেম বা পাসওয়ার্ড সঠিক নয়। আবার চেষ্টা করুন।`);
-    return true;
-  }
-  if (role === 'teacher' && loadAppConfig().allowTeacherRegistration === false) {
-    setAuthMessage('শিক্ষক প্যানেল প্রবেশ এই মুহূর্তে এডমিন কর্তৃক বন্ধ রাখা হয়েছে।');
-    return true;
-  }
-  const remember = $('#rememberMe')?.checked !== false;
-  if (!saveStaffSession(role, remember)) {
+async function enterStaffPanel(role, remember) {
+  if (!(await saveStaffSession(role, remember))) {
     setAuthMessage('সেশন সংরক্ষণ করা যায়নি — ব্রাউজারের স্টোরেজ পরীক্ষা করে আবার চেষ্টা করুন।');
-    return true;
+    return;
   }
   setAuthMessage(`${STAFF_LABEL[role]}ে নেওয়া হচ্ছে…`, 'success');
   window.location.assign(staffPanelPath(role));
-  return true;
 }
 
-function handleLogin(event, state, onAuthenticated) {
+async function handleStaffLogin(role, typedId, pin) {
+  const result = await authenticateStaff(role, typedId, pin);
+  if (!result.ok) {
+    setAuthMessage(`${STAFF_LABEL[role]}র ইউজারনেম বা পাসওয়ার্ড সঠিক নয়। আবার চেষ্টা করুন।`);
+    return;
+  }
+  if (role === 'teacher' && loadAppConfig().allowTeacherRegistration === false) {
+    setAuthMessage('শিক্ষক প্যানেল প্রবেশ এই মুহূর্তে এডমিন কর্তৃক বন্ধ রাখা হয়েছে।');
+    return;
+  }
+  const remember = $('#rememberMe')?.checked !== false;
+  if (result.needsSetup) {
+    openStaffPasswordDialog({
+      role,
+      mode: 'setup',
+      onDone: () => enterStaffPanel(role, remember),
+      onCancel: () => setAuthMessage('প্রবেশের আগে একটি পাসওয়ার্ড নির্ধারণ করুন।')
+    });
+    return;
+  }
+  if (result.needsPasswordChange) {
+    openStaffPasswordDialog({
+      role,
+      mode: 'change',
+      onDone: () => enterStaffPanel(role, remember),
+      onCancel: () => setAuthMessage('নিরাপত্তার জন্য নতুন পাসওয়ার্ড নির্ধারণ করা বাধ্যতামূলক।')
+    });
+    return;
+  }
+  await enterStaffPanel(role, remember);
+}
+
+async function handleLogin(event, state, onAuthenticated) {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
   const typedId = String(form.get('mobile') || '').trim();
@@ -85,7 +120,7 @@ function handleLogin(event, state, onAuthenticated) {
   // Staff usernames are reserved, so a match here can only be that panel.
   const staffRole = staffRoleFor(typedId);
   if (staffRole) {
-    handleStaffLogin(staffRole, typedId, pin);
+    await handleStaffLogin(staffRole, typedId, pin);
     return;
   }
 
@@ -103,14 +138,23 @@ function handleLogin(event, state, onAuthenticated) {
   const knownUsername = normalizeUsername(state.account.username || state.account.student?.username || '');
   const byUsername = Boolean(username) && Boolean(knownUsername) && username === knownUsername;
   const byMobile = isContactNumber(mobile) && mobile === (state.account.registrationMobile || state.account.mobile);
-  if ((!byUsername && !byMobile) || pin !== state.account.pin) {
+  if (!byUsername && !byMobile) {
     setAuthMessage('ইউজারনেম/মোবাইল নম্বর অথবা পাসওয়ার্ড সঠিক নয়। আবার চেষ্টা করুন।');
     return;
+  }
+  if (!(await verifyAccountPassword(state.account, pin))) {
+    setAuthMessage('ইউজারনেম/মোবাইল নম্বর অথবা পাসওয়ার্ড সঠিক নয়। আবার চেষ্টা করুন।');
+    return;
+  }
+  // A plaintext record from the retired scheme is replaced by a hash now that
+  // the password has been proven correct.
+  if (!isPasswordRecord(state.account.pinHash)) {
+    state.account = await upgradeAccountSecrets(state.account, { pin }) || state.account;
   }
   state.student = { ...state.student, ...(state.account.student || {}) };
   saveStudent(state.student);
   const remember = $('#rememberMe')?.checked !== false;
-  persistSession(remember);
+  await persistSession(remember);
   if (remember) setTrustedDevice(true);
   onAuthenticated?.();
 }

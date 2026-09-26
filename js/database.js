@@ -137,7 +137,9 @@ export function publicStudent(student) {
   const copy = { ...student };
   delete copy.pin;
   delete copy.password;
+  delete copy.pinHash;
   delete copy.securityAnswer;
+  delete copy.securityAnswerHash;
   delete copy.securityQuestion;
   return copy;
 }

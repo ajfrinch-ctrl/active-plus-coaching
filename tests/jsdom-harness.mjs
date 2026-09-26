@@ -3,6 +3,7 @@
    Only cosmetic browser APIs jsdom lacks are stubbed — never app logic. */
 import { JSDOM, VirtualConsole } from 'jsdom';
 import { readFileSync } from 'node:fs';
+import { webcrypto } from 'node:crypto';
 
 const GLOBAL_KEYS = [
   'window', 'document', 'navigator', 'location', 'localStorage', 'sessionStorage',
@@ -21,6 +22,14 @@ export async function loadPage(file, { seed = {} } = {}) {
   const { window } = dom;
 
   Object.entries(seed).forEach(([key, value]) => window.localStorage.setItem(key, value));
+
+  // jsdom ships crypto.getRandomValues but not crypto.subtle; the app hashes
+  // passwords with Web Crypto, so the standard Node implementation stands in.
+  if (!window.crypto || !window.crypto.subtle) {
+    try {
+      Object.defineProperty(window, 'crypto', { value: webcrypto, configurable: true });
+    } catch { /* a jsdom that already locked crypto keeps its own object */ }
+  }
 
   // Scrolling is a no-op in jsdom; the app only uses it for polish. Navigation
   // is left unstubbed on purpose: jsdom reports it, so tests can assert that a
@@ -43,7 +52,10 @@ export async function loadPage(file, { seed = {} } = {}) {
   };
   const submit = form => form.dispatchEvent(new window.Event('submit', { bubbles: true, cancelable: true }));
   const flush = async (times = 6) => { for (let i = 0; i < times; i++) await Promise.resolve(); };
-  const waitFor = async (predicate, timeout = 3000) => {
+  // The budget is generous on purpose: password hashing (PBKDF2) and AES-GCM
+  // run on real macrotasks, and the suite runs files in parallel on small
+  // machines, so a UI change can take a while to appear.
+  const waitFor = async (predicate, timeout = 20000) => {
     const started = Date.now();
     while (!predicate()) {
       if (Date.now() - started > timeout) throw new Error('waitFor timed out waiting for a UI change');

@@ -1,12 +1,13 @@
 import { toBanglaNumber as bn } from './ui.js';
 import { loadAppConfig } from './storage.js';
 import { APP_TAGLINE, DEFAULT_APP_SETTINGS } from './config.js';
+import { escapeHtml as escape } from './sanitize.js';
 /* The receipt header shows the institution's own tagline and address. */
 const receiptBrand = () => {
   const cfg = loadAppConfig();
   return { tagline: cfg.tagline || APP_TAGLINE, address: cfg.campusAddress || DEFAULT_APP_SETTINGS.campusAddress };
 };
-const escape = value => String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+
 
 function receiptFields(tx) {
   return [

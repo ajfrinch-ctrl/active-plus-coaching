@@ -71,10 +71,11 @@ test('the registration form asks for a permanent username and validates it live'
   assert.match($('#regUsernameStatus').textContent, /নেওয়া যাবে/);
 });
 
-test('registration stores the username and claims it on this device', () => {
-  const { $, submit } = ctx;
+test('registration stores the username and claims it on this device', async () => {
+  const { $, submit, waitFor } = ctx;
   fillRegistration();
   submit($('#registrationForm'));
+  await waitFor(() => registered === 1);
 
   assert.equal(registered, 1);
   const saved = account();
@@ -87,9 +88,10 @@ test('registration stores the username and claims it on this device', () => {
 });
 
 test('the same username cannot be taken twice', async () => {
-  const { $, submit } = ctx;
+  const { $, submit, waitFor } = ctx;
   fillRegistration({ regMobile: '01799887766' }); // 'raisa.islam' again
   submit($('#registrationForm'));
+  await waitFor(() => /আগেই নেওয়া হয়েছে/.test($('#authMessage').textContent));
   assert.match($('#authMessage').textContent, /আগেই নেওয়া হয়েছে/);
   assert.equal(registered, 1, 'a duplicate username must not create a second account');
   // Another name is still free for the next student.
@@ -99,26 +101,32 @@ test('the same username cannot be taken twice', async () => {
 });
 
 test('login accepts the username, in any case, and still accepts the mobile number', async () => {
-  const { $, type, submit } = ctx;
+  const { $, type, submit, waitFor } = ctx;
   const saved = account();
   assert.equal(saved.username, 'raisa.islam');
+  // The stored account holds a PBKDF2 hash, never the plaintext password.
+  assert.equal(saved.pin, undefined);
+  assert.equal(typeof saved.pinHash, 'object');
 
   state.account = null;
   type($('#loginMobile'), '  RAISA.ISLAM ');
   type($('#loginPin'), '123123');
   submit($('#loginForm'));
+  await waitFor(() => loggedIn === 1);
   assert.equal(loggedIn, 1, 'username login must succeed');
 
   state.account = null;
   type($('#loginMobile'), '01711223344');
   type($('#loginPin'), '123123');
   submit($('#loginForm'));
+  await waitFor(() => loggedIn === 2);
   assert.equal(loggedIn, 2, 'the registration mobile must still work');
 
   state.account = null;
   type($('#loginMobile'), 'raisa.islam');
   type($('#loginPin'), '999999');
   submit($('#loginForm'));
+  await waitFor(() => /সঠিক নয়/.test($('#authMessage').textContent));
   assert.equal(loggedIn, 2, 'a wrong password must be rejected');
   assert.match($('#authMessage').textContent, /সঠিক নয়/);
 
@@ -126,6 +134,7 @@ test('login accepts the username, in any case, and still accepts the mobile numb
   type($('#loginMobile'), 'someone.else');
   type($('#loginPin'), '123123');
   submit($('#loginForm'));
+  await waitFor(() => /সঠিক নয়/.test($('#authMessage').textContent));
   assert.equal(loggedIn, 2, 'an unknown username must be rejected');
   assert.match($('#authMessage').textContent, /সঠিক নয়/);
 });

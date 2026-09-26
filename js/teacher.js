@@ -1,5 +1,6 @@
 import { enabledClasses } from './config.js';
-import { verifyStaffCredentials, saveStaffSession, hasStaffSession, clearStaffSession, goToLoginPage } from './staff-auth.js';
+import { authenticateStaff, saveStaffSession, hasStaffSession, clearStaffSession, goToLoginPage } from './staff-auth.js';
+import { openStaffPasswordDialog } from './staff-password-dialog.js';
 import { loadAppConfig } from './storage.js';
 import { toBanglaNumber as bn } from './ui.js';
 import { initExamManager } from './exam-manager.js';
@@ -405,15 +406,30 @@ async function showTeacherShell() {
   if (button) button.disabled = !teacherRegistrationOpen();
   return false;
 }
+async function enterTeacherPanel(remember) {
+  if (await showTeacherShell()) await saveStaffSession('teacher', remember);
+}
+
 async function openTeacherPanel() {
   const username = $('#teacherLoginUser')?.value || '';
   const password = $('#teacherLoginPin')?.value || '';
-  if (!verifyStaffCredentials('teacher', username, password)) {
+  const result = await authenticateStaff('teacher', username, password);
+  if (!result.ok) {
     $('#teacherEntryError').textContent = 'ইউজারনেম বা পাসওয়ার্ড সঠিক নয়।';
     $('#teacherEntryError').hidden = false;
     return;
   }
-  if (await showTeacherShell()) saveStaffSession('teacher', $('#rememberTeacher')?.checked !== false);
+  $('#teacherEntryError').hidden = true;
+  const remember = $('#rememberTeacher')?.checked !== false;
+  if (result.needsSetup || result.needsPasswordChange) {
+    openStaffPasswordDialog({
+      role: 'teacher',
+      mode: result.needsSetup ? 'setup' : 'change',
+      onDone: () => enterTeacherPanel(remember)
+    });
+    return;
+  }
+  await enterTeacherPanel(remember);
 }
 $('#teacherEnter').addEventListener('click', openTeacherPanel);
 $('#teacherLoginForm')?.addEventListener('submit', event => { event.preventDefault(); openTeacherPanel(); });
@@ -468,4 +484,5 @@ document.addEventListener('keydown', event => {
 });
 watchTeachingData(() => { if (!state.busy && !$('#teacherShell').hidden) reload(); });
 
-if (hasStaffSession('teacher')) showTeacherShell();
+// An existing device-bound session opens the panel without asking again.
+hasStaffSession('teacher').then(valid => { if (valid) showTeacherShell(); });

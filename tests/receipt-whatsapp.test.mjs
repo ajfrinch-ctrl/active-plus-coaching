@@ -5,7 +5,8 @@ import assert from 'node:assert/strict';
 import { loadPage } from './jsdom-harness.mjs';
 import { adminStudents } from '../js/admin-data.js';
 import { ROSTER_KEY } from '../js/office-data.js';
-import { PAYMENT_USER_ID, DEFAULT_PAYMENT_PIN } from '../js/payment-auth.js';
+import { PAYMENT_USER_ID } from '../js/payment-auth.js';
+import { STAFF_TEST_PASSWORD, provisionStaff } from './staff-harness.mjs';
 import { toBanglaNumber as bn } from '../js/ui.js';
 
 const raisa = adminStudents.find(s => s.id === 'AP-1024');
@@ -36,14 +37,19 @@ before(async () => {
 
   await import('../js/payment.js');
   const { $, $$, submit, click, waitFor } = ctx;
+  await provisionStaff('payment');
   ctx.type($('#payLoginUser'), PAYMENT_USER_ID);
-  ctx.type($('#payLoginPin'), DEFAULT_PAYMENT_PIN);
+  ctx.type($('#payLoginPin'), STAFF_TEST_PASSWORD);
   submit($('#payLoginForm'));
   await waitFor(() => $('#payShell').hidden === false);
   ctx.type($('#payStudentSearch'), 'রাইসা');
   await waitFor(() => $$('#paySearchResults .fee-search-result').length > 0);
   click($$('#paySearchResults .fee-search-result')[0]);
+  // The collect button stays disabled until the ledger has loaded, and a click
+  // on a disabled button does nothing — so wait for the desk to be ready first.
+  await waitFor(() => $('#payProfileCollect').disabled === false);
   click($('#payProfileCollect'));
+  await waitFor(() => $('#payCollectionForm').hidden === false);
   submit($('#payCollectionForm'));
   await waitFor(() => $('#payReceiptBackdrop').hidden === false);
 });
