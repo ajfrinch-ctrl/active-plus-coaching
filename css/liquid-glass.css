@@ -1,0 +1,1094 @@
+/* ============================================================================
+   Active Plus Coaching — Glass App Experience
+   ----------------------------------------------------------------------------
+   Global presentation layer. Loaded LAST on index / admin / teacher / payment,
+   so the same glass material, icon treatment, motion language and floating
+   navigation apply to all four portals from a single file.
+
+   PRESENTATION ONLY. This file adds no markup hooks, no scripts and no new
+   behaviour: it restyles the elements the application already renders. Nothing
+   here changes routing, storage, roles, validation, reports or PWA logic.
+
+   Sections
+     01  Design tokens (glass material, depth, motion, radii)
+     02  Ambient background
+     03  Surfaces — glass cards
+     04  Top bars
+     05  Floating glass bottom navigation
+     06  Water-drop icon chips
+     07  Feature tiles, list rows and "More" menus
+     08  Buttons and chips
+     09  Forms
+     10  Modals, toasts, overlays
+     11  Loading / shimmer utilities
+     12  Motion, accessibility and responsive guards
+     13  Dark glass (opt-in, mirrors the light material)
+   ========================================================================== */
+
+/* ---------------------------------------------------------------------------
+   01 — Design tokens
+   ------------------------------------------------------------------------ */
+:root {
+  /* Glass material */
+  --g-tint: 255, 255, 255;
+  --g-surface: rgba(255, 255, 255, .56);
+  --g-surface-strong: rgba(255, 255, 255, .74);
+  --g-surface-soft: rgba(255, 255, 255, .45);
+  --g-surface-quiet: rgba(255, 255, 255, .34);
+  --g-border: rgba(255, 255, 255, .72);
+  --g-border-quiet: rgba(12, 74, 58, .08);
+  --g-highlight: rgba(255, 255, 255, .92);
+  --g-inner: inset 0 1px 0 rgba(255, 255, 255, .78), inset 0 -1px 0 rgba(12, 74, 58, .05);
+
+  /* Depth */
+  --g-shadow-sm: 0 2px 8px rgba(11, 61, 48, .05);
+  --g-shadow: 0 10px 28px rgba(11, 61, 48, .09), 0 2px 6px rgba(11, 61, 48, .04);
+  --g-shadow-lift: 0 18px 44px rgba(11, 61, 48, .14), 0 3px 10px rgba(11, 61, 48, .06);
+  --g-shadow-float: 0 20px 48px rgba(11, 61, 48, .18), 0 2px 8px rgba(11, 61, 48, .08);
+  --g-glow: 0 0 0 1px rgba(4, 121, 90, .16), 0 8px 22px rgba(4, 121, 90, .22);
+
+  /* Blur budget — kept small so low-end Android stays smooth */
+  --g-blur: 18px;
+  --g-blur-strong: 26px;
+  --g-blur-soft: 12px;
+
+  /* Radii */
+  --g-r-xl: 28px;
+  --g-r-lg: 24px;
+  --g-r-md: 18px;
+  --g-r-sm: 14px;
+  --g-r-pill: 999px;
+
+  /* Motion */
+  --g-fast: 150ms;
+  --g-base: 200ms;
+  --g-slow: 260ms;
+  --g-ease: cubic-bezier(.22, .61, .36, 1);
+  --g-spring: cubic-bezier(.34, 1.4, .64, 1);
+}
+
+/* ---------------------------------------------------------------------------
+   02 — Ambient background
+   A soft gradient with a few low-contrast blurred blobs. Everything is painted
+   behind the app (fixed, z-index -1) so the glass surfaces have something to
+   refract, and readability is never reduced.
+   ------------------------------------------------------------------------ */
+html,
+body {
+  background:
+    linear-gradient(170deg, #e4f3ec 0%, #eef6f4 38%, #e8f0f7 72%, #e3edf5 100%);
+  background-attachment: fixed;
+}
+
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  z-index: -1;
+  border-radius: 50%;
+  pointer-events: none;
+  will-change: transform;
+}
+
+/* Warm mint bloom, top-left */
+body::before {
+  top: 2vh;
+  left: -14vw;
+  width: 66vw;
+  height: 66vw;
+  max-width: 420px;
+  max-height: 420px;
+  background: radial-gradient(circle at 50% 50%, rgba(4, 150, 110, .42), rgba(4, 150, 110, 0) 68%);
+  filter: blur(30px);
+  animation: gAmbientA 26s ease-in-out infinite alternate;
+}
+
+/* Cool blue bloom, bottom-right */
+body::after {
+  right: -16vw;
+  bottom: 2vh;
+  width: 74vw;
+  height: 74vw;
+  max-width: 470px;
+  max-height: 470px;
+  background: radial-gradient(circle at 50% 50%, rgba(56, 136, 205, .36), rgba(56, 136, 205, 0) 68%);
+  filter: blur(34px);
+  animation: gAmbientB 32s ease-in-out infinite alternate;
+}
+
+@keyframes gAmbientA {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to   { transform: translate3d(5%, 4%, 0) scale(1.08); }
+}
+@keyframes gAmbientB {
+  from { transform: translate3d(0, 0, 0) scale(1.06); }
+  to   { transform: translate3d(-5%, -4%, 0) scale(1); }
+}
+
+/* A third, slow bloom keeps the middle of tall screens alive. */
+.app-shell::before,
+.admin-shell::before,
+.auth-screen::before {
+  content: "";
+  position: fixed;
+  z-index: -1;
+  top: 34%;
+  left: 50%;
+  width: 96vw;
+  height: 46vh;
+  max-width: 520px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%, rgba(146, 196, 175, .26), rgba(146, 196, 175, 0) 70%);
+  filter: blur(44px);
+  transform: translate3d(-50%, -50%, 0);
+  animation: gAmbientC 30s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+@keyframes gAmbientC {
+  from { transform: translate3d(-50%, -54%, 0) scale(1); }
+  to   { transform: translate3d(-50%, -44%, 0) scale(1.14); }
+}
+
+/* The shells must let the ambient layer through. */
+body,
+.app-shell,
+.admin-shell,
+.teacher-shell,
+.pay-shell,
+.auth-screen,
+.app-main,
+.admin-main,
+.pay-main,
+.pending-screen {
+  background: transparent;
+}
+
+.app-shell,
+.admin-shell,
+.teacher-shell,
+.pay-shell,
+.auth-screen {
+  isolation: isolate;
+}
+
+/* ---------------------------------------------------------------------------
+   03 — Surfaces: glass cards
+   Two tiers:
+     .tier-1  real glass (blur) — the surfaces the eye lands on first
+     .tier-2  translucent only (no blur) — nested tiles, cheap to paint
+   ------------------------------------------------------------------------ */
+
+/* --- tier 1: blurred glass -------------------------------------------- */
+.auth-card,
+.teacher-entry-card,
+.home-hero,
+.home-list-card,
+.home-section > .home-list-card,
+.admin-card,
+.admin-more-menu,
+.dash-finance-card,
+.quick-report-card,
+.report-card,
+.finance-search-card,
+.pay-search-card,
+.pay-quick-profile,
+.teacher-queue-card,
+.teacher-home-link,
+.teaching-board,
+.learning-card,
+.exam-card,
+.exam-workspace,
+.routine-body,
+.contact-card,
+.help-card,
+.settings-list,
+.progress-card,
+.notice-item,
+.student-row,
+.ledger-item,
+.class-row,
+.routine-row,
+.fee-search-card,
+.teaching-card,
+.teacher-summary > div,
+.learning-summary > div,
+.quick-wrap {
+  border: 1px solid var(--g-border) !important;
+  border-radius: var(--g-r-lg);
+  background: var(--g-surface) !important;
+  box-shadow: var(--g-shadow), var(--g-inner) !important;
+  backdrop-filter: blur(var(--g-blur)) saturate(165%);
+  -webkit-backdrop-filter: blur(var(--g-blur)) saturate(165%);
+}
+
+/* --- tier 2: translucent tiles (no blur) ------------------------------- */
+.home-stat,
+.admin-stat-tile,
+.dash-finance-tile,
+.result-stats > div,
+.result-row,
+.course-item,
+.routine-item,
+.notice-strip,
+.detail-grid > div,
+.fee-balance-grid > div,
+.mobile-report-summary,
+.mobile-report-totals,
+.quick-tile,
+.teaching-resource,
+.learning-brief,
+.exam-question,
+.exam-option,
+.pay-pick,
+.pay-method,
+.pay-activity-row,
+.fee-search-result,
+.class-context,
+.teacher-progress-row {
+  border: 1px solid var(--g-border-quiet);
+  border-radius: var(--g-r-md);
+  background: var(--g-surface-soft);
+  box-shadow: var(--g-inner);
+}
+
+/* Tonal tiles keep their meaning, just softened into the glass. */
+.home-stat.tone-mint,
+.admin-stat-tile.tone-mint,
+.dash-finance-tile.tone-mint { background: rgba(215, 243, 232, .58); }
+.home-stat.tone-blue,
+.admin-stat-tile.tone-blue,
+.dash-finance-tile.tone-blue { background: rgba(215, 232, 250, .55); }
+.home-stat.tone-amber,
+.admin-stat-tile.tone-amber,
+.dash-finance-tile.tone-amber { background: rgba(253, 234, 206, .55); }
+
+/* The green hero cards become "liquid" rather than flat fills. */
+.welcome-card,
+.admin-dashboard-collect,
+.pay-pulse-tile,
+.exam-link,
+.learning-filter button[aria-pressed="true"] {
+  border: 1px solid rgba(255, 255, 255, .26);
+  border-radius: var(--g-r-xl);
+  background:
+    radial-gradient(120% 120% at 12% 0%, rgba(255, 255, 255, .26) 0%, rgba(255, 255, 255, 0) 52%),
+    linear-gradient(140deg, #0a8c68 0%, #04795a 48%, #05654b 100%);
+  box-shadow: 0 18px 38px rgba(4, 121, 90, .28), inset 0 1px 0 rgba(255, 255, 255, .3);
+}
+
+/* Coloured hero cards (profile, results, courses) keep their own palette — they
+   only gain the same gloss, radius and depth so the language stays consistent. */
+.profile-card,
+.result-hero,
+.course-summary,
+.pay-due-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--g-r-lg);
+  box-shadow: var(--g-shadow-lift), inset 0 1px 0 rgba(255, 255, 255, .28);
+}
+.profile-card::before,
+.result-hero::before,
+.course-summary::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 120% at 14% 0%, rgba(255, 255, 255, .24) 0%, rgba(255, 255, 255, 0) 55%);
+  pointer-events: none;
+}
+.profile-card > *,
+.result-hero > *,
+.course-summary > * { position: relative; }
+
+/* A single moving sheen across the primary hero — transform only. */
+.welcome-card,
+.admin-dashboard-collect {
+  position: relative;
+  overflow: hidden;
+}
+.welcome-card::after,
+.admin-dashboard-collect::after {
+  content: "";
+  position: absolute;
+  top: -60%;
+  left: -40%;
+  width: 45%;
+  height: 220%;
+  background: linear-gradient(100deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, .16), rgba(255, 255, 255, 0));
+  transform: rotate(14deg) translate3d(0, 0, 0);
+  animation: gSheen 7.5s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes gSheen {
+  0%, 62% { transform: rotate(14deg) translate3d(-40%, 0, 0); opacity: 0; }
+  70%     { opacity: 1; }
+  100%    { transform: rotate(14deg) translate3d(340%, 0, 0); opacity: 0; }
+}
+
+/* Card press feedback (§17, §37) — lift, never bounce. */
+.quick-tile-btn,
+.admin-more-item,
+.home-row,
+.settings-list > button,
+.learning-card,
+.teaching-card,
+.student-row,
+.notice-item,
+.course-item,
+.pay-pick,
+.fee-search-result,
+.admin-dashboard-collect,
+.home-hero-foot,
+.welcome-avatar {
+  transition:
+    transform var(--g-fast) var(--g-ease),
+    box-shadow var(--g-base) var(--g-ease),
+    background var(--g-base) var(--g-ease);
+}
+.quick-tile-btn:active,
+.admin-more-item:active,
+.home-row:active,
+.settings-list > button:active,
+.learning-card:active,
+.teaching-card:active,
+.student-row:active,
+.notice-item:active,
+.course-item:active,
+.pay-pick:active,
+.fee-search-result:active,
+.admin-dashboard-collect:active,
+.home-hero-foot:active {
+  transform: translateY(-2px);
+}
+@media (hover: hover) {
+  .quick-tile-btn:hover,
+  .admin-more-item:hover,
+  .settings-list > button:hover,
+  .learning-card:hover,
+  .teaching-card:hover,
+  .student-row:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--g-shadow-lift);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   04 — Top bars
+   ------------------------------------------------------------------------ */
+.topbar,
+.auth-topbar,
+.admin-topbar,
+.pay-topbar {
+  border-bottom: 1px solid rgba(255, 255, 255, .55) !important;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .84), rgba(255, 255, 255, .62)) !important;
+  box-shadow: 0 8px 26px rgba(11, 61, 48, .07) !important;
+  backdrop-filter: blur(var(--g-blur-strong)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--g-blur-strong)) saturate(180%);
+}
+
+.topbar-strip {
+  border-top-color: rgba(255, 255, 255, .6);
+  background: rgba(255, 255, 255, .28);
+}
+
+/* Existing logo kept as-is, given a glass plinth (§28). */
+.brand-mark img,
+.auth-brand img,
+.admin-brand img {
+  border-radius: 13px;
+  background: rgba(255, 255, 255, .7);
+  box-shadow:
+    0 6px 16px rgba(11, 61, 48, .16),
+    inset 0 1px 0 rgba(255, 255, 255, .9);
+}
+
+/* Round header actions become small glass drops. */
+.icon-button,
+.weather-pill,
+.admin-exit,
+.admin-app-link,
+.icon-btn,
+.notification-button,
+.pay-topbar button,
+.admin-topbar-actions > button,
+.admin-topbar-actions > a {
+  border: 1px solid var(--g-border) !important;
+  background: var(--g-surface-strong) !important;
+  box-shadow: var(--g-shadow-sm), var(--g-inner) !important;
+  backdrop-filter: blur(var(--g-blur-soft));
+  -webkit-backdrop-filter: blur(var(--g-blur-soft));
+  transition: transform var(--g-fast) var(--g-spring), box-shadow var(--g-base) var(--g-ease);
+}
+.icon-button:active,
+.admin-exit:active,
+.admin-app-link:active,
+.icon-btn:active,
+.notification-button:active {
+  transform: scale(.92);
+}
+
+/* ---------------------------------------------------------------------------
+   05 — Floating glass bottom navigation (§12, §13, §14)
+   The bar stays fixed for every portal, detaches from the screen edge, and
+   respects the iPhone-style safe area. Item order, labels, icons and click
+   handling are untouched — this is geometry and material only.
+   ------------------------------------------------------------------------ */
+.bottom-nav,
+.admin-bottom {
+  bottom: calc(10px + var(--safe-bottom)) !important;
+  width: min(calc(100% - 24px), 452px) !important;
+  height: 66px !important;
+  padding: 7px 8px !important;
+  border: 1px solid var(--g-border) !important;
+  border-radius: 26px !important;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .8), rgba(255, 255, 255, .62)) !important;
+  box-shadow:
+    var(--g-shadow-float),
+    inset 0 1px 0 rgba(255, 255, 255, .85),
+    inset 0 -1px 0 rgba(12, 74, 58, .05) !important;
+  backdrop-filter: blur(var(--g-blur-strong)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--g-blur-strong)) saturate(180%);
+}
+
+/* Reserve the same room the app already reserved, plus the float gap, so the
+   last row of content is never covered. */
+.app-shell,
+.admin-shell {
+  --shell-footer-height: calc(80px + var(--safe-bottom));
+}
+
+.bottom-link,
+.admin-bottom-item {
+  gap: 2px;
+  border-radius: 18px;
+  transition: color var(--g-fast) var(--g-ease), transform var(--g-fast) var(--g-spring);
+}
+.bottom-link:active,
+.admin-bottom-item:active { transform: scale(.94); }
+
+/* Icon drop inside a tab */
+.bottom-link .nav-chip,
+.admin-bottom-item .nav-chip {
+  position: relative;
+  width: 36px !important;
+  height: 30px !important;
+  border-radius: 12px !important;
+  background: transparent !important;
+  transition:
+    transform var(--g-base) var(--g-spring),
+    background var(--g-base) var(--g-ease),
+    box-shadow var(--g-base) var(--g-ease);
+}
+
+/* Active tab (§11): larger, brighter, lifted, softly glowing. */
+.bottom-link.active .nav-chip,
+.admin-bottom-item.active .nav-chip,
+.bottom-link[aria-current="page"] .nav-chip,
+.admin-bottom-item[aria-current="page"] .nav-chip {
+  background: linear-gradient(170deg, rgba(255, 255, 255, .95), rgba(214, 243, 232, .85)) !important;
+  box-shadow:
+    0 6px 14px rgba(4, 121, 90, .2),
+    inset 0 1px 0 rgba(255, 255, 255, .95),
+    0 0 0 1px rgba(4, 121, 90, .1);
+  transform: translateY(-3px) scale(1.08);
+}
+.bottom-link.active span:last-child,
+.admin-bottom-item.active span,
+.bottom-link[aria-current="page"] span:last-child,
+.admin-bottom-item[aria-current="page"] span {
+  color: var(--forest);
+}
+
+/* Tap ripple-free feedback on the icon itself (§10: 1.00 → 1.10 → 1.00). */
+.bottom-link:active .nav-chip,
+.admin-bottom-item:active .nav-chip { transform: translateY(-3px) scale(1.12); }
+
+/* Labels stay small, readable and never bold enough to shout (§9). */
+.bottom-link span:last-child,
+.admin-bottom-item span {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: -.1px;
+}
+
+/* Toasts must clear the floating bar. */
+.admin-toast,
+.feedback-toast,
+.pay-toast,
+.install-toast { bottom: calc(96px + var(--safe-bottom)) !important; }
+
+/* ---------------------------------------------------------------------------
+   06 — Water-drop icon chips (§7)
+   Translucent body + soft top highlight + inner shadow + a light reflection.
+   Applied to the chips the app already renders around its SVG icon set, so the
+   stroke weight and optical sizing of the existing icon library are preserved.
+   ------------------------------------------------------------------------ */
+.home-stat-icon,
+.home-hero-icon,
+.home-row-icon,
+.home-hero-foot-icon,
+.admin-stat-icon,
+.admin-hero-icon,
+.admin-more-icon,
+.admin-dashboard-collect-icon,
+.admin-hero-foot-icon,
+.admin-card-chip,
+.learning-home-icon,
+.learning-card-title > span:first-child,
+.notice-detail-icon,
+.subject-icon,
+.settings-icon,
+.pay-pulse-icon,
+.pay-method-dot,
+.install-toast-icon,
+.student-avatar,
+.mini-avatar,
+.form-section-title > span,
+.quick-tile-btn > span:first-child,
+.teaching-kind {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .85),
+    inset 0 -2px 4px rgba(11, 61, 48, .1),
+    0 4px 12px rgba(11, 61, 48, .12);
+  transition: transform var(--g-fast) var(--g-spring), box-shadow var(--g-base) var(--g-ease);
+}
+
+/* The drop's crown highlight */
+.home-stat-icon::before,
+.home-hero-icon::before,
+.home-row-icon::before,
+.home-hero-foot-icon::before,
+.admin-stat-icon::before,
+.admin-hero-icon::before,
+.admin-more-icon::before,
+.admin-dashboard-collect-icon::before,
+.admin-hero-foot-icon::before,
+.admin-card-chip::before,
+.learning-home-icon::before,
+.notice-detail-icon::before,
+.subject-icon::before,
+.settings-icon::before,
+.pay-pulse-icon::before,
+.student-avatar::before,
+.mini-avatar::before,
+.form-section-title > span::before,
+.teaching-kind::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    radial-gradient(90% 60% at 30% 8%, rgba(255, 255, 255, .78) 0%, rgba(255, 255, 255, 0) 62%),
+    linear-gradient(180deg, rgba(255, 255, 255, .22) 0%, rgba(255, 255, 255, 0) 55%);
+  pointer-events: none;
+}
+
+/* Keep the glyph crisp above the highlight. */
+.home-stat-icon svg,
+.home-hero-icon svg,
+.home-row-icon svg,
+.admin-stat-icon svg,
+.admin-more-icon svg,
+.learning-home-icon svg,
+.notice-detail-icon svg,
+.settings-icon svg,
+.pay-pulse-icon svg,
+.admin-card-chip svg { position: relative; }
+
+/* Idle float — only on the handful of dashboard drops, transform-only. */
+.home-stat-icon,
+.admin-stat-icon,
+.quick-tile-btn > span:first-child,
+.pay-pulse-icon {
+  animation: gFloat 5.5s ease-in-out infinite;
+  will-change: transform;
+}
+.home-stats > :nth-child(2) .home-stat-icon,
+.admin-stats > :nth-child(2) .admin-stat-icon,
+.quick-wrap > :nth-child(2) .quick-tile-btn > span:first-child { animation-delay: .5s; }
+.home-stats > :nth-child(3) .home-stat-icon,
+.quick-wrap > :nth-child(3) .quick-tile-btn > span:first-child { animation-delay: 1s; }
+
+@keyframes gFloat {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50%      { transform: translate3d(0, -2.5px, 0); }
+}
+
+/* Tap: 1.00 → 1.10 → 1.00 (§10) */
+.quick-tile-btn:active > span:first-child,
+.admin-more-item:active .admin-more-icon,
+.home-row:active .home-row-icon,
+.settings-list > button:active .settings-icon {
+  transform: scale(1.1);
+}
+
+/* ---------------------------------------------------------------------------
+   07 — Feature tiles, list rows and "More" menus (§15, §16, §19)
+   ------------------------------------------------------------------------ */
+.quick-tile-btn,
+.home-row,
+.admin-more-item,
+.settings-list > button {
+  border-radius: var(--g-r-md);
+}
+
+.admin-more-item,
+.settings-list > button {
+  margin: 6px 0;
+  padding: 14px 12px !important;
+  border: 1px solid var(--g-border-quiet) !important;
+  background: rgba(255, 255, 255, .42);
+}
+.admin-more-item:active,
+.settings-list > button:active { background: rgba(255, 255, 255, .55); }
+
+.admin-menu-arrow,
+.course-chevron,
+.learning-chevron,
+.home-link-pill {
+  transition: transform var(--g-base) var(--g-ease);
+}
+.admin-more-item:active .admin-menu-arrow,
+.home-row:active .admin-menu-arrow { transform: translateX(3px); }
+
+/* Section headers and pills read as light etched glass. */
+.home-date-pill,
+.admin-date-pill,
+.home-count-pill,
+.class-count,
+.badge,
+.chip,
+.audience-chip,
+.teacher-chip,
+.day-tab,
+.filter-button,
+.course-filter,
+.learning-filter,
+.page-date,
+.pay-search-kbd {
+  border: 1px solid var(--g-border) !important;
+  border-radius: var(--g-r-pill);
+  background: var(--g-surface-strong) !important;
+  box-shadow: var(--g-shadow-sm), inset 0 1px 0 rgba(255, 255, 255, .8);
+  backdrop-filter: blur(var(--g-blur-soft));
+  -webkit-backdrop-filter: blur(var(--g-blur-soft));
+}
+/* Selected chips keep their solid green fill (white label) and gain the gloss. */
+.chip.active,
+.day-tab.active {
+  border-color: rgba(255, 255, 255, .26) !important;
+  background:
+    radial-gradient(120% 140% at 20% 0%, rgba(255, 255, 255, .26) 0%, rgba(255, 255, 255, 0) 55%),
+    linear-gradient(140deg, #0a8c68, #04795a 60%, #056148) !important;
+  box-shadow: 0 8px 18px rgba(4, 121, 90, .26), inset 0 1px 0 rgba(255, 255, 255, .3) !important;
+}
+/* Radio-style selections that already use dark ink on a tint stay light. */
+.pay-method[aria-checked="true"] {
+  border-color: rgba(4, 121, 90, .32) !important;
+  background: linear-gradient(170deg, rgba(255, 255, 255, .95), rgba(212, 242, 231, .9)) !important;
+  box-shadow: var(--g-glow);
+}
+
+/* ---------------------------------------------------------------------------
+   08 — Buttons (§21)
+   Icon + text layout already exists in the markup; this is material only.
+   ------------------------------------------------------------------------ */
+.auth-submit,
+.step-next,
+.modal-action,
+.admin-btn.primary,
+.pay-form-actions button[type="submit"],
+.teacher-quick-actions > button:first-child,
+.mini-btn.approve {
+  border: 1px solid rgba(255, 255, 255, .24) !important;
+  border-radius: var(--g-r-sm);
+  background:
+    radial-gradient(120% 140% at 20% 0%, rgba(255, 255, 255, .28) 0%, rgba(255, 255, 255, 0) 55%),
+    linear-gradient(140deg, #0a8c68, #04795a 55%, #056148) !important;
+  box-shadow:
+    0 10px 22px rgba(4, 121, 90, .26),
+    inset 0 1px 0 rgba(255, 255, 255, .3) !important;
+  transition: transform var(--g-fast) var(--g-spring), box-shadow var(--g-base) var(--g-ease), filter var(--g-base) var(--g-ease);
+}
+.auth-submit:active,
+.step-next:active,
+.modal-action:active,
+.admin-btn.primary:active,
+.mini-btn.approve:active {
+  transform: scale(.975);
+  box-shadow: 0 5px 14px rgba(4, 121, 90, .22), inset 0 1px 0 rgba(255, 255, 255, .28) !important;
+}
+
+/* Secondary / ghost buttons: clear glass. */
+.step-back,
+.admin-btn.ghost,
+.mini-btn,
+.filter-reset,
+.modal-close,
+.admin-modal-close,
+.admin-more-back,
+.demo-button,
+.pay-activity-refresh,
+.student-search-clear,
+.quick-amount,
+.teacher-quick-fill,
+.receipt-actions > button {
+  border: 1px solid var(--g-border) !important;
+  border-radius: var(--g-r-sm);
+  background: var(--g-surface-strong) !important;
+  box-shadow: var(--g-shadow-sm), inset 0 1px 0 rgba(255, 255, 255, .8) !important;
+  backdrop-filter: blur(var(--g-blur-soft));
+  -webkit-backdrop-filter: blur(var(--g-blur-soft));
+  transition: transform var(--g-fast) var(--g-spring), box-shadow var(--g-base) var(--g-ease);
+}
+.step-back:active,
+.admin-btn.ghost:active,
+.mini-btn:active,
+.admin-more-back:active,
+.modal-close:active,
+.admin-modal-close:active,
+.quick-amount:active { transform: scale(.955); }
+
+/* Dialog close buttons stay circular drops. */
+.modal-close,
+.admin-modal-close { border-radius: var(--g-r-pill) !important; }
+
+.mini-btn.danger {
+  border-color: rgba(194, 65, 12, .26) !important;
+  background: rgba(255, 240, 233, .78) !important;
+}
+
+/* Tabs / segmented controls become a glass track with a floating thumb. */
+.auth-tabs,
+.registration-mode,
+.teacher-type-tabs,
+.finance-nav-pills,
+.day-tabs {
+  border: 1px solid var(--g-border-quiet) !important;
+  border-radius: var(--g-r-pill);
+  background: rgba(255, 255, 255, .34) !important;
+  box-shadow: inset 0 1px 3px rgba(11, 61, 48, .06);
+  backdrop-filter: blur(var(--g-blur-soft));
+  -webkit-backdrop-filter: blur(var(--g-blur-soft));
+}
+.auth-tab,
+.mode-button { border-radius: var(--g-r-pill) !important; transition: all var(--g-base) var(--g-ease); }
+.auth-tab.active,
+.mode-button.active {
+  background: linear-gradient(170deg, rgba(255, 255, 255, .98), rgba(255, 255, 255, .8)) !important;
+  box-shadow: 0 4px 12px rgba(11, 61, 48, .12), inset 0 1px 0 #fff !important;
+}
+
+/* ---------------------------------------------------------------------------
+   09 — Forms (§20)
+   Field behaviour, names, validation and hints are unchanged.
+   ------------------------------------------------------------------------ */
+.auth-panel input,
+.auth-panel select,
+.auth-panel textarea,
+.edit-modal input,
+.edit-modal select,
+.edit-modal textarea,
+.admin-modal input,
+.admin-modal select,
+.admin-modal textarea,
+.field input,
+.field select,
+.field textarea,
+.app-field input,
+.app-field select,
+.finance-search-input,
+.pay-search-input,
+.student-search,
+.teacher-toolbar select,
+.pay-amount-field input,
+.admin-card input,
+.admin-card select,
+.admin-card textarea {
+  border: 1px solid var(--g-border) !important;
+  border-radius: var(--g-r-sm) !important;
+  background: rgba(255, 255, 255, .55) !important;
+  box-shadow: inset 0 1px 2px rgba(11, 61, 48, .05) !important;
+  backdrop-filter: blur(var(--g-blur-soft));
+  -webkit-backdrop-filter: blur(var(--g-blur-soft));
+  transition: border-color var(--g-base) var(--g-ease), box-shadow var(--g-base) var(--g-ease), background var(--g-base) var(--g-ease);
+}
+
+.auth-panel input:focus,
+.auth-panel select:focus,
+.auth-panel textarea:focus,
+.edit-modal input:focus,
+.edit-modal select:focus,
+.edit-modal textarea:focus,
+.admin-modal input:focus,
+.admin-modal select:focus,
+.admin-modal textarea:focus,
+.field input:focus,
+.field select:focus,
+.field textarea:focus,
+.finance-search-input:focus,
+.pay-search-input:focus,
+.student-search:focus,
+.admin-card input:focus,
+.admin-card select:focus,
+.admin-card textarea:focus {
+  border-color: rgba(4, 121, 90, .45) !important;
+  background: rgba(255, 255, 255, .82) !important;
+  box-shadow:
+    0 0 0 4px rgba(4, 121, 90, .13),
+    inset 0 1px 2px rgba(11, 61, 48, .04) !important;
+}
+
+/* Leading field icon sits on the glass, not in it. */
+.input-wrap > svg { opacity: .85; }
+
+.fake-check {
+  border-color: rgba(12, 74, 58, .2);
+  background: rgba(255, 255, 255, .7);
+  box-shadow: inset 0 1px 2px rgba(11, 61, 48, .07);
+}
+
+.switch-track,
+.toggle-switch {
+  border: 1px solid var(--g-border);
+  box-shadow: inset 0 1px 3px rgba(11, 61, 48, .1);
+}
+
+.step-progress-track {
+  background: rgba(255, 255, 255, .5);
+  box-shadow: inset 0 1px 2px rgba(11, 61, 48, .08);
+}
+
+/* ---------------------------------------------------------------------------
+   10 — Modals, toasts and overlays (§22, §23)
+   ------------------------------------------------------------------------ */
+.modal-backdrop,
+.admin-modal-backdrop {
+  background: rgba(16, 42, 35, .34) !important;
+  backdrop-filter: blur(10px) saturate(130%);
+  -webkit-backdrop-filter: blur(10px) saturate(130%);
+}
+
+.modal,
+.admin-modal,
+.resource-modal-body {
+  border: 1px solid var(--g-border) !important;
+  border-radius: var(--g-r-xl) !important;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .88), rgba(255, 255, 255, .74)) !important;
+  box-shadow:
+    0 30px 70px rgba(11, 61, 48, .26),
+    inset 0 1px 0 rgba(255, 255, 255, .9) !important;
+  backdrop-filter: blur(var(--g-blur-strong)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--g-blur-strong)) saturate(180%);
+}
+
+.admin-toast,
+.feedback-toast,
+.pay-toast {
+  border: 1px solid rgba(255, 255, 255, .18) !important;
+  border-radius: var(--g-r-pill) !important;
+  background: rgba(24, 56, 47, .78) !important;
+  box-shadow: 0 16px 36px rgba(11, 61, 48, .3), inset 0 1px 0 rgba(255, 255, 255, .16) !important;
+  backdrop-filter: blur(var(--g-blur)) saturate(160%);
+  -webkit-backdrop-filter: blur(var(--g-blur)) saturate(160%);
+  animation: gToastIn var(--g-slow) var(--g-ease) both;
+}
+@keyframes gToastIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.install-toast {
+  border: 1px solid var(--g-border) !important;
+  border-radius: var(--g-r-lg) !important;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .88), rgba(255, 255, 255, .72)) !important;
+  box-shadow: var(--g-shadow-float), inset 0 1px 0 rgba(255, 255, 255, .9) !important;
+  backdrop-filter: blur(var(--g-blur)) saturate(170%);
+  -webkit-backdrop-filter: blur(var(--g-blur)) saturate(170%);
+}
+
+.pay-stickybar,
+.exam-timer {
+  border: 1px solid var(--g-border);
+  background: linear-gradient(180deg, rgba(255, 255, 255, .86), rgba(255, 255, 255, .68));
+  box-shadow: var(--g-shadow-float), inset 0 1px 0 rgba(255, 255, 255, .9);
+  backdrop-filter: blur(var(--g-blur-strong)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--g-blur-strong)) saturate(180%);
+}
+
+/* Page transition: fade + subtle translate (§37). */
+.view.active,
+.admin-view.active,
+.teacher-view:not([hidden]),
+.finance-panel.active {
+  animation: gViewIn var(--g-slow) var(--g-ease) both;
+}
+@keyframes gViewIn {
+  from { opacity: 0; transform: translate3d(0, 6px, 0); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+/* ---------------------------------------------------------------------------
+   11 — Loading / shimmer utilities (§24)
+   Available for any element the app already marks as busy; no heavy animation.
+   ------------------------------------------------------------------------ */
+[aria-busy="true"],
+.is-loading,
+.glass-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+[aria-busy="true"]::after,
+.is-loading::after,
+.glass-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, rgba(255, 255, 255, 0) 20%, rgba(255, 255, 255, .55) 50%, rgba(255, 255, 255, 0) 80%);
+  transform: translate3d(-100%, 0, 0);
+  animation: gShimmer 1.25s linear infinite;
+  pointer-events: none;
+}
+@keyframes gShimmer {
+  to { transform: translate3d(100%, 0, 0); }
+}
+
+/* ---------------------------------------------------------------------------
+   12 — Motion, accessibility and responsive guards (§26, §31)
+   ------------------------------------------------------------------------ */
+
+/* Glass must never cost contrast. */
+.muted,
+.finance-hint,
+.home-stat-label,
+.admin-more-copy small,
+.bottom-link span:last-child,
+.admin-bottom-item span { color: #4e625b; }
+
+/* Visible focus on the glass. */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid rgba(4, 121, 90, .55);
+  outline-offset: 2px;
+}
+
+/* 44px touch targets on the new floating bar. */
+.bottom-link,
+.admin-bottom-item { min-height: 52px; }
+
+/* Nothing may spill sideways on small Android screens. */
+.app-main,
+.admin-main,
+.pay-main { overflow-x: hidden; }
+
+@media (max-width: 400px) {
+  .bottom-nav,
+  .admin-bottom {
+    width: min(calc(100% - 16px), 452px) !important;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+  }
+  .bottom-link span:last-child,
+  .admin-bottom-item span { font-size: 9.5px; }
+  .bottom-link .nav-chip,
+  .admin-bottom-item .nav-chip { width: 32px !important; }
+}
+
+@media (max-width: 360px) {
+  :root { --g-r-xl: 24px; --g-r-lg: 20px; --g-r-md: 16px; }
+  .bottom-link span:last-child,
+  .admin-bottom-item span { font-size: 9px; }
+}
+
+/* Cheaper paint where the platform cannot blur. */
+@supports not ((backdrop-filter: blur(4px)) or (-webkit-backdrop-filter: blur(4px))) {
+  .auth-card, .home-hero, .home-list-card, .admin-card, .admin-more-menu,
+  .topbar, .auth-topbar, .admin-topbar, .pay-topbar,
+  .bottom-nav, .admin-bottom, .modal, .admin-modal {
+    background: rgba(255, 255, 255, .95) !important;
+  }
+}
+
+/* Honour the user's motion preference everywhere this file animates. */
+@media (prefers-reduced-motion: reduce) {
+  body::before,
+  body::after,
+  .app-shell::before,
+  .admin-shell::before,
+  .auth-screen::before,
+  .welcome-card::after,
+  .admin-dashboard-collect::after,
+  .home-stat-icon,
+  .admin-stat-icon,
+  .quick-tile-btn > span:first-child,
+  .pay-pulse-icon,
+  [aria-busy="true"]::after,
+  .is-loading::after,
+  .glass-shimmer::after { animation: none !important; }
+}
+
+/* Print / PDF export paths must stay flat and ink-friendly. */
+@media print {
+  body::before, body::after,
+  .app-shell::before, .admin-shell::before, .auth-screen::before { display: none !important; }
+  * { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+}
+
+/* ---------------------------------------------------------------------------
+   13 — Dark glass
+   Opt-in only (html[data-theme="dark"]). The app does not set this attribute
+   today, so behaviour is unchanged; when a dark theme is switched on it
+   inherits exactly the same glass language, just inverted.
+   ------------------------------------------------------------------------ */
+html[data-theme="dark"] {
+  --ink: #e8f1ed;
+  --muted: #a4b6ae;
+  --line: rgba(255, 255, 255, .1);
+  --g-surface: rgba(24, 38, 34, .58);
+  --g-surface-strong: rgba(28, 44, 39, .72);
+  --g-surface-soft: rgba(255, 255, 255, .07);
+  --g-border: rgba(255, 255, 255, .14);
+  --g-border-quiet: rgba(255, 255, 255, .08);
+  --g-inner: inset 0 1px 0 rgba(255, 255, 255, .12), inset 0 -1px 0 rgba(0, 0, 0, .25);
+  --g-shadow: 0 10px 28px rgba(0, 0, 0, .42);
+  --g-shadow-float: 0 20px 48px rgba(0, 0, 0, .55);
+}
+html[data-theme="dark"],
+html[data-theme="dark"] body {
+  background: linear-gradient(175deg, #0d1a17 0%, #10201c 45%, #0c1a20 100%);
+  color: var(--ink);
+}
+html[data-theme="dark"] body::before {
+  background: radial-gradient(circle at 35% 35%, rgba(16, 185, 129, .16), rgba(16, 185, 129, 0) 68%);
+}
+html[data-theme="dark"] body::after {
+  background: radial-gradient(circle at 60% 60%, rgba(56, 130, 200, .14), rgba(56, 130, 200, 0) 68%);
+}
+html[data-theme="dark"] .topbar,
+html[data-theme="dark"] .auth-topbar,
+html[data-theme="dark"] .admin-topbar,
+html[data-theme="dark"] .pay-topbar,
+html[data-theme="dark"] .bottom-nav,
+html[data-theme="dark"] .admin-bottom {
+  border-color: rgba(255, 255, 255, .12) !important;
+  background: linear-gradient(180deg, rgba(26, 42, 37, .82), rgba(20, 34, 30, .66)) !important;
+}
+html[data-theme="dark"] .modal,
+html[data-theme="dark"] .admin-modal {
+  background: linear-gradient(180deg, rgba(26, 42, 37, .9), rgba(20, 34, 30, .78)) !important;
+}
+html[data-theme="dark"] .auth-panel input,
+html[data-theme="dark"] .field input,
+html[data-theme="dark"] .field select,
+html[data-theme="dark"] .admin-card input {
+  color: var(--ink);
+  background: rgba(255, 255, 255, .07) !important;
+}
