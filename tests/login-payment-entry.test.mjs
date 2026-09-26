@@ -80,12 +80,11 @@ test('a student still signs in here and opens the student app', async () => {
 
 test('admin credentials hand over to the admin panel, wrong ones change nothing', async () => {
   await open();
-  // A fresh device has no password for the role yet: the shared dialog asks
-  // for one before anything else happens.
-  await signIn(STAFF_ACCOUNTS.admin.username, STAFF_TEST_PASSWORD, () => Boolean(ctx.$('.staff-pw-backdrop')));
-  assert.equal(session('admin'), null, 'no session before a password exists');
-  ctx.$('[data-staff-pw-cancel]')?.dispatchEvent(new ctx.window.Event('click', { bubbles: true }));
-  await ctx.waitFor(() => !ctx.$('.staff-pw-backdrop'));
+  // Admin access is not self-provisioned at shared login: the first Admin
+  // must be created through the dedicated initial setup flow.
+  await signIn(STAFF_ACCOUNTS.admin.username, STAFF_TEST_PASSWORD, () => Boolean(ctx.$('#authMessage').textContent));
+  assert.equal(session('admin'), null, 'no Admin session before initial setup');
+  assert.equal(ctx.$('.staff-pw-backdrop'), null, 'shared login cannot create the first Admin');
 
   await provisionStaff('admin');
   await signIn('admin.apc', 'ভুল-পাসওয়ার্ড', () => /সঠিক ন(য়|য়)/.test(ctx.$('#authMessage').textContent));
@@ -142,13 +141,12 @@ test('the admin switch that closes teacher access also closes it from this page'
   assert.equal(navigated(), false);
 });
 
-test('the panel a staff member was handed to opens without a second form', async () => {
+test('a fresh Admin portal offers only the dedicated initial setup flow', async () => {
   const panel = await loadPage('admin.html', { seed: DEMO_OFF });
-  seedStaffSession(panel.window, 'admin');
-  await import('../js/admin.js');
-  await panel.flush();
+  await import('../js/admin.js?initial-setup');
+  await panel.waitFor(() => panel.$('#initialAdminSetup').hidden === false);
   assert.equal(panel.$('#adminEntry').hidden, true);
-  assert.equal(panel.$('#adminShell').hidden, false);
+  assert.equal(panel.$('#adminShell').hidden, true);
 });
 
 /* Logout is not a step back to a panel's own form: every panel drops the
@@ -177,14 +175,16 @@ for (const [panel, script, exitButton, role] of [
   });
 }
 
-test('typing a staff username switches the password box to a keyboard layout', async () => {
+test('typing a provisioned staff username switches the password box to a keyboard layout', async () => {
   await open();
+  await provisionStaff('admin');
   const { $, type } = ctx;
   assert.equal($('#loginPin').getAttribute('inputmode'), 'numeric');
   type($('#loginMobile'), 'admin.apc');
   assert.equal($('#loginPin').getAttribute('inputmode'), 'text');
   assert.equal($('#loginHint').classList.contains('is-staff'), true);
   type($('#loginMobile'), 'raisa.islam');
+  await ctx.waitFor(() => $('#loginPin').getAttribute('inputmode') === 'numeric');
   assert.equal($('#loginPin').getAttribute('inputmode'), 'numeric');
   assert.equal($('#loginHint').classList.contains('is-staff'), false);
 });

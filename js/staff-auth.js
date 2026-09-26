@@ -13,7 +13,7 @@
      (session.js); "remember me" keeps the token in localStorage for 90 days,
      otherwise it lives in sessionStorage and dies with the tab. */
 
-import { STAFF_KEYS, readJSON, writeJSON } from './database.js';
+import { STAFF_KEYS, KEYS, readJSON, writeJSON } from './database.js';
 import { hashPassword, verifyPassword, isPasswordRecord } from './password-hash.js';
 import { encryptValue, decryptValue, isEncryptedEnvelope } from './secure-store.js';
 import { buildSessionRecord, isSessionRecordValid, DAY_MS } from './session.js';
@@ -36,6 +36,12 @@ export const STAFF_ACCOUNTS = Object.freeze({
     accountKey: STAFF_KEYS.adminAccount,
     sessionKey: STAFF_KEYS.adminSession
   },
+  manager: {
+    role: 'manager',
+    username: 'manager.apc',
+    accountKey: STAFF_KEYS.managerAccount,
+    sessionKey: STAFF_KEYS.managerSession
+  },
   teacher: {
     role: 'teacher',
     username: 'teacher.apc',
@@ -56,11 +62,140 @@ export function normalizeStaffUsername(value) {
   return String(value ?? '').trim().toLowerCase();
 }
 
+const INITIAL_ADMIN_USERNAME_KEY = 'activePlus.initialAdminUsername.v1';
+const USERNAME_PATTERN = /^[a-z][a-z0-9._]{3,19}$/;
+const TEMP_PASSWORD_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%';
+function generateTemporaryPassword() {
+  const cryptoApi = globalThis.crypto || globalThis.window?.crypto;
+  if (!cryptoApi?.getRandomValues) throw new Error('নিরাপদ অটো-জেনারেটেড পাসওয়ার্ড তৈরি করা যাচ্ছে না।');
+  const bytes = new Uint8Array(20);
+  cryptoApi.getRandomValues(bytes);
+  return [...bytes].map(byte => TEMP_PASSWORD_ALPHABET[byte % TEMP_PASSWORD_ALPHABET.length]).join('');
+}
+
+function normalizeBdMobile(value) {
+  let mobile = String(value ?? '').trim().replace(/[০-৯]/g, digit => '০১২৩৪৫৬৭৮৯'.indexOf(digit));
+  mobile = mobile.replace(/[\s()+-]/g, '');
+  if (mobile.startsWith('+880')) mobile = `0${mobile.slice(4)}`;
+  else if (mobile.startsWith('880')) mobile = `0${mobile.slice(3)}`;
+  return mobile;
+}
+
+/** Create the one and only first-admin profile. Never leaves an incomplete record. */
+export async function createInitialAdmin({ fullName, mobile, email = '', username, password, confirmPassword } = {}) {
+  if (await readStaffAccount('admin')) return { ok: false, error: 'প্রথম Admin Account ইতিমধ্যে তৈরি হয়েছে।' };
+  const name = String(fullName ?? '').trim().replace(/\s+/g, ' ');
+  const phone = normalizeBdMobile(mobile);
+  const mail = String(email ?? '').trim().toLowerCase();
+  const handle = normalizeStaffUsername(username);
+  if (name.length < 2 || name.length > 100) return { ok: false, error: 'পূর্ণ নাম লিখুন (২–১০০ অক্ষর)।' };
+  if (!/^01[3-9]\d{8}$/.test(phone)) return { ok: false, error: 'সঠিক বাংলাদেশি মোবাইল নম্বর লিখুন।' };
+  if (mail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) return { ok: false, error: 'সঠিক ইমেইল ঠিকানা লিখুন অথবা ফাঁকা রাখুন।' };
+  if (!USERNAME_PATTERN.test(handle)) return { ok: false, error: 'ইউজারনেম ৪–২০ অক্ষরের হতে হবে; ইংরেজি ছোট হাতের অক্ষর দিয়ে শুরু করুন, অক্ষর/সংখ্যা/ডট/আন্ডারস্কোর ব্যবহার করুন।' };
+  if (handle === 'admin' || handle === 'administrator' || handle === 'root' || handle === 'null' || handle === 'undefined') return { ok: false, error: 'এই ইউজারনেমটি সংরক্ষিত, অন্য একটি বেছে নিন।' };
+  const passwordIssue = passwordProblem(password, confirmPassword);
+  if (passwordIssue) return { ok: false, error: passwordIssue };
+
+  const otherStaffNames = Object.values(STAFF_ACCOUNTS).filter(item => item.role !== 'admin').map(item => normalizeStaffUsername(item.username));
+  const index = readJSON(KEYS.usernames, {}) || {};
+  if (otherStaffNames.includes(handle) || Object.hasOwn(index, handle)) return { ok: false, error: 'এই ইউজারনেমটি ইতিমধ্যে ব্যবহৃত — অন্য একটি বেছে নিন।' };
+
+  const createdAt = new Date().toISOString();
+  const account = {
+    role: 'admin', status: 'active', owner: 'first-admin',
+    fullName: name, mobile: phone, email: mail,
+    username: handle, password: await hashPassword(password),
+    createdAt, accountStatus: 'active'
+  };
+  // Claim username first, then write the encrypted staff profile; roll back the
+  // claim if storage fails so a half-created Admin cannot block future setup.
+  const claimed = { ...index, [handle]: 'staff:admin' };
+  if (!writeJSON(KEYS.usernames, claimed)) return { ok: false, error: PASSWORD_STORE_FAILED };
+  if (!(await writeStaffAccount('admin', account))) {
+    const rollback = readJSON(KEYS.usernames, {}) || {};
+    if (rollback[handle] === 'staff:admin') { delete rollback[handle]; writeJSON(KEYS.usernames, rollback); }
+    return { ok: false, error: PASSWORD_STORE_FAILED };
+  }
+  if (!writeJSON(INITIAL_ADMIN_USERNAME_KEY, handle)) {
+    try { window.localStorage.removeItem(staffSpec('admin').accountKey); } catch {}
+    const rollback = readJSON(KEYS.usernames, {}) || {};
+    if (rollback[handle] === 'staff:admin') { delete rollback[handle]; writeJSON(KEYS.usernames, rollback); }
+    return { ok: false, error: PASSWORD_STORE_FAILED };
+  }
+  const bootstrap = await ensureBootstrapStaffAccounts(handle);
+  if (!bootstrap.ok) {
+    try { window.localStorage.removeItem(staffSpec('admin').accountKey); window.localStorage.removeItem(INITIAL_ADMIN_USERNAME_KEY); } catch {}
+    const rollback = readJSON(KEYS.usernames, {}) || {};
+    if (rollback[handle] === 'staff:admin') { delete rollback[handle]; writeJSON(KEYS.usernames, rollback); }
+    return { ok: false, error: bootstrap.error || PASSWORD_STORE_FAILED };
+  }
+  return { ok: true, account: { ...account, password: undefined }, bootstrapAccounts: bootstrap.accounts };
+}
+
+/** Ensure one temporary bootstrap identity exists for each operational staff role. */
+export async function ensureBootstrapStaffAccounts(ownerUsername = 'admin.apc') {
+  const index = readJSON(KEYS.usernames, {}) || {};
+  const pending = [];
+  try {
+    for (const role of ['manager', 'teacher', 'payment']) {
+      if (await readStaffAccount(role)) continue;
+      const spec = staffSpec(role);
+      const username = normalizeStaffUsername(spec.username);
+      if (Object.hasOwn(index, username)) return { ok: false, error: `Bootstrap username ${username} আগেই ব্যবহৃত।` };
+      const password = generateTemporaryPassword();
+      pending.push({
+        role, username, password,
+        profile: {
+          role, status: 'active', accountStatus: 'active', owner: normalizeStaffUsername(ownerUsername),
+          fullName: `প্রাথমিক ${role} অ্যাকাউন্ট`, mobile: '', email: '', username,
+          password: await hashPassword(password), mustChangePassword: true,
+          createdAt: new Date().toISOString(), bootstrapAccount: true
+        }
+      });
+    }
+  } catch { return { ok: false, error: PASSWORD_STORE_FAILED }; }
+  if (!pending.length) return { ok: true, accounts: [] };
+  const claimed = { ...index };
+  pending.forEach(account => { claimed[account.username] = `staff:${account.role}`; });
+  if (!writeJSON(KEYS.usernames, claimed)) return { ok: false, error: PASSWORD_STORE_FAILED };
+  const written = [];
+  for (const account of pending) {
+    if (!(await writeStaffAccount(account.role, account.profile))) {
+      written.forEach(role => { try { window.localStorage.removeItem(staffSpec(role).accountKey); } catch {} });
+      writeJSON(KEYS.usernames, index);
+      return { ok: false, error: PASSWORD_STORE_FAILED };
+    }
+    written.push(account.role);
+  }
+  return { ok: true, accounts: pending.map(({ role, username, password }) => ({ role, username, password })) };
+}
+
+export async function resolveStaffRoleByUsername(value) {
+  const username = normalizeStaffUsername(value);
+  const fixed = Object.keys(STAFF_ACCOUNTS).find(role => normalizeStaffUsername(STAFF_ACCOUNTS[role].username) === username);
+  if (fixed) {
+    if (fixed === 'admin' || fixed === 'manager') {
+      const account = await readStaffAccount(fixed);
+      if (!account) return null; // only Admin provisioning creates these owner/approval roles
+      if (account.username) return normalizeStaffUsername(account.username) === username ? fixed : null;
+    }
+    return fixed;
+  }
+  const admin = await readStaffAccount('admin');
+  return admin?.status === 'active' && normalizeStaffUsername(admin.username) === username ? 'admin' : null;
+}
+
 export function staffSpec(role) {
   return STAFF_ACCOUNTS[role] || null;
 }
 
 /** The stored record, decrypted when possible. Null when never provisioned. */
+export function staffAccountRecordExists(role) {
+  const spec = staffSpec(role);
+  if (!spec) return false;
+  try { return window.localStorage.getItem(spec.accountKey) !== null; } catch { return true; }
+}
+
 export async function readStaffAccount(role) {
   const spec = staffSpec(role);
   if (!spec) return null;
@@ -100,10 +235,14 @@ export async function staffNeedsSetup(role) {
  */
 export async function authenticateStaff(role, username, password) {
   const spec = staffSpec(role);
-  if (!spec || normalizeStaffUsername(username) !== spec.username) {
+  if (!spec) return { ok: false, error: WRONG_CREDENTIALS };
+  const account = await readStaffAccount(role);
+  const expectedUsername = role === 'admin' && account?.username
+    ? normalizeStaffUsername(account.username)
+    : normalizeStaffUsername(spec.username);
+  if (normalizeStaffUsername(username) !== expectedUsername) {
     return { ok: false, error: WRONG_CREDENTIALS };
   }
-  const account = await readStaffAccount(role);
   if (!account || typeof account.password === 'undefined') {
     return { ok: true, needsSetup: true };
   }
@@ -135,7 +274,12 @@ export async function loadStaffAccount(role) {
   if (!account) return { username: spec.username, hasPassword: false, mustChangePassword: false, isLegacy: false };
   const isLegacy = typeof account.password === 'string' && !isPasswordRecord(account.password);
   return {
-    username: spec.username,
+    username: account.username || spec.username,
+    fullName: account.fullName || '',
+    mobile: account.mobile || '',
+    email: account.email || '',
+    status: account.status || 'active',
+    createdAt: account.createdAt || null,
     hasPassword: typeof account.password !== 'undefined',
     mustChangePassword: isLegacy || Boolean(account.mustChangePassword),
     isLegacy
@@ -178,8 +322,11 @@ export async function setStaffPassword(role, nextPassword, confirmPassword) {
   if (!spec) return { ok: false, error: 'অজানা ভূমিকা।' };
   const problem = passwordProblem(nextPassword, confirmPassword);
   if (problem) return { ok: false, error: problem };
+  const existing = await readStaffAccount(role);
+  const { mustChangePassword: _mustChangePassword, ...profile } = existing || {};
   const saved = await writeStaffAccount(role, {
-    username: spec.username,
+    ...profile,
+    username: existing?.username || spec.username,
     password: await hashPassword(nextPassword),
     updatedAt: new Date().toISOString()
   });
@@ -201,8 +348,11 @@ export async function changeStaffPassword(role, currentPassword, nextPassword, c
   if (!currentOk) return { ok: false, error: 'বর্তমান পাসওয়ার্ড সঠিক নয়।' };
   const problem = passwordProblem(nextPassword, confirmPassword);
   if (problem) return { ok: false, error: problem };
+  const existing = await readStaffAccount(role);
+  const { mustChangePassword: _mustChangePassword, ...profile } = existing || {};
   const saved = await writeStaffAccount(role, {
-    username: spec.username,
+    ...profile,
+    username: existing?.username || spec.username,
     password: await hashPassword(nextPassword),
     updatedAt: new Date().toISOString()
   });

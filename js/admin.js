@@ -5,7 +5,7 @@ import { toBanglaNumber } from './ui.js';
 import { classCodes, dayNames, feeCategories, paymentMethods } from './admin-data.js';
 import { loadAppConfig, saveAppConfig, loadAccount, saveAccount } from './storage.js';
 import { loadRoster, saveRoster, syncAccountStatus, loadNotices, saveNotices, loadRoutine, saveRoutine } from './office-data.js';
-import { authenticateStaff, saveStaffSession, hasStaffSession, clearStaffSession, goToLoginPage } from './staff-auth.js';
+import { authenticateStaff, createInitialAdmin, ensureBootstrapStaffAccounts, readStaffAccount, staffAccountRecordExists, saveStaffSession, hasStaffSession, clearStaffSession, goToLoginPage } from './staff-auth.js';
 import { openStaffPasswordDialog } from './staff-password-dialog.js';
 import { financeRepository, monthLabel, dateLabel, searchStudents, studentFeeSummary, newestTransactions, stampTransaction, TRANSACTIONS_KEY } from './finance-data.js';
 import { newId } from './database.js';
@@ -74,12 +74,33 @@ function persistStudents() { saveRoster(state.students); }
 function persistNotices() { saveNotices(state.notices); }
 function persistRoutine() { saveRoutine(state.routine); }
 
-function enterPanel() {
+function showBootstrapCredentials(accounts) {
+  if (!accounts?.length) return;
+  const list = $('#bootstrapCredentialsList');
+  if (!list) return;
+  list.replaceChildren();
+  accounts.forEach(account => {
+    const row = document.createElement('article');
+    row.className = 'admin-card bootstrap-credential-row';
+    const role = document.createElement('strong'); role.textContent = account.role;
+    const username = document.createElement('p'); username.textContent = `Username: ${account.username}`;
+    const password = document.createElement('code'); password.textContent = account.password;
+    row.append(role, username, password);
+    list.append(row);
+  });
+  $('#bootstrapCredentialsBackdrop').hidden = false;
+}
+
+function enterPanel({ bootstrapCredentials = [] } = {}) {
   $('#adminEntry').hidden = true;
   $('#adminShell').hidden = false;
   renderAll();
   setView(state.activeView);
   toast('এডমিন প্যানেলে সফলভাবে প্রবেশ করা হয়েছে');
+  if (bootstrapCredentials.length) showBootstrapCredentials(bootstrapCredentials);
+  else readStaffAccount('admin')
+    .then(account => ensureBootstrapStaffAccounts(account?.username || 'admin.apc'))
+    .then(result => { if (result.ok && result.accounts.length) showBootstrapCredentials(result.accounts); });
 }
 
 function exitPanel() {
@@ -259,9 +280,7 @@ function renderStudents() {
           <div class="student-actions">
             <button class="mini-btn" type="button" data-action="view" data-id="${student.id}">তথ্য দেখুন</button>
             <button class="mini-btn" type="button" data-action="edit" data-id="${student.id}">সম্পাদনা</button>
-            ${student.status === 'pending' ? `
-              <button class="mini-btn approve" type="button" data-action="approve" data-id="${student.id}">অনুমোদন</button>
-              <button class="mini-btn danger" type="button" data-action="reject" data-id="${student.id}">বাতিল</button>` : ''}
+            ${student.status === 'pending' ? '<small class="manager-approval-note">সিদ্ধান্ত: Manager</small>' : ''}
             <button class="mini-btn" type="button" data-action="reset-pin" data-id="${student.id}">পাসওয়ার্ড রিসেট</button>
           </div>
         </div>
@@ -276,19 +295,6 @@ function renderStudents() {
 
 function findStudent(id) {
   return state.students.find(student => student.id === id);
-}
-
-function setStatus(id, status, message) {
-  const student = findStudent(id);
-  if (!student) return;
-  student.status = status;
-  persistStudents();
-  void syncAccountStatus(id, status);
-  renderFeeProfile();
-  renderFinanceStats();
-  renderStudents();
-  renderDashboard();
-  toast(message);
 }
 
 /* ---------- Student detail and পাসওয়ার্ড reset modal ---------- */
@@ -322,7 +328,7 @@ function openStudentDetail(student) {
         <div><dt>অগ্রগতি</dt><dd>${performance}</dd></div>
       </dl>
       <div class="modal-actions">
-        ${student.status === 'pending' ? '<button class="admin-btn primary" type="button" data-modal-action="approve">অনুমোদন করুন</button>' : ''}
+        ${student.status === 'pending' ? '<p class="manager-approval-note">এই সিদ্ধান্ত শুধু Manager দিতে পারবেন।</p>' : ''}
         <button class="admin-btn primary" type="button" data-modal-action="edit">সম্পাদনা করুন</button>
         <button class="admin-btn ghost" type="button" data-modal-action="reset-pin">পাসওয়ার্ড রিসেট</button>
         <button class="admin-btn ghost" type="button" data-modal-action="close">বন্ধ করুন</button>
@@ -333,7 +339,7 @@ function openStudentDetail(student) {
     button.addEventListener('click', () => {
       const action = button.dataset.modalAction;
       if (action === 'approve') {
-        setStatus(student.id, 'approved', `${student.name} অনুমোদিত হয়েছে — এখন শিক্ষার্থী অ্যাপ ব্যবহার করতে পারবে`);
+        toast('শিক্ষার্থী অনুমোদন শুধু Manager দিতে পারবেন।');
       } else if (action === 'reset-pin') {
         openPinReset(student);
         return;
@@ -1633,7 +1639,7 @@ $('#cfgTeacherRegistration')?.addEventListener('change', event => {
   renderTeacherRegistrationControl({ ...loadAppConfig(), allowTeacherRegistration: event.target.checked });
 });
 
-async function enterAdminPanel(remember) {
+async function enterAdminPanel(remember, bootstrapCredentials = []) {
   if (!(await saveStaffSession('admin', remember))) {
     const box = $('#adminLoginError');
     if (box) {
@@ -1642,8 +1648,46 @@ async function enterAdminPanel(remember) {
     }
     return;
   }
-  enterPanel();
+  enterPanel({ bootstrapCredentials });
 }
+
+$('#initialAdminForm')?.addEventListener('submit', async event => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const submit = form.querySelector('[type="submit"]');
+  const error = $('#initialAdminError');
+  const data = new FormData(form);
+  if (error) { error.hidden = true; error.textContent = ''; }
+  if (submit) { submit.disabled = true; submit.setAttribute('aria-busy', 'true'); }
+  try {
+    const result = await createInitialAdmin({
+      fullName: data.get('fullName'), mobile: data.get('mobile'), email: data.get('email'),
+      username: data.get('username'), password: data.get('password'), confirmPassword: data.get('confirmPassword')
+    });
+    if (!result.ok) {
+      if (error) { error.textContent = result.error || 'Admin Account তৈরি করা যায়নি।'; error.hidden = false; }
+      return;
+    }
+    form.reset();
+    $('#initialAdminSetup').hidden = true;
+    $('#adminEntry').hidden = false;
+    $('#adminLoginUser').value = result.account.username;
+    $('#adminLoginPin').value = data.get('password') || '';
+    await enterAdminPanel(true, result.bootstrapAccounts || []);
+  } catch {
+    if (error) { error.textContent = 'Account সংরক্ষণ করা যায়নি। স্টোরেজ পরীক্ষা করে আবার চেষ্টা করুন।'; error.hidden = false; }
+  } finally {
+    if (submit) { submit.disabled = false; submit.removeAttribute('aria-busy'); }
+  }
+});
+
+$('#bootstrapCredentialsDone')?.addEventListener('click', () => { $('#bootstrapCredentialsBackdrop').hidden = true; });
+$('#bootstrapCopyCredentials')?.addEventListener('click', async () => {
+  const text = [...($('#bootstrapCredentialsList')?.querySelectorAll('.bootstrap-credential-row') || [])]
+    .map(row => `${row.querySelector('strong')?.textContent}\n${row.querySelector('p')?.textContent}\nTemporary password: ${row.querySelector('code')?.textContent}`).join('\n\n');
+  try { await navigator.clipboard.writeText(text); toast('প্রাথমিক Role ID কপি হয়েছে — নিরাপদে সংরক্ষণ করুন'); }
+  catch { toast('কপি করা যায়নি — তথ্যগুলো হাতে সংরক্ষণ করুন'); }
+});
 
 $('#adminLoginForm')?.addEventListener('submit', async event => {
   event.preventDefault();
@@ -1752,10 +1796,8 @@ const studentAction = event => {
   const { action, id } = button.dataset;
   const student = findStudent(id);
   if (!student) return;
-  if (action === 'approve') {
-    setStatus(id, 'approved', `${student.name} অনুমোদিত হয়েছে — এখন শিক্ষার্থী অ্যাপ ব্যবহার করতে পারবে`);
-  } else if (action === 'reject') {
-    setStatus(id, 'rejected', `${student.name} এর অনুরোধ বাতিল করা হয়েছে`);
+  if (action === 'approve' || action === 'reject') {
+    toast('শিক্ষার্থী অনুমোদন শুধু Manager দিতে পারবেন।');
   } else if (action === 'view') {
     openStudentDetail(student);
   } else if (action === 'edit') {
@@ -1965,5 +2007,27 @@ window.addEventListener('storage', event => {
   if (event.key === EXAM_KEY || event.key === TEACHING_KEY) loadAcademicData();
 });
 
-// An existing device-bound session opens the panel without asking again.
-hasStaffSession('admin').then(valid => { if (valid) enterPanel(); });
+// The full-profile first-run form appears only if no Admin record has ever been stored.
+// A corrupt existing record is never silently replaced by a new first owner.
+async function initAdminEntry() {
+  const exists = staffAccountRecordExists('admin');
+  const setup = $('#initialAdminSetup');
+  const login = $('#adminEntry');
+  if (!exists) {
+    if (setup) setup.hidden = false;
+    if (login) login.hidden = true;
+    $('#initialAdminName')?.focus({ preventScroll: true });
+    return;
+  }
+  if (setup) setup.hidden = true;
+  if (login) login.hidden = false;
+  const account = await readStaffAccount('admin');
+  if (!account) {
+    const box = $('#adminLoginError');
+    if (box) { box.textContent = 'Admin Account-এর সংরক্ষিত তথ্য পড়া যাচ্ছে না। নিরাপত্তার জন্য নতুন Initial Setup দেখানো হয়নি।'; box.hidden = false; }
+    return;
+  }
+  // Existing device-bound session opens the panel without asking again.
+  if (await hasStaffSession('admin')) enterPanel();
+}
+initAdminEntry();

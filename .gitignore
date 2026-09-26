@@ -1,3 +1,9 @@
 node_modules/
 test-results/
 playwright-report/
+.firebase/
+firebase-debug.log
+firestore-debug.log
+functions/.env*
+functions/service-account*.json
+emulator-data/

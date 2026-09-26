@@ -7,8 +7,15 @@ test.use({ viewport: { width: 390, height: 844 }, timezoneId: 'UTC' });
 async function teacher(page) {
   await page.clock.setFixedTime(t0); await page.goto('/teacher.html'); await page.locator('#teacherEnter').click(); await page.locator('.admin-bottom [data-teacher-view=more]').click(); await page.locator('#teacherMore [data-teacher-view=online-exams]').click();
 }
-async function admin(context) {
-  const page = await context.newPage(); await page.clock.setFixedTime(t0); await page.goto('/admin.html'); await page.locator('#adminLoginForm [type=submit]').click(); await page.locator('.admin-bottom [data-admin-view=more]').click(); await page.locator('[data-admin-view=exams]').click(); return page;
+async function manager(context) {
+  const page = await context.newPage(); await page.clock.setFixedTime(t0); await page.goto('/manager.html');
+  await page.evaluate(async () => {
+    const { provisionStaffAccount } = await import('/js/staff-auth.js');
+    const result = await provisionStaffAccount('manager', 'Apc-Test-2026', 'Apc-Test-2026');
+    if (!result.ok && !result.error.includes('আগেই নির্ধারিত')) throw new Error(result.error);
+  });
+  await page.locator('#managerUsername').fill('manager.apc'); await page.locator('#managerPassword').fill('Apc-Test-2026'); await page.locator('#managerLoginForm [type=submit]').click();
+  await page.locator('[data-manager-view=exams]').click(); return page;
 }
 async function student(context) {
   const page = await context.newPage(); await page.clock.setFixedTime(start); await page.goto('/index.html'); if (await page.locator('#authScreen').isVisible()) await page.locator('#demoLoginButton').click(); await page.locator('#homeView [data-view=exams]').click(); return page;
@@ -24,24 +31,24 @@ async function createUI(page, type = 'mcq', title = 'সমন্বিত অ�
   await root.locator('[data-exam-action=request]').click(); await expect(root.locator('[data-managed-exam]')).toContainText('অনুমোদনের অপেক্ষায়');
 }
 async function publishUI(page) {
-  const root = page.locator('#adminExamWorkspace'); await root.locator('[data-exam-action=detail]').click();
+  const root = page.locator('#managerExamWorkspace'); await root.locator('[data-exam-action=detail]').click();
   await root.locator('[name=negative]').fill('0.5'); await root.locator('[value=publish]').click(); await expect(root.locator('[data-managed-exam]')).toContainText('প্রকাশিত');
 }
 async function seed(page, extra = {}) {
   return page.evaluate(async extra => {
-    const { examRepository: repo, examTemplate } = await import('/js/exam-data.js');
+    const { examRepository: repo, examTemplate, MANAGER_ACTOR } = await import('/js/exam-data.js');
     let db = await repo.saveDraft({ title: 'ডেমো পরীক্ষা', type: 'mcq', subject: 'গণিত', template: examTemplate('mcq'), startAt: new Date('2026-10-01T10:00:00Z').getTime(), endAt: new Date('2026-10-01T11:00:00Z').getTime(), lateMinutes: 10, negative: .5, passPercent: 33, ...extra });
-    const id = db.exams[0].id; await repo.requestApproval(id); await repo.review(id, 'publish'); return id;
+    const id = db.exams[0].id; await repo.requestApproval(id); await repo.review(id, 'publish', {}, MANAGER_ACTOR); return id;
   }, extra);
 }
 async function finish(page) {
   await page.locator('[data-student-exam-action=confirm]').click(); await page.locator('[data-student-exam-action=finish]').click();
 }
 
-test('teacher paste → admin approval → mobile MCQ, immediate public score, no early answer PDF', async ({ page, context }) => {
+test('teacher paste → Manager approval → mobile MCQ, immediate public score, no early answer PDF', async ({ page, context }) => {
   const errors = []; page.on('pageerror', e => errors.push(e.message)); await teacher(page); await createUI(page);
   const pupil = await student(context); await expect(pupil.locator('#studentExamWorkspace [data-student-exam]')).toHaveCount(0);
-  const office = await admin(context); await publishUI(office);
+  const office = await manager(context); await publishUI(office);
   await expect(pupil.locator('[data-student-exam]')).toContainText('সমন্বিত অনলাইন পরীক্ষা');
   await pupil.clock.setFixedTime(start);
   await pupil.locator('[data-student-exam-action=start]').click(); await expect(pupil.locator('.exam-question')).toHaveCount(2); await expect(pupil.locator('[data-answer-question]')).toHaveCount(8);
@@ -86,7 +93,7 @@ test('global deadline auto-submits and auto-downloads a real Bengali answer PDF'
 
 for (const type of ['written','short']) {
   test(`${type}: question PDF, next-day classroom marks, absence and downloadable report`, async ({ page, context }) => {
-    await teacher(page); await createUI(page,type); const office=await admin(context); const root=office.locator('#adminExamWorkspace'); await root.locator('[data-exam-action=detail]').click(); await root.locator('[value=publish]').click();
+    await teacher(page); await createUI(page,type); const office=await manager(context); const root=office.locator('#managerExamWorkspace'); await root.locator('[data-exam-action=detail]').click(); await root.locator('[value=publish]').click();
     const pupil=await student(context); await expect(pupil.locator('[data-student-exam-action=start]')).toHaveCount(0);
     const promise=pupil.waitForEvent('download'); await pupil.locator('[data-student-exam-action=paper]').click(); expect((await promise).suggestedFilename()).toContain('questions');
     await page.clock.setFixedTime(new Date('2026-10-02T09:00:00Z')); const teacherRoot=page.locator('#teacherExamWorkspace'); await teacherRoot.locator('[data-exam-action=grade]').click();
@@ -98,8 +105,8 @@ for (const type of ['written','short']) {
   });
 }
 
-test('admin returns corrections, malformed paste and write failure preserve teacher form', async ({ page, context }) => {
-  await teacher(page); await createUI(page); const office=await admin(context); const root=office.locator('#adminExamWorkspace'); await root.locator('[data-exam-action=detail]').click(); await root.locator('[name=note]').fill('নম্বর সংশোধন করুন'); await root.locator('[value=reject]').click();
+test('Manager returns corrections, malformed paste and write failure preserve teacher form', async ({ page, context }) => {
+  await teacher(page); await createUI(page); const office=await manager(context); const root=office.locator('#managerExamWorkspace'); await root.locator('[data-exam-action=detail]').click(); await root.locator('[name=note]').fill('নম্বর সংশোধন করুন'); await root.locator('[value=reject]').click();
   const teacherRoot=page.locator('#teacherExamWorkspace'); await expect(teacherRoot.locator('[data-managed-exam]')).toContainText('নম্বর সংশোধন করুন'); await teacherRoot.locator('[data-exam-action=edit]').click();
   await teacherRoot.locator('[name=template]').fill('ভুল টেমপ্লেট'); await expect(teacherRoot.locator('[data-parsed-preview]')).toContainText('টেমপ্লেট'); await teacherRoot.locator('[data-exam-form] [type=submit]').click(); await expect(teacherRoot.locator('[data-exam-error]')).toBeVisible();
   await teacherRoot.locator('[name=template]').fill(template); await page.evaluate(key=>{const set=Storage.prototype.setItem; Storage.prototype.setItem=function(k,v){if(k===key)throw new DOMException('Quota','QuotaExceededError');return set.call(this,k,v);};},KEY);

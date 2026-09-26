@@ -17,10 +17,37 @@
   <link rel="stylesheet" href="css/exams.css">
   <!-- Global glass design system. Presentation layer only; loaded last. -->
   <link rel="stylesheet" href="css/liquid-glass.css">
+  <link rel="stylesheet" href="css/icon-experience.css">
+  <link rel="stylesheet" href="css/app-redesign.css">
   <link rel="preload" href="assets/fonts/NotoSansBengali-Variable.ttf" as="font" type="font/ttf" crossorigin>
 </head>
 <body>
-  <!-- Admin Login Screen (matching student dummy login layout) -->
+  <!-- First-run owner-controlled setup; shown only while the Admin record is absent. -->
+  <section class="auth-screen admin-auth-screen" id="initialAdminSetup" aria-labelledby="initialAdminTitle" hidden>
+    <div class="auth-topbar"><div class="auth-brand"><img src="assets/icons/logo-128.png" alt="" width="38" height="38"><span><strong>Active Plus Coaching</strong><small>প্রথম Admin সেটআপ</small></span></div></div>
+    <div class="auth-card">
+      <div class="auth-panel-heading"><div><p class="eyebrow">Account Owner • প্রথমবার</p><h1 id="initialAdminTitle">নিজের Admin Account তৈরি করুন</h1><p>প্রথম Admin নিজেই নিজের পূর্ণাঙ্গ প্রোফাইল তৈরি করবেন। এটি সক্রিয় হবে এবং একবার তৈরি হলে এই সেটআপ আর দেখা যাবে না।</p></div></div>
+      <form id="initialAdminForm" novalidate>
+        <label for="initialAdminName">পূর্ণ নাম</label><input id="initialAdminName" name="fullName" type="text" autocomplete="name" maxlength="100" required>
+        <label for="initialAdminMobile">মোবাইল নম্বর</label><input id="initialAdminMobile" name="mobile" type="tel" inputmode="tel" autocomplete="tel" placeholder="01XXXXXXXXX" required>
+        <label for="initialAdminEmail">ইমেইল <small>(ঐচ্ছিক)</small></label><input id="initialAdminEmail" name="email" type="email" autocomplete="email" maxlength="254">
+        <label for="initialAdminUsername">Admin Username</label><input id="initialAdminUsername" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" minlength="4" maxlength="20" placeholder="rahim.admin.apc" required>
+        <label for="initialAdminPassword">পাসওয়ার্ড</label><input id="initialAdminPassword" name="password" type="password" autocomplete="new-password" minlength="6" maxlength="32" required>
+        <label for="initialAdminConfirm">পাসওয়ার্ড নিশ্চিত করুন</label><input id="initialAdminConfirm" name="confirmPassword" type="password" autocomplete="new-password" minlength="6" maxlength="32" required>
+        <p class="finance-error" id="initialAdminError" role="alert" hidden></p>
+        <button class="auth-submit" type="submit">সক্রিয় Admin Account তৈরি করুন</button>
+      </form>
+    </div>
+  </section>
+  <div class="admin-modal-backdrop" id="bootstrapCredentialsBackdrop" hidden>
+    <section class="admin-modal bootstrap-credentials-modal" role="dialog" aria-modal="true" aria-labelledby="bootstrapCredentialsTitle">
+      <header class="admin-card-head"><div><p class="eyebrow">শুধু একবার দেখানো হবে</p><h2 id="bootstrapCredentialsTitle">প্রাথমিক Role ID তৈরি হয়েছে</h2></div></header>
+      <p class="finance-hint">প্রতিটি role-এর temporary password নিরাপদে সংশ্লিষ্ট ব্যক্তির কাছে দিন। প্রথম login-এ password বদলাতে হবে। এই password আবার দেখানো হবে না।</p>
+      <div id="bootstrapCredentialsList"></div>
+      <div class="modal-actions"><button class="admin-btn ghost" type="button" id="bootstrapCopyCredentials">সব কপি করুন</button><button class="admin-btn primary" type="button" id="bootstrapCredentialsDone">সংরক্ষণ করেছি — Admin প্যানেলে যান</button></div>
+    </section>
+  </div>
+  <!-- Admin Login Screen -->
   <section class="auth-screen admin-auth-screen" id="adminEntry" aria-label="Active Plus এডমিন লগইন">
     <div class="auth-topbar">
       <div class="auth-brand">

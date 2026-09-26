@@ -3,7 +3,7 @@
 import test, { before } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadPage } from './jsdom-harness.mjs';
-import { EXAM_KEY, examTemplate, examMatchesClass, validateExam } from '../js/exam-data.js';
+import { EXAM_KEY, examTemplate, examMatchesClass, validateExam, MANAGER_ACTOR } from '../js/exam-data.js';
 import { enabledClasses } from '../js/config.js';
 import { adminStudents } from '../js/admin-data.js';
 import { ROSTER_KEY } from '../js/office-data.js';
@@ -78,7 +78,7 @@ test('a class the app does not run is refused', () => {
 test('only that class can start the published exam', async () => {
   const id = exams()[0].id;
   await repo.requestApproval(id);
-  await repo.review(id, 'publish');
+  await repo.review(id, 'publish', {}, MANAGER_ACTOR);
   // Open the window: publishing requires a future start, taking it a past one.
   const db = JSON.parse(ctx.window.localStorage.getItem(EXAM_KEY));
   db.exams[0].startAt = Date.now() - 60000;

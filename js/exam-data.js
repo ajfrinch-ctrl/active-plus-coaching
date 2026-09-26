@@ -8,6 +8,7 @@ export const EXAM_TYPES = Object.freeze({ mcq: 'MCQ', written: 'লিখিত'
 export const EXAM_STATUSES = Object.freeze({ draft: 'খসড়া', pending: 'অনুমোদনের অপেক্ষায়', rejected: 'সংশোধনের জন্য ফেরত', published: 'প্রকাশিত' });
 export const TEACHER_ACTOR = Object.freeze({ role: 'teacher', id: DEMO_TEACHER.id });
 export const ADMIN_ACTOR = Object.freeze({ role: 'admin', id: 'ADMIN' });
+export const MANAGER_ACTOR = Object.freeze({ role: 'manager', id: 'MANAGER' });
 const fail = text => { throw new Error(text); };
 const number = text => Number(String(text).replace(/[০-৯]/g, d => '০১২৩৪৫৬৭৮৯'.indexOf(d)));
 const round = value => Math.round((value + Number.EPSILON) * 100) / 100;
@@ -110,7 +111,7 @@ async function mutate(fn) {
 }
 function examById(db, id) { const e = db.exams.find(e => e.id === id); if (!e) fail('পরীক্ষাটি পাওয়া যায়নি।'); return e; }
 function teacherOwns(exam, actor) { if (actor?.role !== 'teacher' || actor.id !== exam.teacherId) fail('শুধু দায়িত্বপ্রাপ্ত শিক্ষক এই কাজ করতে পারবেন।'); }
-function requireAdmin(actor) { if (actor?.role !== 'admin') fail('Admin-এর অনুমোদন প্রয়োজন।'); }
+function requireManager(actor) { if (actor?.role !== 'manager') fail('শুধু Manager পরীক্ষা অনুমোদন করতে পারবেন।'); }
 async function eligibleStudent(student) {
   const roster = await teachingRepository.listStudents();
   const found = roster.find(s => s.id === student?.id);
@@ -173,8 +174,8 @@ export const examRepository = {
   async requestApproval(id, actor = TEACHER_ACTOR) {
     return mutate(db => { const e = examById(db, id); teacherOwns(e, actor); if (!['draft', 'rejected'].includes(e.status)) fail('এই পরীক্ষা ইতিমধ্যে পাঠানো/প্রকাশ করা হয়েছে।'); validateExam(e); if (e.startAt <= Date.now()) fail('পরীক্ষার শুরুর সময় ভবিষ্যতে দিন।'); e.status = 'pending'; e.reviewNote = ''; });
   },
-  async review(id, decision, options = {}, actor = ADMIN_ACTOR) {
-    requireAdmin(actor);
+  async review(id, decision, options = {}, actor) {
+    requireManager(actor);
     const students = await teachingRepository.listStudents();
     return mutate(db => {
       const e = examById(db, id); if (e.status !== 'pending') fail('শুধু অপেক্ষমাণ পরীক্ষা পর্যালোচনা করা যাবে।');
