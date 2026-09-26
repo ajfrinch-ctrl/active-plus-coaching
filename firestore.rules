@@ -1,0 +1,100 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function active() { return signedIn() && request.auth.token.status in ['active', 'approved'] && request.auth.token.mustChangePassword != true; }
+    function roleIs(value) { return active() && request.auth.token.role == value; }
+    function admin() { return roleIs('admin'); }
+    function manager() { return roleIs('manager'); }
+    function teacher() { return roleIs('teacher'); }
+    function payment() { return roleIs('payment'); }
+    function student() { return roleIs('student'); }
+    function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
+
+    // Role claims and username reservations are written only by trusted Cloud Functions.
+    match /users/{uid} {
+      allow read: if admin() || isOwner(uid)
+        || (manager() && resource.data.role == 'student' && resource.data.status == 'pending');
+      allow create, update, delete: if false;
+    }
+    match /usernameIndex/{username} {
+      allow read, write: if false;
+    }
+    match /system/{document} {
+      allow read, write: if false;
+    }
+
+    // Student profile/status changes are server-mediated. Only Manager reviews approvals.
+    match /students/{studentId} {
+      allow read: if admin() || (manager() && resource.data.status == 'pending')
+        || (student() && resource.data.uid == request.auth.uid);
+      allow create, delete: if false;
+      allow update: if manager()
+        && resource.data.status == 'pending'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reviewedBy', 'reviewedAt', 'reviewNote'])
+        && request.resource.data.status in ['approved', 'rejected']
+        && request.resource.data.reviewedBy == request.auth.uid;
+    }
+    match /studentApprovals/{approvalId} {
+      allow read: if admin() || (manager() && resource.data.status == 'pending');
+      allow create, update, delete: if manager();
+    }
+
+    // Admin owns reports/configuration; Manager has no finance/configuration access.
+    match /transactions/{transactionId} {
+      allow read: if admin() || payment();
+      allow create: if admin() || payment();
+      allow update, delete: if admin();
+    }
+    match /reports/{reportId} {
+      allow read, write: if admin(); // Financial/general reports
+    }
+    match /academicReports/{reportId} {
+      allow read: if admin() || manager();
+      allow write: if admin();
+    }
+    match /settings/{settingId} {
+      allow read: if admin() || teacher() || payment() || student();
+      allow write: if admin();
+    }
+    match /notices/{noticeId} {
+      allow read: if active();
+      allow write: if admin();
+    }
+    match /routine/{routineId} {
+      allow read: if active();
+      allow write: if admin() || teacher();
+    }
+    match /teaching/{activityId} {
+      allow read: if active();
+      allow create, update, delete: if teacher() || admin();
+    }
+    match /exams/{examId} {
+      allow read: if admin()
+        || (manager() && resource.data.status == 'pending')
+        || (teacher() && resource.data.teacherUid == request.auth.uid)
+        || (student() && resource.data.status == 'published');
+      allow create: if (teacher() && request.resource.data.teacherUid == request.auth.uid && request.resource.data.status in ['draft', 'pending'])
+        || (admin() && request.resource.data.status in ['draft', 'pending']);
+      allow update: if (manager()
+          && resource.data.status == 'pending'
+          && request.resource.data.status in ['published', 'rejected']
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reviewedBy', 'reviewedAt', 'reviewNote', 'publishedAt', 'participants'])
+          && request.resource.data.reviewedBy == request.auth.uid)
+        || (teacher()
+          && resource.data.teacherUid == request.auth.uid
+          && request.resource.data.teacherUid == request.auth.uid
+          && request.resource.data.status in ['draft', 'pending']
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['publishedAt', 'reviewedBy', 'reviewedAt']))
+        || (admin()
+          && request.resource.data.status in ['draft', 'pending']
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['publishedAt', 'reviewedBy', 'reviewedAt']));
+      allow delete: if admin();
+    }
+    match /examApprovals/{examId} {
+      allow read: if admin() || manager();
+      allow create, update, delete: if manager();
+    }
+    match /{document=**} { allow read, write: if false; }
+  }
+}

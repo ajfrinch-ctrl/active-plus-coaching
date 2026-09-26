@@ -5,7 +5,8 @@ export function initFixedShell() {
   for (const [shellSelector, headerSelector, footerSelector] of [
     ['#appShell', '#studentHeader', '.bottom-nav'],
     ['#adminShell', '.admin-topbar', '.admin-bottom'],
-    ['#teacherShell', '.admin-topbar', '.admin-bottom']
+    ['#teacherShell', '.admin-topbar', '.admin-bottom'],
+    ['#managerShell', '.admin-topbar', '.admin-bottom']
   ]) {
     const shell = document.querySelector(shellSelector);
     if (!shell) continue;

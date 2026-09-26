@@ -7,7 +7,8 @@ import {
   STAFF_ACCOUNTS, STAFF_USERNAMES, normalizeStaffUsername,
   readStaffAccount, authenticateStaff, loadStaffAccount, verifyStaffCredentials,
   provisionStaffAccount, setStaffPassword, changeStaffPassword,
-  saveStaffSession, hasStaffSession, clearStaffSession, staffNeedsSetup
+  saveStaffSession, hasStaffSession, clearStaffSession, staffNeedsSetup,
+  createInitialAdmin, resolveStaffRoleByUsername
 } from '../js/staff-auth.js';
 import { isPasswordRecord } from '../js/password-hash.js';
 import { decryptValue } from '../js/secure-store.js';
@@ -30,12 +31,12 @@ function freshBrowser() {
   return window;
 }
 
-const ROLES = ['admin', 'teacher', 'payment'];
+const ROLES = ['admin', 'manager', 'teacher', 'payment'];
 const username = role => STAFF_ACCOUNTS[role].username;
 const WRONG = 'ইউজারনেম বা পাসওয়ার্ড সঠিক নয়। আবার চেষ্টা করুন।';
 
-test('the three reserved usernames are fixed and no role carries a password', () => {
-  assert.deepEqual([...STAFF_USERNAMES].sort(), ['admin.apc', 'payment.apc', 'teacher.apc']);
+test('the four reserved usernames are fixed and no role carries a password', () => {
+  assert.deepEqual([...STAFF_USERNAMES].sort(), ['admin.apc', 'manager.apc', 'payment.apc', 'teacher.apc']);
   for (const role of ROLES) {
     assert.equal(STAFF_ACCOUNTS[role].password, undefined);
     assert.equal(username(role).endsWith('.apc'), true);
@@ -65,6 +66,44 @@ test('a fresh device needs setup for every role, and setup stores only a hash', 
     // Now the panel signs in with it.
     assert.deepEqual(await authenticateStaff(role, username(role), PASSWORD), { ok: true, needsPasswordChange: false });
   }
+});
+
+test('first Admin creates one complete active owner profile with a unique case-insensitive username', async () => {
+  const browser = freshBrowser();
+  const profile = { fullName: 'Rahim Ahmed', mobile: '০১৭১১২২৩৩৪৪', email: 'rahim@example.com', username: 'Rahim.Admin.APC', password: PASSWORD, confirmPassword: PASSWORD };
+  const created = await createInitialAdmin(profile);
+  assert.equal(created.ok, true, created.error);
+  assert.deepEqual(created.bootstrapAccounts.map(account => account.role).sort(), ['manager', 'payment', 'teacher']);
+  for (const role of ['manager', 'teacher', 'payment']) {
+    const bootstrapped = await readStaffAccount(role);
+    assert.equal(bootstrapped.status, 'active');
+    assert.equal(bootstrapped.mustChangePassword, true);
+    assert.equal(isPasswordRecord(bootstrapped.password), true);
+  }
+  const account = await readStaffAccount('admin');
+  assert.equal(account.role, 'admin');
+  assert.equal(account.status, 'active');
+  assert.equal(account.accountStatus, 'active');
+  assert.equal(account.owner, 'first-admin');
+  assert.equal(account.fullName, 'Rahim Ahmed');
+  assert.equal(account.mobile, '01711223344');
+  assert.equal(account.email, 'rahim@example.com');
+  assert.equal(account.username, 'rahim.admin.apc');
+  assert.ok(Number.isFinite(Date.parse(account.createdAt)));
+  assert.equal(isPasswordRecord(account.password), true);
+  assert.equal(await resolveStaffRoleByUsername(' RAHIM.ADMIN.APC '), 'admin');
+  assert.equal((await createInitialAdmin({ ...profile, username: 'different.admin' })).ok, false, 'first setup must never repeat');
+  const rawIndex = JSON.parse(browser.localStorage.getItem('active-plus-usernames-v1'));
+  assert.equal(rawIndex['rahim.admin.apc'], 'staff:admin');
+});
+
+test('initial Admin rejects a username already claimed by a learner, irrespective of case', async () => {
+  const browser = freshBrowser();
+  browser.localStorage.setItem('active-plus-usernames-v1', JSON.stringify({ 'rahim.admin.apc': 'student:123' }));
+  const result = await createInitialAdmin({ fullName: 'Rahim Ahmed', mobile: '01711223344', username: 'RAHIM.ADMIN.APC', password: PASSWORD, confirmPassword: PASSWORD });
+  assert.equal(result.ok, false);
+  assert.match(result.error, /ইতিমধ্যে ব্যবহৃত/);
+  assert.equal(await readStaffAccount('admin'), null);
 });
 
 test('wrong usernames are rejected before any password is read', async () => {

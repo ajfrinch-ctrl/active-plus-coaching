@@ -1,14 +1,14 @@
-import { examRepository as repo, EXAM_TYPES, TEACHER_ACTOR, ADMIN_ACTOR, examTemplate, parseQuestions, totalMarks, watchExams } from './exam-data.js';
+import { examRepository as repo, EXAM_TYPES, TEACHER_ACTOR, ADMIN_ACTOR, MANAGER_ACTOR, examTemplate, parseQuestions, totalMarks, watchExams } from './exam-data.js';
 import { examMeta, questionPreview, resultMarkup, downloadResults, esc, num } from './exam-ui.js';
 import { downloadExamPDF } from './exam-pdf.js';
 import { enabledClasses } from './config.js';
 
 export function initExamManager(container, role) {
   const root = document.querySelector(container); if (!root) return;
-  const actor = role === 'admin' ? ADMIN_ACTOR : TEACHER_ACTOR;
+  const actor = role === 'admin' ? ADMIN_ACTOR : role === 'manager' ? MANAGER_ACTOR : TEACHER_ACTOR;
   let db = { exams: [], attempts: [] }, view = 'list', selected = null, filter = 'all', classFilter = 'all', busy = false, ready = false;
   root.classList.add('exam-workspace');
-  root.innerHTML = '<p class="exam-note">লোকাল ডেমো • প্রশ্ন শিক্ষক তৈরি করবেন, Admin প্রকাশ করবেন। সব শ্রেণির অনুমোদিত শিক্ষার্থী অংশ নিতে পারবে। আলাদা মোবাইলে চালাতে অনলাইন ডেটাবেস প্রয়োজন।</p><p class="exam-error" role="alert" data-exam-error hidden></p><p class="exam-message" role="status" data-exam-message hidden></p><div data-exam-content></div>';
+  root.innerHTML = '<p class="exam-note">লোকাল ডেমো • প্রশ্ন শিক্ষক তৈরি করবেন, Manager অনুমোদন করবেন। সব শ্রেণির অনুমোদিত শিক্ষার্থী অংশ নিতে পারবে। আলাদা মোবাইলে চালাতে অনলাইন ডেটাবেস প্রয়োজন।</p><p class="exam-error" role="alert" data-exam-error hidden></p><p class="exam-message" role="status" data-exam-message hidden></p><div data-exam-content></div>';
   const $ = selector => root.querySelector(selector), content = $('[data-exam-content]');
   const button = (action, label, id = '', cls = '') => `<button type="button" class="${cls}" data-exam-action="${action}" data-id="${esc(id)}">${label}</button>`;
   const back = () => `<div class="exam-actions">${button('list', '← পরীক্ষার তালিকা')}</div>`;
@@ -17,11 +17,11 @@ export function initExamManager(container, role) {
   function scrollTop() { root.closest('main')?.scrollTo({ top: 0, behavior: 'instant' }); }
   function list() {
     view = 'list'; selected = null;
-    const exams = db.exams.filter(e => (role === 'admin' || e.teacherId === actor.id) && (filter === 'all' || e.type === filter) && (classFilter === 'all' || e.className === classFilter));
+    const exams = db.exams.filter(e => (role === 'admin' || (role === 'manager' ? ['pending', 'published', 'rejected'].includes(e.status) : e.teacherId === actor.id)) && (filter === 'all' || e.type === filter) && (classFilter === 'all' || e.className === classFilter));
     content.innerHTML = `${role === 'teacher' ? `<div class="exam-actions">${Object.entries(EXAM_TYPES).map(([type, label]) => button('new-' + type, '+ ' + label, '', 'primary')).join('')}</div>` : '<p class="exam-note">প্রশ্ন ও নম্বর দেখে অনুমোদন দিন। সংশোধন দরকার হলে কারণ লিখে ফেরত দিন।</p>'}
       <div class="exam-actions" aria-label="পরীক্ষার ধরন">${['all', ...Object.keys(EXAM_TYPES)].map(type => `<button type="button" data-exam-action="filter-${type}" aria-pressed="${filter === type}">${type === 'all' ? 'সব' : EXAM_TYPES[type]}</button>`).join('')}</div>
       <label class="exam-class-filter">শ্রেণি <select data-exam-class-filter><option value="all">সব শ্রেণি</option>${enabledClasses.map(c => `<option value="${esc(c)}" ${c === classFilter ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
-      <div class="exam-list">${exams.map(e => `<article class="exam-card" data-managed-exam="${esc(e.id)}">${examMeta(e)}${e.reviewNote ? `<p class="exam-error">${esc(e.reviewNote)}</p>` : ''}<div class="exam-actions">${button('detail', role === 'admin' && e.status === 'pending' ? 'পর্যালোচনা করুন' : 'বিস্তারিত', e.id)}${role === 'teacher' && e.status !== 'published' ? button('edit', 'সম্পাদনা', e.id) : ''}${role === 'teacher' && ['draft', 'rejected'].includes(e.status) ? button('request', 'অনুমতির জন্য পাঠান', e.id, 'primary') + button('delete', 'মুছুন', e.id, 'danger') : ''}${e.status === 'published' ? button('report', 'ফলাফল ও রিপোর্ট', e.id) : ''}${role === 'teacher' && e.status === 'published' && e.type !== 'mcq' ? button('grade', 'নম্বর / উপস্থিতি', e.id) : ''}</div></article>`).join('') || `<p class="exam-card">${classFilter === 'all' ? 'এখনও এই ধরনের পরীক্ষা নেই।' : `${esc(classFilter)} — এই শ্রেণির কোনো পরীক্ষা নেই।`}</p>`}</div>`;
+      <div class="exam-list">${exams.map(e => `<article class="exam-card" data-managed-exam="${esc(e.id)}">${examMeta(e)}${e.reviewNote ? `<p class="exam-error">${esc(e.reviewNote)}</p>` : ''}<div class="exam-actions">${button('detail', role === 'manager' && e.status === 'pending' ? 'পর্যালোচনা করুন' : 'বিস্তারিত', e.id)}${role === 'teacher' && e.status !== 'published' ? button('edit', 'সম্পাদনা', e.id) : ''}${role === 'teacher' && ['draft', 'rejected'].includes(e.status) ? button('request', 'অনুমতির জন্য পাঠান', e.id, 'primary') + button('delete', 'মুছুন', e.id, 'danger') : ''}${e.status === 'published' ? button('report', 'ফলাফল ও রিপোর্ট', e.id) : ''}${role === 'teacher' && e.status === 'published' && e.type !== 'mcq' ? button('grade', 'নম্বর / উপস্থিতি', e.id) : ''}</div></article>`).join('') || `<p class="exam-card">${classFilter === 'all' ? 'এখনও এই ধরনের পরীক্ষা নেই।' : `${esc(classFilter)} — এই শ্রেণির কোনো পরীক্ষা নেই।`}</p>`}</div>`;
   }
   async function reload() {
     try { db = await repo.list(); ready = true; if (view === 'list') list(); else if (view === 'report' && selected) report(db.exams.find(e => e.id === selected), false); }
@@ -67,7 +67,7 @@ export function initExamManager(container, role) {
   function detail(e) {
     view = 'detail'; selected = e.id;
     content.innerHTML = `${back()}<article class="exam-card">${examMeta(e)}<p>${esc(e.instructions)}</p><p class="exam-note">ভুলপ্রতি কাটা নম্বর ${num(e.negative)} • পাস ${num(e.passPercent)}% • প্রথম প্রবেশের সীমা ${num(e.lateMinutes)} মিনিট</p><div class="exam-actions">${button('paper', 'প্রশ্নপত্র PDF ডাউনলোড', e.id)}</div></article>
-      ${role === 'admin' && e.status === 'pending' ? `<form class="exam-form" data-review-form><label>প্রতি ভুল উত্তরে কাটা নম্বর<input name="negative" type="number" min="0" max="1000" step="0.01" value="${e.negative}" ${e.type !== 'mcq' ? 'readonly' : ''}></label><label>সংশোধনের কারণ (ফেরত দিলে আবশ্যক)<textarea name="note" maxlength="500"></textarea></label><div class="exam-actions"><button type="submit" name="decision" value="publish" class="primary">অনুমোদন দিয়ে প্রকাশ করুন</button><button type="submit" name="decision" value="reject">সংশোধনের জন্য ফেরত দিন</button></div></form>` : ''}<h3>প্রশ্ন ও নম্বর যাচাই</h3>${questionPreview(e, true)}`;
+      ${role === 'manager' && e.status === 'pending' ? `<form class="exam-form" data-review-form><label>প্রতি ভুল উত্তরে কাটা নম্বর<input name="negative" type="number" min="0" max="1000" step="0.01" value="${e.negative}" ${e.type !== 'mcq' ? 'readonly' : ''}></label><label>সংশোধনের কারণ (ফেরত দিলে আবশ্যক)<textarea name="note" maxlength="500"></textarea></label><div class="exam-actions"><button type="submit" name="decision" value="publish" class="primary">অনুমোদন দিয়ে প্রকাশ করুন</button><button type="submit" name="decision" value="reject">সংশোধনের জন্য ফেরত দিন</button></div></form>` : ''}<h3>প্রশ্ন ও নম্বর যাচাই</h3>${questionPreview(e, true)}`;
     $('[data-review-form]')?.addEventListener('submit', event => { event.preventDefault(); const options = Object.fromEntries(new FormData(event.currentTarget)); const decision = event.submitter.value; run(() => repo.review(e.id, decision, options, actor), decision === 'publish' ? 'পরীক্ষা অনুমোদিত ও প্রকাশিত হয়েছে।' : 'শিক্ষকের কাছে ফেরত দেওয়া হয়েছে।'); }); scrollTop();
   }
   function report(e, reset = true) { view = 'report'; selected = e.id; content.innerHTML = `${back()}${examMeta(e)}<div class="exam-actions">${button('csv', 'রিপোর্ট ডাউনলোড (CSV)', e.id)}${e.type === 'mcq' && Date.now() >= e.endAt ? button('solutions', 'সঠিক উত্তরসহ PDF', e.id) : ''}</div>${resultMarkup(db, e, true)}`; if (reset) scrollTop(); }
@@ -87,7 +87,7 @@ export function initExamManager(container, role) {
     else if (action.startsWith('new-')) editor(action.slice(4));
     else if (action === 'edit') editor(e.type, e);
     else if (action === 'detail') detail(e);
-    else if (action === 'request') run(() => repo.requestApproval(e.id, actor), 'Admin-এর অনুমতির জন্য পাঠানো হয়েছে।');
+    else if (action === 'request') run(() => repo.requestApproval(e.id, actor), 'Manager-এর অনুমতির জন্য পাঠানো হয়েছে।');
     else if (action === 'delete' && window.confirm('এই খসড়া পরীক্ষাটি মুছে ফেলবেন?')) run(() => repo.deleteDraft(e.id, actor), 'খসড়া মুছে ফেলা হয়েছে।');
     else if (action === 'report') report(e);
     else if (action === 'grade') { try { await grade(e); } catch (e) { error(e.message); } }

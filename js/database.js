@@ -40,6 +40,8 @@ export const SYNCABLE = Object.freeze([
 export const STAFF_KEYS = Object.freeze({
   adminAccount: 'activePlus.adminAccount.v1',
   adminSession: 'activePlus.adminSession.v1',
+  managerAccount: 'activePlus.managerAccount.v1',
+  managerSession: 'activePlus.managerSession.v1',
   teacherAccount: 'activePlus.teacherAccount.v1',
   teacherSession: 'activePlus.teacherSession.v1',
   paymentAccount: 'activePlus.paymentAccount.v1',

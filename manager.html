@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https:; manifest-src 'self'; worker-src 'self'; base-uri 'self'; object-src 'none'">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#087b66">
+  <meta name="description" content="Active Plus Manager approval portal">
+  <meta name="robots" content="noindex">
+  <title>Active Plus | Manager Portal</title>
+  <link rel="icon" href="favicon.ico" sizes="any">
+  <link rel="stylesheet" href="css/admin.css">
+  <link rel="stylesheet" href="css/mobile.css">
+  <link rel="stylesheet" href="css/exams.css">
+  <link rel="stylesheet" href="css/teaching.css">
+  <link rel="stylesheet" href="css/liquid-glass.css">
+  <link rel="stylesheet" href="css/icon-experience.css">
+  <link rel="stylesheet" href="css/app-redesign.css">
+</head>
+<body>
+  <section class="auth-screen admin-auth-screen" id="managerLogin" aria-label="ম্যানেজার লগইন">
+    <div class="auth-topbar"><div class="auth-brand"><img src="assets/icons/logo-128.png" alt="" width="38" height="38"><span><strong>Active Plus Coaching</strong><small>Manager Approval Portal</small></span></div></div>
+    <div class="auth-card">
+      <p class="eyebrow">শুধু অনুমোদিত Manager</p><h1>ম্যানেজার পোর্টালে প্রবেশ</h1>
+      <p class="finance-hint">Student enrollment ও পরীক্ষার approval, এবং academic reports। Finance ও account control এখানে নেই।</p>
+      <form id="managerLoginForm" novalidate>
+        <label for="managerUsername">Manager Username</label><div class="input-wrap"><input id="managerUsername" name="username" type="text" autocomplete="username" autocapitalize="none" required></div>
+        <label for="managerPassword">পাসওয়ার্ড</label><div class="input-wrap"><input id="managerPassword" name="password" type="password" autocomplete="current-password" required><button class="show-pin" type="button" id="managerTogglePassword" aria-label="পাসওয়ার্ড দেখুন">◉</button></div>
+        <label class="remember-label"><input id="managerRemember" type="checkbox" checked><span class="fake-check"></span>এই ডিভাইসে মনে রাখুন</label>
+        <p class="finance-error" id="managerLoginError" role="alert" hidden></p>
+        <button class="auth-submit" type="submit">ম্যানেজার পোর্টালে প্রবেশ করুন</button>
+      </form>
+      <p class="auth-footnote"><a class="inline-link" href="index.html">← মূল লগইন পেইজে ফিরুন</a></p>
+    </div>
+  </section>
+
+  <div class="admin-shell manager-shell" id="managerShell" hidden>
+    <header class="admin-topbar"><div class="admin-topbar-inner">
+      <div class="admin-brand"><img src="assets/icons/logo-128.png" alt="" width="38" height="38"><span><strong>Manager Portal</strong><small>অনুমোদন ও একাডেমিক রিপোর্ট</small></span></div>
+      <button class="admin-exit" id="managerLogout" type="button" aria-label="লগআউট"><svg viewBox="0 0 24 24"><use href="#icon-logout"></use></svg><span>লগআউট</span></button>
+    </div></header>
+    <main class="admin-main" id="managerMain">
+      <section class="admin-view active" data-view-panel="approvals" aria-labelledby="managerHomeTitle">
+        <article class="admin-hero"><div class="admin-hero-head"><div class="admin-hero-title"><span class="admin-hero-icon"><svg viewBox="0 0 24 24"><use href="#icon-shield"></use></svg></span><h1 id="managerHomeTitle">অনুমোদন কেন্দ্র</h1></div><span class="admin-date-pill" id="managerToday"></span></div>
+          <div class="admin-hero-stats"><div class="admin-stat-tile tone-mint"><span class="tile-icon"><svg viewBox="0 0 24 24"><use href="#icon-users"></use></svg></span><p class="tile-label">অপেক্ষমাণ শিক্ষার্থী</p><p class="tile-value" id="managerPendingCount">০</p></div><div class="admin-stat-tile tone-blue"><span class="tile-icon"><svg viewBox="0 0 24 24"><use href="#icon-clipboard"></use></svg></span><p class="tile-label">পরীক্ষা পর্যালোচনা</p><p class="tile-value" id="managerPendingExamCount">০</p></div></div>
+        </article>
+        <div class="page-intro"><div><p class="eyebrow">Student accounts</p><h1>শিক্ষার্থী অনুমোদন</h1></div></div>
+        <p class="finance-hint">শিক্ষার্থীর তথ্য যাচাই করে সিদ্ধান্ত দিন। Admin এই সিদ্ধান্ত দিতে পারবেন না।</p>
+        <div id="managerStudentQueue" class="teacher-record-list" aria-live="polite"></div>
+      </section>
+      <section class="admin-view" data-view-panel="exams" aria-labelledby="managerExamTitle">
+        <div class="page-intro"><div><p class="eyebrow">Academic workflow</p><h1 id="managerExamTitle">পরীক্ষা অনুমোদন</h1></div></div>
+        <p class="finance-hint">শিক্ষকের পাঠানো অপেক্ষমাণ পরীক্ষা দেখুন; প্রকাশ বা সংশোধনের জন্য ফেরত দিন।</p>
+        <div id="managerExamWorkspace"></div>
+      </section>
+      <section class="admin-view" data-view-panel="reports" aria-labelledby="managerReportsTitle">
+        <div class="page-intro"><div><p class="eyebrow">Academic reports only</p><h1 id="managerReportsTitle">একাডেমিক রিপোর্ট</h1></div></div>
+        <div class="admin-card"><div class="admin-card-head"><h2>শিক্ষার্থী অগ্রগতি</h2><span class="home-count-pill">আর্থিক তথ্য নয়</span></div><div id="managerAcademicReport"></div></div>
+      </section>
+    </main>
+    <nav class="admin-bottom" aria-label="Manager navigation">
+      <button class="admin-bottom-item active" type="button" data-manager-view="approvals"><span class="nav-chip"><svg viewBox="0 0 24 24"><use href="#icon-shield"></use></svg></span><span>অনুমোদন</span></button>
+      <button class="admin-bottom-item" type="button" data-manager-view="exams"><span class="nav-chip"><svg viewBox="0 0 24 24"><use href="#icon-clipboard"></use></svg></span><span>পরীক্ষা</span></button>
+      <button class="admin-bottom-item" type="button" data-manager-view="reports"><span class="nav-chip"><svg viewBox="0 0 24 24"><use href="#icon-trending"></use></svg></span><span>একাডেমিক রিপোর্ট</span></button>
+    </nav>
+  </div>
+  <svg class="icon-sprite" aria-hidden="true"><symbol id="icon-logout" viewBox="0 0 24 24"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></symbol><symbol id="icon-shield" viewBox="0 0 24 24"><path d="M12 3 20 6v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z"/><path d="m8 12 2.5 2.5L16 9"/></symbol><symbol id="icon-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20v-1a6 6 0 0 1 12 0v1M16 5.5a3 3 0 0 1 0 5.5m2 3a5 5 0 0 1 3 5v1"/></symbol><symbol id="icon-clipboard" viewBox="0 0 24 24"><path d="M9 4h6l1 2h3v15H5V6h3z"/><path d="m8 13 2.5 2.5L16 10"/></symbol><symbol id="icon-trending" viewBox="0 0 24 24"><path d="m3 17 6-6 4 4 8-9"/><path d="M15 6h6v6"/></symbol></svg>
+  <div class="admin-toast" id="managerToast" role="status" hidden></div>
+  <script type="module" src="js/manager.js"></script>
+</body>
+</html>

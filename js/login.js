@@ -16,13 +16,13 @@ import {
   isSecurityCheckDisabled, loadAppConfig, verifyAccountPassword, upgradeAccountSecrets
 } from './storage.js';
 import {
-  STAFF_ACCOUNTS, normalizeStaffUsername, authenticateStaff, saveStaffSession
+  STAFF_ACCOUNTS, normalizeStaffUsername, authenticateStaff, saveStaffSession, resolveStaffRoleByUsername
 } from './staff-auth.js';
 import { openStaffPasswordDialog } from './staff-password-dialog.js';
 import { isPasswordRecord } from './password-hash.js';
 
-const STAFF_PANEL = Object.freeze({ admin: 'admin.html', teacher: 'teacher.html', payment: 'payment.html' });
-const STAFF_LABEL = Object.freeze({ admin: 'এডমিন প্যানেল', teacher: 'শিক্ষক প্যানেল', payment: 'পেমেন্ট রিসিভ প্যানেল' });
+const STAFF_PANEL = Object.freeze({ admin: 'admin.html', manager: 'manager.html', teacher: 'teacher.html', payment: 'payment.html' });
+const STAFF_LABEL = Object.freeze({ admin: 'এডমিন প্যানেল', manager: 'ম্যানেজার প্যানেল', teacher: 'শিক্ষক প্যানেল', payment: 'পেমেন্ট রিসিভ প্যানেল' });
 const STAFF_ID_HINT = 'স্টাফ লগইন';
 const DEFAULT_ID_HINT = 'শিক্ষার্থী: ইউজারনেম বা মোবাইল নম্বর ও পাসওয়ার্ড। শিক্ষক, এডমিন ও পেমেন্ট কাউন্টার: নিজের ইউজারনেম ও পাসওয়ার্ড দিয়ে এখানেই লগইন করুন।';
 
@@ -54,20 +54,26 @@ export function switchAuthTab(tab) {
 
 /* The same box takes a 4–6 digit student password or a staff password, so the
    keyboard and the hint follow what is being typed. */
+let loginHintSequence = 0;
 function syncLoginHints() {
   const idInput = $('#loginMobile');
   const pinInput = $('#loginPin');
   if (!idInput || !pinInput) return;
-  const role = staffRoleFor(idInput.value);
-  pinInput.setAttribute('inputmode', role ? 'text' : 'numeric');
-  pinInput.setAttribute('placeholder', role ? 'পাসওয়ার্ড' : '৪–৬ সংখ্যার পাসওয়ার্ড');
-  const hint = $('#loginHint');
-  if (hint) {
-    hint.textContent = role
-      ? `${STAFF_ID_HINT} — ${STAFF_LABEL[role]}। নিজের পাসওয়ার্ড দিয়ে প্রবেশ করুন।`
-      : DEFAULT_ID_HINT;
-    hint.classList.toggle('is-staff', Boolean(role));
-  }
+  const value = idInput.value;
+  const sequence = ++loginHintSequence;
+  const paint = role => {
+    if (sequence !== loginHintSequence || idInput.value !== value) return;
+    pinInput.setAttribute('inputmode', role ? 'text' : 'numeric');
+    pinInput.setAttribute('placeholder', role ? 'পাসওয়ার্ড' : '৪–৬ সংখ্যার পাসওয়ার্ড');
+    const hint = $('#loginHint');
+    if (hint) {
+      hint.textContent = role ? `${STAFF_ID_HINT} — ${STAFF_LABEL[role]}। নিজের পাসওয়ার্ড দিয়ে প্রবেশ করুন।` : DEFAULT_ID_HINT;
+      hint.classList.toggle('is-staff', Boolean(role));
+    }
+  };
+  const known = staffRoleFor(value);
+  if (known) paint(known);
+  else resolveStaffRoleByUsername(value).then(paint).catch(() => paint(null));
 }
 
 async function enterStaffPanel(role, remember) {
@@ -118,7 +124,7 @@ async function handleLogin(event, state, onAuthenticated) {
   const pin = String(form.get('pin') || '');
 
   // Staff usernames are reserved, so a match here can only be that panel.
-  const staffRole = staffRoleFor(typedId);
+  const staffRole = await resolveStaffRoleByUsername(typedId);
   if (staffRole) {
     await handleStaffLogin(staffRole, typedId, pin);
     return;

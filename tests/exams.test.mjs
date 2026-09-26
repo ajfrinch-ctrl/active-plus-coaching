@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { examRepository as repo, EXAM_KEY, examTemplate, parseQuestions, MCQ_MARKS, scoreAttempt, retryEligibility, firstAttemptMean, examResults, classExamDate, totalMarks, TEACHER_ACTOR, ADMIN_ACTOR } from '../js/exam-data.js';
+import { examRepository as repo, EXAM_KEY, examTemplate, parseQuestions, MCQ_MARKS, scoreAttempt, retryEligibility, firstAttemptMean, examResults, classExamDate, totalMarks, TEACHER_ACTOR, ADMIN_ACTOR, MANAGER_ACTOR } from '../js/exam-data.js';
 import { pagesPDF } from '../js/exam-pdf.js';
 import { adminStudents } from '../js/admin-data.js';
 import { ROSTER_KEY } from '../js/office-data.js';
@@ -18,7 +18,7 @@ function setup() {
 const fields = (extra = {}) => ({ title: 'গণিত মূল্যায়ন', subject: 'গণিত', type: 'mcq', startAt: start, endAt: end, lateMinutes: 10, negative: .5, passPercent: 33, template: examTemplate('mcq'), ...extra });
 async function publish(extra = {}) {
   let db = await repo.saveDraft(fields(extra)); const id = db.exams[0].id;
-  await repo.requestApproval(id); db = await repo.review(id, 'publish'); return db.exams[0];
+  await repo.requestApproval(id); db = await repo.review(id, 'publish', {}, MANAGER_ACTOR); return db.exams[0];
 }
 async function attempt(e, student, answers = {}) {
   let db = await repo.startAttempt(e.id, student); const a = db.attempts.find(a => a.studentId === student.id && a.examId === e.id && a.status === 'active');
@@ -38,7 +38,7 @@ test('MCQ marks are fixed at 1; written/short keep their own weights; malformed 
   for (const text of ['', 'প্রশ্ন: x', examTemplate('mcq').replace('উত্তর: A', 'উত্তর: E'), withMarks, examTemplate('mcq').replace('B: চট্টগ্রাম', 'B: ঢাকা'), examTemplate('mcq') + '\nউত্তর: B']) assert.throws(() => parseQuestions(text, 'mcq'));
   assert.throws(() => parseQuestions(examTemplate('mcq'), 'written'));
 });
-test('teacher drafts → submit → admin rejection/edit/approval; no premature publication', async () => {
+test('teacher drafts → submit → Manager rejection/edit/approval; no premature publication', async () => {
   setup(); let db = await repo.saveDraft(fields()); const id = db.exams[0].id;
   assert.equal(db.exams[0].status, 'draft');
   await assert.rejects(repo.review(id, 'publish'));
@@ -46,9 +46,10 @@ test('teacher drafts → submit → admin rejection/edit/approval; no premature 
   await assert.rejects(repo.requestApproval(id, { role: 'teacher', id: 'OTHER' }));
   await repo.requestApproval(id);
   await assert.rejects(repo.review(id, 'publish', {}, TEACHER_ACTOR));
-  db = await repo.review(id, 'reject', { note: 'প্রশ্ন সংশোধন করুন' }); assert.equal(db.exams[0].status, 'rejected');
+  await assert.rejects(repo.review(id, 'publish', {}, ADMIN_ACTOR), /শুধু Manager/);
+  db = await repo.review(id, 'reject', { note: 'প্রশ্ন সংশোধন করুন' }, MANAGER_ACTOR); assert.equal(db.exams[0].status, 'rejected');
   db = await repo.saveDraft({ ...fields(), id }); assert.equal(db.exams[0].status, 'draft');
-  await repo.requestApproval(id); db = await repo.review(id, 'publish', { negative: 1 });
+  await repo.requestApproval(id); db = await repo.review(id, 'publish', { negative: 1 }, MANAGER_ACTOR);
   assert.equal(db.exams[0].negative, 1); assert.equal(db.exams[0].status, 'published'); assert.ok(db.exams[0].participants.length >= 4);
   await assert.rejects(repo.saveDraft({ ...fields(), id })); await assert.rejects(repo.deleteDraft(id));
 });
