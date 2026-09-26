@@ -1,5 +1,10 @@
-const CACHE_NAME = 'active-plus-student-v63-admin-panel';
+const CACHE_NAME = 'active-plus-student-v66-populated-role-demo';
 const APP_SHELL = [
+  './offline-roles.html',
+  './css/offline-roles.css',
+  './js/offline-role-store.js',
+  './js/offline-role-demo.js',
+  './js/offline-role-ui.js',
   './',
   './index.html',
   './admin.html',
@@ -53,6 +58,9 @@ const APP_SHELL = [
   './assets/icons/admin/classes.png',
   './assets/icons/admin/app.png',
   './assets/icons/admin/exams.png',
+  './assets/icons/admin/routine.png',
+  './assets/icons/admin/more.png',
+  './assets/icons/admin/logout.png',
   './css/icon-experience.css',
   './css/app-redesign.css',
   './css/admin-panel-ui.css',

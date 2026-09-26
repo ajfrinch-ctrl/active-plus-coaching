@@ -94,6 +94,12 @@ test('the bottom bar renders one icon + label per permitted tab', () => {
   // The active tab is marked for both CSS and assistive tech.
   assert.equal(ctx.$$('.admin-bottom [aria-current="page"]').length, 1);
   assert.equal(ctx.$('.admin-bottom [aria-current="page"]').dataset.adminView, 'dashboard');
+  // Every tab uses this panel's own generated set, not the shared glass family.
+  for (const button of items) {
+    assert.match(button.querySelector('img.nav-icon').getAttribute('src'), /^assets\/icons\/admin\//);
+  }
+  assert.equal(ctx.$('.admin-exit img.topbar-icon').getAttribute('src'), 'assets/icons/admin/logout.png');
+  assert.equal(ctx.$('.admin-app-link img.topbar-icon').getAttribute('src'), 'assets/icons/admin/app.png');
 });
 
 test('the dashboard grid is generated from the permission model', () => {

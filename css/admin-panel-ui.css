@@ -8,8 +8,8 @@
      • same palette            — forest green primary, mint tint, cream canvas
      • same surfaces           — white/glass cards, 1px quiet border, soft depth
      • same radii and shadows  — --g-r-* / --g-shadow-* glass tokens
-     • same motion             -- --g-ease / --g-spring, transform-only
-     • same icon family        -- AI-generated soft-3D glass drops
+     • same motion             — --g-ease / --g-spring, transform-only
+     • same icon family        — AI-generated soft-3D glass drops
 
    Presentation only. No routing, no storage, no roles, no business logic:
    permission decisions live in js/admin-permissions.js.
@@ -95,8 +95,10 @@
   white-space: nowrap;
 }
 
+/* Touch controls keep the app-wide 44px minimum (css/mobile.css) — only the
+   type is enlarged, never the tap target. */
 .admin-shell .mini-btn {
-  min-height: 34px;
+  min-height: 44px;
   padding: 0 12px;
   font-size: 11.5px;
   font-weight: 800;
@@ -104,7 +106,7 @@
 }
 
 .admin-shell .chip {
-  min-height: 34px;
+  min-height: 44px;
   padding: 0 13px;
   font-size: 11.5px;
   font-weight: 800;
@@ -177,10 +179,22 @@
 
 .admin-shell .admin-topbar-actions .admin-app-link,
 .admin-shell .admin-topbar-actions .admin-exit {
-  min-height: 38px;
+  min-height: 44px;
   padding: 0 12px;
   font-size: 11.5px;
   font-weight: 800;
+}
+
+.admin-shell .admin-topbar-actions .topbar-icon {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  object-fit: contain;
+}
+
+.admin-shell .admin-app-link svg,
+.admin-shell .admin-exit svg {
+  display: none;
 }
 
 .admin-shell .admin-brand strong {
@@ -210,6 +224,37 @@
   opacity: 1;
 }
 
+/* App-control module rows: the generated family replaces the old emoji bullets
+   (ক্লাস রুটিন / কোর্স / ফলাফল / ইনস্টল), so nothing in the panel is emoji. */
+.admin-shell .app-toggle-copy strong {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-shell .app-toggle-icon {
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+
+/* Live/maintenance badge keeps its colour cue without an emoji. */
+.admin-shell #appStatusLiveBadge {
+  display: inline-flex;
+  align-items: center;
+}
+
+.admin-shell #appStatusLiveBadge::before {
+  content: "";
+  flex: 0 0 7px;
+  width: 7px;
+  height: 7px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
 .admin-shell .detail-grid dt {
   color: var(--panel-muted);
   font-size: 11.5px;
@@ -224,7 +269,6 @@
   overflow-wrap: anywhere;
 }
 
-.admin-shell .manager-approval-note,
 .admin-shell .student-name-hidden {
   color: var(--panel-muted);
 }
@@ -256,11 +300,20 @@
 /* ---------------------------------------------------------------------------
    03 — Dashboard: compact hero + permission-driven icon grid
    ------------------------------------------------------------------------ */
+/* The hero is a light card again: css/app-redesign.css paints it dark green and
+   every label inside white, which is unreadable once the summary tiles are
+   white. Same palette, same material as the login card — only the ink flips. */
 .admin-shell .admin-hero {
+  padding: 0;
   border: 1px solid var(--panel-line);
   border-radius: var(--g-r-lg);
+  color: var(--panel-text);
   background: var(--panel-card-solid);
   box-shadow: var(--g-shadow);
+}
+
+.admin-shell .admin-hero > * {
+  color: var(--panel-text);
 }
 
 .admin-shell .admin-hero-head {
@@ -273,6 +326,7 @@
   flex: 0 0 38px;
   width: 38px;
   height: 38px;
+  border: 1px solid var(--panel-line);
   border-radius: 13px;
   background: var(--panel-tint);
 }
@@ -340,7 +394,7 @@
   margin-top: 12px;
   padding: 14px;
   border: 0;
-  border-radius: var(--g-r-md);
+  border-radius: var(--g-r-lg);
   color: #ffffff;
   background:
     radial-gradient(120% 140% at 18% 0%, rgba(255, 255, 255, .28) 0%, rgba(255, 255, 255, 0) 58%),
@@ -556,7 +610,7 @@
     filter var(--g-base) var(--g-ease);
 }
 
-.admin-bottom-item .nav-label {
+.admin-shell .admin-bottom-item .nav-label {
   max-width: 100%;
   margin-top: 1px;
   color: var(--panel-muted);
@@ -577,7 +631,7 @@
   transform: scale(1.05);
 }
 
-.admin-bottom-item:active .nav-label {
+.admin-shell .admin-bottom-item:active .nav-label {
   color: var(--forest-dark);
 }
 
@@ -599,8 +653,8 @@
   filter: drop-shadow(0 4px 8px rgba(4, 121, 90, .28));
 }
 
-.admin-bottom-item.active .nav-label,
-.admin-bottom-item[aria-current="page"] .nav-label {
+.admin-shell .admin-bottom-item.active .nav-label,
+.admin-shell .admin-bottom-item[aria-current="page"] .nav-label {
   color: var(--forest-dark);
   font-weight: 800;
 }
@@ -710,7 +764,8 @@
   .admin-feature-icon-image { width: 44px; height: 44px; }
   .admin-feature-label { font-size: 12px; }
   .admin-bottom-item .nav-icon { width: 27px; height: 27px; }
-  .admin-bottom-item .nav-label { font-size: 10px; }
+  /* Labels stay at 11px — the smallest size that still reads on a phone. */
+  .admin-shell .admin-bottom-item .nav-label { font-size: 11px; line-height: 1.15; }
   .admin-shell .admin-more-icon { flex: 0 0 42px; width: 42px; height: 42px; }
   .admin-shell .admin-more-icon-image { width: 32px; height: 32px; }
   .admin-shell .admin-dashboard-collect-icon { flex: 0 0 42px; width: 42px; height: 42px; }
@@ -724,7 +779,7 @@
   .admin-feature-icon-image { width: 40px; height: 40px; }
   .admin-feature-label { font-size: 11.5px; }
   .admin-bottom-item .nav-icon { width: 26px; height: 26px; }
-  .admin-bottom-item .nav-label { font-size: 9.8px; }
+  .admin-shell .admin-bottom-item .nav-label { font-size: 11px; line-height: 1.15; }
   .admin-shell .page-intro h1,
   .admin-shell .admin-view h1 { font-size: 20px; }
 }
@@ -740,4 +795,23 @@
   }
   .admin-bottom-item.active .nav-icon,
   .admin-bottom-item[aria-current="page"] .nav-icon { transform: none; }
+}
+
+/* Browser-audited narrow-screen fixes, scoped to Admin only. */
+.admin-shell .day-tabs { flex-wrap: wrap; overflow-x: visible; }
+.admin-shell .day-tab { min-height: 44px; }
+.admin-shell .admin-more-item .admin-menu-arrow {
+  display: inline-flex; align-items: center; justify-content: center;
+  flex: 0 0 24px; width: 24px; height: 24px; line-height: 1;
+}
+.admin-shell .audit-id-badge.purple { color: #5c529f; }
+.admin-shell .admin-dashboard-collect {
+  background: linear-gradient(140deg, #075d52, #064b40);
+}
+.admin-shell .admin-dashboard-collect::after { display: none; }
+
+/* The floating footer sits 10px above the viewport edge. Reserve that gap in
+   addition to its measured height, so the scroll area ends above the bar. */
+#adminShell {
+  grid-template-rows: var(--shell-header-height) minmax(0, 1fr) calc(var(--shell-footer-height) + 12px + var(--safe-bottom));
 }

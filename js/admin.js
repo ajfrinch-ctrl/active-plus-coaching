@@ -1567,7 +1567,7 @@ function renderAppManagement() {
   if ($('#cfgSkipSecurity')) $('#cfgSkipSecurity').checked = cfg.skipSecurityCheck !== false;
   renderTeacherRegistrationControl(cfg);
   if ($('#appStatusLiveBadge')) {
-    $('#appStatusLiveBadge').textContent = cfg.maintenanceMode ? '🔴 রক্ষণাবেক্ষণ মোড' : '🟢 অ্যাপ লাইভ';
+    $('#appStatusLiveBadge').textContent = cfg.maintenanceMode ? 'রক্ষণাবেক্ষণ মোড' : 'অ্যাপ লাইভ';
     $('#appStatusLiveBadge').className = `badge ${cfg.maintenanceMode ? 'badge-rejected' : 'badge-approved'}`;
   }
 
@@ -1690,7 +1690,7 @@ $('#btnResetAppSettings')?.addEventListener('click', resetAppSettingsToDefault);
 $('#cfgMaintenanceMode')?.addEventListener('change', event => {
   const isMaint = event.target.checked;
   if ($('#appStatusLiveBadge')) {
-    $('#appStatusLiveBadge').textContent = isMaint ? '🔴 রক্ষণাবেক্ষণ মোড' : '🟢 অ্যাপ লাইভ';
+    $('#appStatusLiveBadge').textContent = isMaint ? 'রক্ষণাবেক্ষণ মোড' : 'অ্যাপ লাইভ';
     $('#appStatusLiveBadge').className = `badge ${isMaint ? 'badge-rejected' : 'badge-approved'}`;
   }
 });

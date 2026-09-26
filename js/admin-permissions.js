@@ -109,7 +109,7 @@ export const MORE_VIEWS = Object.freeze(['exams', 'notices', 'reports', 'app-man
 /** Bottom-bar entries. `order` keeps the tab order stable no matter which
  *  entries survive the capability filter. */
 export const ADMIN_BOTTOM_NAV = Object.freeze([
-  { view: 'dashboard', label: 'ড্যাশবোর্ড', icon: 'dashboard', capability: CAPABILITIES.DASHBOARD, order: 1 },
+  { view: 'dashboard', label: 'হোম', icon: 'dashboard', capability: CAPABILITIES.DASHBOARD, order: 1 },
   { view: 'students', label: 'শিক্ষার্থী', icon: 'users', capability: CAPABILITIES.STUDENTS_VIEW, order: 2 },
   { view: 'finance', label: 'হিসাব', icon: 'finance', capability: CAPABILITIES.FINANCE_VIEW, order: 3 },
   { view: 'routine', label: 'রুটিন', icon: 'routine', capability: CAPABILITIES.ROUTINE_MANAGE, order: 4 },

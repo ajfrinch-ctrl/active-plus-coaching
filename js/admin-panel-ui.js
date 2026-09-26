@@ -23,9 +23,9 @@ import {
   enforceCapabilities
 } from './admin-permissions.js';
 
-/* One icon per section. The admin set is generated for this panel; routine,
-   "more" and logout reuse the shared glass family until their admin-set
-   counterparts are generated. */
+/* One icon per section. assets/icons/admin holds the set generated for this
+   panel; only the Teacher entry (never granted here) falls back to the shared
+   water-drop family in assets/icons/glass. */
 export const ADMIN_ICON_FILES = Object.freeze({
   dashboard: 'assets/icons/admin/dashboard.png',
   users: 'assets/icons/admin/users.png',
@@ -36,10 +36,10 @@ export const ADMIN_ICON_FILES = Object.freeze({
   classes: 'assets/icons/admin/classes.png',
   app: 'assets/icons/admin/app.png',
   exams: 'assets/icons/admin/exams.png',
-  routine: 'assets/icons/glass/routine.png',
-  more: 'assets/icons/glass/settings.png',
-  teaching: 'assets/icons/glass/suggestion.png',
-  logout: 'assets/icons/glass/logout.png'
+  routine: 'assets/icons/admin/routine.png',
+  more: 'assets/icons/admin/more.png',
+  logout: 'assets/icons/admin/logout.png',
+  teaching: 'assets/icons/glass/suggestion.png'
 });
 
 function iconImage(key, className) {
@@ -184,6 +184,10 @@ export function initAdminPanelShell({ access, onNavigate } = {}) {
   document.querySelectorAll('.admin-stats .admin-stat .admin-stat-icon').forEach((chip, index) => {
     paintIcon(chip, statIcons[index] || 'finance', 'admin-stat-icon-image');
   });
+
+  // Top bar: logo link to the shared login page, then logout.
+  paintIcon(document.querySelector('.admin-app-link'), 'app', 'topbar-icon');
+  paintIcon(document.querySelector('.admin-exit'), 'logout', 'topbar-icon');
 
   return { access, removed, bottomEntries, moreEntries, tileEntries, bottomButtons, moreItems, tiles };
 }

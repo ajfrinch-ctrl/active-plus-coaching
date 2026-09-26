@@ -87,8 +87,7 @@ Admin প্যানেল কোনো নতুন রোল বা স্ট
 `assets/icons/admin/*.png` — প্রতিটি বিভাগের জন্য নিজস্ব AI-generated premium আইকন
 (soft-3D, glass-like, rounded, financial-app inspired), কোনো emoji নয়:
 `dashboard`, `users`, `finance`, `payment`, `reports`, `notices`, `classes`, `app`,
-`exams`। রুটিন, “আরও” ও লগআউট শেয়ার্ড `assets/icons/glass/` ফ্যামিলি থেকে আসে, তাই
-সব আইকন একই ভিজ্যুয়াল পরিবারের। স্টাইল ও রঙ লগইন পেজ ও অন্য প্যানেলের সঙ্গে একই
+`exams`, `routine`, `more`, `logout`। সব বিভাগ, বটম বার ও লগআউটে নতুন Admin আইকন সেট ব্যবহার করা হয়। স্টাইল ও রঙ লগইন পেজ ও অন্য প্যানেলের সঙ্গে একই
 (`css/admin-panel-ui.css`, loaded last): একই primary/secondary, surface, card, border,
 radius ও shadow টোকেন — পুরো অ্যাপ একটি পরিবারের মতো দেখায়।
 
@@ -450,3 +449,63 @@ Firebase SDK এই ধাপে যোগ করা হয়নি। কা�
 ### নোটিশ
 
 শিক্ষার্থীর নোটিশ ইনবক্স অফিসের নোটিশ তালিকা ও অ্যাপ সেটিংসের ঘোষণা থেকে আসে। খালি অবস্থায় “এখনও কোনো নোটিশ নেই” দেখায়। পড়ার রেকর্ড `activePlus.notices.read.v1:<student-id>`-এ এই ডিভাইসেই থাকে।
+
+## Offline role workspace v2 — নতুন নীতির পরীক্ষার সংস্করণ
+
+`offline-roles.html` খুলুন। **ডেমো ডেটাবেজ তৈরি** একবার চাপুন।
+Login: `admin.demo`, `manager.demo`, `teacher.demo`, `payment.demo`, `student.demo`।
+শুধু ডেমোর পাসওয়ার্ড: `Demo12345`। বাস্তব তথ্যের জন্য এই credentials ব্যবহার করবেন না।
+
+সব রোল একই `activePlus.roleWorkspace.v2` localStorage document ব্যবহার করে।
+`payment` internal ID-এর UI নাম **Cash Counter**। পুরোনো v1 database, accounts,
+transactions বা মূল প্যানেলগুলো স্বয়ংক্রিয়ভাবে migrate করা হয়নি। এই workspace-এর
+নিয়ম পুরোনো `admin.html`/`manager.html`/`payment.html`-এর ওপর প্রয়োগ হয়েছে ধরে নেবেন না।
+
+- Admin: non-student staff create/edit/activate/deactivate/reset, assigned classes,
+  অনুমোদিত staff role পরিবর্তন, system settings, সব রিপোর্ট, backup/restore।
+- Manager: student approve/reject/edit/reset, payment approval, operational reports,
+  notices/routines/classes, academic app settings, exam/result approval ও publication।
+- Teacher: assigned-class roster, attendance/remarks, assignments ও grading,
+  academic notices, exam/result preparation (প্রকাশের আগে Manager review)।
+- Cash Counter: সীমিত student lookup, payment entry, নিজের counter history/receipt।
+- Student: registration (Manager approval required), নিজের profile/payment/academic
+  তথ্য, নিজের class-এর প্রকাশিত তথ্য, assignment submission।
+
+`js/offline-role-store.js` প্রতিটি action-এ database থেকে বর্তমান actor পুনরায় যাচাই
+করে; callers-এর পাঠানো role/status দিয়ে অনুমতি নির্ধারণ করে না। Reads scoped,
+role grants explicit (Admin auto-superuser নয়), password PBKDF2 hashed। Staff
+reset/deactivation/role change পুরোনো session invalid করে। Pending payment মোট
+আদায়ে গণনা হয় না; duplicate approval প্রত্যাখ্যাত হয়। Receipt-এ provisional status থাকে।
+Report/receipt বর্তমানে JSON download; polished PDF/print এবং legacy panel migration
+এই পরীক্ষার workspace-এর অংশ নয়। Demo data ইচ্ছাকৃত ও পুনরায় seed করে পুরোনো data মুছে না।
+
+অফলাইনে DevTools/localStorage পরিবর্তন ঠেকানো সম্ভব নয়; এটি online backend security
+নয়। আলাদা ডিভাইস বা origin-এ sync নেই। প্রথমবার online/local server দিয়ে page/assets
+load হওয়ার পর service-worker cache দিয়ে offline ব্যবহার করা যায়। Online migration-এ
+একই policy server-side identity, authorization, transactions এবং Firestore rules-এ
+প্রয়োগ করতে হবে। পুরোনো Firebase rules এই নতুন policy অনুযায়ী deploy করা হয়নি।
+
+যাচাই:
+- `node --experimental-default-type=module --test tests/offline-role-store.test.mjs`
+- `npx playwright test tests/offline-roles.spec.cjs`
+
+Browser tests: Cash Counter entry → Manager approval → Admin report → Student own
+history, forbidden menus, reload persistence এবং 320/390px layout। Domain tests:
+forbidden direct actions, scoped data, pending totals, assignments/results, staff
+session invalidation, registration, storage failure এবং safe backup restore।
+
+### পূর্ণ কোচিং ডেমো
+
+নতুন workspace-এ UI দিয়ে seed করলে ষষ্ঠ–দ্বাদশ শ্রেণির A/B মিলিয়ে ১৪টি সেকশন,
+১১৪ জন শিক্ষার্থী, ২৫৭ payment, ৩০ notice, ৫৭ routine, ৬০ assignment,
+৩৪০ submission, ৫৭ exam, ৩৪১ result, ৪২৫ attendance ও ৮৫ feedback তৈরি হয়।
+প্রতি সেকশনে approved/pending/rejected student এবং published/pending academic
+records আছে। এগুলো কৃত্রিম তথ্য, কোনো বাস্তব ব্যক্তির রেকর্ড নয়।
+
+আগে seed করা থাকলে `admin.demo` দিয়ে ঢুকে **সব ক্লাসে আরও ডেমো যোগ করুন** চাপুন।
+এটি additive/idempotent: একই ID দ্বিতীয়বার তৈরি করে না; সম্পাদনা বা approval ফিরিয়ে
+নেয় না। মূল Teacher-এর assigned class বদলায় না। অতিরিক্ত class teacher:
+`teacher6a.demo` … `teacher12b.demo`; approved student:
+`student6a1.demo` … `student12b6.demo` (grade 6–12, section a/b, roll 1–6)।
+নতুন নমুনায় সবার password `Demo12345`। Teacher ও Student তাদের নির্ধারিত scope-ই দেখেন।
+ক্লাস/সেকশন dropdown ও search ব্যবহার করে বড় তালিকা ফিল্টার করুন।
