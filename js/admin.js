@@ -5,7 +5,8 @@ import { toBanglaNumber } from './ui.js';
 import { classCodes, dayNames, feeCategories, paymentMethods } from './admin-data.js';
 import { loadAppConfig, saveAppConfig, loadAccount, saveAccount } from './storage.js';
 import { loadRoster, saveRoster, syncAccountStatus, loadNotices, saveNotices, loadRoutine, saveRoutine } from './office-data.js';
-import { verifyStaffCredentials, saveStaffSession, hasStaffSession, clearStaffSession, goToLoginPage } from './staff-auth.js';
+import { authenticateStaff, saveStaffSession, hasStaffSession, clearStaffSession, goToLoginPage } from './staff-auth.js';
+import { openStaffPasswordDialog } from './staff-password-dialog.js';
 import { financeRepository, monthLabel, dateLabel, searchStudents, studentFeeSummary, newestTransactions, stampTransaction, TRANSACTIONS_KEY } from './finance-data.js';
 import { newId } from './database.js';
 import { receiptMarkup, downloadReceipt } from './finance-receipt.js';
@@ -15,6 +16,7 @@ import { teachingRepository, displayDate, PROGRESS_LABELS, TEACHING_KEY } from '
 import { initExamManager } from './exam-manager.js';
 import { registerServiceWorker } from './service-worker.js';
 import { initFixedShell } from './fixed-shell.js';
+import { escapeHtml } from './sanitize.js';
 
 initFixedShell();
 registerServiceWorker();
@@ -148,14 +150,6 @@ function renderFinanceSummary() {
 
 /* ---------- Students ---------- */
 
-function escapeHtml(str) {
-  return String(str || '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
 
 function normalizeDigitsOnly(text) {
   return String(text || '')
@@ -289,7 +283,7 @@ function setStatus(id, status, message) {
   if (!student) return;
   student.status = status;
   persistStudents();
-  syncAccountStatus(id, status);
+  void syncAccountStatus(id, status);
   renderFeeProfile();
   renderFinanceStats();
   renderStudents();
@@ -464,10 +458,10 @@ function openPinReset(student) {
       <p id="pinResetError" class="finance-error" role="alert" hidden></p>
       <div class="modal-actions"><button class="admin-btn primary" type="button" data-modal-action="done">${isLocal ? 'রিসেট নিশ্চিত করুন' : 'বুঝেছি'}</button></div>`
   );
-  $('#adminModalBody [data-modal-action="done"]').addEventListener('click', () => {
+  $('#adminModalBody [data-modal-action="done"]').addEventListener('click', async () => {
     if (isLocal) {
       const latest = loadAccount();
-      if ((latest?.student?.id !== student.id && latest?.studentId !== student.id) || !saveAccount({ ...latest, pin: DEFAULT_PIN })) {
+      if ((latest?.student?.id !== student.id && latest?.studentId !== student.id) || !(await saveAccount({ ...latest, pin: DEFAULT_PIN }))) {
         $('#pinResetError').textContent = 'পাসওয়ার্ড সংরক্ষণ হয়নি। আবার চেষ্টা করুন।';
         $('#pinResetError').hidden = false;
         return;
@@ -1639,11 +1633,24 @@ $('#cfgTeacherRegistration')?.addEventListener('change', event => {
   renderTeacherRegistrationControl({ ...loadAppConfig(), allowTeacherRegistration: event.target.checked });
 });
 
-$('#adminLoginForm')?.addEventListener('submit', event => {
+async function enterAdminPanel(remember) {
+  if (!(await saveStaffSession('admin', remember))) {
+    const box = $('#adminLoginError');
+    if (box) {
+      box.textContent = 'সেশন সংরক্ষণ করা যায়নি — ব্রাউজারের স্টোরেজ পরীক্ষা করে আবার চেষ্টা করুন।';
+      box.hidden = false;
+    }
+    return;
+  }
+  enterPanel();
+}
+
+$('#adminLoginForm')?.addEventListener('submit', async event => {
   event.preventDefault();
   const username = $('#adminLoginUser')?.value || '';
   const password = $('#adminLoginPin')?.value || '';
-  if (!verifyStaffCredentials('admin', username, password)) {
+  const result = await authenticateStaff('admin', username, password);
+  if (!result.ok) {
     const box = $('#adminLoginError');
     if (box) {
       box.textContent = 'ইউজারনেম বা পাসওয়ার্ড সঠিক নয়।';
@@ -1653,8 +1660,16 @@ $('#adminLoginForm')?.addEventListener('submit', event => {
   }
   const box = $('#adminLoginError');
   if (box) box.hidden = true;
-  saveStaffSession('admin', $('#rememberAdmin')?.checked !== false);
-  enterPanel();
+  const remember = $('#rememberAdmin')?.checked !== false;
+  if (result.needsSetup || result.needsPasswordChange) {
+    openStaffPasswordDialog({
+      role: 'admin',
+      mode: result.needsSetup ? 'setup' : 'change',
+      onDone: () => enterAdminPanel(remember)
+    });
+    return;
+  }
+  await enterAdminPanel(remember);
 });
 $('#adminExitButton')?.addEventListener('click', exitPanel);
 $$('[data-toggle-pin]').forEach(button => {
@@ -1950,4 +1965,5 @@ window.addEventListener('storage', event => {
   if (event.key === EXAM_KEY || event.key === TEACHING_KEY) loadAcademicData();
 });
 
-if (hasStaffSession('admin')) enterPanel();
+// An existing device-bound session opens the panel without asking again.
+hasStaffSession('admin').then(valid => { if (valid) enterPanel(); });

@@ -9,14 +9,16 @@ import { receiptMarkup, downloadReceipt, createReceiptPNG } from './finance-rece
 import { toBanglaNumber } from './ui.js';
 import { registerServiceWorker } from './service-worker.js';
 import { goToLoginPage } from './staff-auth.js';
+import { escapeHtml } from './sanitize.js';
 import {
   PAYMENT_USER_ID,
-  verifyPaymentCredentials,
+  authenticatePayment,
   savePaymentSession,
   hasPaymentSession,
   clearPaymentSession,
   changePaymentPin
 } from './payment-auth.js';
+import { openStaffPasswordDialog } from './staff-password-dialog.js';
 
 export { PAYMENT_USER_ID };
 
@@ -25,7 +27,6 @@ registerServiceWorker();
 const bn = toBanglaNumber;
 const $ = selector => document.querySelector(selector);
 const $$ = selector => Array.from(document.querySelectorAll(selector));
-const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 
 const state = {
   students: [],
@@ -72,7 +73,7 @@ async function enterPanel(remember) {
   state.students = loadRoster();
   $('#payEntry').hidden = true;
   $('#payShell').hidden = false;
-  savePaymentSession(remember);
+  await savePaymentSession(remember);
   renderMethodPills();
   populateMonths();
   // Focus as soon as the desk is visible. Waiting for the ledger load lets the
@@ -81,11 +82,12 @@ async function enterPanel(remember) {
   await loadTransactions();
 }
 
-$('#payLoginForm').addEventListener('submit', event => {
+$('#payLoginForm').addEventListener('submit', async event => {
   event.preventDefault();
   const userId = $('#payLoginUser').value.trim();
   const pin = $('#payLoginPin').value;
-  if (!verifyPaymentCredentials(userId, pin)) {
+  const result = await authenticatePayment(userId, pin);
+  if (!result.ok) {
     $('#payLoginError').textContent = 'ইউজারনেম বা পাসওয়ার্ড সঠিক নয়। আবার চেষ্টা করুন।';
     $('#payLoginError').hidden = false;
     $('#payLoginPin').value = '';
@@ -93,7 +95,16 @@ $('#payLoginForm').addEventListener('submit', event => {
     return;
   }
   $('#payLoginError').hidden = true;
-  enterPanel($('#rememberPay').checked);
+  const remember = $('#rememberPay').checked;
+  if (result.needsSetup || result.needsPasswordChange) {
+    openStaffPasswordDialog({
+      role: 'payment',
+      mode: result.needsSetup ? 'setup' : 'change',
+      onDone: () => enterPanel(remember)
+    });
+    return;
+  }
+  enterPanel(remember);
 });
 
 $('#payExitButton').addEventListener('click', () => {
@@ -126,9 +137,9 @@ $('#payPinBackdrop').addEventListener('click', event => {
   if (event.target === event.currentTarget) closePinModal();
 });
 
-$('#payPinForm').addEventListener('submit', event => {
+$('#payPinForm').addEventListener('submit', async event => {
   event.preventDefault();
-  const result = changePaymentPin($('#payPinCurrent').value, $('#payPinNew').value, $('#payPinConfirm').value);
+  const result = await changePaymentPin($('#payPinCurrent').value, $('#payPinNew').value, $('#payPinConfirm').value);
   if (!result.ok) {
     $('#payPinError').textContent = result.error;
     $('#payPinError').hidden = false;
@@ -314,8 +325,8 @@ function renderProfile() {
   $('#payQuickProfile').innerHTML = `
     <div class="fee-profile-heading">
       <span class="student-avatar" aria-hidden="true">${escapeHtml(student.name.charAt(0))}</span>
-      <div><h3>${escapeHtml(student.name)}</h3><small>Student ID: ${student.id}</small></div>
-      <span class="badge ${status.className}">${status.label}</span>
+      <div><h3>${escapeHtml(student.name)}</h3><small>Student ID: ${escapeHtml(student.id)}</small></div>
+      <span class="badge ${escapeHtml(status.className)}">${escapeHtml(status.label)}</span>
     </div>
     <div class="pay-due-hero ${summary.due ? 'has-due' : 'is-clear'}">
       <div>
@@ -672,9 +683,12 @@ document.addEventListener('keydown', event => {
 /* ---------- Returning session: a remembered device (or a sign-in from the
    student login page) opens the desk directly, without the entry form. ---------- */
 
-if (hasPaymentSession()) {
-  // Hide synchronously so the entry screen never flashes on arrival.
+// A valid, device-bound session opens the desk without the entry form. The
+// check is asynchronous (the stored record may be encrypted), so the entry
+// screen is hidden as soon as the answer arrives.
+hasPaymentSession().then(valid => {
+  if (!valid) return;
   $('#payEntry').hidden = true;
   $('#payShell').hidden = false;
   enterPanel(true);
-}
+});

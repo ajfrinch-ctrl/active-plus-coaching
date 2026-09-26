@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { KEYS, SYNCABLE, LOCAL_ONLY, listDocuments, listDocumentsStrict, replaceDocuments, replaceDocumentsStrict, rememberAccount, newId } from '../js/database.js';
 import { saveAccount, loadAccount, generateStudentId } from '../js/storage.js';
 import { financeRepository, TRANSACTIONS_KEY, stampTransaction } from '../js/finance-data.js';
+import { isPasswordRecord } from '../js/password-hash.js';
 
 function setup() {
   const store = new Map();
@@ -43,19 +44,22 @@ test('corrupt ledger is rejected and left untouched', () => {
   assert.equal(store.get(KEYS.transactions), 'corrupt-json');
 });
 
-test('account mirror keeps the login password on the device and out of the collection', () => {
+test('account mirror keeps the login password on the device and out of the collection', async () => {
   setup();
-  assert.equal(saveAccount({
+  assert.equal(await saveAccount({
     mobile: '01711223344',
     pin: '123123',
     username: 'raisa.islam',
     student: { id: 'S-9', name: 'রাইসা', pin: 'secret', securityAnswer: 'no' }
   }), true);
   const login = loadAccount();
-  assert.equal(login.pin, '123123');
+  // The stored record holds a PBKDF2 hash, never the plaintext PIN.
+  assert.equal(login.pin, undefined);
+  assert.equal(isPasswordRecord(login.pinHash), true);
   const mirrored = JSON.parse(window.localStorage.getItem(KEYS.accounts));
   assert.equal(mirrored['S-9'].username, 'raisa.islam');
   assert.equal(mirrored['S-9'].pin, undefined);
+  assert.equal(mirrored['S-9'].pinHash, undefined);
   assert.equal(mirrored['S-9'].student.pin, undefined);
   assert.equal(mirrored['S-9'].student.securityAnswer, undefined);
   assert.equal(rememberAccount({ studentId: 'S-9' }), true);

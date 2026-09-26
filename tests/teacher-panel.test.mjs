@@ -7,7 +7,8 @@ import { loadPage } from './jsdom-harness.mjs';
 import { teachingRepository, todayISO } from '../js/teaching-data.js';
 import { adminStudents } from '../js/admin-data.js';
 import { ROSTER_KEY } from '../js/office-data.js';
-import { STAFF_ACCOUNTS, STAFF_PASSWORD } from '../js/staff-auth.js';
+import { STAFF_ACCOUNTS } from '../js/staff-auth.js';
+import { STAFF_TEST_PASSWORD, provisionStaff, completeStaffPasswordDialog } from './staff-harness.mjs';
 
 const shift = days => {
   const d = new Date(`${todayISO()}T12:00:00`);
@@ -27,10 +28,14 @@ before(async () => {
     seed: { 'activePlus.demo.autofill.v1': 'off', [ROSTER_KEY]: JSON.stringify(adminStudents) }
   });
   await import('../js/teacher.js');
+  await provisionStaff('teacher');
   ctx.type($('#teacherLoginUser'), STAFF_ACCOUNTS.teacher.username);
-  ctx.type($('#teacherLoginPin'), STAFF_PASSWORD);
+  ctx.type($('#teacherLoginPin'), STAFF_TEST_PASSWORD);
   ctx.click($('#teacherEnter'));
-  await settle();
+  // A role with no password yet is asked to set one before the panel opens.
+  await ctx.waitFor(() => Boolean($('.staff-pw-backdrop')) || $('#teacherShell').hidden === false);
+  if ($('.staff-pw-backdrop')) await completeStaffPasswordDialog(ctx);
+  await ctx.waitFor(() => $('#teacherShell').hidden === false);
   assert.equal($('#teacherShell').hidden, false, 'the panel must open');
 });
 

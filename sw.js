@@ -1,4 +1,4 @@
-const CACHE_NAME = 'active-plus-student-v53-logout-to-login';
+const CACHE_NAME = 'active-plus-student-v54-logout-to-login';
 const APP_SHELL = [
   './',
   './index.html',
@@ -38,6 +38,11 @@ const APP_SHELL = [
   './css/scroll-header.css',
   './assets/fonts/NotoSansBengali-Variable.ttf',
   './js/config.js',
+  './js/password-hash.js',
+  './js/secure-store.js',
+  './js/session.js',
+  './js/sanitize.js',
+  './js/staff-password-dialog.js',
   './js/demo-data.js',
   './js/demo-forms.js',
   './js/exam-data.js',

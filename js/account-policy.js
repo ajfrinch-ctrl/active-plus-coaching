@@ -1,7 +1,9 @@
 /* Shared student/teacher account policy; enforce the same rules on the future server.
    Extra contacts are append-only and are not alternate login IDs.
    A username is a second login ID the student picks once; like the registration
-   mobile it is immutable, so it can be used safely instead of the phone number. */
+   mobile it is immutable, so it can be used safely instead of the phone number.
+   Passwords and recovery answers are carried as PBKDF2 hash records
+   (pinHash / securityAnswerHash); plaintext never reaches storage. */
 import { DEFAULT_PIN } from './config.js';
 import { STAFF_USERNAMES } from './staff-auth.js';
 
@@ -68,7 +70,15 @@ export function protectAccountIdentity(candidate, previous = null) {
   const lockedUsername = normalizeUsername(previous?.username || previous?.student?.username || '');
   const requested = normalizeUsername(candidate.username);
   const username = lockedUsername || (isValidUsername(requested) ? requested : '');
-  const account = { ...candidate, registrationMobile, mobile: registrationMobile, additionalMobiles, pin: candidate.pin || previous?.pin || DEFAULT_PIN, username };
+  const account = { ...candidate, registrationMobile, mobile: registrationMobile, additionalMobiles, username };
+  // Secrets travel as hash records only; a new plaintext secret is hashed by
+  // storage.js before it is written. A legacy plaintext value survives here
+  // only so it can be verified once and upgraded — it is dropped as soon as a
+  // hash record exists.
+  const pinHash = candidate.pinHash || previous?.pinHash || null;
+  const securityAnswerHash = candidate.securityAnswerHash || previous?.securityAnswerHash || null;
+  if (pinHash) { account.pinHash = pinHash; delete account.pin; }
+  if (securityAnswerHash) { account.securityAnswerHash = securityAnswerHash; delete account.securityAnswer; }
   if (candidate.student) {
     account.student = { ...candidate.student, studentMobile: registrationMobile };
     if (username) account.student.username = username;

@@ -7,7 +7,8 @@ import { EXAM_KEY, examTemplate, examMatchesClass, validateExam } from '../js/ex
 import { enabledClasses } from '../js/config.js';
 import { adminStudents } from '../js/admin-data.js';
 import { ROSTER_KEY } from '../js/office-data.js';
-import { STAFF_ACCOUNTS, STAFF_PASSWORD } from '../js/staff-auth.js';
+import { STAFF_ACCOUNTS } from '../js/staff-auth.js';
+import { STAFF_TEST_PASSWORD, provisionStaff, completeStaffPasswordDialog } from './staff-harness.mjs';
 
 let ctx, repo;
 const $ = sel => ctx.$(sel);
@@ -24,10 +25,14 @@ before(async () => {
   });
   repo = (await import('../js/exam-data.js')).examRepository;
   await import('../js/teacher.js');
+  await provisionStaff('teacher');
   ctx.type($('#teacherLoginUser'), STAFF_ACCOUNTS.teacher.username);
-  ctx.type($('#teacherLoginPin'), STAFF_PASSWORD);
+  ctx.type($('#teacherLoginPin'), STAFF_TEST_PASSWORD);
   ctx.click($('#teacherEnter'));
-  await settle();
+  // A role with no password yet is asked to set one before the panel opens.
+  await ctx.waitFor(() => Boolean($('.staff-pw-backdrop')) || $('#teacherShell').hidden === false);
+  if ($('.staff-pw-backdrop')) await completeStaffPasswordDialog(ctx);
+  await ctx.waitFor(() => $('#teacherShell').hidden === false);
   ctx.click($('[data-teacher-view="online-exams"]'));
   ctx.click($('#teacherExamWorkspace [data-exam-action="new-mcq"]'));
 });

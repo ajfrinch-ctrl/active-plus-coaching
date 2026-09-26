@@ -9,6 +9,7 @@ import {
 } from '../js/account-policy.js';
 import { saveAccount, loadAccount, usernameTaken, usernameOwner, reserveUsername, releaseUsername } from '../js/storage.js';
 import { STORAGE_KEYS } from '../js/config.js';
+import { isPasswordRecord } from '../js/password-hash.js';
 
 function setup() {
   const store = new Map();
@@ -66,14 +67,19 @@ test('an account keeps the first username forever', () => {
   assert.equal(protectAccountIdentity({ ...legacy, username: 'other' }, legacy).username, 'legacy.name');
 });
 
-test('storage keeps the username through saves and rewrites', () => {
+test('storage keeps the username through saves and rewrites', async () => {
   setup();
-  assert.equal(saveAccount({ mobile: '01711223344', username: 'raisa.islam', pin: '123123', student: { id: 'S-1' } }), true);
+  assert.equal(await saveAccount({ mobile: '01711223344', username: 'raisa.islam', pin: '123123', student: { id: 'S-1' } }), true);
   assert.equal(loadAccount().username, 'raisa.islam');
-  assert.equal(saveAccount({ ...loadAccount(), username: 'other.name', pin: '654321' }), true);
+  assert.equal(await saveAccount({ ...loadAccount(), username: 'other.name', pin: '654321' }), true);
   const current = loadAccount();
   assert.equal(current.username, 'raisa.islam');
-  assert.equal(current.pin, '654321'); // the PIN still changes
+  // The PIN still changes — but only as a PBKDF2 hash, never as plaintext.
+  assert.equal(current.pin, undefined);
+  assert.equal(isPasswordRecord(current.pinHash), true);
+  const { verifyAccountPassword } = await import('../js/storage.js');
+  assert.equal(await verifyAccountPassword(current, '654321'), true);
+  assert.equal(await verifyAccountPassword(current, '123123'), false);
   assert.equal(JSON.parse(window.localStorage.getItem(STORAGE_KEYS.account)).username, 'raisa.islam');
 });
 

@@ -9,7 +9,8 @@ import { loadPage } from './jsdom-harness.mjs';
 import { adminStudents, initialTransactions, paymentMethods } from '../js/admin-data.js';
 import { studentFeeSummary, dateLabel, TRANSACTIONS_KEY } from '../js/finance-data.js';
 import { toBanglaNumber } from '../js/ui.js';
-import { PAYMENT_ACCOUNT_KEY, PAYMENT_SESSION_KEY, PAYMENT_USER_ID, DEFAULT_PAYMENT_PIN } from '../js/payment-auth.js';
+import { PAYMENT_ACCOUNT_KEY, PAYMENT_SESSION_KEY, PAYMENT_USER_ID, hasPaymentSession, loadPaymentAccount } from '../js/payment-auth.js';
+import { STAFF_TEST_PASSWORD, provisionStaff } from './staff-harness.mjs';
 import { ROSTER_KEY } from '../js/office-data.js';
 
 const DEMO_OFF = {
@@ -26,18 +27,32 @@ before(async () => {
   await import('../js/payment.js');
 });
 
-test('entry screen starts blank and rejects a wrong password', () => {
-  const { $, submit } = ctx;
+test('entry screen starts blank; a fresh device asks for a password first', async () => {
+  const { $, submit, waitFor } = ctx;
   assert.equal($('#payEntry').hidden, false);
   assert.equal($('#payShell').hidden, true);
   assert.equal($('#payLoginUser').value, '');
   assert.equal($('#payLoginPin').value, '');
   assert.equal($('#payLoginPin').maxLength, 32);
 
+  // No built-in default password: the first sign-in opens the setup dialog.
+  $('#payLoginUser').value = PAYMENT_USER_ID;
+  $('#payLoginPin').value = 'anything-at-all';
+  submit($('#payLoginForm'));
+  await waitFor(() => Boolean($('.staff-pw-backdrop')));
+  assert.equal($('#payShell').hidden, true);
+  assert.equal($('#payLoginError').hidden, true);
+
+  // Cancel keeps the desk closed; the stored account stays absent.
+  $('[data-staff-pw-cancel]').dispatchEvent(new window.Event('click', { bubbles: true }));
+  await waitFor(() => !$('.staff-pw-backdrop'));
+  assert.equal(await loadPaymentAccount().then(a => a.hasPassword), false);
+
+  await provisionStaff('payment');
   $('#payLoginUser').value = PAYMENT_USER_ID;
   $('#payLoginPin').value = 'wrong-pass';
   submit($('#payLoginForm'));
-  assert.equal($('#payLoginError').hidden, false);
+  await waitFor(() => $('#payLoginError').hidden === false);
   assert.match($('#payLoginError').textContent, /ইউজারনেম বা পাসওয়ার্ড সঠিক নয়/);
   assert.equal($('#payShell').hidden, true);
 });
@@ -45,13 +60,16 @@ test('entry screen starts blank and rejects a wrong password', () => {
 test('the counter username + password opens the desk, stores a session and focuses search', async () => {
   const { $, submit, window, waitFor } = ctx;
   $('#payLoginUser').value = 'Payment.APC'; // case tolerant
-  $('#payLoginPin').value = DEFAULT_PAYMENT_PIN;
+  $('#payLoginPin').value = STAFF_TEST_PASSWORD;
   submit($('#payLoginForm'));
   await waitFor(() => $('#payShell').hidden === false);
+  // The session token is written after the desk opens; wait for the store.
+  await waitFor(() => window.localStorage.getItem(PAYMENT_SESSION_KEY) !== null);
 
   assert.equal($('#payEntry').hidden, true);
-  const session = JSON.parse(window.localStorage.getItem(PAYMENT_SESSION_KEY));
-  assert.ok(session.expiry > Date.now());
+  // The session is a device-bound token (encrypted when the platform allows).
+  assert.equal(window.localStorage.getItem(PAYMENT_SESSION_KEY) !== null, true);
+  assert.equal(await hasPaymentSession(), true);
   assert.equal(window.document.activeElement, $('#payStudentSearch'));
   // Method pills come from the shared payment method list.
   const pills = ctx.$$('#payFeeMethodGroup [data-pay-method]');
@@ -83,6 +101,8 @@ test('keypad + method pill collect in a few taps and the save is durable', async
   const { $, $$, click, type, submit, waitFor, window } = ctx;
   const summary = studentFeeSummary(raisa, initialTransactions);
 
+  // Disabled until the ledger has loaded; a click then would be a no-op.
+  await waitFor(() => $('#payProfileCollect').disabled === false);
   click($('#payProfileCollect'));
   assert.equal($('#payCollectionForm').hidden, false);
   assert.equal($('#payFeeAmount').value, String(summary.due || summary.monthlyFee));
@@ -171,12 +191,25 @@ test('the password can be changed from the desk; the stored account keeps its us
   type($('#payPinNew'), '456789');
   type($('#payPinConfirm'), '456789');
   submit($('#payPinForm'));
+  await waitFor(() => $('#payPinError').hidden === false);
   assert.match($('#payPinError').textContent, /বর্তমান পাসওয়ার্ড সঠিক নয়/);
 
-  type($('#payPinCurrent'), DEFAULT_PAYMENT_PIN);
+  type($('#payPinCurrent'), STAFF_TEST_PASSWORD);
   submit($('#payPinForm'));
   await waitFor(() => $('#payPinBackdrop').hidden === true);
-  assert.deepEqual(JSON.parse(window.localStorage.getItem(PAYMENT_ACCOUNT_KEY)), { username: PAYMENT_USER_ID, password: '456789' });
+  // The stored record is an encrypted envelope: no username or password text
+  // is readable from storage, and the account keeps its user ID.
+  const raw = window.localStorage.getItem(PAYMENT_ACCOUNT_KEY);
+  assert.equal(/"password"/.test(raw), false);
+  assert.equal(/"username"/.test(raw), false);
+  const account = await loadPaymentAccount();
+  assert.equal(account.userId, PAYMENT_USER_ID);
+  assert.equal(account.hasPassword, true);
+  // The new password is the one that works now.
+  const { verifyPaymentCredentials } = await import('../js/payment-auth.js');
+  assert.equal(await verifyPaymentCredentials(PAYMENT_USER_ID, '456789'), true);
+  assert.equal(await verifyPaymentCredentials(PAYMENT_USER_ID, STAFF_TEST_PASSWORD), false);
+  assert.equal(await hasPaymentSession(), true, 'the desk stays signed in after the change');
   assert.match($('#payToast').textContent, /পাসওয়ার্ড পরিবর্তন হয়েছে/);
 });
 

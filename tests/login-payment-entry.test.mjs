@@ -1,12 +1,18 @@
 /* One login page for everyone: student, teacher, admin and the payment counter
    all sign in on index.html. A student lands in the student app; a reserved
    staff username hands the visitor to that panel with the session already
-   written, so the panel opens without a second credential form. */
+   written, so the panel opens without a second credential form.
+
+   Phase 1 security: no built-in default password exists. A role's first
+   sign-in on a device opens the shared password dialog; the session is a
+   device-bound token written only after a valid password is in place. */
 import test, { before } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadPage } from './jsdom-harness.mjs';
-import { STAFF_ACCOUNTS, STAFF_PASSWORD } from '../js/staff-auth.js';
+import { STAFF_ACCOUNTS } from '../js/staff-auth.js';
+import { hasStaffSession } from '../js/staff-auth.js';
 import { STORAGE_KEYS } from '../js/config.js';
+import { STAFF_TEST_PASSWORD, provisionStaff, seedStaffSession, signInOnLoginPage, completeStaffPasswordDialog } from './staff-harness.mjs';
 
 const DEMO_OFF = { 'activePlus.demo.autofill.v1': 'off' };
 const ACCOUNT_KEY = 'active-plus-account-v1';
@@ -32,11 +38,13 @@ async function open(seed = {}) {
   return ctx;
 }
 
-function signIn(username, pin) {
+async function signIn(username, pin, wait = () => true) {
   const { $, type, submit } = ctx;
   type($('#loginMobile'), username);
   type($('#loginPin'), pin);
   submit($('#loginForm'));
+  await ctx.waitFor(wait);
+  await ctx.flush();
 }
 
 const session = role => ctx.window.localStorage.getItem(STAFF_ACCOUNTS[role].sessionKey);
@@ -59,68 +67,86 @@ test('the login card is the single door: no staff tabs, no shortcut links, no de
   assert.equal(/১২৩১২৩|APC-PAY|এক ক্লিক/.test(ctx.window.document.body.textContent), false);
 });
 
-test('a student still signs in here and opens the student app', () => {
-  signIn('raisa.islam', '246810');
+test('a student still signs in here and opens the student app', async () => {
+  await signIn('raisa.islam', '246810', () => studentAppOpened === 1);
   assert.equal(studentAppOpened, 1);
   assert.equal(ctx.window.localStorage.getItem(STORAGE_KEYS.session) !== null, true);
+  // The legacy plaintext PIN was upgraded to a hash on this successful login.
+  const stored = JSON.parse(ctx.window.localStorage.getItem(ACCOUNT_KEY));
+  assert.equal(stored.pin, undefined);
+  assert.equal(typeof stored.pinHash, 'object');
   for (const role of Object.keys(STAFF_ACCOUNTS)) assert.equal(session(role), null);
 });
 
-test('admin credentials hand over to the admin panel, wrong ones change nothing', () => {
-  signIn('admin.apc', 'ভুল-পাসওয়ার্ড');
-  assert.match(ctx.$('#authMessage').textContent, /সঠিক নয়/);
+test('admin credentials hand over to the admin panel, wrong ones change nothing', async () => {
+  await open();
+  // A fresh device has no password for the role yet: the shared dialog asks
+  // for one before anything else happens.
+  await signIn(STAFF_ACCOUNTS.admin.username, STAFF_TEST_PASSWORD, () => Boolean(ctx.$('.staff-pw-backdrop')));
+  assert.equal(session('admin'), null, 'no session before a password exists');
+  ctx.$('[data-staff-pw-cancel]')?.dispatchEvent(new ctx.window.Event('click', { bubbles: true }));
+  await ctx.waitFor(() => !ctx.$('.staff-pw-backdrop'));
+
+  await provisionStaff('admin');
+  await signIn('admin.apc', 'ভুল-পাসওয়ার্ড', () => /সঠিক ন(য়|য়)/.test(ctx.$('#authMessage').textContent));
+  assert.match(ctx.$('#authMessage').textContent, /সঠিক ন(য়|য়)/);
   assert.equal(session('admin'), null);
   assert.equal(navigated(), false);
   assert.equal(studentAppOpened, 1);
 
-  signIn(STAFF_ACCOUNTS.admin.username.toUpperCase(), STAFF_PASSWORD);
+  // The right password hands over to the panel with the session already written.
+  await signIn(STAFF_ACCOUNTS.admin.username.toUpperCase(), STAFF_TEST_PASSWORD, () => navigated());
   assert.match(ctx.$('#authMessage').textContent, /এডমিন প্যানেল/);
-  const stored = JSON.parse(session('admin'));
-  assert.equal(stored.role, 'admin');
-  assert.equal(stored.expiry > Date.now(), true);
+  assert.equal(session('admin') !== null, true);
+  assert.equal(await hasStaffSession('admin'), true);
   assert.equal(navigated(), true, 'the login page must hand over to admin.html');
 });
 
 test('teacher and payment counter use the same form and reach their own panels', async () => {
   await open();
-  signIn(STAFF_ACCOUNTS.teacher.username, STAFF_PASSWORD);
+  await provisionStaff('teacher');
+  await signIn(STAFF_ACCOUNTS.teacher.username, STAFF_TEST_PASSWORD, () => navigated() || ctx.$('#authMessage').textContent.includes('শিক্ষক'));
   assert.match(ctx.$('#authMessage').textContent, /শিক্ষক প্যানেল/);
-  assert.equal(JSON.parse(session('teacher')).role, 'teacher');
+  assert.equal(session('teacher') !== null, true);
+  assert.equal(await hasStaffSession('teacher'), true);
   assert.equal(session('admin'), null);
 
   await open();
-  signIn(STAFF_ACCOUNTS.payment.username, STAFF_PASSWORD);
+  await provisionStaff('payment');
+  await signIn(STAFF_ACCOUNTS.payment.username, STAFF_TEST_PASSWORD, () => navigated() || ctx.$('#authMessage').textContent.includes('পেমেন্ট'));
   assert.match(ctx.$('#authMessage').textContent, /পেমেন্ট রিসিভ প্যানেল/);
-  assert.equal(JSON.parse(session('payment')).role, 'payment');
+  assert.equal(await hasStaffSession('payment'), true);
   // The counter desk reads this key, so landing there needs no second form.
   assert.equal(session('payment') !== null, true);
 });
 
-test('remember-me unchecked keeps a staff session only for the tab', () => {
-  return open().then(() => {
-    const { $, type, submit } = ctx;
-    type($('#loginMobile'), STAFF_ACCOUNTS.admin.username);
-    type($('#loginPin'), STAFF_PASSWORD);
-    $('#rememberMe').checked = false;
-    submit($('#loginForm'));
-    assert.equal(session('admin'), null, 'no 90-day session was written');
-    assert.equal(ctx.window.sessionStorage.getItem(STAFF_ACCOUNTS.admin.sessionKey), '1');
-  });
+test('remember-me unchecked keeps a staff session only for the tab', async () => {
+  await open();
+  await provisionStaff('admin');
+  const { $, type, submit } = ctx;
+  type($('#loginMobile'), STAFF_ACCOUNTS.admin.username);
+  type($('#loginPin'), STAFF_TEST_PASSWORD);
+  $('#rememberMe').checked = false;
+  submit($('#loginForm'));
+  await ctx.waitFor(() => ctx.window.sessionStorage.getItem(STAFF_ACCOUNTS.admin.sessionKey) === '1' || navigated());
+  assert.equal(session('admin'), null, 'no 90-day session was written');
+  assert.equal(ctx.window.sessionStorage.getItem(STAFF_ACCOUNTS.admin.sessionKey), '1');
 });
 
 test('the admin switch that closes teacher access also closes it from this page', async () => {
   await open({ 'active-plus-app-config-v1': JSON.stringify({ allowTeacherRegistration: false }) });
-  signIn(STAFF_ACCOUNTS.teacher.username, STAFF_PASSWORD);
+  await provisionStaff('teacher');
+  await signIn(STAFF_ACCOUNTS.teacher.username, STAFF_TEST_PASSWORD, () => ctx.$('#authMessage').textContent.includes('বন্ধ'));
   assert.match(ctx.$('#authMessage').textContent, /বন্ধ রাখা হয়েছে/);
   assert.equal(session('teacher'), null);
   assert.equal(navigated(), false);
 });
 
 test('the panel a staff member was handed to opens without a second form', async () => {
-  const panel = await loadPage('admin.html', {
-    seed: { ...DEMO_OFF, [STAFF_ACCOUNTS.admin.sessionKey]: JSON.stringify({ expiry: Date.now() + 86400000, role: 'admin' }) }
-  });
+  const panel = await loadPage('admin.html', { seed: DEMO_OFF });
+  seedStaffSession(panel.window, 'admin');
   await import('../js/admin.js');
+  await panel.flush();
   assert.equal(panel.$('#adminEntry').hidden, true);
   assert.equal(panel.$('#adminShell').hidden, false);
 });
@@ -133,12 +159,14 @@ for (const [panel, script, exitButton, role] of [
   ['payment.html', '../js/payment.js', '#payExitButton', 'payment']
 ]) {
   test(`logging out of ${panel} goes to the login page`, async () => {
-    const page = await loadPage(panel, {
-      seed: { ...DEMO_OFF, [STAFF_ACCOUNTS[role].sessionKey]: JSON.stringify({ expiry: Date.now() + 86400000, role }) }
-    });
-    // Cache-bust: the previous test already evaluated admin.js against another
-    // document, and a cached module would bind its handlers to that old DOM.
+    const page = await loadPage(panel, { seed: DEMO_OFF });
+    seedStaffSession(page.window, role);
+    // Cache-bust: the previous test already evaluated this module against
+    // another document, and a cached module would bind its handlers to that
+    // old DOM.
     await import(`${script}?logout=${role}`);
+    // The desk rewrites its session on entry; wait for the store to settle.
+    await page.waitFor(() => page.window.localStorage.getItem(STAFF_ACCOUNTS[role].sessionKey) !== null);
     assert.equal(page.window.localStorage.getItem(STAFF_ACCOUNTS[role].sessionKey) !== null, true, 'session was there to begin with');
     page.click(page.$(exitButton));
     assert.equal(page.window.localStorage.getItem(STAFF_ACCOUNTS[role].sessionKey), null);

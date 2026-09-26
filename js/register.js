@@ -5,7 +5,9 @@
 import { $, $$, normalizeMobile, normalizeAnswer, setAuthMessage, showFeedback } from './ui.js';
 import { enabledClasses } from './config.js';
 import { contactNumber, isContactNumber, normalizeUsername, usernameError, suggestUsername } from './account-policy.js';
-import { saveAccount, saveStudent, generateStudentId, persistSession, setTrustedDevice, usernameTaken, reserveUsername, releaseUsername } from './storage.js';
+import {
+  saveAccount, saveStudent, generateStudentId, persistSession, setTrustedDevice, usernameTaken, reserveUsername, releaseUsername, loadAccount
+} from './storage.js';
 import { upsertLocalAccount } from './office-data.js';
 import { switchAuthTab } from './login.js';
 
@@ -76,7 +78,7 @@ function initUsernameField() {
   return check;
 }
 
-function handleRegistration(event, state, onRegistered) {
+async function handleRegistration(event, state, onRegistered) {
   event.preventDefault();
   const formElement = event.currentTarget;
   if (!formElement.checkValidity()) {
@@ -135,15 +137,17 @@ function handleRegistration(event, state, onRegistered) {
   };
   // Claim the name first, so a failed save never leaves a dangling claim.
   if (!reserveUsername(username, studentId)) return setAuthMessage('এই ইউজারনেমটি এরই মধ্যে অন্য কেউ নিয়েছে। অন্য একটি বেছে নিন।');
-  if (!saveAccount(account)) {
+  // The account is written with a PBKDF2-hashed password; the plaintext PIN
+  // stays in this form submission only.
+  if (!(await saveAccount(account))) {
     releaseUsername(username, studentId);
     return setAuthMessage('সংরক্ষণ হয়নি। স্টোরেজ পরীক্ষা করে আবার চেষ্টা করুন।');
   }
-  state.account = account;
+  state.account = loadAccount() || account;
   state.student = { ...state.student, ...studentData };
   saveStudent(state.student);
   upsertLocalAccount();
-  persistSession(true);
+  await persistSession(true);
   setTrustedDevice(true);
   formElement.reset();
   toggleMajorField();

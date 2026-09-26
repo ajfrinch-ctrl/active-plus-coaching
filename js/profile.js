@@ -100,7 +100,7 @@ function initSecurityToggle() {
     skipToggle.addEventListener('change', () => {
       setSecurityCheckDisabled(skipToggle.checked);
       if (skipToggle.checked) {
-        persistSession(true);
+        void persistSession(true);
         setTrustedDevice(true);
         showFeedback('এখন থেকে প্রতিবার পাসওয়ার্ড চাওয়া হবে না');
       } else {
@@ -113,7 +113,7 @@ function initSecurityToggle() {
     trustedToggle.addEventListener('change', () => {
       setTrustedDevice(trustedToggle.checked);
       if (trustedToggle.checked) {
-        persistSession(true);
+        void persistSession(true);
         showFeedback('এই ডিভাইসটি বিশ্বস্ত হিসেবে সংরক্ষিত');
       } else {
         showFeedback('বিশ্বস্ত ডিভাইস বন্ধ করা হয়েছে');
@@ -125,7 +125,7 @@ function initSecurityToggle() {
 export function initProfile({ state, onStudentChange }) {
   populateProfileClassOptions();
   initSecurityToggle();
-  $('#profileForm')?.addEventListener('submit', event => {
+  $('#profileForm')?.addEventListener('submit', async event => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     if (!event.currentTarget.reportValidity()) return;
@@ -138,7 +138,7 @@ export function initProfile({ state, onStudentChange }) {
     const student = readEditableStudent(form, { ...state.student, studentMobile: account.registrationMobile || account.mobile });
     nextAccount = { ...nextAccount, student };
     let saved;
-    try { saved = persistAccount(nextAccount); }
+    try { saved = await persistAccount(nextAccount); }
     catch { return showFeedback('সংরক্ষণ হয়নি। স্টোরেজ পরীক্ষা করে আবার চেষ্টা করুন।'); }
     state.account = saved;
     state.student = state.account.student;

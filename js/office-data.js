@@ -72,7 +72,7 @@ export function upsertLocalAccount() {
   return saveRoster(loadRoster());
 }
 
-export function syncAccountStatus(studentId, status) {
+export async function syncAccountStatus(studentId, status) {
   const account = loadAccount();
   if (!account) return false;
   const id = account.student?.id || account.studentId;

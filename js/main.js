@@ -1,7 +1,8 @@
 /* Application composition root. Feature modules can be replaced independently.
    Updated: don't ask security check every time - auto-login for trusted devices. */
 import { APP_TAGLINE } from './config.js';
-import { loadStudent, loadAccount, hasSession, persistSession, saveStudent, clearSession, isSecurityCheckDisabled, isTrustedDevice, loadAppConfig } from './storage.js';
+import { loadStudent, loadAccount, hasSession, persistSession, saveStudent, clearSession, isSecurityCheckDisabled, loadAppConfig } from './storage.js';
+import { escapeHtml } from './sanitize.js';
 import { $, setAuthMessage, showFeedback } from './ui.js';
 import { renderStudent, openStudentApp, showAuthScreen, setView } from './shell.js';
 import { switchAuthTab, initLogin } from './login.js';
@@ -53,7 +54,7 @@ function applyAppConfig(cfg) {
       </div>
       <div class="maint-body">
         <strong>⚠️ সিস্টেম রক্ষণাবেক্ষণ চলছে</strong>
-        <p>${cfg.maintenanceMessage || 'বর্তমানে অ্যাপটিতে সিস্টেম আপডেট ও রক্ষণাবেক্ষণের কাজ চলছে।'}</p>
+        <p>${escapeHtml(cfg.maintenanceMessage) || 'বর্তমানে অ্যাপটিতে সিস্টেম আপডেট ও রক্ষণাবেক্ষণের কাজ চলছে।'}</p>
       </div>
     `;
     authMaintBanner.hidden = false;
@@ -75,7 +76,7 @@ function applyAppConfig(cfg) {
       </div>
       <div class="maint-body">
         <strong>⚠️ সিস্টেম রক্ষণাবেক্ষণ চলছে</strong>
-        <p>${cfg.maintenanceMessage || 'বর্তমানে অ্যাপটিতে সিস্টেম আপডেট ও রক্ষণাবেক্ষণের কাজ চলছে।'}</p>
+        <p>${escapeHtml(cfg.maintenanceMessage) || 'বর্তমানে অ্যাপটিতে সিস্টেম আপডেট ও রক্ষণাবেক্ষণের কাজ চলছে।'}</p>
       </div>
     `;
     appMaintBanner.hidden = false;
@@ -175,17 +176,13 @@ function leaveApp() {
   setAuthMessage('লগআউট হয়েছে। আবার প্রবেশ করতে মোবাইল নম্বর ও পাসওয়ার্ড দিন।');
 }
 
-function shouldAutoLogin() {
+/* Auto-login needs a real session: a device-bound, unexpired token. The
+   only shortcut is the explicit on-device preference to skip the password
+   prompt; an existing account alone never opens the app. */
+async function shouldAutoLogin() {
   if (!state.account) return false;
-  // If user disabled security check, always auto-login
   if (isSecurityCheckDisabled()) return true;
-  // If trusted device or valid session, auto-login
-  if (isTrustedDevice()) return true;
-  if (hasSession()) return true;
-  // Even if session expired, if account exists and was previously logged in on this device,
-  // allow auto-login to avoid asking every time (per user request)
-  // This makes the app not ask পাসওয়ার্ড every launch
-  return true;
+  return hasSession();
 }
 
 renderStudent(state.student);
@@ -216,22 +213,21 @@ initLogout({ onLoggedOut: leaveApp });
 // Pending-account screen is the only other place a student can leave the app.
 $('#pendingLogout')?.addEventListener('click', leaveApp);
 
-if (shouldAutoLogin()) {
-  state.student = { ...state.student, ...(state.account.student || {}) };
-  saveStudent(state.student);
-  // Ensure session is refreshed so next launch also skips check
-  if (!hasSession()) {
-    persistSession(true);
-  }
-  enterApp();
-} else {
-  showAuthScreen();
-  switchAuthTab('login');
-}
-
+// The entry decision is asynchronous: the stored session may be encrypted.
+// A #view shortcut in the URL is applied only once the app screen is open.
 const hashView = window.location.hash.replace('#', '');
-if (['home', 'routine', 'courses', 'results', 'profile', 'exams'].includes(hashView) && !$('#authScreen')?.hidden) {
-  // Keep auth as the first screen; a shortcut is applied after login by the normal shell.
-} else if (['home', 'routine', 'courses', 'results', 'profile', 'exams'].includes(hashView)) {
-  setView(hashView);
-}
+const isShortcutView = ['home', 'routine', 'courses', 'results', 'profile', 'exams'].includes(hashView);
+
+(async () => {
+  if (await shouldAutoLogin()) {
+    state.student = { ...state.student, ...(state.account.student || {}) };
+    saveStudent(state.student);
+    // Ensure a session exists so the next launch also skips the prompt.
+    if (!(await hasSession())) await persistSession(true);
+    enterApp();
+    if (isShortcutView) setView(hashView);
+  } else {
+    showAuthScreen();
+    switchAuthTab('login');
+  }
+})();

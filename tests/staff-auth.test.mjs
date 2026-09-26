@@ -1,0 +1,200 @@
+/* Staff authentication rules for all three roles, in one place.
+   Phase 1: no built-in default password, PBKDF2 hashes, first-use setup,
+   forced change after migration, and device-bound session tokens. */
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {
+  STAFF_ACCOUNTS, STAFF_USERNAMES, normalizeStaffUsername,
+  readStaffAccount, authenticateStaff, loadStaffAccount, verifyStaffCredentials,
+  provisionStaffAccount, setStaffPassword, changeStaffPassword,
+  saveStaffSession, hasStaffSession, clearStaffSession, staffNeedsSetup
+} from '../js/staff-auth.js';
+import { isPasswordRecord } from '../js/password-hash.js';
+import { decryptValue } from '../js/secure-store.js';
+import { getDeviceId } from '../js/session.js';
+
+const PASSWORD = 'Apc-Test-2026';
+
+function memoryStorage() {
+  const map = new Map();
+  return {
+    getItem: key => (map.has(key) ? map.get(key) : null),
+    setItem: (key, value) => map.set(key, String(value)),
+    removeItem: key => map.delete(key),
+    _map: map
+  };
+}
+
+function freshBrowser() {
+  globalThis.window = { localStorage: memoryStorage(), sessionStorage: memoryStorage() };
+  return window;
+}
+
+const ROLES = ['admin', 'teacher', 'payment'];
+const username = role => STAFF_ACCOUNTS[role].username;
+const WRONG = 'ইউজারনেম বা পাসওয়ার্ড সঠিক নয়। আবার চেষ্টা করুন।';
+
+test('the three reserved usernames are fixed and no role carries a password', () => {
+  assert.deepEqual([...STAFF_USERNAMES].sort(), ['admin.apc', 'payment.apc', 'teacher.apc']);
+  for (const role of ROLES) {
+    assert.equal(STAFF_ACCOUNTS[role].password, undefined);
+    assert.equal(username(role).endsWith('.apc'), true);
+  }
+  assert.equal(normalizeStaffUsername('  Admin.APC '), 'admin.apc');
+});
+
+test('a fresh device needs setup for every role, and setup stores only a hash', async () => {
+  const browser = freshBrowser();
+  for (const role of ROLES) {
+    assert.equal(await staffNeedsSetup(role), true, `${role} must need a first password`);
+    const result = await authenticateStaff(role, username(role), 'whatever');
+    assert.deepEqual(result, { ok: true, needsSetup: true });
+  }
+  // Setup each role for real.
+  for (const role of ROLES) {
+    const provisioned = await provisionStaffAccount(role, PASSWORD, PASSWORD);
+    assert.equal(provisioned.ok, true, provisioned.error);
+    const raw = browser.localStorage.getItem(STAFF_ACCOUNTS[role].accountKey);
+    assert.equal(/"password"/.test(raw), false, `${role} account must not store password text`);
+    const account = await readStaffAccount(role);
+    assert.equal(account.username, username(role));
+    assert.equal(isPasswordRecord(account.password), true);
+    const view = await loadStaffAccount(role);
+    assert.equal(view.hasPassword, true);
+    assert.equal(view.mustChangePassword, false);
+    // Now the panel signs in with it.
+    assert.deepEqual(await authenticateStaff(role, username(role), PASSWORD), { ok: true, needsPasswordChange: false });
+  }
+});
+
+test('wrong usernames are rejected before any password is read', async () => {
+  freshBrowser();
+  await provisionStaffAccount('admin', PASSWORD, PASSWORD);
+  for (const typed of ['', 'admin', 'student.apc', '01711223344', 'admin.apc.evil']) {
+    const result = await authenticateStaff('admin', typed, PASSWORD);
+    assert.equal(result.ok, false, `"${typed}" must not authenticate`);
+    assert.equal(result.error, WRONG);
+  }
+  // Case and stray spaces are tolerated in the real username.
+  assert.deepEqual(await authenticateStaff('admin', '  ADMIN.APC ', PASSWORD), { ok: true, needsPasswordChange: false });
+  // The right username with the wrong password is also rejected.
+  const bad = await authenticateStaff('admin', username('admin'), 'wrong-password');
+  assert.equal(bad.ok, false);
+  // An unknown role never authenticates.
+  assert.equal((await authenticateStaff('nobody', 'x', 'y')).ok, false);
+});
+
+test('verifyStaffCredentials only passes a fully valid, up-to-date account', async () => {
+  freshBrowser();
+  await provisionStaffAccount('teacher', PASSWORD, PASSWORD);
+  assert.equal(await verifyStaffCredentials('teacher', 'teacher.apc', PASSWORD), true);
+  assert.equal(await verifyStaffCredentials('teacher', 'Teacher.APC', PASSWORD), true);
+  assert.equal(await verifyStaffCredentials('teacher', 'teacher.apc', 'nope'), false);
+  assert.equal(await verifyStaffCredentials('admin', 'admin.apc', PASSWORD), false, 'another role is not provisioned');
+  assert.equal(await verifyStaffCredentials('nonsense', 'x', 'y'), false);
+});
+
+test('a legacy plaintext record verifies once, is hashed away, and forces a change', async () => {
+  const browser = freshBrowser();
+  const legacy = 'Legacy-Plain-1';
+  browser.localStorage.setItem(STAFF_ACCOUNTS.admin.accountKey, JSON.stringify({ username: username('admin'), password: legacy }));
+  const view = await loadStaffAccount('admin');
+  assert.equal(view.mustChangePassword, true, 'a legacy record is due for a change');
+  assert.equal(view.isLegacy, true);
+
+  const wrong = await authenticateStaff('admin', username('admin'), 'not-it');
+  assert.equal(wrong.ok, false);
+
+  const first = await authenticateStaff('admin', username('admin'), legacy);
+  assert.deepEqual(first, { ok: true, needsPasswordChange: true });
+  // The plaintext is gone from storage immediately.
+  const raw = browser.localStorage.getItem(STAFF_ACCOUNTS.admin.accountKey);
+  assert.equal(raw.includes(legacy), false);
+  const stored = await readStaffAccount('admin');
+  assert.equal(isPasswordRecord(stored.password), true);
+  assert.equal(stored.mustChangePassword, true);
+  // Still due for a change, so plain verification refuses.
+  assert.equal(await verifyStaffCredentials('admin', username('admin'), legacy), false);
+  const changed = await setStaffPassword('admin', PASSWORD, PASSWORD);
+  assert.equal(changed.ok, true);
+  const after = await readStaffAccount('admin');
+  assert.equal(after.mustChangePassword, undefined);
+  assert.equal(await verifyStaffCredentials('admin', username('admin'), PASSWORD), true);
+  assert.equal(await verifyStaffCredentials('admin', username('admin'), legacy), false);
+});
+
+test('password rules are enforced everywhere a password is written', async () => {
+  freshBrowser();
+  assert.deepEqual(await provisionStaffAccount('admin', '123', '123'), { ok: false, error: 'নতুন পাসওয়ার্ড ৬–৩২ অক্ষরের হতে হবে।' });
+  assert.deepEqual(await provisionStaffAccount('admin', PASSWORD, 'mismatch'), { ok: false, error: 'দুইবার লেখা নতুন পাসওয়ার্ড মিলছে না।' });
+  assert.equal((await provisionStaffAccount('admin', PASSWORD, PASSWORD)).ok, true);
+  // Provisioning again is refused so a set password cannot be silently replaced.
+  const again = await provisionStaffAccount('admin', 'Another-1', 'Another-1');
+  assert.equal(again.ok, false);
+  // changeStaffPassword needs the current password.
+  assert.deepEqual(await changeStaffPassword('admin', 'wrong', 'Another-1', 'Another-1'), { ok: false, error: 'বর্তমান পাসওয়ার্ড সঠিক নয়।' });
+  assert.deepEqual(await changeStaffPassword('admin', PASSWORD, 'Another-1', 'Another-2'), { ok: false, error: 'দুইবার লেখা নতুন পাসওয়ার্ড মিলছে না।' });
+  assert.deepEqual(await changeStaffPassword('admin', PASSWORD, 'Another-1', 'Another-1'), { ok: true, password: 'Another-1' });
+  assert.equal(await verifyStaffCredentials('admin', username('admin'), 'Another-1'), true);
+  // Unknown roles are refused rather than crashing.
+  assert.equal((await provisionStaffAccount('nobody', PASSWORD, PASSWORD)).ok, false);
+  assert.equal((await setStaffPassword('nobody', PASSWORD, PASSWORD)).ok, false);
+  assert.equal((await changeStaffPassword('nobody', PASSWORD, PASSWORD, PASSWORD)).ok, false);
+  assert.equal(await readStaffAccount('nobody'), null);
+});
+
+test('sessions are device-bound tokens; remembered and tab sessions differ', async () => {
+  const browser = freshBrowser();
+  await provisionStaffAccount('admin', PASSWORD, PASSWORD);
+
+  assert.equal(await hasStaffSession('admin'), false);
+  assert.equal(await saveStaffSession('admin', true), true);
+  assert.equal(await hasStaffSession('admin'), true);
+  const envelope = JSON.parse(browser.localStorage.getItem(STAFF_ACCOUNTS.admin.sessionKey));
+  const record = JSON.parse(await decryptValue(envelope));
+  assert.equal(typeof record.token, 'string');
+  assert.equal(record.token.length >= 16, true);
+  assert.equal(record.deviceId, getDeviceId());
+  assert.equal(record.owner, username('admin'));
+  assert.equal(record.expiry > Date.now(), true);
+  assert.equal(browser.sessionStorage.getItem(STAFF_ACCOUNTS.admin.sessionKey), null);
+
+  clearStaffSession('admin');
+  assert.equal(await hasStaffSession('admin'), false);
+  assert.equal(browser.localStorage.getItem(STAFF_ACCOUNTS.admin.sessionKey), null);
+
+  // Not remembered: only a tab marker, which dies with the tab.
+  await saveStaffSession('admin', false);
+  assert.equal(browser.localStorage.getItem(STAFF_ACCOUNTS.admin.sessionKey), null);
+  assert.equal(browser.sessionStorage.getItem(STAFF_ACCOUNTS.admin.sessionKey), '1');
+  assert.equal(await hasStaffSession('admin'), true);
+  browser.sessionStorage._map.clear();
+  assert.equal(await hasStaffSession('admin'), false);
+});
+
+test('a session record from another device is dropped, not honoured', async () => {
+  const browser = freshBrowser();
+  browser.localStorage.setItem(STAFF_ACCOUNTS.admin.sessionKey, JSON.stringify({
+    token: 'copied-token', deviceId: 'other-device', owner: username('admin'),
+    issuedAt: Date.now(), expiry: Date.now() + 60000
+  }));
+  assert.equal(await hasStaffSession('admin'), false);
+  assert.equal(browser.localStorage.getItem(STAFF_ACCOUNTS.admin.sessionKey), null);
+});
+
+test('expired and unreadable sessions count as signed out, and storage errors are safe', async () => {
+  const browser = freshBrowser();
+  const { buildSessionRecord } = await import('../js/session.js');
+  browser.localStorage.setItem(STAFF_ACCOUNTS.admin.sessionKey, JSON.stringify(buildSessionRecord({ owner: username('admin'), ttlDays: -1 })));
+  assert.equal(await hasStaffSession('admin'), false);
+  browser.localStorage.setItem(STAFF_ACCOUNTS.admin.sessionKey, '{broken');
+  assert.equal(await hasStaffSession('admin'), false);
+
+  globalThis.window = {
+    get localStorage() { throw new Error('blocked'); },
+    get sessionStorage() { throw new Error('blocked'); }
+  };
+  assert.equal(await hasStaffSession('admin'), false);
+  assert.equal(await saveStaffSession('admin', true), false);
+  clearStaffSession('admin'); // must not throw
+});

@@ -13,7 +13,7 @@ export const ACTIVITY_TYPES = Object.freeze({
   routine: { label: 'ক্লাস', plural: 'ক্লাস রুটিন', progress: 'উপস্থিতি' }
 });
 export const PROGRESS_LABELS = Object.freeze({ pending: 'বাকি', done: 'সম্পন্ন জানিয়েছে', reviewed: 'দেখা হয়েছে', present: 'উপস্থিত', absent: 'অনুপস্থিত', late: 'দেরিতে উপস্থিত' });
-export const escapeText = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+export { escapeHtml as escapeText } from './sanitize.js';
 export function todayISO(now = new Date()) { return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`; }
 export function displayDate(value) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value || '')) return '—';
