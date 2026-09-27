@@ -58,7 +58,35 @@ export function showAuthScreen() {
   scrollToTop();
 }
 
-export function setView(viewName) {
+/* Deep-linkable student views. The URL hash always names the open view:
+   #routine, #courses, #exams, #results, #profile (home has no hash). Browser
+   and system Back walk the visited views; refresh and shared links reopen the
+   exact view (pattern: hash router + back button). */
+const VIEW_ROUTES = Object.freeze(['home', 'routine', 'courses', 'exams', 'results', 'profile']);
+
+export function viewRouteFromHash(hash = window.location.hash) {
+  const name = String(hash || '').replace('#', '');
+  return VIEW_ROUTES.includes(name) ? name : 'home';
+}
+
+function syncViewHash(viewName, mode) {
+  if (mode === 'keep') return;
+  if (typeof window === 'undefined' || !window.history?.pushState) return;
+  const name = VIEW_ROUTES.includes(viewName) ? viewName : 'home';
+  const target = name === 'home' ? '' : `#${name}`;
+  const rawHash = window.location.hash || '';
+  const current = rawHash === '#home' ? '' : rawHash;
+  const url = window.location.pathname + window.location.search + target;
+  if (current === target) {
+    // Still normalise a literal #home away so Home is the clean bare URL.
+    if (rawHash !== target) window.history.replaceState(window.history.state, '', url);
+    return;
+  }
+  if (mode === 'push') window.history.pushState(window.history.state, '', url);
+  else window.history.replaceState(window.history.state, '', url);
+}
+
+export function setView(viewName, { history: historyMode = 'push' } = {}) {
   const panel = document.getElementById(`${viewName}View`);
   if (!panel) return;
   $$('[data-view-panel]').forEach(item => item.classList.toggle('active', item === panel));
@@ -68,4 +96,5 @@ export function setView(viewName) {
     if (active) item.setAttribute('aria-current', 'page'); else item.removeAttribute('aria-current');
   });
   scrollToTop();
+  syncViewHash(viewName, historyMode);
 }

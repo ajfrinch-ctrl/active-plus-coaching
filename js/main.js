@@ -4,7 +4,9 @@ import { APP_TAGLINE } from './config.js';
 import { loadStudent, loadAccount, hasSession, persistSession, saveStudent, clearSession, isSecurityCheckDisabled, loadAppConfig } from './storage.js';
 import { escapeHtml } from './sanitize.js';
 import { $, setAuthMessage, showFeedback } from './ui.js';
-import { renderStudent, openStudentApp, showAuthScreen, setView } from './shell.js';
+import { renderStudent, openStudentApp, showAuthScreen, setView, viewRouteFromHash } from './shell.js';
+import { initAppearance } from './appearance.js';
+import { initCopyChips } from './copy.js';
 import { switchAuthTab, initLogin } from './login.js';
 import { initRegister } from './register.js';
 import { initRecovery } from './recovery.js';
@@ -164,6 +166,10 @@ function handleAction(action) {
 }
 
 function enterApp() {
+  // A #view shortcut in the URL opens exactly that view after any login;
+  // otherwise every login lands on Home. A leftover panel from a previous
+  // session must never greet the student.
+  setView(viewRouteFromHash(), { history: 'replace' });
   openStudentApp(state);
   refreshDashboard();
   refreshTeaching();
@@ -201,6 +207,8 @@ initProfile({
 initRoutine();
 initConnectivity();
 initDynamicTheme();
+initAppearance();
+initCopyChips();
 initInstallPrompt();
 registerServiceWorker();
 initLogin({
@@ -220,9 +228,10 @@ initLogout({ onLoggedOut: leaveApp });
 $('#pendingLogout')?.addEventListener('click', leaveApp);
 
 // The entry decision is asynchronous: the stored session may be encrypted.
-// A #view shortcut in the URL is applied only once the app screen is open.
-const hashView = window.location.hash.replace('#', '');
-const isShortcutView = ['home', 'routine', 'courses', 'results', 'profile', 'exams'].includes(hashView);
+// A #view shortcut in the URL is applied by enterApp once the screen opens.
+window.addEventListener('popstate', () => {
+  setView(viewRouteFromHash(), { history: 'keep' });
+});
 
 (async () => {
   if (await shouldAutoLogin()) {
@@ -231,7 +240,6 @@ const isShortcutView = ['home', 'routine', 'courses', 'results', 'profile', 'exa
     // Ensure a session exists so the next launch also skips the prompt.
     if (!(await hasSession())) await persistSession(true);
     enterApp();
-    if (isShortcutView) setView(hashView);
   } else {
     showAuthScreen();
     switchAuthTab('login');

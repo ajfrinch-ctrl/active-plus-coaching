@@ -7,7 +7,9 @@ export function initNavigation({ onAction }) {
     const viewTrigger = event.target.closest('[data-view]');
     if (viewTrigger) {
       event.preventDefault();
-      setView(viewTrigger.dataset.view);
+      // Tab/shortcut clicks walk the history stack so browser and system Back
+      // return to the previous view (pattern: deep-linkable routes).
+      setView(viewTrigger.dataset.view, { history: 'push' });
       return;
     }
 

@@ -496,7 +496,7 @@ body,
 .admin-bottom-item.active span,
 .bottom-link[aria-current="page"] span:last-child,
 .admin-bottom-item[aria-current="page"] span {
-  color: var(--forest);
+  color: var(--forest-text);
 }
 
 /* Tap ripple-free feedback on the icon itself (§10: 1.00 → 1.10 → 1.00). */
