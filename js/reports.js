@@ -210,7 +210,7 @@ class ReportCenter {
       card.append(icon);
       const copy = el('span', 'rp-card-copy');
       copy.append(el('strong', '', category.labelBn));
-      copy.append(el('small', '', `${category.reports.length} টি রিপোর্ট`));
+      copy.append(el('small', '', `${bn(category.reports.length)} টি রিপোর্ট`));
       card.append(copy);
       card.append(el('span', 'rp-card-go', '›'));
       card.addEventListener('click', () => this.showReports(category));

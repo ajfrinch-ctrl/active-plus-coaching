@@ -177,7 +177,9 @@ test('each role is offered only the reports it may run', () => {
   assert.ok(idsFor('admin').includes('management.summary'));
 
   const manager = idsFor('manager');
-  assert.equal(manager.some(id => id.startsWith('staff.')), false, 'Manager is never offered staff reports');
+  // The staff directory itself is Admin's; the teacher work the Manager owns
+  // (assignments, activity) is theirs.
+  assert.deepEqual(manager.filter(id => id.startsWith('staff.')), ['staff.teacher-assignment', 'staff.activity']);
   assert.ok(manager.includes('fee.daily') && manager.includes('management.summary'));
 
   const teacher = idsFor('teacher');
@@ -254,10 +256,20 @@ test('a Cash Counter cannot widen "Own Transaction History"', async () => {
 });
 
 test('a Manager is refused the staff directory reports', () => {
-  for (const id of ['staff.teachers', 'staff.managers', 'staff.cashiers', 'staff.status', 'staff.teacher-assignment', 'staff.activity']) {
+  for (const id of ['staff.teachers', 'staff.managers', 'staff.cashiers', 'staff.status']) {
     assert.throws(() => access.enforceAccess(report(id), MANAGER, {}), forbidden, `${id} refuses a Manager`);
   }
   assert.doesNotThrow(() => access.enforceAccess(report('staff.teachers'), ADMIN, {}), 'Admin is allowed');
+});
+
+test('a Manager may still report on the teacher work they own', () => {
+  // Assignments and teaching activity are the Manager's own records; the
+  // staff directory (Staff ID, username, mobile, status) is not.
+  for (const id of ['staff.teacher-assignment', 'staff.activity']) {
+    assert.doesNotThrow(() => access.enforceAccess(report(id), MANAGER, {}), `${id} is a Manager report`);
+    assert.doesNotThrow(() => access.enforceAccess(report(id), ADMIN, {}), `${id} is an Admin report`);
+    assert.throws(() => access.enforceAccess(report(id), TEACHER, {}), forbidden, `${id} is not for Teachers`);
+  }
 });
 
 test('nobody at all may run a report without signing in', () => {

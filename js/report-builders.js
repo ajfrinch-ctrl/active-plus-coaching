@@ -2199,8 +2199,7 @@ const staffTeacherAssignment = {
   category: 'staff',
   title: 'Teacher Assignment Report',
   subtitle: 'শিক্ষকের শ্রেণি, ব্যাচ ও বিষয় বণ্টন',
-  roles: ['admin'],
-  staffOnly: true,
+  roles: ['admin', 'manager'],
   filters: ['class', 'subject'],
   async build(ctx) {
     const assignments = (await ctx.assignments()) || [];
@@ -2234,8 +2233,7 @@ const staffActivity = {
   category: 'staff',
   title: 'Staff Activity Report',
   subtitle: 'শিক্ষকের ক্লাস, বাড়ির কাজ, নোটিশ ও মূল্যায়ন',
-  roles: ['admin'],
-  staffOnly: true,
+  roles: ['admin', 'manager'],
   filters: ['period', 'teacher', 'class', 'subject'],
   period: 'activity',
   async build(ctx) {
