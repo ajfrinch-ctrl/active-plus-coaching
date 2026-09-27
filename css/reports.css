@@ -1,0 +1,340 @@
+/* Reports Module — mobile-first glass UI and the A4 preview surface.
+
+   Two jobs:
+   1. the flow (category → report → filters → preview) as thumb-sized,
+      icon-plus-text cards with no horizontal overflow anywhere;
+   2. the preview, which is the PDF's own page geometry drawn by the browser —
+      each page is a real 794 × 1123 A4 sheet scaled to the panel width, so
+      what you see is what you download.
+
+   The DOWNLOAD PDF bar is full width and sits above the bottom navigation:
+   it never hides under it and never covers the last line of a page. */
+:root {
+  --rp-glass: rgba(255, 255, 255, .72);
+  --rp-glass-strong: rgba(255, 255, 255, .88);
+  --rp-blur: saturate(150%) blur(12px);
+  --rp-page-shadow: 0 10px 30px rgba(4, 121, 90, .10), 0 1px 2px rgba(20, 33, 28, .06);
+}
+
+/* ---------- shell ---------- */
+
+.rp-root { display: grid; gap: 12px; }
+
+.rp-head {
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 255, 255, .6);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, rgba(232, 245, 238, .9), rgba(255, 255, 255, .72));
+  -webkit-backdrop-filter: var(--rp-blur);
+  backdrop-filter: var(--rp-blur);
+  box-shadow: var(--soft-shadow);
+}
+.rp-title { font-size: 18px; font-weight: 800; letter-spacing: .01em; }
+.rp-hint { color: var(--muted); font-size: 12px; line-height: 1.45; }
+.rp-who { display: flex; align-items: center; gap: 8px; margin-top: 4px; font-size: 12px; }
+.rp-who-role {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--forest);
+  color: #fff;
+  font-weight: 700;
+}
+.rp-who-name { color: var(--muted); }
+
+.rp-crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 0 2px;
+  font-size: 12px;
+}
+.rp-crumb {
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--forest-dark);
+  font-weight: 700;
+  font-size: 12px;
+}
+.rp-crumb:disabled { color: var(--muted); }
+.rp-crumb:not(:disabled):hover { background: var(--mint-2); }
+.rp-crumb-sep { color: var(--muted-2); }
+
+.rp-status {
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--rp-glass);
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.rp-status[data-tone="error"] {
+  border-color: rgba(194, 65, 12, .35);
+  background: rgba(255, 244, 240, .92);
+  color: var(--coral);
+}
+.rp-status[data-tone="ok"] {
+  border-color: rgba(4, 121, 90, .3);
+  background: var(--mint);
+  color: var(--forest-dark);
+}
+.rp-note { color: var(--muted); font-size: 13px; }
+
+/* ---------- step 1: category cards ---------- */
+
+.rp-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.rp-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 76px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, .65);
+  border-radius: var(--radius-md);
+  background: var(--rp-glass);
+  -webkit-backdrop-filter: var(--rp-blur);
+  backdrop-filter: var(--rp-blur);
+  box-shadow: var(--soft-shadow);
+  text-align: left;
+  transition: transform .16s ease, box-shadow .16s ease;
+}
+.rp-card:active { transform: scale(.985); }
+.rp-card-icon,
+.rp-report-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  border-radius: 13px;
+  background: linear-gradient(145deg, var(--mint-2), #fff);
+  color: var(--forest);
+  box-shadow: inset 0 0 0 1px rgba(4, 121, 90, .10);
+}
+.rp-icon-svg { width: 22px; height: 22px; stroke: currentColor; }
+.rp-card-copy,
+.rp-report-copy { display: grid; gap: 2px; min-width: 0; }
+.rp-card-copy strong,
+.rp-report-copy strong { font-size: 13.5px; font-weight: 800; line-height: 1.3; }
+.rp-card-copy small,
+.rp-report-copy small { color: var(--muted); font-size: 11.5px; line-height: 1.35; }
+.rp-card-go { margin-left: auto; color: var(--muted-2); font-size: 18px; }
+
+/* ---------- step 2: report cards ---------- */
+
+.rp-list { display: grid; gap: 10px; }
+.rp-report {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  min-height: 64px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, .65);
+  border-radius: var(--radius-md);
+  background: var(--rp-glass);
+  -webkit-backdrop-filter: var(--rp-blur);
+  backdrop-filter: var(--rp-blur);
+  box-shadow: var(--soft-shadow);
+  text-align: left;
+}
+.rp-report:active { transform: scale(.99); }
+.rp-report-filters {
+  margin-top: 2px;
+  color: var(--forest-dark);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* ---------- step 3: filters ---------- */
+
+.rp-choose {
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: var(--rp-glass-strong);
+  box-shadow: var(--soft-shadow);
+}
+.rp-choose h3 { font-size: 15px; font-weight: 800; }
+.rp-choose-sub { margin-top: 2px; color: var(--muted); font-size: 12px; }
+
+.rp-filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.rp-field { grid-column: 1 / -1; display: grid; gap: 8px; }
+.rp-field[data-filter="class"],
+.rp-field[data-filter="batch"],
+.rp-field[data-filter="status"],
+.rp-field[data-filter="paymentStatus"],
+.rp-field[data-filter="resultStatus"],
+.rp-field[data-filter="approvalStatus"],
+.rp-field[data-filter="staffStatus"] { grid-column: span 1; }
+.rp-select, .rp-date { display: grid; gap: 4px; }
+.rp-select-label { color: var(--muted); font-size: 11.5px; font-weight: 700; }
+.rp-filters select,
+.rp-filters input {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--ink);
+  font-size: 14px;
+}
+.rp-period-extras { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.rp-range { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+
+.rp-filter-actions { display: grid; gap: 8px; }
+.rp-generate {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 54px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--forest), var(--forest-dark));
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
+  box-shadow: 0 8px 20px rgba(4, 121, 90, .22);
+}
+.rp-generate:disabled { opacity: .6; }
+.rp-back {
+  min-height: 46px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--forest-dark);
+  font-weight: 700;
+}
+
+/* ---------- step 4: preview ---------- */
+
+.rp-preview-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--rp-glass-strong);
+  box-shadow: var(--soft-shadow);
+}
+.rp-preview-meta { display: grid; gap: 2px; min-width: 0; }
+.rp-preview-meta strong { font-size: 14px; }
+.rp-preview-meta span { color: var(--muted); font-size: 12px; }
+.rp-mini-btn {
+  margin-left: auto;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--forest-dark);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* The pages are scaled to the panel width, so the shell never scrolls
+   sideways: what you see fits the screen exactly. */
+.rp-preview-scroll {
+  overflow: hidden;
+  padding: 8px 0 0;
+  border-radius: var(--radius-md);
+  background: var(--mint-2);
+}
+.rp-pages {
+  --rp-scale: 1;
+  position: relative;
+  width: 794px;
+  transform: scale(var(--rp-scale));
+  transform-origin: top left;
+}
+.rp-page {
+  position: relative;
+  width: 794px;
+  height: 1123px;
+  margin: 0 auto 14px;
+  overflow: hidden;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: var(--rp-page-shadow);
+  color: #20392e;
+  font-family: "ReceiptBangla", "Noto Sans Bengali", "Nirmala UI", system-ui, sans-serif;
+}
+.rp-page + .rp-page { margin-top: 0; }
+.rp-text, .rp-rect, .rp-logo { position: absolute; }
+.rp-text { white-space: pre; }
+.rp-logo { object-fit: contain; }
+
+.rp-empty {
+  display: grid;
+  gap: 8px;
+  padding: 18px 16px;
+  border-radius: var(--radius-md);
+  background: var(--rp-glass-strong);
+  box-shadow: var(--soft-shadow);
+}
+.rp-empty h3 { font-size: 15px; }
+.rp-empty-text { color: var(--ink); font-size: 14px; font-weight: 700; }
+.rp-empty-meta { color: var(--muted); font-size: 12px; }
+
+/* ---------- step 5: download ---------- */
+
+.rp-download-bar {
+  position: sticky;
+  bottom: calc(76px + var(--safe-bottom));
+  z-index: 3;
+  margin-top: 10px;
+  padding-top: 8px;
+  background: linear-gradient(180deg, rgba(244, 247, 246, 0), rgba(244, 247, 246, .92) 40%);
+}
+.rp-download {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 58px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--forest-light), var(--forest-dark));
+  color: #fff;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: .02em;
+  box-shadow: 0 10px 26px rgba(4, 121, 90, .28);
+}
+.rp-download:active { transform: translateY(1px); }
+.rp-download:disabled { opacity: .65; }
+
+/* ---------- wider screens ---------- */
+
+@media (min-width: 560px) {
+  .rp-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .rp-filters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (min-width: 900px) {
+  .rp-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .rp-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rp-card, .rp-report, .rp-download { transition: none; }
+  .rp-card:active, .rp-report:active, .rp-download:active { transform: none; }
+}
+
+/* High-contrast text stays readable on the glass surfaces. */
+@media (prefers-contrast: more) {
+  .rp-card, .rp-report, .rp-head, .rp-choose, .rp-preview-bar, .rp-empty { background: #fff; }
+  .rp-hint, .rp-card-copy small, .rp-report-copy small, .rp-preview-meta span { color: #3f4f48; }
+}

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'active-plus-student-v72-first-admin-user-id';
+const CACHE_NAME = 'active-plus-student-v73-reports-module';
 const APP_SHELL = [
   './offline-roles.html',
   './css/offline-roles.css',
@@ -86,6 +86,7 @@ const APP_SHELL = [
   './css/typography.css',
   './css/scroll-header.css',
   './css/liquid-glass.css',
+  './css/reports.css',
   './assets/fonts/NotoSansBengali-Variable.ttf',
   './js/config.js',
   './js/password-hash.js',
@@ -139,6 +140,12 @@ const APP_SHELL = [
   './js/finance-data.js',
   './js/finance-receipt.js',
   './js/report-generator.js',
+  './js/reports.js',
+  './js/report-layout.js',
+  './js/report-catalog.js',
+  './js/report-access.js',
+  './js/report-builders.js',
+  './js/report-sources.js',
   './js/admin-permissions.js',
   './js/admin-icons.js',
   './js/admin-panel-ui.js',

@@ -14,6 +14,7 @@ import { registerServiceWorker } from './service-worker.js';
 import { initFixedShell } from './fixed-shell.js';
 import { initExamManager } from './exam-manager.js';
 import { listTeacherAssignments, saveTeacherAssignment, deleteTeacherAssignment, TEACHER_ASSIGNMENTS_KEY } from './teacher-assignments.js';
+import { mountReports, refreshReports } from './reports.js';
 
 registerServiceWorker();
 initFixedShell();
@@ -442,9 +443,10 @@ async function enterManager(remember = true) {
   $('#managerNameShort').textContent = managerAccount?.fullName || 'Manager Profile';
   if (!examStarted) { initExamManager('#managerExamWorkspace', 'manager'); examStarted = true; }
   renderView('dashboard'); await loadOperationalData();
+  mountReports($('#managerReports'), { panel: 'manager' });
 }
 $('#managerLogout').addEventListener('click', () => { clearStaffSession('manager'); $('#managerPassword').value = ''; $('#managerShell').hidden = true; $('#managerLogin').hidden = false; });
 window.addEventListener('storage', event => {
-  if (!event.key || [ 'activePlus.admin.students.v1', 'activePlus.admin.transactions.v1', 'activePlus.admin.notices.v1', 'activePlus.admin.routine.v1', TEACHING_KEY, TEACHER_ASSIGNMENTS_KEY, 'activePlus.exams.v1' ].includes(event.key)) void loadOperationalData();
+  if (!event.key || [ 'activePlus.admin.students.v1', 'activePlus.admin.transactions.v1', 'activePlus.admin.notices.v1', 'activePlus.admin.routine.v1', TEACHING_KEY, TEACHER_ASSIGNMENTS_KEY, 'activePlus.exams.v1' ].includes(event.key)) { void loadOperationalData(); refreshReports($('#managerReports')); }
 });
 (async () => { if (await hasStaffSession('manager')) await enterManager(true); })();

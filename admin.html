@@ -26,6 +26,7 @@
   <link rel="stylesheet" href="css/admin-panel-ui.css">
   <link rel="preload" href="assets/fonts/NotoSansBengali-Variable.ttf" as="font" type="font/ttf" crossorigin>
   <link rel="stylesheet" href="css/portal-polish.css">
+  <link rel="stylesheet" href="css/reports.css">
   <!-- Icon geometry + staff management: loaded last so one fixed container
        per icon is the final word (no overlap, no double painting). -->
   <link rel="stylesheet" href="css/admin-icon-system.css">
@@ -276,6 +277,14 @@
           <div><p class="eyebrow">Report Center</p><h1 id="reportsTitle">রিপোর্ট জেনারেটর</h1></div>
         </div>
         <p class="finance-hint reports-intro-hint">দুই ধরনের রিপোর্ট — আর্থিক লেনদেন আর শিক্ষার্থীর অগ্রগতি। ফিল্টার বা অপশন বদলালে সারাংশ সাথে সাথে আপডেট হয়, তারপর PDF বা CSV নামিয়ে নিন।</p>
+
+        <!-- Reports Module: type → filters → preview → PDF, on every role. -->
+        <section class="rp-section" aria-labelledby="adminReportsTitle">
+          <div class="page-intro">
+            <div><p class="eyebrow">Report builder</p><h2 id="adminReportsTitle">রিপোর্ট তৈরি, প্রিভিউ ও PDF</h2></div>
+          </div>
+          <div id="adminReports" class="rp-mount"></div>
+        </section>
 
         <!-- Group 1: money -->
         <h2 class="reports-group-title">আর্থিক লেনদেন</h2>

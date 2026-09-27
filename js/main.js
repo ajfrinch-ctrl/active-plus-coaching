@@ -21,6 +21,7 @@ import { initFixedShell } from './fixed-shell.js';
 import { initStudentExams } from './student-exams.js';
 import { initStudentTeaching } from './student-teaching.js';
 import { initStudentDashboard } from './student-dashboard.js';
+import { mountReports, refreshReports } from './reports.js';
 
 initFixedShell();
 
@@ -168,6 +169,8 @@ function enterApp() {
   refreshTeaching();
   refreshExams();
   refreshNotices();
+  // A student's reports are their own: the module re-reads the signed-in id.
+  mountReports($('#studentReports'), { panel: 'student' });
 }
 
 function leaveApp() {
@@ -193,7 +196,7 @@ initNavigation({ onAction: handleAction });
 const refreshNotices = initModals({ getStudent: () => state.student });
 initProfile({
   state,
-  onStudentChange: student => { renderStudent(student); refreshTeaching(); refreshExams(); }
+  onStudentChange: student => { renderStudent(student); refreshTeaching(); refreshExams(); refreshReports($('#studentReports')); }
 });
 initRoutine();
 initConnectivity();

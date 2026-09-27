@@ -24,6 +24,7 @@
   <link rel="stylesheet" href="css/app-redesign.css">
   <link rel="preload" href="assets/fonts/NotoSansBengali-Variable.ttf" as="font" type="font/ttf" crossorigin>
   <link rel="stylesheet" href="css/portal-polish.css">
+  <link rel="stylesheet" href="css/reports.css">
 </head>
 <body class="pay-body">
   <!-- Entry screen: the login page can also sign in here, so this is a fallback, not a wall. -->
@@ -228,6 +229,14 @@
             </button>
           </div>
         </form>
+      </article>
+
+      <article class="admin-card pay-reports-card">
+        <header class="admin-card-head">
+          <div><p class="eyebrow">Reports</p><h2>কাউন্টার রিপোর্ট</h2></div>
+        </header>
+        <p class="finance-hint">নিজের কাউন্টারের আদায়, রসিদ ও অনুমোদনের অবস্থা — প্রিভিউ দেখে PDF নামান।</p>
+        <div id="paymentReports" class="rp-mount"></div>
       </article>
 
       <article class="admin-card pay-activity-card">

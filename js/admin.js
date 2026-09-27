@@ -20,6 +20,7 @@ import { financeRepository, monthLabel, dateLabel, searchStudents, studentFeeSum
 import { newId, KEYS, readJSON, writeJSON } from './database.js';
 import { receiptMarkup, downloadReceipt } from './finance-receipt.js';
 import { downloadReportPDF, downloadCSV } from './report-generator.js';
+import { mountReports, refreshReports } from './reports.js';
 import { examRepository, totalMarks, examResults, EXAM_KEY } from './exam-data.js';
 import { teachingRepository, displayDate, PROGRESS_LABELS, TEACHING_KEY } from './teaching-data.js';
 import { registerServiceWorker } from './service-worker.js';
@@ -143,6 +144,8 @@ async function enterPanel({ bootstrapCredentials = [] } = {}) {
   initStaffManagement({ onChanged: onStaffChanged });
   await refreshStaffSnapshot();
   renderAll();
+  // The Reports Module re-reads who is signed in and what they may see.
+  mountReports($('#adminReports'), { panel: 'admin' });
   if (viewExists('reports')) renderStaffReportMeta();
   // A deep link (admin.html#staff) opens only when this role may see it;
   // anything else falls back to the first permitted tab.
