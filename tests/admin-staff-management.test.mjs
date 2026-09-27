@@ -70,19 +70,26 @@ test('the staff list opens with one permanent Staff ID per system role', async (
 test('create builds a new staff account with the next unique Staff ID', async () => {
   ctx.click(ctx.$('#staffCreateButton'));
   await ctx.waitFor(() => Boolean(ctx.$('#staffForm')));
+  // The Login User ID cannot be typed: the form shows a locked preview only.
+  assert.equal(ctx.$('#staffField-username').tagName, 'DIV');
+  assert.equal(ctx.$('#staffField-username-hidden').tagName, 'INPUT');
+  assert.equal(ctx.$('#staffField-username-hidden').type, 'hidden');
   fill('#staffField-fullName', 'নতুন শিক্ষক');
-  fill('#staffField-username', 'new.teacher.apc');
+  ctx.$('#staffField-fullName').dispatchEvent(new ctx.window.Event('input', { bubbles: true }));
   fill('#staffField-password', 'Teacher-2026');
   fill('#staffField-confirmPassword', 'Teacher-2026');
   fill('#staffField-role', 'teacher');
+  ctx.$('#staffField-role').dispatchEvent(new ctx.window.Event('change', { bubbles: true }));
   fill('#staffField-mobile', '01712345678');
   fill('#staffField-subjects', 'উচ্চতর গণিত, পদার্থবিজ্ঞান');
+  // Generated from the name + role: "First Name + Role + .apc".
+  assert.equal(ctx.$('#staffField-username').textContent, 'notun.teacher.apc');
   ctx.submit(ctx.$('#staffForm'));
   await ctx.waitFor(() => Boolean(staffCard('STF-0005')));
 
   const created = (await listStaff()).find(entry => entry.staffId === 'STF-0005');
   assert.equal(created.fullName, 'নতুন শিক্ষক');
-  assert.equal(created.username, 'new.teacher.apc');
+  assert.equal(created.username, 'notun.teacher.apc');
   assert.equal(created.role, 'teacher');
   assert.equal(created.status, 'active');
   assert.deepEqual(created.assignment.subjects, ['উচ্চতর গণিত', 'পদার্থবিজ্ঞান']);
@@ -93,16 +100,34 @@ test('create builds a new staff account with the next unique Staff ID', async ()
   assert.equal(staffCard('STF-0005').textContent.includes('Teacher-2026'), false);
   // The username is claimed device-wide, so a student cannot take it.
   const index = JSON.parse(ctx.window.localStorage.getItem('active-plus-usernames-v1') || '{}');
-  assert.equal(index['new.teacher.apc'], 'staff:teacher');
+  assert.equal(index['notun.teacher.apc'], 'staff:teacher');
+  // The permanent internal identity is separate and never a login id.
+  assert.match(created.staffId, /^STF-\d{4}$/);
+  assert.notEqual(created.staffId, created.username);
 });
 
-test('a duplicate username is refused with a Bengali reason', async () => {
+test('a repeated name never produces a duplicate id — the number lands on the first name', async () => {
+  // A typed-in username is ignored: ids are always generated.
   const result = await createStaff({
-    fullName: 'ডুপ্লিকেট', username: 'new.teacher.apc', password: 'Dup-2026',
+    fullName: 'নতুন শিক্ষক', username: 'notun.teacher.apc', password: 'Dup-2026',
     confirmPassword: 'Dup-2026', role: 'teacher'
   });
-  assert.equal(result.ok, false);
-  assert.match(result.error, /ইউজারনেম/);
+  assert.equal(result.ok, true, result.error);
+  assert.equal(result.staff.username, 'notun2.teacher.apc');
+  assert.equal(result.staff.staffId, 'STF-0006');
+  const third = await createStaff({
+    fullName: 'নতুন শিক্ষক', password: 'Dup-2026', confirmPassword: 'Dup-2026', role: 'teacher'
+  });
+  assert.equal(third.ok, true, third.error);
+  assert.equal(third.staff.username, 'notun3.teacher.apc');
+  // Forbidden shapes never appear. The four device role accounts keep their own
+  // reserved ids ("admin.apc", "teacher.apc", …) — they are never rewritten.
+  for (const entry of (await listStaff()).filter(item => item.kind !== 'system')) {
+    assert.doesNotMatch(entry.username, /(admin|manager|teacher|cash)\d/);
+    assert.doesNotMatch(entry.username, /apc\d/);
+    assert.match(entry.username, /^([a-z][a-z0-9]*)\.(admin|manager|teacher|cash)\.apc$/);
+  }
+  await sync();
 });
 
 test('edit changes the profile but the Staff ID stays locked', async () => {
@@ -125,6 +150,34 @@ test('edit changes the profile but the Staff ID stays locked', async () => {
   const forced = await updateStaff('STF-0005', { staffId: 'STF-9999', fullName: 'চেষ্টা' });
   assert.equal(forced.ok, true);
   assert.equal((await listStaff()).find(entry => entry.fullName === 'চেষ্টা').staffId, 'STF-0005');
+});
+
+test('a role change or a rename regenerates the Login User ID — the Staff ID never moves', async () => {
+  const created = await createStaff({
+    fullName: 'Rasal Ahmed', password: 'Role-2026', confirmPassword: 'Role-2026', role: 'teacher'
+  });
+  assert.equal(created.ok, true, created.error);
+  const id = created.staff.staffId;
+  assert.equal(created.staff.username, 'rasal.teacher.apc');
+
+  const moved = await updateStaff(id, { role: 'manager' });
+  assert.equal(moved.ok, true, moved.error);
+  assert.equal(moved.staff.username, 'rasal.manager.apc', 'the role part follows the role');
+  assert.equal(moved.staff.role, 'manager');
+  assert.equal(moved.staff.staffId, id, 'the permanent internal id is untouched');
+
+  const renamed = await updateStaff(id, { fullName: 'Karim Ahmed' });
+  assert.equal(renamed.ok, true, renamed.error);
+  assert.equal(renamed.staff.username, 'karim.manager.apc');
+  assert.equal(renamed.staff.staffId, id);
+  assert.doesNotMatch(renamed.staff.username, /(manager|admin|teacher|cash)\d/);
+
+  // A device role account keeps its own reserved id — it is never rewritten.
+  const system = await updateStaff('STF-0003', { fullName: 'শিক্ষক এক' });
+  assert.equal(system.ok, true, system.error);
+  assert.equal(system.staff.username, 'teacher.apc');
+  assert.equal(system.staff.staffId, 'STF-0003');
+  await sync();
 });
 
 test('deactivate blocks login but keeps every historical record', async () => {
@@ -193,18 +246,20 @@ test('delete asks for confirmation and refuses when history is attached', async 
 
 test('a staff member without history is deleted after confirmation', async () => {
   const created = await createStaff({
-    fullName: 'অস্থায়ী স্টাফ', username: 'temp.staff.apc', password: 'Temp-2026',
+    fullName: 'অস্থায়ী স্টাফ', password: 'Temp-2026',
     confirmPassword: 'Temp-2026', role: 'other', status: 'active'
   });
   assert.equal(created.ok, true);
   const staffId = created.staff.staffId;
+  // Generated, not typed: First Name + Role + .apc ("staff" for the other role).
+  assert.equal(created.staff.username, 'asthayi.staff.apc');
 
   const removed = await deleteStaff(staffId);
   assert.equal(removed.ok, true);
   assert.equal((await listStaff()).some(entry => entry.staffId === staffId), false);
   // The username claim is released, so the name can be used again.
   const index = JSON.parse(ctx.window.localStorage.getItem('active-plus-usernames-v1') || '{}');
-  assert.equal(index['temp.staff.apc'], undefined);
+  assert.equal(index['asthayi.staff.apc'], undefined);
 });
 
 test('search and filters narrow the list by ID, name, username, mobile, role and status', async () => {

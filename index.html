@@ -54,6 +54,61 @@
           <button class="auth-submit" type="submit">লগইন করুন <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg></button>
         </form>
         <p class="auth-footnote">অ্যাকাউন্ট নেই? <button type="button" class="inline-link" data-auth-tab="register">রেজিস্ট্রেশন করুন</button></p>
+        <!-- First use only: shown by js/login.js while this device has no Admin
+             record at all. Once the first Admin exists it is removed. -->
+        <p class="auth-footnote first-use-note" id="firstAdminFootnote" hidden>প্রথমবার ব্যবহার করছেন? <button type="button" class="inline-link" id="openFirstAdmin" data-auth-tab="first-admin">Admin Account তৈরি করুন</button></p>
+      </div>
+
+      <!-- First-use Admin Account creation. The Login User ID is generated,
+           never typed: First Name + Role + ".apc". -->
+      <div class="auth-panel" id="firstAdminPanel" data-auth-panel="first-admin" hidden>
+        <div class="auth-panel-heading">
+          <div>
+            <h2>প্রথম Admin Account তৈরি করুন</h2>
+            <p>প্রথম Admin নিজের তথ্য দিয়ে অ্যাকাউন্ট তৈরি করবেন। Admin User ID স্বয়ংক্রিয়ভাবে তৈরি হবে — আপনাকে লিখতে হবে না।</p>
+          </div>
+        </div>
+        <form id="firstAdminForm" novalidate autocomplete="off">
+          <label for="firstAdminName">পূর্ণ নাম</label>
+          <div class="input-wrap">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-user"></use></svg>
+            <input id="firstAdminName" name="fullName" type="text" autocomplete="name" maxlength="100" placeholder="যেমন: Rasal Russell Chowdhury" required>
+          </div>
+
+          <span class="auto-id-label" id="firstAdminIdLabel">Admin User ID (স্বয়ংক্রিয়)</span>
+          <div class="auto-id-preview" id="firstAdminIdPreview" role="status" aria-live="polite" aria-atomic="true" aria-labelledby="firstAdminIdLabel">—</div>
+          <p class="fixed-field-note">নিয়ম: First Name + Role + .apc — যেমন <b>rasal.admin.apc</b>। এটি পরিবর্তন করা যায় না।</p>
+
+          <label for="firstAdminMobile">মোবাইল নম্বর</label>
+          <div class="input-wrap">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-phone"></use></svg>
+            <input id="firstAdminMobile" name="mobile" type="tel" inputmode="tel" autocomplete="tel" placeholder="01XXXXXXXXX" required>
+          </div>
+
+          <label for="firstAdminEmail">ইমেইল (ঐচ্ছিক)</label>
+          <div class="input-wrap">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-mail"></use></svg>
+            <input id="firstAdminEmail" name="email" type="email" autocomplete="email" maxlength="254" placeholder="name@example.com">
+          </div>
+
+          <label for="firstAdminPassword">পাসওয়ার্ড</label>
+          <div class="input-wrap">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg>
+            <input id="firstAdminPassword" name="password" type="password" autocomplete="new-password" minlength="6" maxlength="32" placeholder="৬–৩২ অক্ষর" required>
+            <button class="show-pin" type="button" data-toggle-pin="firstAdminPassword" aria-label="পাসওয়ার্ড দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg></button>
+          </div>
+
+          <label for="firstAdminConfirm">পাসওয়ার্ড নিশ্চিত করুন</label>
+          <div class="input-wrap">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg>
+            <input id="firstAdminConfirm" name="confirmPassword" type="password" autocomplete="new-password" minlength="6" maxlength="32" placeholder="একই পাসওয়ার্ড আবার লিখুন" required>
+            <button class="show-pin" type="button" data-toggle-pin="firstAdminConfirm" aria-label="পাসওয়ার্ড দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg></button>
+          </div>
+
+          <p class="auth-message" id="firstAdminError" role="alert" hidden></p>
+          <button class="auth-submit" type="submit">Admin Account তৈরি করুন <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-check-circle"></use></svg></button>
+          <p class="auth-footnote"><button type="button" class="inline-link" data-auth-tab="login">← লগইনে ফিরুন</button></p>
+        </form>
       </div>
 
       <div class="auth-panel" id="registerPanel" data-auth-panel="register" hidden>
@@ -352,7 +407,7 @@
     <symbol id="icon-smartphone" viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M10 18h4"/></symbol>
     <symbol id="icon-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.6 2.6 0 1 1 4.2 2c-1.1.8-1.7 1.2-1.7 2.5M12 17h.01"/></symbol>
     <symbol id="icon-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
-    <symbol id="icon-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
+    <symbol id="icon-mail" viewBox="0 0 24 24"><path d="M4 6h16v12H4z"/><path d="m4 7 8 6 8-6"/></symbol><symbol id="icon-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
     <symbol id="icon-logout" viewBox="0 0 24 24"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></symbol>
     <symbol id="icon-shield" viewBox="0 0 24 24"><path d="M12 3 5 6v5.2c0 4.8 3 8 7 9.8 4-1.8 7-5 7-9.8V6l-7-3Z"/><path d="m9 12 2 2 4-4.5"/></symbol>
   </svg>

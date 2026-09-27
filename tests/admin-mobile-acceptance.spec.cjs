@@ -1,14 +1,28 @@
 const { test, expect } = require('./fixtures.cjs');
 
+/* First use lives on the LOGIN page only: the Admin is created there with a
+   generated Login User ID ("review.admin.apc"), and the option disappears for
+   good afterwards. This spec (unrunnable without a browser binary) mirrors
+   tests/first-admin-setup.test.mjs, which drives the same flow in jsdom. */
 async function setup(page) {
-  await page.goto('/admin.html');
-  await page.locator('#initialAdminName').fill('Admin Review');
-  await page.locator('#initialAdminMobile').fill('01711222333');
-  await page.locator('#initialAdminUsername').fill('review.admin.apc');
-  await page.locator('#initialAdminPassword').fill('Review123');
-  await page.locator('#initialAdminConfirm').fill('Review123');
-  await page.locator('#initialAdminForm button[type=submit]').click();
-  await page.locator('#bootstrapCredentialsDone').click();
+  await page.goto('/index.html');
+  await page.locator('#openFirstAdmin').click();
+  await page.locator('#firstAdminName').fill('Review Admin');
+  // The id is generated, never typed: only the locked preview is on screen.
+  await expect(page.locator('#firstAdminIdPreview')).toHaveText('review.admin.apc');
+  await expect(page.locator('#firstAdminPanel input[name="username"]')).toHaveCount(0);
+  await page.locator('#firstAdminMobile').fill('01711222333');
+  await page.locator('#firstAdminPassword').fill('Review123');
+  await page.locator('#firstAdminConfirm').fill('Review123');
+  await page.locator('#firstAdminForm button[type=submit]').click();
+  // The first-use workflow is gone once the Admin exists.
+  await expect(page.locator('#firstAdminPanel')).toHaveCount(0);
+  await expect(page.locator('#openFirstAdmin')).toHaveCount(0);
+  // …and the generated id signs in like any other Admin.
+  await expect(page.locator('#loginMobile')).toHaveValue('review.admin.apc');
+  await page.locator('#loginForm button[type=submit]').click();
+  const bootstrap = page.locator('#bootstrapCredentialsDone');
+  if (await bootstrap.count()) await bootstrap.click();
   await expect(page.locator('#adminShell')).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
 }

@@ -19,6 +19,7 @@ import { enabledClasses } from './config.js';
 import { toBanglaNumber } from './ui.js';
 import { escapeHtml } from './sanitize.js';
 import { iconMarkup, paintIcon } from './admin-icons.js';
+import { generateLoginId, isAutoLoginId } from './user-id.js';
 import {
   CREATABLE_STAFF_ROLES,
   STAFF_ROLES,
@@ -70,7 +71,11 @@ function fieldRow(spec, value) {
   const { name, label, type = 'text', placeholder = '', hint = '', required = false, options = [], multiple = false, max = 120 } = spec;
   const text = String(value ?? '');
   const id = `staffField-${name}`;
-  const labelHtml = `<label for="${id}">${escapeHtml(label)}${required ? ' *' : ''}</label>`;
+  // A generated value has no form control to point at, so it gets a span
+  // (a <label for> pointing at a div would be invalid).
+  const labelHtml = type === 'auto-id'
+    ? `<span class="auto-id-label" id="${id}-label">${escapeHtml(label)}${required ? ' *' : ''}</span>`
+    : `<label for="${id}">${escapeHtml(label)}${required ? ' *' : ''}</label>`;
   let control;
   if (type === 'select') {
     control = `<select id="${id}" name="${name}"${multiple ? ' multiple size="4"' : ''}${required ? ' required' : ''}>
@@ -85,6 +90,11 @@ function fieldRow(spec, value) {
     </select>`;
   } else if (type === 'textarea') {
     control = `<textarea id="${id}" name="${name}" rows="3" maxlength="${max}" placeholder="${escapeHtml(placeholder)}">${escapeHtml(text)}</textarea>`;
+  } else if (type === 'auto-id') {
+    // A generated Login User ID: shown, never typed. The value travels in a
+    // hidden input so the form still submits it.
+    control = `<div class="auto-id-preview" id="${id}" data-auto-id="true" aria-labelledby="${id}-label" aria-label="${escapeHtml(label)} — স্বয়ংক্রিয়ভাবে তৈরি, পরিবর্তন করা যায় না" role="status" aria-live="polite" aria-atomic="true" tabindex="0">${text ? escapeHtml(text) : '—'}</div>
+      <input type="hidden" id="${id}-hidden" name="${name}" value="${escapeHtml(text)}">`;
   } else {
     const extra = type === 'date' ? '' : ` maxlength="${max}"`;
     control = `<input id="${id}" name="${name}" type="${type}" value="${escapeHtml(text)}" placeholder="${escapeHtml(placeholder)}"${extra}${required ? ' required' : ''}${type === 'password' ? ' autocomplete="new-password"' : ''}>`;
@@ -338,7 +348,7 @@ function staffFormHtml(record) {
   const assignment = record?.assignment || {};
   const identityFields = [
     { name: 'fullName', label: 'পূর্ণ নাম', required: true, value: record?.fullName },
-    { name: 'username', label: 'ইউজারনেম', required: true, value: record?.username, hint: '৪–২০ অক্ষর, ইংরেজি ছোট হাতের অক্ষর দিয়ে শুরু' },
+    { name: 'username', label: 'Login User ID (স্বয়ংক্রিয়)', type: 'auto-id', value: record?.username, hint: 'নিয়ম: First Name + Role + .apc — যেমন rasal.teacher.apc। স্বয়ংক্রিয়ভাবে তৈরি হয়, পরিবর্তন করা যায় না' },
     ...(editing ? [] : [
       { name: 'password', label: 'পাসওয়ার্ড', type: 'password', required: true, hint: '৬–৩২ অক্ষর' },
       { name: 'confirmPassword', label: 'পাসওয়ার্ড নিশ্চিত করুন', type: 'password', required: true }
@@ -404,6 +414,7 @@ function openCreate() {
   const body = openModal('Staff Management', 'নতুন স্টাফ অ্যাকাউন্ট', staffFormHtml(null), { wide: true });
   const form = body.querySelector('#staffForm');
   wireForm(form, null);
+  refreshAutoId(form, null);
 }
 
 async function openEdit(staffId) {
@@ -414,6 +425,7 @@ async function openEdit(staffId) {
   }
   const body = openModal('Staff Management', `${record.fullName} — সম্পাদনা`, staffFormHtml(record), { wide: true });
   const form = body.querySelector('#staffForm');
+  refreshAutoId(form, record);
   if (record.protected) {
     const roleSelect = form.querySelector('#staffField-role');
     const statusSelect = form.querySelector('#staffField-status');
@@ -427,10 +439,47 @@ async function openEdit(staffId) {
   wireForm(form, record);
 }
 
+/** Every Login User ID already used, so the preview never proposes a double. */
+function existingUsernames(except = '') {
+  return (state.staff || [])
+    .map(staff => staff?.username)
+    .filter(name => name && name !== except);
+}
+
+/**
+ * Keep the generated id in step with the name and the role.
+ * A system/protected/hand-made id is never rewritten, so nobody loses a login.
+ */
+function refreshAutoId(form, record = null) {
+  const box = form.querySelector('#staffField-username[data-auto-id]');
+  if (!box) return;
+  const hidden = form.querySelector('#staffField-username-hidden');
+  const locked = Boolean(record?.protected || record?.kind === 'system');
+  const keepCurrent = Boolean(record) && (locked || !isAutoLoginId(record.username, record.role));
+  if (keepCurrent) {
+    box.textContent = record.username || '—';
+    if (hidden) hidden.value = record.username || '';
+    return;
+  }
+  const fullName = form.querySelector('#staffField-fullName')?.value || '';
+  const role = form.querySelector('#staffField-role')?.value || 'teacher';
+  if (!String(fullName).trim()) {
+    box.textContent = '—';
+    if (hidden) hidden.value = '';
+    return;
+  }
+  const id = generateLoginId({ fullName, role, taken: existingUsernames(record?.username) });
+  box.textContent = id;
+  if (hidden) hidden.value = id;
+}
+
 function wireForm(form, record) {
   const assignmentHost = form.querySelector('#staffAssignmentFields');
+  form.querySelector('#staffField-fullName')?.addEventListener('input', () => refreshAutoId(form, record));
   form.querySelector('#staffField-role')?.addEventListener('change', event => {
     const role = event.target.value;
+    // The role is part of the id: "rasal.teacher.apc" → "rasal.manager.apc".
+    refreshAutoId(form, record);
     if (!assignmentHost) return;
     assignmentHost.dataset.role = role;
     assignmentHost.querySelector('.staff-form-section').textContent = `${STAFF_ROLE_META[role]?.labelBn || 'স্টাফ'} — Assignment`;

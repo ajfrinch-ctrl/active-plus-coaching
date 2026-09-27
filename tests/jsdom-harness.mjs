@@ -55,9 +55,11 @@ export async function loadPage(file, { seed = {} } = {}) {
   // The budget is generous on purpose: password hashing (PBKDF2) and AES-GCM
   // run on real macrotasks, and the suite runs files in parallel on small
   // machines, so a UI change can take a while to appear.
+  /* Predicates may be async (a stored record is read with `await`), so the
+     result is awaited — a sync predicate still works exactly as before. */
   const waitFor = async (predicate, timeout = 20000) => {
     const started = Date.now();
-    while (!predicate()) {
+    while (!(await predicate())) {
       if (Date.now() - started > timeout) throw new Error('waitFor timed out waiting for a UI change');
       await new Promise(resolve => setTimeout(resolve, 5));
     }

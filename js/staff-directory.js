@@ -34,6 +34,7 @@
 
 import { KEYS, readJSON, writeJSON } from './database.js';
 import { hashPassword, isPasswordRecord, verifyPassword } from './password-hash.js';
+import { generateLoginId, isAutoLoginId, normalizeLoginId } from './user-id.js';
 import { encryptValue, decryptValue, isEncryptedEnvelope } from './secure-store.js';
 import {
   STAFF_ACCOUNTS,
@@ -395,20 +396,44 @@ function usernameOwner(username) {
   return usernameIndex()[username] || null;
 }
 
-export function validateStaffFields(fields, { records, existing = null } = {}) {
+/**
+ * Every Login User ID already taken: the device registry, the four reserved
+ * staff names and the ids of the records themselves. Compared case-insensitively
+ * by the generator, so "Rasal.Teacher.apc" can never slip past "rasal.teacher.apc".
+ */
+function takenUsernames(records = [], except = '') {
+  const skip = normalizeLoginId(except);
+  const all = [
+    ...Object.keys(usernameIndex()),
+    ...STAFF_USERNAMES,
+    ...(Array.isArray(records) ? records : []).map(record => record?.username).filter(Boolean)
+  ];
+  return [...new Set(all.map(normalizeLoginId))].filter(name => name && name !== skip);
+}
+
+/** The one rule for a Login User ID: First Name + Role + ".apc". */
+export function buildStaffLoginId(fullName, role, records = [], except = '') {
+  return generateLoginId({ fullName, role, taken: takenUsernames(records, except) });
+}
+
+export function validateStaffFields(fields, { records, existing = null, autoUsername = true } = {}) {
   const errors = {};
   const fullName = clean(fields.fullName, 100);
   if (fullName.length < 2) errors.fullName = 'পূর্ণ নাম লিখুন (কমপক্ষে ২ অক্ষর)।';
 
-  const username = normalizeStaffUsername(fields.username);
-  if (!USERNAME_PATTERN.test(username)) {
-    errors.username = 'ইউজারনেম ৪–২০ অক্ষর; ইংরেজি ছোট হাতের অক্ষর দিয়ে শুরু করুন (অক্ষর/সংখ্যা/ডট/আন্ডারস্কোর)।';
-  } else if (RESERVED_USERNAMES.has(username) || STAFF_USERNAMES.includes(username)) {
-    errors.username = 'এই ইউজারনেম সংরক্ষিত — অন্য একটি বেছে নিন।';
-  } else if ((records || []).some(record => record.username === username && record.staffId !== existing?.staffId)) {
-    errors.username = 'এই ইউজারনেম ইতিমধ্যে ব্যবহৃত — অন্য একটি বেছে নিন।';
-  } else if (username !== existing?.username && usernameOwner(username)) {
-    errors.username = 'এই ইউজারনেম অন্য অ্যাকাউন্টের — অন্য একটি বেছে নিন।';
+  /* A Login User ID is generated ("firstname.role.apc"), never typed, so the
+     username field is not validated — it is produced after this check. */
+  const username = autoUsername ? '' : normalizeStaffUsername(fields.username);
+  if (!autoUsername) {
+    if (!USERNAME_PATTERN.test(username)) {
+      errors.username = 'ইউজারনেম ৪–২০ অক্ষর; ইংরেজি ছোট হাতের অক্ষর দিয়ে শুরু করুন (অক্ষর/সংখ্যা/ডট/আন্ডারস্কোর)।';
+    } else if (RESERVED_USERNAMES.has(username) || STAFF_USERNAMES.includes(username)) {
+      errors.username = 'এই ইউজারনেম সংরক্ষিত — অন্য একটি বেছে নিন।';
+    } else if ((records || []).some(record => record.username === username && record.staffId !== existing?.staffId)) {
+      errors.username = 'এই ইউজারনেম ইতিমধ্যে ব্যবহৃত — অন্য একটি বেছে নিন।';
+    } else if (username !== existing?.username && usernameOwner(username)) {
+      errors.username = 'এই ইউজারনেম অন্য অ্যাকাউন্টের — অন্য একটি বেছে নিন।';
+    }
   }
 
   if (fields.mobile && !MOBILE_PATTERN.test(normalizeBdMobile(fields.mobile))) {
@@ -453,6 +478,10 @@ export async function createStaff(fields = {}) {
     if (Object.keys(errors).length) return { ok: false, error: Object.values(errors)[0], errors };
 
     const now = new Date().toISOString();
+    /* Login User ID — always generated from the name and the role:
+       "rasal.teacher.apc", "rasal2.teacher.apc", …  The internal Staff ID
+       above stays separate and permanent. */
+    const username = buildStaffLoginId(values.fullName, values.role, records);
     const record = {
       id: newRecordId(),
       staffId: nextStaffId(records),
@@ -460,7 +489,7 @@ export async function createStaff(fields = {}) {
       role: values.role,
       systemRole: null,
       fullName: values.fullName,
-      username: values.username,
+      username,
       mobile: fields.mobile ? normalizeBdMobile(fields.mobile) : '',
       email: clean(fields.email).toLowerCase(),
       address: clean(fields.address, 300),
@@ -476,7 +505,7 @@ export async function createStaff(fields = {}) {
       history: [{ at: now, action: 'created', detail: `তৈরি করেছেন ${actor.username || 'admin'}` }]
     };
 
-    // Claim the username first (same device registry the student flow uses),
+    // Claim the generated id first (same device registry the student flow uses),
     // then write the record; roll back if the write fails.
     const index = usernameIndex();
     if (index[record.username] && index[record.username] !== `staff:${record.role}`) {
@@ -534,10 +563,19 @@ export async function updateStaff(staffId, patch = {}) {
     }
     if (Object.keys(errors).length) return { ok: false, error: Object.values(errors)[0], errors };
 
+    /* Login User ID follows the name and the role it was generated from.
+       A hand-made id, a protected owner id and a system role id are kept as
+       they are, so nothing that already signs in is broken by an edit. */
+    const identityChanged = values.fullName !== current.fullName || values.role !== current.role;
+    const regenerable = current.kind !== 'system' && !current.protected && isAutoLoginId(current.username, current.role);
+    const username = (identityChanged && regenerable)
+      ? buildStaffLoginId(values.fullName, values.role, records, current.username)
+      : current.username;
+
     let updated = {
       ...current,
       fullName: values.fullName,
-      username: values.username,
+      username,
       role: values.role,
       status: values.status,
       mobile: next.mobile ? normalizeBdMobile(next.mobile) : '',
@@ -553,14 +591,14 @@ export async function updateStaff(staffId, patch = {}) {
       ]
     };
 
-    if (values.username !== current.username && current.kind === 'directory') {
+    if (username !== current.username && current.kind === 'directory') {
       const registry = usernameIndex();
-      if (registry[values.username] && registry[values.username] !== `staff:${current.role}`) {
+      if (registry[username] && registry[username] !== `staff:${current.role}`) {
         return { ok: false, error: 'এই ইউজারনেম ইতিমধ্যে ব্যবহৃত।', errors: { username: 'এই ইউজারনেম ইতিমধ্যে ব্যবহৃত।' } };
       }
       const registryNext = { ...registry };
       if (registryNext[current.username] === `staff:${current.role}`) delete registryNext[current.username];
-      registryNext[values.username] = `staff:${updated.role}`;
+      registryNext[username] = `staff:${updated.role}`;
       if (!writeJSON(KEYS.usernames, registryNext)) {
         return { ok: false, error: 'ইউজারনেম সংরক্ষণ করা যায়নি।', code: 'STORAGE' };
       }

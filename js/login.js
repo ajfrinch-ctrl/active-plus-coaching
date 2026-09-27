@@ -16,10 +16,13 @@ import {
   isSecurityCheckDisabled, loadAppConfig, verifyAccountPassword, upgradeAccountSecrets
 } from './storage.js';
 import {
-  STAFF_ACCOUNTS, normalizeStaffUsername, authenticateStaff, saveStaffSession, resolveStaffRoleByUsername
+  STAFF_ACCOUNTS, STAFF_USERNAMES, normalizeStaffUsername, authenticateStaff,
+  saveStaffSession, resolveStaffRoleByUsername, createInitialAdmin, staffAccountRecordExists
 } from './staff-auth.js';
+import { KEYS, readJSON } from './database.js';
 import { openStaffPasswordDialog } from './staff-password-dialog.js';
 import { authenticateDirectoryStaff, changeDirectoryStaffPassword, findDirectoryStaffByUsername } from './staff-directory.js';
+import { generateLoginId } from './user-id.js';
 import { isPasswordRecord } from './password-hash.js';
 
 const STAFF_PANEL = Object.freeze({ admin: 'admin.html', manager: 'manager.html', teacher: 'teacher.html', payment: 'payment.html' });
@@ -254,4 +257,117 @@ export function initLogin({ state, onAuthenticated }) {
   $('#loginMobile')?.addEventListener('input', syncLoginHints);
   syncLoginHints();
   $('#loginForm')?.addEventListener('submit', event => handleLogin(event, state, onAuthenticated));
+  initFirstAdminSetup();
+}
+
+/* ---------------------------------------------------------------------------
+   First use only — "Admin Count = 0" opens the one-time Admin Account form.
+
+   The gate is the stored Admin record itself, not a flag: while no Admin
+   account exists the option is on the login page, and the moment one is
+   created the panel and its trigger are REMOVED from the DOM. Even a direct
+   console call to createInitialAdmin() is refused by js/staff-auth.js, which
+   re-checks the same record before writing anything.
+   ------------------------------------------------------------------------- */
+
+let firstAdminState = { available: false, preview: '' };
+
+export function firstAdminAvailable() {
+  return firstAdminState.available === true;
+}
+
+/** Every username already claimed on this device (case-insensitive compare). */
+function claimedUsernames() {
+  const index = readJSON(KEYS.usernames, {}) || {};
+  return [...Object.keys(index), ...STAFF_USERNAMES];
+}
+
+/** Live preview: the id the form will create for the typed name. */
+function renderFirstAdminPreview() {
+  const name = $('#firstAdminName')?.value || '';
+  const box = $('#firstAdminIdPreview');
+  if (!box) return;
+  if (!String(name).trim()) {
+    box.textContent = '—';
+    box.dataset.value = '';
+    firstAdminState.preview = '';
+    return;
+  }
+  const id = generateLoginId({ fullName: name, role: 'admin', taken: claimedUsernames() });
+  box.textContent = id;
+  box.dataset.value = id;
+  firstAdminState.preview = id;
+}
+
+async function lockFirstAdminSetup(reason = '') {
+  firstAdminState.available = false;
+  // Removed, not hidden: no second first-use workflow can be reached from here.
+  $('#firstAdminPanel')?.remove();
+  $('#firstAdminFootnote')?.remove();
+  $('#openFirstAdmin')?.remove();
+  if (reason) setAuthMessage(reason, 'success');
+}
+
+async function initFirstAdminSetup() {
+  const panel = $('#firstAdminPanel');
+  if (!panel) return;                       // page carries no first-use form
+  if (await staffAccountRecordExists('admin')) {
+    await lockFirstAdminSetup();             // Admin Count >= 1 → never offered
+    return;
+  }
+  firstAdminState.available = true;
+  const footnote = $('#firstAdminFootnote');
+  if (footnote) footnote.hidden = false;
+  $('#firstAdminName')?.addEventListener('input', renderFirstAdminPreview);
+  renderFirstAdminPreview();
+  $('#firstAdminForm')?.addEventListener('submit', handleFirstAdminSubmit);
+}
+
+async function handleFirstAdminSubmit(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const submit = form.querySelector('[type="submit"]');
+  const error = $('#firstAdminError');
+  const data = new FormData(form);
+  const showError = message => {
+    if (!error) return;
+    error.textContent = message;
+    error.hidden = !message;
+  };
+  showError('');
+  // Re-check at submit time too: a second tab may have created the Admin.
+  if (await staffAccountRecordExists('admin')) {
+    await lockFirstAdminSetup('প্রথম Admin Account ইতিমধ্যে তৈরি হয়েছে — এখন লগইন করুন।');
+    switchAuthTab('login');
+    return;
+  }
+  if (submit) { submit.disabled = true; submit.setAttribute('aria-busy', 'true'); }
+  try {
+    const result = await createInitialAdmin({
+      fullName: data.get('fullName'),
+      mobile: data.get('mobile'),
+      email: data.get('email'),
+      password: data.get('password'),
+      confirmPassword: data.get('confirmPassword')
+    });
+    if (!result.ok) {
+      showError(result.error || 'Admin Account তৈরি করা যায়নি।');
+      return;
+    }
+    const id = result.account.username;
+    form.reset();
+    // The workflow is over for good: remove it, then hand the id to the form.
+    await lockFirstAdminSetup();
+    switchAuthTab('login');
+    const idInput = $('#loginMobile');
+    if (idInput) idInput.value = id;
+    const pinInput = $('#loginPin');
+    if (pinInput) pinInput.value = String(data.get('password') || '');
+    setAuthMessage(`Admin Account তৈরি হয়েছে। আপনার User ID: ${id} — এখন লগইন করুন।`, 'success');
+    pinInput?.focus?.({ preventScroll: true });
+  } catch {
+    showError('Account সংরক্ষণ করা যায়নি। স্টোরেজ পরীক্ষা করে আবার চেষ্টা করুন।');
+  } finally {
+    if (submit) { submit.disabled = false; submit.removeAttribute('aria-busy'); }
+  }
 }

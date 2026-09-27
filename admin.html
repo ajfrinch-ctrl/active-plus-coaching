@@ -32,33 +32,9 @@
   <link rel="stylesheet" href="css/admin-staff.css">
 </head>
 <body>
-  <!-- First-run owner-controlled setup; shown only while the Admin record is absent. -->
-<body>
-  <!-- First-run owner-controlled setup; shown only while the Admin record is absent. -->
-  <section class="auth-screen admin-auth-screen" id="initialAdminSetup" aria-labelledby="initialAdminTitle" hidden>
-    <div class="auth-topbar"><div class="auth-brand"><img src="assets/icons/logo-128.png" alt="" width="38" height="38"><span><strong>Active Plus Coaching</strong><small>প্রথম Admin সেটআপ</small></span></div></div>
-    <div class="auth-card">
-      <div class="auth-panel-heading"><div><p class="eyebrow">Account Owner • প্রথমবার</p><h1 id="initialAdminTitle">নিজের Admin Account তৈরি করুন</h1><p>প্রথম Admin নিজেই নিজের পূর্ণাঙ্গ প্রোফাইল তৈরি করবেন। এটি সক্রিয় হবে এবং একবার তৈরি হলে এই সেটআপ আর দেখা যাবে না।</p></div></div>
-      <form id="initialAdminForm" novalidate>
-        <label for="initialAdminName">পূর্ণ নাম</label><input id="initialAdminName" name="fullName" type="text" autocomplete="name" maxlength="100" required>
-        <label for="initialAdminMobile">মোবাইল নম্বর</label><input id="initialAdminMobile" name="mobile" type="tel" inputmode="tel" autocomplete="tel" placeholder="01XXXXXXXXX" required>
-        <label for="initialAdminEmail">ইমেইল <small>(ঐচ্ছিক)</small></label><input id="initialAdminEmail" name="email" type="email" autocomplete="email" maxlength="254">
-        <label for="initialAdminUsername">Admin Username</label><input id="initialAdminUsername" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" minlength="4" maxlength="20" placeholder="rahim.admin.apc" required>
-        <label for="initialAdminPassword">পাসওয়ার্ড</label><input id="initialAdminPassword" name="password" type="password" autocomplete="new-password" minlength="6" maxlength="32" required>
-        <label for="initialAdminConfirm">পাসওয়ার্ড নিশ্চিত করুন</label><input id="initialAdminConfirm" name="confirmPassword" type="password" autocomplete="new-password" minlength="6" maxlength="32" required>
-        <p class="finance-error" id="initialAdminError" role="alert" hidden></p>
-        <button class="auth-submit" type="submit">সক্রিয় Admin Account তৈরি করুন</button>
-      </form>
-    </div>
-  </section>
-  <div class="admin-modal-backdrop" id="bootstrapCredentialsBackdrop" hidden>
-    <section class="admin-modal bootstrap-credentials-modal" role="dialog" aria-modal="true" aria-labelledby="bootstrapCredentialsTitle">
-      <header class="admin-card-head"><div><p class="eyebrow">শুধু একবার দেখানো হবে</p><h2 id="bootstrapCredentialsTitle">প্রাথমিক Role ID তৈরি হয়েছে</h2></div></header>
-      <p class="finance-hint">প্রতিটি role-এর temporary password নিরাপদে সংশ্লিষ্ট ব্যক্তির কাছে দিন। প্রথম login-এ password বদলাতে হবে। এই password আবার দেখানো হবে না।</p>
-      <div id="bootstrapCredentialsList"></div>
-      <div class="modal-actions"><button class="admin-btn ghost" type="button" id="bootstrapCopyCredentials">সব কপি করুন</button><button class="admin-btn primary" type="button" id="bootstrapCredentialsDone">সংরক্ষণ করেছি — Admin প্যানেলে যান</button></div>
-    </section>
-  </div>
+  <!-- First use lives on the login page only (index.html → "প্রথমবার ব্যবহার
+       করছেন? Admin Account তৈরি করুন"). This panel never offers it again, and
+       js/staff-auth.js refuses createInitialAdmin() once one Admin exists. -->
   <!-- Admin Login Screen -->
   <section class="auth-screen admin-auth-screen" id="adminEntry" aria-label="Active Plus এডমিন লগইন">
     <div class="auth-topbar">
@@ -77,6 +53,10 @@
           <div>
             <h2>এডমিন লগইন</h2>
           </div>
+        </div>
+        <div class="admin-no-account" id="adminNoAccount" hidden>
+          <p>এই ডিভাইসে এখনো কোনো Admin Account তৈরি হয়নি। প্রথম Admin Account শুধু লগইন পেজ থেকে একবারই তৈরি করা যায়।</p>
+          <a class="admin-btn primary" href="index.html">লগইন পেজে যান</a>
         </div>
         <form id="adminLoginForm" novalidate>
           <label for="adminLoginUser">ইউজারনেম</label>
@@ -1017,6 +997,34 @@
           <div><p class="eyebrow">Admin Profile</p><h1 id="adminProfileTitle">আমার প্রোফাইল</h1></div>
         </div>
         <article class="admin-card" id="adminProfileCard" aria-live="polite"></article>
+        <article class="admin-card">
+          <header class="admin-card-head">
+            <div><p class="eyebrow">Profile</p><h2>আমার তথ্য হালনাগাদ</h2></div>
+          </header>
+          <form id="adminProfileForm" class="staff-form" novalidate autocomplete="off">
+            <div class="staff-form-grid">
+              <div class="staff-field">
+                <label for="adminProfileName">পূর্ণ নাম *</label>
+                <input id="adminProfileName" name="fullName" type="text" autocomplete="name" maxlength="100" required>
+              </div>
+              <div class="staff-field">
+                <label for="adminProfileMobile">মোবাইল নম্বর *</label>
+                <input id="adminProfileMobile" name="mobile" type="tel" inputmode="tel" autocomplete="tel" placeholder="01XXXXXXXXX" required>
+              </div>
+              <div class="staff-field">
+                <label for="adminProfileEmail">ইমেইল (ঐচ্ছিক)</label>
+                <input id="adminProfileEmail" name="email" type="email" autocomplete="email" maxlength="254">
+              </div>
+              <div class="staff-field">
+                <label for="adminProfileUserId">Login User ID</label>
+                <div class="auto-id-preview" id="adminProfileUserId" role="status" aria-live="polite">—</div>
+                <small>স্বয়ংক্রিয়ভাবে তৈরি — First Name + Role + .apc</small>
+              </div>
+            </div>
+            <p class="finance-error" id="adminProfileError" role="alert" hidden></p>
+            <button class="admin-btn primary" type="submit">তথ্য সংরক্ষণ করুন</button>
+          </form>
+        </article>
         <article class="admin-card">
           <header class="admin-card-head">
             <div><p class="eyebrow">Password</p><h2>নিজের পাসওয়ার্ড বদল</h2></div>

@@ -14,7 +14,7 @@ import { toBanglaNumber } from './ui.js';
 import { classCodes, dayNames, feeCategories, paymentMethods } from './admin-data.js';
 import { loadAppConfig, saveAppConfig, loadAccount, saveAccount } from './storage.js';
 import { loadRoster, saveRoster, syncAccountStatus, loadNotices, loadRoutine } from './office-data.js';
-import { authenticateStaff, changeStaffPassword, createInitialAdmin, ensureBootstrapStaffAccounts, readStaffAccount, staffAccountRecordExists, saveStaffSession, hasStaffSession, clearStaffSession, goToLoginPage, STAFF_SESSION_RULES, STAFF_KEYS_LIST } from './staff-auth.js';
+import { authenticateStaff, changeStaffPassword, updateStaffProfile, ensureBootstrapStaffAccounts, readStaffAccount, staffAccountRecordExists, saveStaffSession, hasStaffSession, clearStaffSession, goToLoginPage, STAFF_SESSION_RULES, STAFF_KEYS_LIST } from './staff-auth.js';
 import { openStaffPasswordDialog } from './staff-password-dialog.js';
 import { financeRepository, monthLabel, dateLabel, searchStudents, studentFeeSummary, newestTransactions, stampTransaction, isFinalizedTransaction, TRANSACTIONS_KEY } from './finance-data.js';
 import { newId, KEYS, readJSON, writeJSON } from './database.js';
@@ -2049,6 +2049,12 @@ async function renderAdminProfile() {
     ['স্ট্যাটাস', '<span class="badge badge-approved">Protected • সক্রিয়</span>'],
     ['যোগদান', escapeHtml(String(account?.createdAt || '').slice(0, 10) || '—')]
   ];
+  // The same card fills the editable identity form: name, mobile, email.
+  if ($('#adminProfileName')) $('#adminProfileName').value = account?.fullName || '';
+  if ($('#adminProfileMobile')) $('#adminProfileMobile').value = account?.mobile || '';
+  if ($('#adminProfileEmail')) $('#adminProfileEmail').value = account?.email || '';
+  if ($('#adminProfileUserId')) $('#adminProfileUserId').textContent = account?.username || '—';
+
   host.innerHTML = `
     <header class="admin-card-head">
       <div><p class="eyebrow">Admin Profile</p><h2>আমার পরিচয়</h2></div>
@@ -2191,35 +2197,10 @@ async function enterAdminPanel(remember, bootstrapCredentials = []) {
   await enterPanel({ bootstrapCredentials });
 }
 
-$('#initialAdminForm')?.addEventListener('submit', async event => {
-  event.preventDefault();
-  const form = event.currentTarget;
-  const submit = form.querySelector('[type="submit"]');
-  const error = $('#initialAdminError');
-  const data = new FormData(form);
-  if (error) { error.hidden = true; error.textContent = ''; }
-  if (submit) { submit.disabled = true; submit.setAttribute('aria-busy', 'true'); }
-  try {
-    const result = await createInitialAdmin({
-      fullName: data.get('fullName'), mobile: data.get('mobile'), email: data.get('email'),
-      username: data.get('username'), password: data.get('password'), confirmPassword: data.get('confirmPassword')
-    });
-    if (!result.ok) {
-      if (error) { error.textContent = result.error || 'Admin Account তৈরি করা যায়নি।'; error.hidden = false; }
-      return;
-    }
-    form.reset();
-    $('#initialAdminSetup').hidden = true;
-    $('#adminEntry').hidden = false;
-    $('#adminLoginUser').value = result.account.username;
-    $('#adminLoginPin').value = data.get('password') || '';
-    await enterAdminPanel(true, result.bootstrapAccounts || []);
-  } catch {
-    if (error) { error.textContent = 'Account সংরক্ষণ করা যায়নি। স্টোরেজ পরীক্ষা করে আবার চেষ্টা করুন।'; error.hidden = false; }
-  } finally {
-    if (submit) { submit.disabled = false; submit.removeAttribute('aria-busy'); }
-  }
-});
+/* The first Admin Account is created once, from the login page (index.html).
+   This panel never shows a creation form, and js/staff-auth.js refuses
+   createInitialAdmin() while an Admin record exists — so a direct call, a copied
+   URL or a hidden route cannot start the workflow a second time. */
 
 $('#bootstrapCredentialsDone')?.addEventListener('click', () => { $('#bootstrapCredentialsBackdrop').hidden = true; });
 $('#bootstrapCopyCredentials')?.addEventListener('click', async () => {
@@ -2359,8 +2340,43 @@ $('#backupFileInput')?.addEventListener('change', event => {
 
 $('#adminMoreLogout')?.addEventListener('click', exitPanel);
 
+$('#adminProfileForm')?.addEventListener('submit', async event => {
+  event.preventDefault();
+  const error = $('#adminProfileError');
+  if (error) { error.hidden = true; error.textContent = ''; }
+  const fullName = String($('#adminProfileName')?.value || '').trim().replace(/\s+/g, ' ');
+  const mobile = String($('#adminProfileMobile')?.value || '').trim();
+  const email = String($('#adminProfileEmail')?.value || '').trim().toLowerCase();
+  if (fullName.length < 2 || fullName.length > 100) {
+    if (error) { error.textContent = 'পূর্ণ নাম লিখুন (২–১০০ অক্ষর)।'; error.hidden = false; }
+    return;
+  }
+  if (!/^01[3-9]\d{8}$/.test(mobile)) {
+    if (error) { error.textContent = 'সঠিক ১১ সংখ্যার মোবাইল নম্বর দিন (যেমন: ০১৭XXXXXXXX)।'; error.hidden = false; }
+    return;
+  }
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (error) { error.textContent = 'সঠিক ইমেইল ঠিকানা দিন অথবা ফাঁকা রাখুন।'; error.hidden = false; }
+    return;
+  }
+  // Only name/mobile/email move. The Login User ID and the Staff ID are locked
+  // inside updateStaffProfile, so this form cannot rewrite the identity even
+  // if it is submitted straight from the console.
+  const result = await updateStaffProfile('admin', { fullName, mobile, email });
+  if (!result.ok) {
+    if (error) { error.textContent = result.error || 'তথ্য সংরক্ষণ করা যায়নি।'; error.hidden = false; }
+    return;
+  }
+  toast('প্রোফাইল হালনাগাদ করা হয়েছে');
+  await refreshStaffSnapshot();
+  renderAdminProfile();
+});
+
 $('#adminPasswordForm')?.addEventListener('submit', async event => {
   event.preventDefault();
+  // Captured now: event.currentTarget is nulled once the dispatch (and the
+  // awaits below) is over, so the form must be reset through this reference.
+  const form = event.currentTarget;
   const error = $('#adminPasswordError');
   const current = $('#adminCurrentPassword')?.value || '';
   const next = $('#adminNewPassword')?.value || '';
@@ -2375,7 +2391,7 @@ $('#adminPasswordForm')?.addEventListener('submit', async event => {
     if (error) { error.textContent = result.error || 'পাসওয়ার্ড বদল করা যায়নি।'; error.hidden = false; }
     return;
   }
-  event.currentTarget.reset();
+  form?.reset();
   toast('পাসওয়ার্ড বদল করা হয়েছে');
 });
 
@@ -2546,16 +2562,20 @@ window.addEventListener('storage', event => {
 // The full-profile first-run form appears only if no Admin record has ever been stored.
 // A corrupt existing record is never silently replaced by a new first owner.
 async function initAdminEntry() {
-  const exists = staffAccountRecordExists('admin');
-  const setup = $('#initialAdminSetup');
+  const exists = await staffAccountRecordExists('admin');
   const login = $('#adminEntry');
+  const notice = $('#adminNoAccount');
+  const form = $('#adminLoginForm');
   if (!exists) {
-    if (setup) setup.hidden = false;
-    if (login) login.hidden = true;
-    $('#initialAdminName')?.focus({ preventScroll: true });
+    // No Admin on this device: the one-time creation form is on the login page.
+    if (login) login.hidden = false;
+    if (notice) notice.hidden = false;
+    if (form) form.hidden = true;
+    notice?.querySelector('a')?.focus({ preventScroll: true });
     return;
   }
-  if (setup) setup.hidden = true;
+  if (notice) notice.hidden = true;
+  if (form) form.hidden = false;
   if (login) login.hidden = false;
   const account = await readStaffAccount('admin');
   if (!account) {

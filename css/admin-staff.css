@@ -432,7 +432,8 @@
   grid-column: 1 / -1;
 }
 
-.admin-shell .staff-field > label {
+.admin-shell .staff-field > label,
+.admin-shell .staff-field > .auto-id-label {
   color: var(--ink, #16241f);
   font-size: 12px;
   font-weight: 800;
@@ -885,4 +886,63 @@
   .admin-shell .staff-card-actions .mini-btn {
     flex: 1 1 100%;
   }
+}
+
+/* ---------------------------------------------------------------------------
+   09 — Auto-generated Login User ID (js/user-id.js)
+   First Name + Role + ".apc" — shown, never typed, never clipped.
+   ------------------------------------------------------------------------ */
+.admin-shell .auto-id-preview,
+.staff-modal-backdrop .auto-id-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 10px 12px;
+  border: 1px dashed rgba(4, 121, 90, .35);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .96), rgba(223, 242, 231, .65));
+  color: var(--forest-dark, #056148);
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 13.5px;
+  font-weight: 800;
+  letter-spacing: .2px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  cursor: default;
+  user-select: all;
+}
+
+.admin-shell .auto-id-preview::before,
+.staff-modal-backdrop .auto-id-preview::before {
+  content: '';
+  flex: 0 0 15px;
+  width: 15px;
+  height: 15px;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23056148' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4.8' y='10.4' width='14.4' height='10.4' rx='2.6'/%3E%3Cpath d='M8.2 10.4V7.9a3.8 3.8 0 0 1 7.6 0v2.5'/%3E%3C/svg%3E");
+  opacity: .8;
+}
+
+/* The "no Admin on this device" notice on the Admin login screen. */
+.admin-shell .admin-no-account,
+.admin-auth-screen .admin-no-account {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 14px;
+  border: 1px dashed rgba(4, 121, 90, .35);
+  border-radius: var(--g-r-md, 16px);
+  background: rgba(223, 242, 231, .6);
+}
+
+.admin-shell .admin-no-account p,
+.admin-auth-screen .admin-no-account p {
+  margin: 0;
+  color: var(--panel-text, #16241f);
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.6;
 }

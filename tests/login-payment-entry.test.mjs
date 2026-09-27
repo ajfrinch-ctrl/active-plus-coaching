@@ -10,7 +10,7 @@ import test, { before } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadPage } from './jsdom-harness.mjs';
 import { STAFF_ACCOUNTS } from '../js/staff-auth.js';
-import { hasStaffSession } from '../js/staff-auth.js';
+import { hasStaffSession, createInitialAdmin } from '../js/staff-auth.js';
 import { STORAGE_KEYS } from '../js/config.js';
 import { STAFF_TEST_PASSWORD, provisionStaff, seedStaffSession, signInOnLoginPage, completeStaffPasswordDialog } from './staff-harness.mjs';
 
@@ -141,12 +141,18 @@ test('the admin switch that closes teacher access also closes it from this page'
   assert.equal(navigated(), false);
 });
 
-test('a fresh Admin portal offers only the dedicated initial setup flow', async () => {
+/* First use is a login-page step, not a portal step: with no Admin stored the
+   Admin portal must not offer a creation form of its own — it points to
+   index.html instead (built in tests/first-admin-setup.test.mjs). */
+test('a fresh Admin portal offers no Admin creation of its own', async () => {
   const panel = await loadPage('admin.html', { seed: DEMO_OFF });
   await import('../js/admin.js?initial-setup');
-  await panel.waitFor(() => panel.$('#initialAdminSetup').hidden === false);
-  assert.equal(panel.$('#adminEntry').hidden, true);
+  await panel.waitFor(() => panel.$('#adminEntry').hidden === false, 20000);
+  assert.equal(panel.$('#initialAdminSetup'), null, 'the old setup block is gone');
+  assert.equal(panel.$('#initialAdminForm'), null);
   assert.equal(panel.$('#adminShell').hidden, true);
+  assert.equal(panel.$('#adminNoAccount').hidden, false, 'it sends the owner to the login page');
+  assert.equal(panel.$('#adminLoginForm').hidden, true);
 });
 
 /* Logout is not a step back to a panel's own form: every panel drops the
@@ -158,6 +164,14 @@ for (const [panel, script, exitButton, role] of [
 ]) {
   test(`logging out of ${panel} goes to the login page`, async () => {
     const page = await loadPage(panel, { seed: DEMO_OFF });
+    // The Admin portal only opens for a device that already has an Admin
+    // record; without one it sends the visitor to the login page instead.
+    if (role === 'admin') {
+      await createInitialAdmin({
+        fullName: 'Owner One', mobile: '01711222333', email: '',
+        password: STAFF_TEST_PASSWORD, confirmPassword: STAFF_TEST_PASSWORD
+      });
+    }
     seedStaffSession(page.window, role);
     // Cache-bust: the previous test already evaluated this module against
     // another document, and a cached module would bind its handlers to that
@@ -165,6 +179,9 @@ for (const [panel, script, exitButton, role] of [
     await import(`${script}?logout=${role}`);
     // The desk rewrites its session on entry; wait for the store to settle.
     await page.waitFor(() => page.window.localStorage.getItem(STAFF_ACCOUNTS[role].sessionKey) !== null);
+    // The Admin portal also re-reads the stored record before it opens, so wait
+    // for the panel itself instead of racing its first render.
+    if (role === 'admin') await page.waitFor(() => page.$('#adminShell').hidden === false, 20000);
     assert.equal(page.window.localStorage.getItem(STAFF_ACCOUNTS[role].sessionKey) !== null, true, 'session was there to begin with');
     page.click(page.$(exitButton));
     assert.equal(page.window.localStorage.getItem(STAFF_ACCOUNTS[role].sessionKey), null);

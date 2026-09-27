@@ -17,8 +17,10 @@ import { provisionStaff, seedStaffSession, STAFF_TEST_PASSWORD } from './staff-h
 import { createStaff, listStaff, setStaffStatus, resetStaffPassword, findDirectoryStaffByUsername } from '../js/staff-directory.js';
 
 const DEMO_OFF = { 'activePlus.demo.autofill.v1': 'off' };
-const STAFF_USERNAME = 'second.teacher.apc';
 const STAFF_PASSWORD = 'Teacher-2026';
+/* The Login User ID is generated from the name + role — never typed — so the
+   tests read it back from the record the data layer created. */
+let STAFF_USERNAME = null;
 
 let ctx;
 let staffId = null;
@@ -37,8 +39,7 @@ async function openLogin({ create = true } = {}) {
   seedStaffSession(ctx.window, 'admin');
   if (create) {
     const created = await createStaff({
-      fullName: 'দ্বিতীয় শিক্ষক',
-      username: STAFF_USERNAME,
+      fullName: 'দ্বিতীয় শিক্ষক',
       password: STAFF_PASSWORD,
       confirmPassword: STAFF_PASSWORD,
       role: 'teacher',
@@ -47,7 +48,9 @@ async function openLogin({ create = true } = {}) {
     });
     assert.equal(created.ok, true, created.error);
     staffId = created.staff.staffId;
+    STAFF_USERNAME = created.staff.username;
     assert.equal(staffId, 'STF-0005');
+    assert.match(STAFF_USERNAME, /^dbiti[jy]\.teacher\.apc$/);
   }
   return ctx;
 }
@@ -71,14 +74,16 @@ before(async () => {
   await provisionStaff('admin');
   seedStaffSession(ctx.window, 'admin');
   const created = await createStaff({
-    fullName: 'দ্বিতীয় শিক্ষক',
-    username: STAFF_USERNAME,
+    fullName: 'দ্বিতীয় শিক্ষক',
     password: STAFF_PASSWORD,
     confirmPassword: STAFF_PASSWORD,
     role: 'teacher'
   });
   assert.equal(created.ok, true, created.error);
   assert.equal(created.staff.staffId, 'STF-0005');
+  // Generated from the name and the role — never typed by anybody.
+  assert.match(created.staff.username, /^dbiti[jy]\.teacher\.apc$/);
+  STAFF_USERNAME = created.staff.username;
 });
 
 test('a Staff Management account signs in and replaces its temporary password', async () => {
@@ -120,7 +125,7 @@ test('a deactivated staff member cannot sign in — and Admin can turn it back o
   // The identity itself is untouched — only the login gate changed.
   const still = (await listStaff()).find(entry => entry.staffId === staffId);
   assert.equal(still.status, 'inactive');
-  assert.equal(still.fullName, 'দ্বিতীয় শিক্ষক');
+  assert.equal(still.fullName, 'দ্বিতীয় শিক্ষক');
 
   assert.equal((await setStaffStatus(staffId, 'active')).ok, true);
   await signIn(STAFF_USERNAME, STAFF_PASSWORD, () => Boolean(ctx.$('.staff-pw-backdrop')));

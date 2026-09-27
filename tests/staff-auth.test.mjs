@@ -97,13 +97,22 @@ test('first Admin creates one complete active owner profile with a unique case-i
   assert.equal(rawIndex['rahim.admin.apc'], 'staff:admin');
 });
 
-test('initial Admin rejects a username already claimed by a learner, irrespective of case', async () => {
+/* The Login User ID is always generated, so it can never collide: when a
+   learner already owns "rahim.admin.apc" the Admin simply gets the next number
+   on the FIRST NAME ("rahim2.admin.apc"). A username passed by a caller — even
+   in a different case — is ignored. */
+test('a generated Login User ID never collides with a learner who claimed the same name', async () => {
   const browser = freshBrowser();
   browser.localStorage.setItem('active-plus-usernames-v1', JSON.stringify({ 'rahim.admin.apc': 'student:123' }));
   const result = await createInitialAdmin({ fullName: 'Rahim Ahmed', mobile: '01711223344', username: 'RAHIM.ADMIN.APC', password: PASSWORD, confirmPassword: PASSWORD });
-  assert.equal(result.ok, false);
-  assert.match(result.error, /ইতিমধ্যে ব্যবহৃত/);
-  assert.equal(await readStaffAccount('admin'), null);
+  assert.equal(result.ok, true, result.error);
+  const account = await readStaffAccount('admin');
+  assert.equal(account.username, 'rahim2.admin.apc');
+  // The learner keeps its own claim; nothing is overwritten.
+  const rawIndex = JSON.parse(browser.localStorage.getItem('active-plus-usernames-v1'));
+  assert.equal(rawIndex['rahim.admin.apc'], 'student:123');
+  assert.equal(rawIndex['rahim2.admin.apc'], 'staff:admin');
+  assert.equal(await resolveStaffRoleByUsername('RAHIM2.ADMIN.APC'), 'admin');
 });
 
 test('wrong usernames are rejected before any password is read', async () => {

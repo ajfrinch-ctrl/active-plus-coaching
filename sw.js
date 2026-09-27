@@ -1,4 +1,4 @@
-const CACHE_NAME = 'active-plus-student-v71-admin-staff-management';
+const CACHE_NAME = 'active-plus-student-v72-first-admin-user-id';
 const APP_SHELL = [
   './offline-roles.html',
   './css/offline-roles.css',
@@ -144,6 +144,7 @@ const APP_SHELL = [
   './js/admin-panel-ui.js',
   './js/staff-directory.js',
   './js/staff-management.js',
+  './js/user-id.js',
   './js/admin-panel-ui.js'
 ];
 
