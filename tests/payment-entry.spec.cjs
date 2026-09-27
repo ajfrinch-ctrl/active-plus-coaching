@@ -52,6 +52,7 @@ test('the desk collects with keypad, method pills and the sticky bar', async ({ 
   await page.goto('/payment.html');
   await page.locator('#payLoginForm button[type=submit]').click();
   await expect(page.locator('#payShell')).toBeVisible();
+  const approvedCollectionBefore = await page.locator('#payTodayAmount').textContent();
 
   // One tap, no typing: a student with dues comes from the quick picks.
   await expect(page.locator('#payQuickPicks .pay-pick').first()).toBeVisible();
@@ -78,10 +79,11 @@ test('the desk collects with keypad, method pills and the sticky bar', async ({ 
   await expect(page.locator('#payReceiptBackdrop')).toBeVisible();
   await expect(page.locator('#payReceiptBody')).toContainText('৳৭০০');
 
-  // Today's summary and activity list pick the collection up.
+  // The entry appears in activity but only counts as collection after Manager approval.
   await page.locator('#payReceiptClose').click();
   await expect(page.locator('#payTodayList .pay-activity-row').first()).toBeVisible();
-  await expect(page.locator('#payTodayAmount')).not.toHaveText('৳০');
+  await expect(page.locator('#payTodayAmount')).toHaveText(approvedCollectionBefore);
+  await expect(page.locator('#payTodayCount')).toContainText('১ অপেক্ষমাণ');
 
   const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('activePlus.admin.transactions.v1')));
   const added = stored.find(tx => tx.amount === 700 && tx.method === 'বিকাশ (bKash)');

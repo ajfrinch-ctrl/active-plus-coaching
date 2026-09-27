@@ -1,0 +1,132 @@
+/* Student home dashboard inspired by the supplied Active Plus mobile reference. */
+.student-topbar {
+  z-index: 40;
+  height: calc(86px + env(safe-area-inset-top, 0px));
+  padding: env(safe-area-inset-top, 0px) 18px 0;
+  border-bottom: 1px solid #e5eee5;
+  background: rgba(255,255,255,.97);
+  box-shadow: 0 3px 15px rgba(28,70,42,.07);
+}
+.student-identity { min-width: 0; gap: 12px; }
+.student-identity img { width: 54px; height: 54px; flex: 0 0 54px; border-radius: 50%; object-fit: cover; }
+.student-identity span { min-width: 0; }
+.student-identity strong { display:block; max-width: 190px; overflow:hidden; color:#145c2d; font-size:20px; font-weight:800; line-height:1.25; text-overflow:ellipsis; white-space:nowrap; }
+.student-identity small { display:block; max-width:190px; overflow:hidden; margin-top:4px; color:#66736b; font-size:12px; font-weight:600; text-overflow:ellipsis; white-space:nowrap; }
+.student-header-tools { display:flex; align-items:center; gap:7px; flex:0 0 auto; }
+.student-date { display:flex; align-items:flex-start; gap:7px; color:#285b36; }
+.student-date svg { width:20px; height:20px; flex:0 0 20px; margin-top:2px; fill:none; stroke:currentColor; stroke-width:2; }
+.student-date span { display:flex; flex-direction:column; min-width:0; }
+.student-date strong { color:#3c4d41; font-size:12px; font-weight:700; white-space:nowrap; }
+.student-date small { margin-top:3px; color:#778078; font-size:10px; white-space:nowrap; }
+.student-topbar .notification-button { width:36px; height:40px; flex:0 0 36px; border:0; background:transparent; box-shadow:none; }
+.student-topbar .notification-button svg { width:20px; height:20px; }
+.app-shell:not(.is-pending) .app-main { padding:16px 14px calc(26px + var(--safe-bottom)); background:linear-gradient(180deg,#f3f9ef,#f8fbf6 55%,#f0f7ee); }
+.student-home-view { display:none; }
+.student-home-view.active { display:block; }
+.study-progress-card {
+  overflow:hidden; border:1px solid #d9ead8; border-radius:19px; background:#fff;
+  box-shadow:0 5px 14px rgba(29,79,42,.10);
+}
+.study-progress-top {
+  display:flex; align-items:center; gap:12px; min-height:112px; padding:15px 17px;
+  background:linear-gradient(110deg,#eff9ed,#f7fbf2 70%,#fff);
+}
+.study-progress-icon,.dashboard-feature-icon {
+  display:grid; place-items:center; width:54px; height:54px; flex:0 0 54px;
+  border:1px solid #d9eddb; border-radius:50%; color:#16733a; background:#f8fff6;
+}
+.study-progress-icon svg { width:27px; height:27px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.study-progress-heading { min-width:0; flex:1; }
+.study-progress-heading p { margin:0 0 2px; color:#647267; font-size:11px; }
+.study-progress-heading h1 { margin:0; color:#14582b; font-size:21px; font-weight:800; line-height:1.25; }
+.progress-ring {
+  --progress:0deg; position:relative; display:grid; place-items:center; width:82px; height:82px; flex:0 0 82px;
+  border-radius:50%; background:conic-gradient(#16863e 0deg var(--progress),#dfe8e1 var(--progress) 360deg);
+}
+.progress-ring::before { content:""; position:absolute; inset:7px; border-radius:50%; background:#fff; }
+.progress-ring > div { position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; }
+.progress-ring strong { color:#176232; font-size:19px; line-height:1.15; }
+.progress-ring small { color:#526257; font-size:10px; }
+.study-progress-stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); padding:12px 7px 10px; }
+.study-progress-stats > div { display:flex; min-width:0; align-items:center; justify-content:center; gap:8px; padding:2px 6px; }
+.study-progress-stats > div + div { border-left:1px solid #e1e9e2; }
+.study-progress-stats svg { width:24px; height:24px; flex:0 0 24px; fill:none; stroke:#188044; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.study-progress-stats span { display:flex; min-width:0; flex-direction:column; }
+.study-progress-stats strong { color:#29382d; font-size:12px; font-weight:800; white-space:nowrap; }
+.study-progress-stats small { margin-top:2px; color:#778078; font-size:10px; white-space:nowrap; }
+.study-progress-note { margin:0; padding:0 15px 10px; color:#78817a; font-size:10px; text-align:center; }
+.dashboard-section { margin-top:19px; }
+.dashboard-section-heading { display:flex; align-items:center; justify-content:space-between; gap:10px; margin:0 3px 9px; }
+.dashboard-section-heading h2 { display:flex; align-items:center; gap:6px; margin:0; color:#155c2e; font-size:18px; font-weight:800; }
+.dashboard-text-link { display:flex; align-items:center; gap:5px; padding:5px 2px; border:0; color:#1d6736; background:transparent; font:inherit; font-size:12px; font-weight:700; white-space:nowrap; }
+.dashboard-text-link span { font-size:22px; line-height:14px; }
+.dashboard-routine-list { display:grid; gap:7px; }
+.dashboard-routine-card,.dashboard-empty-card {
+  display:flex; align-items:center; gap:10px; min-height:76px; padding:10px 12px;
+  border:1px solid #e3ebe3; border-radius:17px; background:#fff;
+  box-shadow:0 3px 9px rgba(37,67,40,.07);
+}
+.dashboard-routine-icon,.dashboard-empty-icon {
+  display:grid; place-items:center; width:48px; height:48px; flex:0 0 48px;
+  border-radius:14px; color:#155f2d; background:#edf8e9;
+}
+.dashboard-routine-icon svg,.dashboard-empty-icon svg { width:27px; height:27px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.dashboard-routine-icon.tone-1 { color:#2d5590; background:#eaf2ff; }
+.dashboard-routine-icon.tone-2 { color:#5b4388; background:#f2edfb; }
+.dashboard-routine-main { display:flex; min-width:0; flex:1; flex-direction:column; align-items:flex-start; }
+.dashboard-routine-main > strong { max-width:100%; overflow:hidden; color:#252f28; font-size:15px; font-weight:800; text-overflow:ellipsis; white-space:nowrap; }
+.dashboard-routine-main > small { max-width:100%; overflow:hidden; margin-top:1px; color:#636d65; font-size:11px; text-overflow:ellipsis; white-space:nowrap; }
+.dashboard-time-pill { display:inline-block; margin-top:3px; padding:1px 8px; border-radius:99px; color:#1a6634; background:#edf8ea; font-size:10px; font-weight:700; }
+.dashboard-routine-status { display:flex; flex:0 0 auto; align-items:center; gap:5px; color:#68726a; font-size:10px; white-space:nowrap; }
+.dashboard-routine-status i { width:8px; height:8px; border-radius:50%; background:#92a197; }
+.dashboard-empty-card { min-height:68px; }
+.dashboard-empty-card > span:nth-child(2) { display:flex; min-width:0; flex:1; flex-direction:column; }
+.dashboard-empty-card strong { color:#354438; font-size:13px; }
+.dashboard-empty-card small { margin-top:3px; color:#758078; font-size:11px; }
+.dashboard-empty-card button,.challenge-open { width:38px; height:38px; border:0; border-radius:12px; color:#176333; background:#edf7ef; font-size:26px; }
+.dashboard-exam-card,.dashboard-fee-card {
+  display:flex; align-items:center; gap:11px; margin-top:12px; padding:13px;
+  border:1px solid #dcebdd; border-radius:17px; background:#f3faf1;
+}
+.exam-feature-icon { width:46px; height:46px; flex-basis:46px; border-radius:13px; background:#eaf6e8; }
+.dashboard-feature-icon svg { width:24px; height:24px; fill:none; stroke:currentColor; stroke-width:1.9; }
+.dashboard-feature-copy { display:flex; min-width:0; flex:1; flex-direction:column; }
+.dashboard-feature-copy strong { overflow:hidden; color:#155c2e; font-size:14px; font-weight:800; text-overflow:ellipsis; white-space:nowrap; }
+.dashboard-feature-copy small { margin-top:3px; color:#707a71; font-size:10px; line-height:1.4; }
+.dashboard-primary-action { display:flex; align-items:center; gap:6px; min-height:42px; padding:0 12px; border:0; border-radius:12px; color:#fff; background:#087b3b; font:inherit; font-size:11px; font-weight:800; white-space:nowrap; }
+.dashboard-fee-card { border-color:#f1e2bb; background:#fffaf0; }
+.fee-alert-icon { display:grid; place-items:center; width:44px; height:44px; flex:0 0 44px; border-radius:50%; color:#fff; background:#e7a10d; font-size:22px; font-weight:800; }
+.dashboard-fee-card .dashboard-feature-copy strong { color:#b65120; }
+.dashboard-fee-amount { color:#bf4d1c; font-size:19px; font-weight:900; white-space:nowrap; }
+.dashboard-fee-card.is-paid { border-color:#dcebdd; background:#f2faf2; }
+.dashboard-fee-card.is-paid .fee-alert-icon { background:#268749; }
+.dashboard-fee-card.is-paid .dashboard-feature-copy strong,.dashboard-fee-card.is-paid .dashboard-fee-amount { color:#1e7138; }
+.challenge-star { color:#218446; font-size:21px; }
+.challenge-card { display:flex; align-items:center; gap:11px; min-height:88px; padding:12px; border:1px solid #e2ebe1; border-radius:17px; background:#fff; box-shadow:0 3px 9px rgba(37,67,40,.07); }
+.challenge-icon { display:grid; place-items:center; width:48px; height:48px; flex:0 0 48px; border-radius:14px; color:#fff; background:#328544; }
+.challenge-icon svg { width:25px; height:25px; fill:none; stroke:currentColor; stroke-width:1.8; }
+.challenge-copy { display:flex; min-width:0; flex:1; flex-direction:column; }
+.challenge-copy strong { overflow:hidden; color:#1b3424; font-size:13px; font-weight:800; text-overflow:ellipsis; white-space:nowrap; }
+.challenge-copy small { overflow:hidden; margin-top:3px; color:#6d776f; font-size:10px; text-overflow:ellipsis; white-space:nowrap; }
+.challenge-progress-track { display:block; height:6px; margin-top:9px; overflow:hidden; border-radius:99px; background:#e3e8e4; }
+.challenge-progress-track i { display:block; width:0; height:100%; border-radius:inherit; background:#218542; transition:width .3s ease; }
+.challenge-card.is-complete .challenge-icon { background:#16854a; }
+.dashboard-empty { margin:0; padding:16px; border:1px solid #e2ebe1; border-radius:16px; color:#68756b; background:#fff; font-size:12px; }
+@media(max-width:360px) {
+  .student-topbar { padding-right:10px; padding-left:12px; }
+  .student-identity { gap:8px; }
+  .student-identity img { width:44px; height:44px; flex-basis:44px; }
+  .student-identity strong { max-width:105px; font-size:16px; }
+  .student-identity small { max-width:105px; font-size:10px; }
+  .student-date { gap:4px; }
+  .student-date svg { width:17px; height:17px; flex-basis:17px; }
+  .student-date strong { font-size:10px; }
+  .student-date small { font-size:9px; }
+  .student-topbar .notification-button { flex-basis:30px; width:30px; }
+  .study-progress-top { gap:8px; padding:12px; }
+  .study-progress-icon { width:44px; height:44px; flex-basis:44px; }
+  .study-progress-heading h1 { font-size:17px; }
+  .progress-ring { width:70px; height:70px; flex-basis:70px; }
+  .study-progress-stats > div { flex-direction:column; gap:4px; text-align:center; }
+  .dashboard-routine-status { display:none; }
+}

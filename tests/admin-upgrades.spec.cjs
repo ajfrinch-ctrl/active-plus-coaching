@@ -17,8 +17,7 @@ async function bottom(page, view) {
 test('dashboard shows today and this-month money summary with a details shortcut', async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-09-22T12:00:00Z'));
   await enter(page);
-  await expect(page.locator('#dashTodayAmount')).toHaveText('৳৩,০০০');
-  await expect(page.locator('#dashTodaySub')).toHaveText('২ টি লেনদেন');
+  await expect(page.locator('#dashTransactionCount')).toHaveText('৭ টি');
   await expect(page.locator('#dashMonthAmount')).toHaveText('৳৫,৮০০');
   await expect(page.locator('#dashMonthSub')).toHaveText('সেপ্টেম্বর ২০২৬');
   await expect(page.locator('#dashMonthDue')).toHaveText('৳১,৫০০');
@@ -91,10 +90,10 @@ test('student management hides personal info until selected and supports editing
   await expect(page.locator('#adminModalBody')).toContainText('০১৭১১১১১১১১');
   await page.keyboard.press('Escape');
   await bottom(page, 'finance');
-  await page.locator('#feeStudentSearch').fill('রাইসা');
-  await page.locator('.fee-search-result').first().click();
-  await expect(page.locator('#feeQuickProfile')).toContainText('রাইসা ইসলাম (সম্পাদিত)');
-  await expect(page.locator('.fee-balance-grid dd').first()).toHaveText('৳২,০০০');
+  await page.locator('[data-finance-tab=students]').click();
+  await page.locator('#ledgerSearch').fill('রাইসা');
+  await expect(page.locator('#studentLedgerList')).toContainText('রাইসা ইসলাম (সম্পাদিত)');
+  await expect(page.locator('#studentLedgerList [data-action=quick-collect]')).toHaveCount(0);
   await bottom(page, 'students');
   await expect(page.locator('#studentList')).not.toContainText('01711111111');
 });

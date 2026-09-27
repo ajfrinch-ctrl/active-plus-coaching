@@ -3,11 +3,13 @@ import { loadAccount } from './storage.js';
 import { $, $$, scrollToTop, toBanglaNumber } from './ui.js';
 
 export function renderStudent(student) {
-  const firstName = String(student.name || 'শিক্ষার্থী').trim().split(/\s+/)[0] || 'শিক্ষার্থী';
+  const fullName = String(student.name || student.nameBn || 'শিক্ষার্থী').trim() || 'শিক্ষার্থী';
+  const firstName = fullName.split(/\s+/)[0] || 'শিক্ষার্থী';
   const initial = firstName.charAt(0) || 'শি';
   const meta = [student.className, student.group].filter(Boolean).join(' · ') || 'শ্রেণি এখনও যোগ হয়নি';
 
-  $('#studentName') && ($('#studentName').textContent = firstName);
+  $('#studentName') && ($('#studentName').textContent = fullName);
+  $('#studentHeaderMeta') && ($('#studentHeaderMeta').textContent = meta);
   $('#avatarInitial') && ($('#avatarInitial').textContent = initial);
   $('#profileAvatar') && ($('#profileAvatar').textContent = initial);
   $('#profileName') && ($('#profileName').textContent = student.name);
@@ -60,6 +62,10 @@ export function setView(viewName) {
   const panel = document.getElementById(`${viewName}View`);
   if (!panel) return;
   $$('[data-view-panel]').forEach(item => item.classList.toggle('active', item === panel));
-  $$('.bottom-link').forEach(item => item.classList.toggle('active', item.dataset.view === (viewName === 'exams' ? 'courses' : viewName)));
+  $$('.bottom-link').forEach(item => {
+    const active = item.dataset.view === (viewName === 'exams' ? 'courses' : viewName);
+    item.classList.toggle('active', active);
+    if (active) item.setAttribute('aria-current', 'page'); else item.removeAttribute('aria-current');
+  });
   scrollToTop();
 }

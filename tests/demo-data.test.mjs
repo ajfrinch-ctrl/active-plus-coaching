@@ -3,10 +3,13 @@ import assert from 'node:assert/strict';
 import { buildDemoExams, buildDemoTeaching } from '../js/demo-data.js';
 import { examRepository, EXAM_KEY } from '../js/exam-data.js';
 import { teachingRepository, TEACHING_KEY } from '../js/teaching-data.js';
+import { enabledClasses } from '../js/config.js';
+import { TEACHER_ASSIGNMENTS_KEY } from '../js/teacher-assignments.js';
 for (const date of ['2026-09-22T10:00:00Z','2027-01-01T00:10:00Z']) {
   test(`demo fixtures validate and remain useful across date boundaries: ${date}`,async()=>{
     const now=Date.parse(date), exams=buildDemoExams(now), activities=buildDemoTeaching(now);
-    const store=new Map([[EXAM_KEY,JSON.stringify({version:1,...exams})],[TEACHING_KEY,JSON.stringify({version:1,activities})]]);
+    const assignments=enabledClasses.map((className,index)=>({id:`TAS-${index}`,teacherUsername:'teacher.apc',teacherName:'Test Teacher',className,group:'',subject:'Test'}));
+    const store=new Map([[EXAM_KEY,JSON.stringify({version:1,...exams})],[TEACHING_KEY,JSON.stringify({version:1,activities})],[TEACHER_ASSIGNMENTS_KEY,JSON.stringify(assignments)]]);
     globalThis.window={localStorage:{getItem:key=>store.get(key)??null}};
     const db=await examRepository.list(); assert.equal(db.exams.length,8); assert.equal(db.attempts.length,7);
     assert.equal((await teachingRepository.list()).activities.length,5);

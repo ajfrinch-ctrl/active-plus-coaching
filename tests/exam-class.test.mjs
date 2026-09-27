@@ -7,6 +7,7 @@ import { EXAM_KEY, examTemplate, examMatchesClass, validateExam, MANAGER_ACTOR }
 import { enabledClasses } from '../js/config.js';
 import { adminStudents } from '../js/admin-data.js';
 import { ROSTER_KEY } from '../js/office-data.js';
+import { TEACHER_ASSIGNMENTS_KEY } from '../js/teacher-assignments.js';
 import { STAFF_ACCOUNTS } from '../js/staff-auth.js';
 import { STAFF_TEST_PASSWORD, provisionStaff, completeStaffPasswordDialog } from './staff-harness.mjs';
 
@@ -21,11 +22,12 @@ const honours = adminStudents.find(s => s.id === '260716011');        // অন�
 
 before(async () => {
   ctx = await loadPage('teacher.html', {
-    seed: { 'activePlus.demo.autofill.v1': 'off', [ROSTER_KEY]: JSON.stringify(adminStudents) }
+    seed: { 'activePlus.demo.autofill.v1': 'off', [ROSTER_KEY]: JSON.stringify(adminStudents), [TEACHER_ASSIGNMENTS_KEY]: JSON.stringify(enabledClasses.map((className, index) => ({ id: `TAS-${index}`, teacherUsername: 'teacher.apc', teacherName: 'Test Teacher', className, group: '', subject: 'Test' }))) }
   });
   repo = (await import('../js/exam-data.js')).examRepository;
   await import('../js/teacher.js');
   await provisionStaff('teacher');
+  await provisionStaff('manager');
   ctx.type($('#teacherLoginUser'), STAFF_ACCOUNTS.teacher.username);
   ctx.type($('#teacherLoginPin'), STAFF_TEST_PASSWORD);
   ctx.click($('#teacherEnter'));
@@ -33,6 +35,7 @@ before(async () => {
   await ctx.waitFor(() => Boolean($('.staff-pw-backdrop')) || $('#teacherShell').hidden === false);
   if ($('.staff-pw-backdrop')) await completeStaffPasswordDialog(ctx);
   await ctx.waitFor(() => $('#teacherShell').hidden === false);
+  ctx.window.sessionStorage.setItem(STAFF_ACCOUNTS.manager.sessionKey, '1');
   ctx.click($('[data-teacher-view="online-exams"]'));
   ctx.click($('#teacherExamWorkspace [data-exam-action="new-mcq"]'));
 });
@@ -85,7 +88,7 @@ test('only that class can start the published exam', async () => {
   db.exams[0].endAt = Date.now() + 3600000;
   write(db);
 
-  await assert.rejects(() => repo.startAttempt(id, honours), /তোমার শ্রেণির জন্য নয়/);
+  await assert.rejects(() => repo.startAttempt(id, honours), /অনুমোদিত participant/);
   const after = await repo.startAttempt(id, tenth);
   assert.ok(after.attempts.some(a => a.examId === id && a.studentId === tenth.id), 'the class it was made for can sit it');
 });

@@ -1,4 +1,4 @@
-import { examRepository as repo, examMatchesClass, retryEligibility, firstAttemptMean, examResults, totalMarks, watchExams } from './exam-data.js';
+import { examRepository as repo, examMatchesStudent, retryEligibility, firstAttemptMean, examResults, totalMarks, watchExams } from './exam-data.js';
 import { examMeta, resultMarkup, esc, num } from './exam-ui.js';
 import { downloadExamPDF } from './exam-pdf.js';
 
@@ -18,14 +18,14 @@ export function initStudentExams({ getStudent, getAccount }) {
   function list() {
     view = 'list'; examId = null; attemptId = null;
     if (!activeAccount()) { content.innerHTML = '<p class="exam-card">অনুমোদিত অ্যাকাউন্ট দিয়ে লগইন করতে হবে।</p>'; return; }
-    const exams = db.exams.filter(e => e.status === 'published' && examMatchesClass(e, getStudent().className)).sort((a, b) => b.startAt - a.startAt), now = Date.now();
+    const exams = db.exams.filter(e => e.status === 'published' && examMatchesStudent(e, getStudent())).sort((a, b) => b.startAt - a.startAt), now = Date.now();
     content.innerHTML = `<div class="exam-actions">${button('refresh', 'তালিকা / জমার অবস্থা হালনাগাদ')}</div><div class="exam-list">${exams.map(e => {
       const attempts = own(e), active = attempts.find(a => a.status === 'active'), queued = attempts.some(a => a.status === 'queued');
       const canFirst = !attempts.length && now >= e.startAt && now < e.endAt && now <= e.startAt + e.lateMinutes * 60000;
       const retry = retryEligibility(db, e, getStudent().id);
       return `<article class="exam-card" data-student-exam="${esc(e.id)}">${examMeta(e)}<p class="exam-note">${esc(e.instructions)}</p>${e.type === 'mcq' ? `<p class="exam-note">সব প্রশ্ন একসঙ্গে থাকবে। প্রতি ভুলে ${num(e.negative)} নম্বর কাটা হবে; সর্বনিম্ন মোট ০। প্রথম প্রবেশের সীমা ${num(e.lateMinutes)} মিনিট।</p>${queued ? '<p class="exam-message">উত্তর ফোনে সংরক্ষিত—অনলাইনে এলে জমা হবে।</p>' : ''}` : ''}
         <div class="exam-actions">${e.type === 'mcq' ? active && now < e.endAt ? button('resume', 'পরীক্ষায় ফিরে যাও', e.id, 'primary') : canFirst ? button('start', 'পরীক্ষা শুরু করো', e.id, 'primary') : retry ? button('start', 'দ্বিতীয়বার পরীক্ষা দাও', e.id, 'primary') : `<small>${now < e.startAt ? 'নির্ধারিত সময়ে পরীক্ষা শুরু হবে।' : now >= e.endAt ? 'পরীক্ষার সময় শেষ।' : attempts.length ? 'চলমান গড়ের নিচে হলে দ্বিতীয় সুযোগ এখানে আসবে।' : 'প্রথম প্রবেশের সময়সীমা শেষ।'}</small>` : now >= e.startAt ? button('paper', 'প্রশ্নপত্র PDF ডাউনলোড', e.id, 'primary') : '<small>শুরুর সময় হলে PDF পাওয়া যাবে।</small>'}
-        ${button('results', 'সবার ফলাফল', e.id)}${e.type === 'mcq' && now >= e.endAt ? button('solutions', 'সঠিক উত্তরসহ PDF', e.id) : ''}</div></article>`;
+        ${e.resultsPublished ? button('results', 'প্রকাশিত ফলাফল', e.id) : '<small>ফলাফল Manager-এর প্রকাশের অপেক্ষায়।</small>'}${e.type === 'mcq' && now >= e.endAt ? button('solutions', 'সঠিক উত্তরসহ PDF', e.id) : ''}</div></article>`;
     }).join('') || '<p class="exam-card">Admin এখনও কোনো পরীক্ষা প্রকাশ করেননি।</p>'}</div>`;
   }
   function activeExam(e, a) {
@@ -42,6 +42,7 @@ export function initStudentExams({ getStudent, getAccount }) {
     clock(); scrollTop();
   }
   function results(e, reset = true) {
+    if (!e.resultsPublished) { view = 'list'; examId = null; attemptId = null; list(); message('ফলাফল এখনো Manager প্রকাশ করেননি।'); return; }
     view = 'results'; examId = e.id; attemptId = null;
     const mine = own(e), pending = mine.some(a => a.status === 'queued'), mean = firstAttemptMean(db, e.id);
     content.innerHTML = `<div class="exam-actions">${button('list', '← পরীক্ষার তালিকা')}${button('refresh', 'হালনাগাদ')}</div>${examMeta(e)}
@@ -89,7 +90,7 @@ export function initStudentExams({ getStudent, getAccount }) {
   }
   async function automaticPDF() {
     if (busy || pdfBusy || !ready || !activeAccount() || document.querySelector('#appShell').hidden || document.visibilityState !== 'visible') return;
-    for (const e of db.exams.filter(e => e.type === 'mcq' && e.status === 'published' && examMatchesClass(e, getStudent().className) && Date.now() >= e.endAt && own(e).some(a => !a.demoFixture))) {
+    for (const e of db.exams.filter(e => e.type === 'mcq' && e.status === 'published' && examMatchesStudent(e, getStudent()) && Date.now() >= e.endAt && own(e).some(a => !a.demoFixture))) {
       const key = `activePlus.examPDF.${e.id}.${getStudent().id}`;
       let done = false; try { done = window.localStorage.getItem(key) === 'started'; } catch { /* Manual download remains available. */ }
       if (done || autoTried.has(key)) continue;

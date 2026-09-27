@@ -4,18 +4,23 @@ import { examRepository as repo, EXAM_KEY, examTemplate, parseQuestions, MCQ_MAR
 import { pagesPDF } from '../js/exam-pdf.js';
 import { adminStudents } from '../js/admin-data.js';
 import { ROSTER_KEY } from '../js/office-data.js';
+import { enabledClasses } from '../js/config.js';
+import { TEACHER_ASSIGNMENTS_KEY } from '../js/teacher-assignments.js';
+import { STAFF_ACCOUNTS } from '../js/staff-auth.js';
 const realNow = Date.now;
 let clock;
 const start = new Date('2026-10-01T10:00:00Z').getTime(), end = start + 3600000;
 const [one, two, three] = adminStudents.filter(s => s.status === 'approved');
 function setup() {
-  const store = new Map([[ROSTER_KEY, JSON.stringify(adminStudents)]]); let fail = false, events = 0;
+  const assignments = enabledClasses.map((className, index) => ({ id: `TAS-${index}`, teacherUsername: 'teacher.apc', teacherName: 'Test Teacher', className, group: '', subject: 'Test' }));
+  const store = new Map([[ROSTER_KEY, JSON.stringify(adminStudents)], [TEACHER_ASSIGNMENTS_KEY, JSON.stringify(assignments)], [STAFF_ACCOUNTS.teacher.accountKey, JSON.stringify({ role: 'teacher', username: 'teacher.apc', fullName: 'Test Teacher', status: 'active' })], [STAFF_ACCOUNTS.manager.accountKey, JSON.stringify({ role: 'manager', username: 'manager.apc', fullName: 'Test Manager', status: 'active' })]]); let fail = false, events = 0;
   clock = start - 3600000; Date.now = () => clock;
   Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { onLine: true } });
-  globalThis.window = { localStorage: { getItem: key => store.get(key) ?? null, setItem: (key, value) => { if (fail) throw new Error('quota'); store.set(key, value); } }, dispatchEvent: () => events++ };
+  const sessions = new Map([[STAFF_ACCOUNTS.teacher.sessionKey, '1'], [STAFF_ACCOUNTS.manager.sessionKey, '1']]);
+  globalThis.window = { localStorage: { getItem: key => store.get(key) ?? null, setItem: (key, value) => { if (fail) throw new Error('quota'); store.set(key, value); } }, sessionStorage: { getItem: key => sessions.get(key) ?? null, setItem: (key, value) => sessions.set(key, value), removeItem: key => sessions.delete(key) }, dispatchEvent: () => events++ };
   return { store, fail: () => { fail = true; }, get events() { return events; } };
 }
-const fields = (extra = {}) => ({ title: 'গণিত মূল্যায়ন', subject: 'গণিত', type: 'mcq', startAt: start, endAt: end, lateMinutes: 10, negative: .5, passPercent: 33, template: examTemplate('mcq'), ...extra });
+const fields = (extra = {}) => ({ title: 'গণিত মূল্যায়ন', subject: 'গণিত', className: 'দশম শ্রেণি', type: 'mcq', startAt: start, endAt: end, lateMinutes: 10, negative: .5, passPercent: 33, template: examTemplate('mcq'), ...extra });
 async function publish(extra = {}) {
   let db = await repo.saveDraft(fields(extra)); const id = db.exams[0].id;
   await repo.requestApproval(id); db = await repo.review(id, 'publish', {}, MANAGER_ACTOR); return db.exams[0];
@@ -38,6 +43,23 @@ test('MCQ marks are fixed at 1; written/short keep their own weights; malformed 
   for (const text of ['', 'প্রশ্ন: x', examTemplate('mcq').replace('উত্তর: A', 'উত্তর: E'), withMarks, examTemplate('mcq').replace('B: চট্টগ্রাম', 'B: ঢাকা'), examTemplate('mcq') + '\nউত্তর: B']) assert.throws(() => parseQuestions(text, 'mcq'));
   assert.throws(() => parseQuestions(examTemplate('mcq'), 'written'));
 });
+test('teacher exam actions and participants are bounded to assigned class/batch', async () => {
+  const env = setup();
+  env.store.set(TEACHER_ASSIGNMENTS_KEY, JSON.stringify([{ id: 'TAS-SCI', teacherUsername: 'teacher.apc', teacherName: 'Test Teacher', className: 'দশম শ্রেণি', group: 'বিজ্ঞান বিভাগ', subject: 'গণিত' }]));
+  await assert.rejects(repo.saveDraft(fields({ group: '' })), /assignment নেই/);
+  await assert.rejects(repo.saveDraft(fields({ className: 'অনার্স ১ম বর্ষ', group: 'বাংলা' })), /assignment নেই/);
+  let db = await repo.saveDraft(fields({ group: 'বিজ্ঞান' }));
+  const id = db.exams[0].id;
+  await repo.requestApproval(id);
+  db = await repo.review(id, 'publish', {}, MANAGER_ACTOR);
+  assert.ok(db.exams[0].participants.every(person => person.className === 'দশম শ্রেণি'));
+  assert.ok(db.exams[0].participants.every(person => person.id === one.id || person.id === two.id));
+  const teacherDb = await repo.list(TEACHER_ACTOR);
+  assert.equal(teacherDb.exams.length, 1);
+  await assert.rejects(repo.saveDraft(fields({ id, group: 'মানবিক' })), /assignment নেই/);
+  await assert.rejects(repo.markWrittenAbsent(id, three));
+});
+
 test('teacher drafts → submit → Manager rejection/edit/approval; no premature publication', async () => {
   setup(); let db = await repo.saveDraft(fields()); const id = db.exams[0].id;
   assert.equal(db.exams[0].status, 'draft');
@@ -50,7 +72,7 @@ test('teacher drafts → submit → Manager rejection/edit/approval; no prematur
   db = await repo.review(id, 'reject', { note: 'প্রশ্ন সংশোধন করুন' }, MANAGER_ACTOR); assert.equal(db.exams[0].status, 'rejected');
   db = await repo.saveDraft({ ...fields(), id }); assert.equal(db.exams[0].status, 'draft');
   await repo.requestApproval(id); db = await repo.review(id, 'publish', { negative: 1 }, MANAGER_ACTOR);
-  assert.equal(db.exams[0].negative, 1); assert.equal(db.exams[0].status, 'published'); assert.ok(db.exams[0].participants.length >= 4);
+  assert.equal(db.exams[0].negative, 1); assert.equal(db.exams[0].status, 'published'); assert.equal(db.exams[0].participants.every(person => person.className === 'দশম শ্রেণি'), true);
   await assert.rejects(repo.saveDraft({ ...fields(), id })); await assert.rejects(repo.deleteDraft(id));
 });
 test('start/end, late entry, all-class approved students, stable shuffled resume and duplicate starts', async () => {
@@ -59,7 +81,7 @@ test('start/end, late entry, all-class approved students, stable shuffled resume
   assert.deepEqual(new Set(a.order.map(q => q.id)), new Set(e.questions.map(q => q.id)));
   for (const q of a.order) assert.deepEqual(new Set(q.options), new Set(['A', 'B', 'C', 'D']));
   let db = await repo.startAttempt(e.id, one); assert.equal(db.attempts.length, 1); assert.deepEqual(db.attempts[0].order, a.order);
-  await repo.startAttempt(e.id, three); // A different class is not filtered out.
+  await assert.rejects(repo.startAttempt(e.id, three), /অনুমোদিত participant/); // A different class cannot access this exam.
   await assert.rejects(repo.startAttempt(e.id, { id: 'pending' }));
   clock = start + 11 * 60000; await assert.rejects(repo.startAttempt(e.id, two));
   clock = end; await assert.rejects(repo.saveAnswer(a.id, one.id, 'q1', 'A')); await assert.rejects(repo.startAttempt(e.id, two));
@@ -96,6 +118,10 @@ test('written/short next-day physical grading and explicit absence; invalid scor
   clock = new Date('2026-10-02T00:00:00+06:00').getTime(); await repo.markWrittenAbsent(e.id, one);
   let db = await repo.saveWrittenScore(e.id, one, { q1: 4, q2: 2 }); assert.equal(db.attempts[0].score, 6); assert.deepEqual(db.exams[0].absentIds, []);
   await assert.rejects(repo.saveWrittenScore(e.id, one, { q1: 8, q2: 2 })); await assert.rejects(repo.markWrittenAbsent(e.id, one));
+  await assert.rejects(repo.publishResults(e.id), /সব অংশগ্রহণকারীর/);
+  await repo.markWrittenAbsent(e.id, two);
+  db = await repo.publishResults(e.id, MANAGER_ACTOR); assert.equal(db.exams[0].resultsPublished, true);
+  await assert.rejects(repo.saveWrittenScore(e.id, one, { q1: 1, q2: 1 }));
   await assert.rejects(repo.saveWrittenScore(e.id, one, { q1: 1, q2: 1 }, ADMIN_ACTOR));
 });
 test('invalid/corrupt storage and quota failure never reset data or announce success', async () => {

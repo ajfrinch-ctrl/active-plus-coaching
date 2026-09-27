@@ -1,4 +1,6 @@
-import { enabledClasses } from './config.js';
+import { loadRoutine, WEEK_DAYS } from './office-data.js';
+import { readStaffAccount } from './staff-auth.js';
+import { listTeacherAssignments } from './teacher-assignments.js';
 import { authenticateStaff, saveStaffSession, hasStaffSession, clearStaffSession, goToLoginPage } from './staff-auth.js';
 import { openStaffPasswordDialog } from './staff-password-dialog.js';
 import { loadAppConfig } from './storage.js';
@@ -10,7 +12,7 @@ import { teachingRepository, DEMO_TEACHER, ACTIVITY_TYPES, PROGRESS_LABELS, esca
 
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
-const state = { db: { activities: [] }, students: [], view: 'home', homeClass: 'all', status: 'all', ready: false, busy: false, recordLimit: 15 };
+const state = { db: { activities: [] }, students: [], assignments: [], teacher: null, view: 'home', homeClass: 'all', status: 'all', ready: false, busy: false, recordLimit: 15 };
 let modalTrigger, toastTimer;
 initFixedShell();
 initExamManager('#teacherExamWorkspace', 'teacher');
@@ -40,7 +42,7 @@ const isDue = a => String(a.date || '') <= todayISO();
 /** One line of Bengali status per activity; empty string = nothing pending. */
 function pendingNote(a) {
   if (a.status === 'draft') return 'খসড়া — শিক্ষার্থী এখনও দেখবে না';
-  if (a.type === 'suggestion') return '';
+  if (['suggestion', 'exam'].includes(a.type)) return '';
   const stats = progressStats(a);
   // Notebooks students already handed in wait on the teacher even before the deadline.
   if (a.type === 'homework' && stats.toReview) return `${bn(stats.toReview)} জনের খাতা দেখা বাকি`;
@@ -58,7 +60,8 @@ function attentionItems(source = own()) {
     .sort((x, y) => `${y.a.date === today}|${y.a.date}`.localeCompare(`${x.a.date === today}|${x.a.date}`))
     .slice(0, 6);
 }
-const classOptions = value => enabledClasses.map(c => `<option ${c === value ? 'selected' : ''}>${esc(c)}</option>`).join('');
+const assignedClasses = () => [...new Set(state.assignments.map(item => item.className))];
+const classOptions = value => assignedClasses().map(c => `<option value="${esc(c)}" ${c === value ? 'selected' : ''}>${esc(c)}</option>`).join('');
 function activityMeta(a) {
   const date = `${displayDate(a.date)}${a.time ? ' • ' + bn(a.time) : ''}`;
   return `${a.type === 'homework' ? 'শেষ সময়: ' : ''}${date}${a.duration ? ' • ' + bn(a.duration) + ' মিনিট' : ''}${a.totalMarks ? ' • পূর্ণমান ' + bn(a.totalMarks) : ''}`;
@@ -74,9 +77,7 @@ function recordCard(a) {
     <p class="teaching-preview">${esc(a.details)}</p>
     <div class="teaching-actions">
       <button type="button" data-record-action="detail" data-id="${esc(a.id)}">বিস্তারিত</button>
-      <button type="button" data-record-action="edit" data-id="${esc(a.id)}">সম্পাদনা</button>
-      ${a.status === 'published' && ACTIVITY_TYPES[a.type].progress ? `<button class="primary" type="button" data-record-action="progress" data-id="${esc(a.id)}">${ACTIVITY_TYPES[a.type].progress}</button>` : ''}
-      <button class="danger" type="button" data-record-action="delete" data-id="${esc(a.id)}">মুছুন</button>
+      ${a.type !== 'exam' ? `<button type="button" data-record-action="edit" data-id="${esc(a.id)}">সম্পাদনা</button>${a.status === 'published' && ACTIVITY_TYPES[a.type].progress ? `<button class="primary" type="button" data-record-action="progress" data-id="${esc(a.id)}">${ACTIVITY_TYPES[a.type].progress}</button>` : ''}<button class="danger" type="button" data-record-action="delete" data-id="${esc(a.id)}">মুছুন</button>` : '<small>পরীক্ষার approval ও score-entry Examination workflow-এ নিয়ন্ত্রিত</small>'}
     </div></article>`;
 }
 /* Slim card for the home queue: one tap opens the exact work that is pending. */
@@ -120,37 +121,37 @@ function renderTypeCounts() {
   });
 }
 function renderHome() {
+  const hasAssignments = state.assignments.length > 0;
+  $('#teacherAssignmentNotice').hidden = hasAssignments;
+  $('#teacherQuickActions').hidden = !hasAssignments;
   const today = todayISO();
   $('#teacherToday').textContent = displayDate(today);
   const scope = state.homeClass;
   const records = own().filter(a => scope === 'all' || a.className === scope);
   const published = records.filter(a => a.status === 'published');
-  $('#teacherPublishedCount').textContent = bn(published.length);
-  $('#teacherDraftCount').textContent = bn(records.length - published.length);
-  $('#teacherPendingCount').textContent = bn(records.filter(a => pendingNote(a)).length);
-  const todays = published
-    .filter(a => a.date === today && ['routine', 'exam'].includes(a.type))
-    .sort((a, b) => String(a.time || '').localeCompare(String(b.time || '')));
-  $('#teacherTodayClassCount').textContent = bn(todays.length);
+  $('#teacherPublishedCount').textContent = hasAssignments ? bn(published.length) : '—';
+  $('#teacherDraftCount').textContent = hasAssignments ? bn(records.length - published.length) : '—';
+  $('#teacherPendingCount').textContent = hasAssignments ? bn(records.filter(a => pendingNote(a)).length) : '—';
+  const weekday = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'][new Date().getDay()];
+  const todays = (loadRoutine()[weekday]?.classes || []).filter(item => state.assignments.some(assignment => assignment.className === item.className) && (scope === 'all' || item.className === scope)).sort((a, b) => String(a.time || '').localeCompare(String(b.time || '')));
+  $('#teacherTodayClassCount').textContent = hasAssignments ? bn(todays.length) : '—';
   renderTypeCounts();
 
   const items = attentionItems(records);
   $('#teacherAttentionHint').textContent = items.length ? `${bn(items.length)}টি কাজ বাকি${scope === 'all' ? '' : ' • ' + esc(scope)}` : (scope === 'all' ? 'সব কাজ শেষ' : `${esc(scope)} — সব কাজ শেষ`);
   $('#teacherAttention').innerHTML = items.length
     ? items.map(({ a, note }) => queueCard(a, note, a.status === 'published' && ACTIVITY_TYPES[a.type].progress ? ACTIVITY_TYPES[a.type].progress : 'সম্পাদনা করুন')).join('')
-    : '<p class="teacher-empty teacher-all-clear">সব কাজ শেষ — নম্বর, খাতা দেখা ও উপস্থিতি সব নথিভুক্ত আছে।</p>';
+    : hasAssignments ? '<p class="teacher-empty teacher-all-clear">সব কাজ শেষ — নম্বর, খাতা দেখা ও উপস্থিতি সব নথিভুক্ত আছে।</p>' : '<p class="teacher-empty">কোনো assigned class/batch নেই।</p>';
   $('#teacherTodayClasses').innerHTML = todays.length
-    ? todays.map(a => {
-        const note = pendingNote(a);
-        return queueCard(a, note || 'এই ক্লাসের নথিভুক্ত করার মতো কিছু বাকি নেই', ACTIVITY_TYPES[a.type].progress || 'সম্পাদনা করুন', !note);
-      }).join('')
-    : '<p class="teacher-empty">আজ কোনো ক্লাস বা পরীক্ষা নেই।</p>';
-  $('#teacherRecent').innerHTML = records.slice().sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 5).map(recordCard).join('') || '<p class="teacher-empty">এখনও কোনো কাজ যোগ করেননি। উপরের বাটন থেকে প্রথম কাজটি তৈরি করুন।</p>';
+    ? todays.map(item => `<article class="teaching-card"><span class="teaching-kind">Manager routine</span><h3>${esc(item.subject || 'বিষয় উল্লেখ নেই')}</h3><small>${esc(item.className || '')}${item.room ? ` • ${esc(item.room)}` : ''}</small><p>${esc(item.time || 'সময় নির্ধারিত নয়')}</p></article>`).join('')
+    : `<p class="teacher-empty">${hasAssignments ? 'Manager routine-এ আজকের কোনো assigned class schedule নেই।' : 'No Manager assignment.'}</p>`;
+  $('#teacherRecent').innerHTML = records.slice().sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 5).map(recordCard).join('') || `<p class="teacher-empty">${hasAssignments ? 'এখনও কোনো academic কাজ যোগ করা হয়নি।' : 'Assignment না থাকায় academic কাজ দেখানো হচ্ছে না।'}</p>`;
 }
 function renderRecords() {
   if (!ACTIVITY_TYPES[state.view]) return;
   $('#teacherRecordsTitle').textContent = ACTIVITY_TYPES[state.view].plural;
-  $('#teacherRecordsBack').hidden = state.view !== 'suggestion';
+  $('#teacherNewActivity').hidden = state.view === 'exam';
+  $('#teacherRecordsBack').hidden = !['suggestion', 'routine'].includes(state.view);
   $('#teacherOnlineExamHint').hidden = state.view !== 'exam';
   const query = $('#teacherRecordSearch').value.trim().toLocaleLowerCase();
   const className = $('#teacherClassFilter').value;
@@ -182,6 +183,11 @@ function renderRecords() {
 
 function renderStudents() {
   const className = $('#teacherStudentClass').value;
+  if (!state.assignments.length) {
+    $('#teacherStudentCount').textContent = '—';
+    $('#teacherStudentList').innerHTML = '<p class="teacher-empty">Manager assignment না দেওয়া পর্যন্ত student search বন্ধ থাকবে।</p>';
+    return;
+  }
   if (!$('#teacherStudentSearch').value.trim()) {
     $('#teacherStudentCount').textContent = '';
     $('#teacherStudentList').innerHTML = '<p class="teacher-empty">শিক্ষার্থী খুঁজতে নাম, Student ID বা মোবাইল লিখুন।</p>';
@@ -191,9 +197,40 @@ function renderStudents() {
   $('#teacherStudentCount').textContent = `${bn(students.length)} জন অনুমোদিত শিক্ষার্থী`;
   $('#teacherStudentList').innerHTML = students.map(s => `<article class="teaching-card"><span class="student-avatar" aria-hidden="true">${esc(s.name.charAt(0))}</span><h3>${esc(s.name)}</h3><small>Student ID: ${esc(s.id)}</small><p>${esc(s.className)} • ${esc(s.group || '—')}</p><small>মোবাইল: ${esc(s.mobile || s.studentMobile || '—')}</small><div class="teaching-actions"><button type="button" data-student-detail="${esc(s.id)}">শেখার অগ্রগতি</button></div></article>`).join('') || '<p class="teacher-empty">কোনো শিক্ষার্থী পাওয়া যায়নি</p>';
 }
-function render() { renderHome(); renderRecords(); renderStudents(); }
+const weekdayNames = { sat: 'শনিবার', sun: 'রবিবার', mon: 'সোমবার', tue: 'মঙ্গলবার', wed: 'বুধবার', thu: 'বৃহস্পতিবার' };
+function renderTeacherClasses() {
+  const host = $('#teacherClassList'); if (!host) return;
+  host.innerHTML = state.assignments.map(item => {
+    const students = state.students.filter(student => student.className === item.className && (!item.group || student.group === item.group));
+    return `<article class="teaching-card"><h3>${esc(item.className)}${item.group ? ` • ${esc(item.group)}` : ''}</h3><p>${esc(item.subject)}</p><small>${bn(students.length)} জন অনুমোদিত শিক্ষার্থী</small></article>`;
+  }).join('') || '<p class="teacher-empty">Manager এখনো কোনো class/batch assignment দেননি। অ্যাসাইনমেন্ট না থাকায় শিক্ষার্থী ও একাডেমিক রেকর্ড দেখানো হচ্ছে না।</p>';
+}
+function renderTeacherRoutine() {
+  const host = $('#teacherRoutineList'); if (!host) return;
+  const routine = loadRoutine();
+  const rows = WEEK_DAYS.flatMap(day => (routine[day]?.classes || []).filter(item => state.assignments.some(assignment => assignment.className === item.className)).map(item => ({ day, item })));
+  host.innerHTML = rows.length ? rows.map(({ day, item }) => `<article class="teaching-card"><span class="teaching-kind">${esc(weekdayNames[day] || day)}</span><h3>${esc(item.subject || 'বিষয় উল্লেখ নেই')}</h3><p>${esc(item.className || '')}${item.room ? ` • ${esc(item.room)}` : ''}</p><small>${esc(item.time || 'সময় নির্ধারিত নয়')}</small></article>`).join('') : '<p class="teacher-empty">আপনার assigned class-এর জন্য Manager routine-এ কোনো schedule নেই।</p>';
+}
+function renderAcademicReports() {
+  const host = $('#teacherAcademicReportList'); if (!host) return;
+  const records = own();
+  const rows = assignedClasses().map(className => {
+    const classRecords = records.filter(item => item.className === className);
+    const attendance = classRecords.filter(item => item.type === 'routine').reduce((sum, item) => sum + Object.keys(item.progress || {}).length, 0);
+    const marks = classRecords.filter(item => item.type === 'exam').reduce((sum, item) => sum + Object.keys(item.progress || {}).length, 0);
+    const assignments = classRecords.filter(item => item.type === 'homework').length;
+    return `<article class="teaching-card"><h3>${esc(className)}</h3><p>সংরক্ষিত attendance entry: ${bn(attendance)}</p><p>নথিভুক্ত marks entry: ${bn(marks)}</p><p>Assignment activity: ${bn(assignments)}</p></article>`;
+  });
+  host.innerHTML = rows.join('') || '<p class="teacher-empty">রিপোর্ট দেখানোর মতো assigned class নেই। এখানে শুধু এই ব্রাউজারে সংরক্ষিত academic activity গণনা করা হয়; এটি পূর্ণাঙ্গ/সার্ভার রিপোর্ট নয়।</p>';
+}
+function renderTeacherProfile() {
+  const host = $('#teacherProfileCard'); if (!host) return;
+  const account = state.teacher || {};
+  host.innerHTML = `<div class="manager-profile-list"><div><small>নাম</small><strong>${esc(account.fullName || '—')}</strong></div><div><small>Username</small><strong>${esc(account.username || '—')}</strong></div><div><small>যোগাযোগ</small><strong>${esc(account.mobile || '—')}</strong></div><div><small>Role</small><strong>Teacher — Academic</strong></div><div><small>Assigned class/batch</small><strong>${bn(state.assignments.length)}</strong></div></div>`;
+}
+function render() { renderHome(); renderRecords(); renderStudents(); renderTeacherClasses(); renderTeacherRoutine(); renderAcademicReports(); renderTeacherProfile(); }
 function setView(view) {
-  if (!['home', 'more', 'students', 'online-exams', ...Object.keys(ACTIVITY_TYPES)].includes(view)) return;
+  if (!['home', 'more', 'students', 'online-exams', 'classes', 'routine-view', 'reports', 'profile', ...Object.keys(ACTIVITY_TYPES)].includes(view)) return;
   const previous = state.view;
   // A search typed for one record type must not silently hide the next one.
   if (ACTIVITY_TYPES[view] && previous !== view) {
@@ -202,15 +239,16 @@ function setView(view) {
     state.recordLimit = 15;
   }
   state.view = view;
-  const panel = ACTIVITY_TYPES[view] ? 'teacherRecords' : { home: 'teacherHome', more: 'teacherMore', students: 'teacherStudents', 'online-exams': 'teacherOnlineExams' }[view];
+  const panel = ACTIVITY_TYPES[view] ? 'teacherRecords' : { home: 'teacherHome', more: 'teacherMore', students: 'teacherStudents', 'online-exams': 'teacherOnlineExams', classes: 'teacherClasses', 'routine-view': 'teacherRoutine', reports: 'teacherAcademicReports', profile: 'teacherProfile' }[view];
   $$('.teacher-view').forEach(el => { el.hidden = el.id !== panel; });
   $$('.teacher-type-tabs [data-type-tab]').forEach(el => {
     const active = el.dataset.typeTab === view;
     el.classList.toggle('active', active);
     el.setAttribute('aria-selected', String(active));
   });
+  const bottomView = ['home', 'students', 'routine', 'online-exams', 'more'].includes(view) ? view : 'more';
   $$('.admin-bottom [data-teacher-view]').forEach(el => {
-    const active = el.dataset.teacherView === (['suggestion', 'students', 'online-exams'].includes(view) ? 'more' : view);
+    const active = el.dataset.teacherView === bottomView;
     el.classList.toggle('active', active);
     if (active) el.setAttribute('aria-current', 'page'); else el.removeAttribute('aria-current');
   });
@@ -218,8 +256,14 @@ function setView(view) {
 }
 async function reload() {
   try {
-    const [db, students] = await Promise.all([teachingRepository.list(), teachingRepository.listStudents()]);
-    state.db = db; state.students = students; state.ready = true;
+    const [db, students, teacher] = await Promise.all([teachingRepository.list(), teachingRepository.listStudents(), readStaffAccount('teacher')]);
+    state.db = db; state.students = students; state.teacher = teacher; state.assignments = listTeacherAssignments(teacher?.username || 'teacher.apc');
+    state.ready = true;
+    ['teacherHomeClass', 'teacherClassFilter', 'teacherStudentClass'].forEach(id => {
+      const select = $('#' + id), selected = select.value;
+      select.innerHTML = `<option value="all">সব assigned class</option>${classOptions(selected)}`;
+      if ([...select.options].some(option => option.value === selected)) select.value = selected; else select.value = 'all';
+    });
     $('#teacherDataError').hidden = true; render(); return true;
   } catch {
     state.ready = false; $('#teacherDataError').hidden = false; return false;
@@ -240,8 +284,9 @@ function closeModal() {
   target?.focus({ preventScroll: true });
 }
 function showEditor(type, old = null) {
+  if (type === 'exam') return setView('online-exams');
   if (!state.ready || state.busy) return toast('আগে ডেটা লোড হতে দিন বা আবার চেষ্টা করুন।');
-  const a = old || { type, date: todayISO(), time: '17:00', duration: 60, totalMarks: 100, status: 'draft', className: 'দশম শ্রেণি' };
+  const a = old || { type, date: todayISO(), time: '17:00', duration: 60, totalMarks: 100, status: 'draft', className: assignedClasses()[0] || '' };
   const timed = ['exam', 'routine'].includes(type);
   const field = (name, label, inputType = 'text', extra = '') => `<div><label for="activity-${name}">${label}</label><input id="activity-${name}" name="${name}" type="${inputType}" value="${esc(a[name] ?? '')}" ${extra}></div>`;
   openModal(`${old ? 'সম্পাদনা: ' : 'নতুন '}${ACTIVITY_TYPES[type].label}`, `<form id="teacherActivityForm" class="teacher-form">
@@ -407,7 +452,10 @@ async function showTeacherShell() {
   return false;
 }
 async function enterTeacherPanel(remember) {
-  if (await showTeacherShell()) await saveStaffSession('teacher', remember);
+  if (!(await saveStaffSession('teacher', remember))) {
+    $('#teacherEntryError').textContent = 'সেশন সংরক্ষণ করা যায়নি।'; $('#teacherEntryError').hidden = false; return;
+  }
+  if (!(await showTeacherShell())) clearStaffSession('teacher');
 }
 
 async function openTeacherPanel() {
@@ -433,10 +481,12 @@ async function openTeacherPanel() {
 }
 $('#teacherEnter').addEventListener('click', openTeacherPanel);
 $('#teacherLoginForm')?.addEventListener('submit', event => { event.preventDefault(); openTeacherPanel(); });
+$('#teacherChangePassword')?.addEventListener('click', () => openStaffPasswordDialog({ role: 'teacher', mode: 'change' }));
 $('#teacherExit').addEventListener('click', () => {
   clearStaffSession('teacher');
   // Logout always returns to the shared login page, never to a panel entry form.
   $('#teacherShell').hidden = true;
+  $('#teacherEntry').hidden = true;
   const pin = $('#teacherLoginPin');
   if (pin) pin.value = '';
   goToLoginPage();

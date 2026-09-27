@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https:; manifest-src 'self'; worker-src 'self'; base-uri 'self'; object-src 'none'">
+  <meta name="referrer" content="no-referrer">
+  <script src="js/sanitize-url.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
   <meta name="theme-color" content="#04795a">
   <meta name="robots" content="noindex">
@@ -20,6 +22,7 @@
   <link rel="stylesheet" href="css/icon-experience.css">
   <link rel="stylesheet" href="css/app-redesign.css">
   <link rel="preload" href="assets/fonts/NotoSansBengali-Variable.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="stylesheet" href="css/portal-polish.css">
 </head>
 <body>
   <section class="auth-screen admin-auth-screen" id="teacherEntry" aria-labelledby="teacherEntryTitle">
@@ -50,6 +53,7 @@
     </div></header>
     <main class="admin-main" id="teacherMain">
       <div id="teacherDataError" class="finance-error" role="alert" hidden>ডেটা পড়া যায়নি। <button id="teacherRetry" class="mini-btn" type="button">আবার চেষ্টা করুন</button></div>
+      <p id="teacherAssignmentNotice" class="finance-error" role="status" hidden>Manager এখনো কোনো class/batch assignment দেননি। Teacher academic data access বন্ধ আছে; Manager-কে Teachers প্যানেল থেকে assignment দিতে বলুন।</p>
       <section id="teacherHome" class="teacher-view" aria-labelledby="teacherHomeTitle">
         <div class="page-intro"><div><p class="eyebrow" id="teacherToday"></p><h1 id="teacherHomeTitle">স্বাগতম</h1><p class="finance-hint">আপনার ক্লাস ও শিক্ষার্থীদের কাজ</p></div><span class="badge badge-pending">শিক্ষক</span></div>
 
@@ -64,10 +68,8 @@
           <label for="teacherHomeClass">কোন শ্রেণির কাজ দেখবেন</label><select id="teacherHomeClass"><option value="all">সব শ্রেণি</option></select>
         </div>
 
-        <div class="teacher-quick-actions">
-          <button class="admin-btn primary" type="button" data-new-activity="exam">+ পরীক্ষা</button>
+        <div class="teacher-quick-actions" id="teacherQuickActions">
           <button class="admin-btn ghost" type="button" data-new-activity="homework">+ বাড়ির কাজ</button>
-          <button class="admin-btn ghost" type="button" data-new-activity="routine">+ ক্লাস</button>
         </div>
 
         <div class="teacher-section-heading"><h2>মনোযোগ দরকার</h2><small id="teacherAttentionHint">বাকি কাজ</small></div>
@@ -87,7 +89,6 @@
         <div class="teacher-type-tabs" role="tablist" aria-label="কাজের ধরন">
           <button type="button" role="tab" data-type-tab="exam">পরীক্ষা <span class="tab-count" id="tabCount-exam"></span></button>
           <button type="button" role="tab" data-type-tab="homework">বাড়ির কাজ <span class="tab-count" id="tabCount-homework"></span></button>
-          <button type="button" role="tab" data-type-tab="routine">ক্লাস রুটিন <span class="tab-count" id="tabCount-routine"></span></button>
           <button type="button" role="tab" data-type-tab="suggestion">সাজেশন <span class="tab-count" id="tabCount-suggestion"></span></button>
         </div>
         <div class="teacher-toolbar">
@@ -101,14 +102,18 @@
       </section>
       <section id="teacherMore" class="teacher-view" aria-labelledby="teacherMoreTitle" hidden>
         <div class="page-intro"><div><p class="eyebrow">সহায়ক কাজ</p><h1 id="teacherMoreTitle">আরও</h1></div></div>
-        <nav class="admin-more-menu admin-card" aria-label="শিক্ষকের আরও কাজ">
-          <p class="teacher-menu-label">পরীক্ষা ও উপকরণ</p>
-          <button class="admin-more-item" type="button" data-teacher-view="online-exams"><span class="admin-more-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-clipboard"></use></svg></span><span class="admin-more-copy"><strong>পরীক্ষা নিন</strong><small>MCQ, লিখিত ও সংক্ষিপ্ত প্রশ্ন তৈরি করে অনুমতি নিন</small></span><span aria-hidden="true">→</span></button>
-          <button class="admin-more-item" type="button" data-teacher-view="suggestion"><span class="admin-more-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-book"></use></svg></span><span class="admin-more-copy"><strong>সাজেশন ও সহায়ক উপকরণ</strong><small>নোট, নির্দেশনা ও পড়ার লিংক দিন</small></span><span aria-hidden="true">→</span></button>
-          <p class="teacher-menu-label">শিক্ষার্থী</p>
-          <button class="admin-more-item" type="button" data-teacher-view="students"><span class="admin-more-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-users"></use></svg></span><span class="admin-more-copy"><strong>শিক্ষার্থী তালিকা</strong><small>অনুমোদিত শিক্ষার্থী খুঁজুন</small></span><span aria-hidden="true">→</span></button>
-          <p class="teacher-menu-label">যাচাই</p>
-          <a class="admin-more-item" href="index.html"><span class="admin-more-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-smartphone"></use></svg></span><span class="admin-more-copy"><strong>শিক্ষার্থী অ্যাপ দেখুন</strong><small>প্রকাশিত কাজ যাচাই করুন</small></span><span aria-hidden="true">→</span></a>
+        <nav class="admin-more-menu admin-card" aria-label="Teacher academic menu">
+          <p class="teacher-menu-label">একাডেমিক কাজ</p>
+          <button class="admin-more-item" type="button" data-teacher-view="classes"><span class="admin-more-copy"><strong>My Classes</strong><small>Manager-assigned class/batch</small></span><span aria-hidden="true">→</span></button>
+          <button class="admin-more-item" type="button" data-teacher-view="students"><span class="admin-more-copy"><strong>My Students</strong><small>শুধু assigned scope-এর শিক্ষার্থী</small></span><span aria-hidden="true">→</span></button>
+          <button class="admin-more-item" type="button" data-teacher-view="routine-view"><span class="admin-more-copy"><strong>Routine</strong><small>Manager প্রকাশিত routine — শুধু দেখুন</small></span><span aria-hidden="true">→</span></button>
+          <button class="admin-more-item" type="button" data-teacher-view="routine"><span class="admin-more-copy"><strong>Attendance</strong><small>assigned class-এর উপস্থিতি নথিভুক্ত করুন</small></span><span aria-hidden="true">→</span></button>
+          <button class="admin-more-item" type="button" data-teacher-view="homework"><span class="admin-more-copy"><strong>Assignments</strong><small>কাজ ও জমার মূল্যায়ন</small></span><span aria-hidden="true">→</span></button>
+          <button class="admin-more-item" type="button" data-teacher-view="online-exams"><span class="admin-more-copy"><strong>Examination</strong><small>খসড়া তৈরি করে Manager approval-এ পাঠান</small></span><span aria-hidden="true">→</span></button>
+          <button class="admin-more-item" type="button" data-teacher-view="exam"><span class="admin-more-copy"><strong>Marks / Results</strong><small>assigned scope-এর নম্বর ও ফলাফল</small></span><span aria-hidden="true">→</span></button>
+          <button class="admin-more-item" type="button" data-teacher-view="suggestion"><span class="admin-more-copy"><strong>Notice</strong><small>শ্রেণি/ব্যাচের একাডেমিক বার্তা</small></span><span aria-hidden="true">→</span></button>
+          <button class="admin-more-item" type="button" data-teacher-view="reports"><span class="admin-more-copy"><strong>Academic Reports</strong><small>এই ব্রাউজারে সংরক্ষিত academic summaries</small></span><span aria-hidden="true">→</span></button>
+          <button class="admin-more-item" type="button" data-teacher-view="profile"><span class="admin-more-copy"><strong>Teacher Profile</strong><small>নিজের profile ও account তথ্য</small></span><span aria-hidden="true">→</span></button>
         </nav>
         <p class="teacher-local-note">এই প্যানেল শুধু একাডেমিক কাজের জন্য। অর্থব্যবস্থাপনা, ভর্তি অনুমোদন ও অ্যাপ সেটিংস Admin প্যানেলে থাকবে।</p>
       </section>
@@ -120,15 +125,20 @@
       </section>
       <section id="teacherOnlineExams" class="teacher-view" aria-labelledby="teacherOnlineExamsTitle" hidden>
         <button class="admin-more-back" type="button" data-teacher-view="more">← আরও-তে ফিরুন</button>
-        <div class="page-intro"><h1 id="teacherOnlineExamsTitle">পরীক্ষা নিন</h1></div><div id="teacherExamWorkspace"></div>
+        <div class="page-intro"><h1 id="teacherOnlineExamsTitle">Examination</h1></div><div id="teacherExamWorkspace"></div>
       </section>
+      <section id="teacherClasses" class="teacher-view" aria-labelledby="teacherClassesTitle" hidden><button class="admin-more-back" type="button" data-teacher-view="more">← আরও-তে ফিরুন</button><div class="page-intro"><h1 id="teacherClassesTitle">My Classes</h1></div><div id="teacherClassList" class="teacher-record-list"></div></section>
+      <section id="teacherRoutine" class="teacher-view" aria-labelledby="teacherRoutineTitle" hidden><button class="admin-more-back" type="button" data-teacher-view="more">← আরও-তে ফিরুন</button><div class="page-intro"><h1 id="teacherRoutineTitle">Routine</h1></div><p class="teacher-local-note">এটি Manager-এর schedule-এর read-only view। Teacher এখান থেকে routine পরিবর্তন করতে পারবেন না।</p><div id="teacherRoutineList" class="teacher-record-list"></div></section>
+      <section id="teacherAcademicReports" class="teacher-view" aria-labelledby="teacherAcademicReportsTitle" hidden><button class="admin-more-back" type="button" data-teacher-view="more">← আরও-তে ফিরুন</button><div class="page-intro"><h1 id="teacherAcademicReportsTitle">Academic Reports</h1></div><div id="teacherAcademicReportList" class="teacher-record-list"></div></section>
+      <section id="teacherProfile" class="teacher-view" aria-labelledby="teacherProfileTitle" hidden><button class="admin-more-back" type="button" data-teacher-view="more">← আরও-তে ফিরুন</button><div class="page-intro"><h1 id="teacherProfileTitle">Teacher Profile</h1></div><article id="teacherProfileCard" class="admin-card"></article><button class="admin-btn primary" type="button" id="teacherChangePassword">নিজের পাসওয়ার্ড পরিবর্তন</button></section>
     </main>
-    <nav class="admin-bottom" aria-label="শিক্ষক মোবাইল নেভিগেশন"><button class="admin-bottom-item active" type="button" data-teacher-view="home" aria-current="page"><span class="nav-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-home"></use></svg></span><span>হোম</span></button>
-<button class="admin-bottom-item" type="button" data-teacher-view="exam" ><span class="nav-chip"><i class="nav-dot" id="navDot-exam" hidden></i><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-clipboard"></use></svg></span><span>পরীক্ষা</span></button>
-<button class="admin-bottom-item" type="button" data-teacher-view="homework" ><span class="nav-chip"><i class="nav-dot" id="navDot-homework" hidden></i><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-book"></use></svg></span><span>বাড়ির কাজ</span></button>
-<button class="admin-bottom-item" type="button" data-teacher-view="routine" ><span class="nav-chip"><i class="nav-dot" id="navDot-routine" hidden></i><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-calendar"></use></svg></span><span>রুটিন</span></button>
-<button class="admin-bottom-item" type="button" data-teacher-view="more" ><span class="nav-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-more"></use></svg></span><span>আরও</span></button>
-</nav>
+    <nav class="admin-bottom" aria-label="Teacher navigation">
+      <button class="admin-bottom-item active" type="button" data-teacher-view="home" aria-current="page"><span class="nav-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-home"></use></svg></span><span>Dashboard</span></button>
+      <button class="admin-bottom-item" type="button" data-teacher-view="students"><span class="nav-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-users"></use></svg></span><span>My Students</span></button>
+      <button class="admin-bottom-item" type="button" data-teacher-view="routine"><span class="nav-chip"><i class="nav-dot" id="navDot-routine" hidden></i><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-calendar"></use></svg></span><span>Attendance</span></button>
+      <button class="admin-bottom-item" type="button" data-teacher-view="online-exams"><span class="nav-chip"><i class="nav-dot" id="navDot-exam" hidden></i><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-clipboard"></use></svg></span><span>Examination</span></button>
+      <button class="admin-bottom-item" type="button" data-teacher-view="more"><span class="nav-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-more"></use></svg></span><span>More</span></button>
+    </nav>
   </div>
   <div class="admin-modal-backdrop" id="teacherModalBackdrop" hidden>
     <section class="admin-modal" role="dialog" aria-modal="true" aria-labelledby="teacherModalTitle"><header class="admin-modal-header"><div><p class="eyebrow">শিক্ষক প্যানেল</p><h2 id="teacherModalTitle"></h2></div><button class="admin-modal-close" id="teacherModalClose" type="button" aria-label="বন্ধ করুন">×</button></header><div class="admin-modal-body" id="teacherModalBody"></div></section>

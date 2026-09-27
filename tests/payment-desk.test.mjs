@@ -136,7 +136,8 @@ test('keypad + method pill collect in a few taps and the save is durable', async
 
   assert.match($('#payReceiptSub').textContent, /রসিদ নং: REC-/);
   assert.match($('#payReceiptBody').textContent, /৳৮০০/);
-  assert.match($('#payToast').textContent, /সফলভাবে জমা নেওয়া হয়েছে/);
+  assert.match($('#payToast').textContent, /Manager অনুমোদনের অপেক্ষায়/);
+  assert.equal(added.status, 'pending');
   assert.equal($('#payToast').dataset.tone, 'success');
   assert.equal($('#payCollectionForm').hidden, true);
 });
@@ -147,7 +148,9 @@ test('today summary and activity list refresh after the collection', async () =>
   const today = dateLabel(new Date());
   const beforeToday = initialTransactions.filter(tx => tx.date === today).reduce((sum, tx) => sum + tx.amount, 0);
 
-  assert.equal($('#payTodayAmount').textContent, money(beforeToday + 800));
+  // A counter entry is not counted as collection until Manager approval.
+  assert.equal($('#payTodayAmount').textContent, money(beforeToday));
+  assert.match($('#payTodayCount').textContent, /১ অপেক্ষমাণ/);
   const rows = $$('#payTodayList .pay-activity-row');
   assert.equal(rows.length, initialTransactions.filter(tx => tx.date === today).length + 1);
   assert.match($('#payTodayList').textContent, /রাইসা ইসলাম/);
@@ -155,7 +158,7 @@ test('today summary and activity list refresh after the collection', async () =>
   // Closing the receipt re-renders the profile with the new paid total.
   click($('#payReceiptClose'));
   await waitFor(() => $('#payReceiptBackdrop').hidden === true);
-  assert.match($('#payQuickProfile .fee-balance-grid').textContent, new RegExp(money(summary.paid + 800)));
+  assert.match($('#payQuickProfile .fee-balance-grid').textContent, new RegExp(money(summary.paid)));
 
   // Reopening a receipt from today's list uses the stored transaction.
   click(rows[0]);

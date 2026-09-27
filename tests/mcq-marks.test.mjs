@@ -4,6 +4,8 @@ import test, { before } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadPage } from './jsdom-harness.mjs';
 import { EXAM_KEY, examTemplate, totalMarks } from '../js/exam-data.js';
+import { enabledClasses } from '../js/config.js';
+import { TEACHER_ASSIGNMENTS_KEY } from '../js/teacher-assignments.js';
 import { STAFF_ACCOUNTS } from '../js/staff-auth.js';
 import { STAFF_TEST_PASSWORD, provisionStaff, completeStaffPasswordDialog } from './staff-harness.mjs';
 
@@ -13,7 +15,7 @@ const settle = () => new Promise(resolve => setTimeout(resolve, 40));
 const storedExam = () => JSON.parse(ctx.window.localStorage.getItem(EXAM_KEY)).exams[0];
 
 before(async () => {
-  ctx = await loadPage('teacher.html', { seed: { 'activePlus.demo.autofill.v1': 'off' } });
+  ctx = await loadPage('teacher.html', { seed: { 'activePlus.demo.autofill.v1': 'off', [TEACHER_ASSIGNMENTS_KEY]: JSON.stringify(enabledClasses.map((className, index) => ({ id: `TAS-${index}`, teacherUsername: 'teacher.apc', teacherName: 'Test Teacher', className, group: '', subject: 'Test' }))) } });
   await import('../js/teacher.js');
   await provisionStaff('teacher');
   ctx.type($('#teacherLoginUser'), STAFF_ACCOUNTS.teacher.username);

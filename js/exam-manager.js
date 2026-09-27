@@ -2,10 +2,12 @@ import { examRepository as repo, EXAM_TYPES, TEACHER_ACTOR, ADMIN_ACTOR, MANAGER
 import { examMeta, questionPreview, resultMarkup, downloadResults, esc, num } from './exam-ui.js';
 import { downloadExamPDF } from './exam-pdf.js';
 import { enabledClasses } from './config.js';
+import { listTeacherAssignments } from './teacher-assignments.js';
 
 export function initExamManager(container, role) {
   const root = document.querySelector(container); if (!root) return;
   const actor = role === 'admin' ? ADMIN_ACTOR : role === 'manager' ? MANAGER_ACTOR : TEACHER_ACTOR;
+  const roleClasses = role === 'teacher' ? [...new Set(listTeacherAssignments('teacher.apc').map(item => item.className))] : enabledClasses;
   let db = { exams: [], attempts: [] }, view = 'list', selected = null, filter = 'all', classFilter = 'all', busy = false, ready = false;
   root.classList.add('exam-workspace');
   root.innerHTML = '<p class="exam-note">লোকাল ডেমো • প্রশ্ন শিক্ষক তৈরি করবেন, Manager অনুমোদন করবেন। সব শ্রেণির অনুমোদিত শিক্ষার্থী অংশ নিতে পারবে। আলাদা মোবাইলে চালাতে অনলাইন ডেটাবেস প্রয়োজন।</p><p class="exam-error" role="alert" data-exam-error hidden></p><p class="exam-message" role="status" data-exam-message hidden></p><div data-exam-content></div>';
@@ -20,11 +22,11 @@ export function initExamManager(container, role) {
     const exams = db.exams.filter(e => (role === 'admin' || (role === 'manager' ? ['pending', 'published', 'rejected'].includes(e.status) : e.teacherId === actor.id)) && (filter === 'all' || e.type === filter) && (classFilter === 'all' || e.className === classFilter));
     content.innerHTML = `${role === 'teacher' ? `<div class="exam-actions">${Object.entries(EXAM_TYPES).map(([type, label]) => button('new-' + type, '+ ' + label, '', 'primary')).join('')}</div>` : '<p class="exam-note">প্রশ্ন ও নম্বর দেখে অনুমোদন দিন। সংশোধন দরকার হলে কারণ লিখে ফেরত দিন।</p>'}
       <div class="exam-actions" aria-label="পরীক্ষার ধরন">${['all', ...Object.keys(EXAM_TYPES)].map(type => `<button type="button" data-exam-action="filter-${type}" aria-pressed="${filter === type}">${type === 'all' ? 'সব' : EXAM_TYPES[type]}</button>`).join('')}</div>
-      <label class="exam-class-filter">শ্রেণি <select data-exam-class-filter><option value="all">সব শ্রেণি</option>${enabledClasses.map(c => `<option value="${esc(c)}" ${c === classFilter ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
+      <label class="exam-class-filter">শ্রেণি <select data-exam-class-filter><option value="all">সব শ্রেণি</option>${roleClasses.map(c => `<option value="${esc(c)}" ${c === classFilter ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
       <div class="exam-list">${exams.map(e => `<article class="exam-card" data-managed-exam="${esc(e.id)}">${examMeta(e)}${e.reviewNote ? `<p class="exam-error">${esc(e.reviewNote)}</p>` : ''}<div class="exam-actions">${button('detail', role === 'manager' && e.status === 'pending' ? 'পর্যালোচনা করুন' : 'বিস্তারিত', e.id)}${role === 'teacher' && e.status !== 'published' ? button('edit', 'সম্পাদনা', e.id) : ''}${role === 'teacher' && ['draft', 'rejected'].includes(e.status) ? button('request', 'অনুমতির জন্য পাঠান', e.id, 'primary') + button('delete', 'মুছুন', e.id, 'danger') : ''}${e.status === 'published' ? button('report', 'ফলাফল ও রিপোর্ট', e.id) : ''}${role === 'teacher' && e.status === 'published' && e.type !== 'mcq' ? button('grade', 'নম্বর / উপস্থিতি', e.id) : ''}</div></article>`).join('') || `<p class="exam-card">${classFilter === 'all' ? 'এখনও এই ধরনের পরীক্ষা নেই।' : `${esc(classFilter)} — এই শ্রেণির কোনো পরীক্ষা নেই।`}</p>`}</div>`;
   }
   async function reload() {
-    try { db = await repo.list(); ready = true; if (view === 'list') list(); else if (view === 'report' && selected) report(db.exams.find(e => e.id === selected), false); }
+    try { db = await repo.list(actor); ready = true; if (view === 'list') list(); else if (view === 'report' && selected) report(db.exams.find(e => e.id === selected), false); }
     catch (e) { ready = false; error(e.message || 'পরীক্ষার ডেটা পড়া যায়নি।'); }
   }
   async function run(operation, success, next = list) {
@@ -39,12 +41,13 @@ export function initExamManager(container, role) {
     view = 'edit'; selected = e?.id;
     const nextDay = new Date(Date.now() + 86400000); nextDay.setHours(18, 0, 0, 0);
     const localTime = ms => { const d = new Date(ms); return new Date(ms - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); };
-    const data = e || { type, title: '', subject: '', startAt: nextDay.getTime(), endAt: nextDay.getTime() + 3600000, lateMinutes: 10, negative: 0, passPercent: 33, template: '', instructions: '' };
-    const classOptions = value => `<option value="">শ্রেণি নির্বাচন করুন</option>${enabledClasses.map(c => `<option value="${esc(c)}" ${c === value ? 'selected' : ''}>${esc(c)}</option>`).join('')}`;
+    const data = e || { type, title: '', subject: '', className: roleClasses[0] || '', group: '', startAt: nextDay.getTime(), endAt: nextDay.getTime() + 3600000, lateMinutes: 10, negative: 0, passPercent: 33, template: '', instructions: '' };
+    const classOptions = value => `<option value="">শ্রেণি নির্বাচন করুন</option>${roleClasses.map(c => `<option value="${esc(c)}" ${c === value ? 'selected' : ''}>${esc(c)}</option>`).join('')}`;
     const field = (name, label, kind = 'text', extra = '') => `<label>${label}<input name="${name}" type="${kind}" value="${esc(['startAt', 'endAt'].includes(name) ? localTime(data[name]) : data[name])}" ${extra}></label>`;
     content.innerHTML = `${back()}<h2>${e ? 'সম্পাদনা' : 'নতুন পরীক্ষা'} — ${EXAM_TYPES[type]}</h2><form class="exam-form" data-exam-form>
       ${field('title', 'পরীক্ষার নাম *', 'text', 'required maxlength="150"')}${field('subject', 'একটি বিষয় *', 'text', 'required maxlength="80"')}
       <label>কোন শ্রেণির জন্য *<select name="className" required>${classOptions(data.className)}</select></label>
+      ${role === 'teacher' ? `<label>Batch / Group<input name="group" maxlength="80" list="examAssignedGroups" value="${esc(data.group || '')}" placeholder="Full-class assignment হলে ফাঁকা রাখুন"><datalist id="examAssignedGroups">${[...new Set(listTeacherAssignments('teacher.apc').filter(item => item.group).map(item => item.group))].map(group => `<option value="${esc(group)}"></option>`).join('')}</datalist></label>` : ''}
       ${field('startAt', type === 'mcq' ? 'শুরুর সময় *' : 'প্রশ্ন ডাউনলোড শুরুর সময় *', 'datetime-local', 'required')}${field('endAt', type === 'mcq' ? 'সবার জন্য শেষ সময় *' : 'আজকের প্রস্তুতির শেষ সময় *', 'datetime-local', 'required')}
       <p class="exam-note">সময় এই মোবাইলের স্থানীয় সময় অনুযায়ী। ${type === 'mcq' ? 'মোট দুইবার; চলমান প্রথম-প্রচেষ্টার গড়ের নিচে থাকলে দ্বিতীয় সুযোগ। সময় বাড়বে না। সেরা নম্বর ফলাফলে থাকবে।' : 'শুরুর তারিখের পরের দিন (বাংলাদেশ সময়) ক্লাসে পরীক্ষা হবে। শিক্ষার্থী PDF নেবে, খাতায় উত্তর দেবে।'}</p>
       ${type === 'mcq' ? field('lateMinutes', 'দেরিতে প্রথম প্রবেশ: শুরুর পর কত মিনিট', 'number', 'required min="1" step="1"') : ''}

@@ -44,7 +44,6 @@ test('the Admin role grants reports, users and management — and nothing else',
     CAPABILITIES.STUDENTS_VIEW,
     CAPABILITIES.STUDENTS_MANAGE,
     CAPABILITIES.FINANCE_VIEW,
-    CAPABILITIES.FINANCE_COLLECT,
     CAPABILITIES.REPORTS_VIEW,
     CAPABILITIES.NOTICES_MANAGE,
     CAPABILITIES.ROUTINE_MANAGE,
@@ -54,8 +53,9 @@ test('the Admin role grants reports, users and management — and nothing else',
   ]) {
     assert.equal(access.has(capability), true, `Admin must keep ${capability}`);
   }
-  // Manager / Teacher / Payment-counter territory.
+  // Manager / Teacher / Payment-counter territory, including daily fee collection.
   for (const capability of [
+    CAPABILITIES.FINANCE_COLLECT,
     CAPABILITIES.STUDENTS_APPROVE,
     CAPABILITIES.EXAMS_PUBLISH,
     CAPABILITIES.TEACHING_PANEL,
@@ -65,6 +65,8 @@ test('the Admin role grants reports, users and management — and nothing else',
   }
   assert.equal(createAccess('manager').allowsView('finance'), false);
   assert.equal(createAccess('admin').allowsView('finance'), true);
+  assert.equal(createAccess('payment').has(CAPABILITIES.FINANCE_COLLECT), true, 'Cash Counter keeps fee collection');
+  assert.equal(createAccess('manager').has(CAPABILITIES.STUDENTS_APPROVE), true, 'Manager keeps student approval');
   assert.equal(createAccess('admin').defaultView(), 'dashboard');
 });
 
@@ -114,9 +116,9 @@ test('the dashboard grid is generated from the permission model', () => {
     assert.ok(tile.querySelector('.admin-feature-label')?.textContent.trim().length > 1);
     assert.ok(tile.dataset.adminCap, `${tile.dataset.adminView} tile carries no capability`);
   }
-  // Hero and fee-collection card use the same generated language.
+  // System overview uses a generated icon and exposes no daily collection CTA.
   assert.ok(ctx.$('.admin-hero-icon img'));
-  assert.ok(ctx.$('#dashCollectFee .admin-dashboard-collect-icon img'));
+  assert.equal(ctx.$('#dashCollectFee'), null);
   assert.equal(ctx.$$('.admin-hero-stats .tile-icon img').length, 2);
 });
 
@@ -130,6 +132,11 @@ test('nothing outside the Admin role survives in the DOM', () => {
   assert.equal(ctx.$('.pay-panel-link'), null);
   assert.equal(ctx.$$('[data-admin-cap="teaching.panel"]').length, 0);
   assert.equal(ctx.$$('[data-admin-cap="payment.panel"]').length, 0);
+  // Finance reports/monitoring remain, while cash-entry controls are removed.
+  assert.ok(ctx.$('[data-view-panel="finance"]'));
+  assert.equal(ctx.$$('#feeStudentSearch, #feeCollectionForm, #btnFinanceGoCollect, #dashCollectFee').length, 0);
+  assert.equal(ctx.$$('#studentLedgerList [data-action="quick-collect"]').length, 0);
+  assert.equal(ctx.$$('.admin-view[data-view-panel="finance"] [data-finance-tab]').length, 2);
   // Granted sections are untouched.
   for (const view of ['dashboard', 'students', 'finance', 'routine', 'more', 'exams', 'notices', 'reports', 'app-management', 'classes']) {
     assert.equal(ctx.$$(`[data-admin-view="${view}"]`).length > 0, true, `${view} should still be reachable`);

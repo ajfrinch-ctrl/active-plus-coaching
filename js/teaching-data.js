@@ -3,14 +3,16 @@
 import { enabledClasses, STORAGE_KEYS } from './config.js';
 import { loadRoster } from './office-data.js';
 import { KEYS, readRaw, writeRaw } from './database.js';
+import { isTeacherAssigned, assignedScopeForStudent } from './teacher-assignments.js';
+import { hasStaffSession, readStaffAccount } from './staff-auth.js';
 
 export const TEACHING_KEY = KEYS.teaching;
 export const DEMO_TEACHER = Object.freeze({ id: 'TCH-001', name: 'মো. সাইফুল ইসলাম' });
 export const ACTIVITY_TYPES = Object.freeze({
-  exam: { label: 'পরীক্ষা', plural: 'পরীক্ষা', progress: 'নম্বর দিন' },
+  exam: { label: 'Marks/Results', plural: 'Marks/Results', progress: '' },
   homework: { label: 'বাড়ির কাজ', plural: 'বাড়ির কাজ', progress: 'জমার অবস্থা' },
-  suggestion: { label: 'সাজেশন', plural: 'সাজেশন', progress: '' },
-  routine: { label: 'ক্লাস', plural: 'ক্লাস রুটিন', progress: 'উপস্থিতি' }
+  suggestion: { label: 'Academic notice', plural: 'Academic notices', progress: '' },
+  routine: { label: 'Attendance session', plural: 'Attendance', progress: 'উপস্থিতি' }
 });
 export const PROGRESS_LABELS = Object.freeze({ pending: 'বাকি', done: 'সম্পন্ন জানিয়েছে', reviewed: 'দেখা হয়েছে', present: 'উপস্থিত', absent: 'অনুপস্থিত', late: 'দেরিতে উপস্থিত' });
 export { escapeHtml as escapeText } from './sanitize.js';
@@ -86,7 +88,7 @@ function readData() {
   }
   return db;
 }
-function roster() {
+function approvedRoster() {
   const students = loadRoster().filter(s => s.status === 'approved').map(s => ({ ...s }));
   // Include the current approved student account without changing stored office records.
   try {
@@ -98,6 +100,21 @@ function roster() {
     }
   } catch { /* Existing app owns student-account recovery. */ }
   return students;
+}
+function roster() { return approvedRoster().filter(student => assignedScopeForStudent('teacher.apc', student)); }
+function teacherSnapshot(db) {
+  return { ...db, activities: db.activities.filter(activity => activity.teacherId === DEMO_TEACHER.id && isTeacherAssigned('teacher.apc', activity.className, activity.group)) };
+}
+function studentSnapshot(db, student) {
+  return { version: db.version, activities: db.activities.filter(activity => activity.status === 'published' && matchesStudent(activity, student)) };
+}
+function assertAssigned(className, group = '') {
+  if (!isTeacherAssigned('teacher.apc', className, group)) fail('এই class/batch-এ আপনার Manager assignment নেই।');
+}
+async function requireRoleSession(role) {
+  if (!(await hasStaffSession(role))) fail(`সক্রিয় ${role === 'teacher' ? 'Teacher' : 'Manager'} session ছাড়া এই কাজ করা যাবে না।`);
+  const account = await readStaffAccount(role);
+  if (!account || ['disabled', 'inactive', 'rejected'].includes(account.status) || account.accountStatus === 'disabled') fail(`সক্রিয় ${role === 'teacher' ? 'Teacher' : 'Manager'} profile ছাড়া এই কাজ করা যাবে না।`);
 }
 async function mutate(change) {
   const save = () => {
@@ -111,15 +128,23 @@ async function mutate(change) {
 }
 function ownedActivity(db, id) {
   const activity = db.activities.find(a => a.id === id);
-  if (!activity || activity.teacherId !== DEMO_TEACHER.id) fail('কাজটি পাওয়া যায়নি। তালিকা আবার খুলুন।');
+  if (!activity || activity.teacherId !== DEMO_TEACHER.id || !isTeacherAssigned('teacher.apc', activity.className, activity.group)) fail('কাজটি পাওয়া যায়নি বা এই class/batch-এর assignment নেই।');
   return activity;
 }
 export const teachingRepository = {
-  async list() { return readData(); },
-  async listStudents() { return roster(); },
+  async list() { return teacherSnapshot(readData()); },
+  async listForManager() { await requireRoleSession('manager'); return readData(); },
+  async listStudents() { await requireRoleSession('teacher'); return roster(); },
+  async listApprovedStudents() { await requireRoleSession('manager'); return approvedRoster(); },
   async saveActivity(input) {
+    await requireRoleSession('teacher');
     const fields = validateActivity(input);
-    return mutate(db => {
+    if (fields.type === 'exam') fail('পরীক্ষার খসড়া ও অনুমোদনের জন্য Examination workflow ব্যবহার করুন।');
+    assertAssigned(fields.className, fields.group);
+    const teacher = await readStaffAccount('teacher');
+    const teacherName = String(teacher?.fullName || teacher?.username || '').trim();
+    if (!teacherName) fail('Teacher profile পাওয়া যায়নি।');
+    const db = await mutate(db => {
       const old = input.id ? ownedActivity(db, input.id) : null;
       if (old && old.type !== fields.type) fail('কাজের ধরন বদলানো যাবে না।');
       if (old && Object.keys(old.progress).length && (old.className !== fields.className || groupKey(old.group) !== groupKey(fields.group))) fail('নম্বর/অগ্রগতি আছে। এই কাজের শ্রেণি বা বিভাগ বদলানো যাবে না।');
@@ -129,16 +154,21 @@ export const teachingRepository = {
         if (conflict) fail('এই সময়ে আপনার আরেকটি ক্লাস/পরীক্ষা আছে। সময় বদলান।');
       }
       const now = new Date().toISOString();
-      const activity = { ...fields, id: old?.id || `ACT-${crypto.randomUUID()}`, teacherId: DEMO_TEACHER.id, teacherName: DEMO_TEACHER.name, createdAt: old?.createdAt || now, updatedAt: now, progress: old?.progress || {} };
+      const activity = { ...fields, id: old?.id || `ACT-${crypto.randomUUID()}`, teacherId: DEMO_TEACHER.id, teacherName, createdAt: old?.createdAt || now, updatedAt: now, progress: old?.progress || {} };
       if (old) db.activities[db.activities.indexOf(old)] = activity; else db.activities.unshift(activity);
     });
+    return teacherSnapshot(db);
   },
   async deleteActivity(id) {
-    return mutate(db => { ownedActivity(db, id); db.activities = db.activities.filter(a => a.id !== id); });
+    await requireRoleSession('teacher');
+    const db = await mutate(data => { const activity = ownedActivity(data, id); if (activity.type === 'exam') fail('পরীক্ষার রেকর্ড এখানে মুছতে বা পরিবর্তন করতে পারবেন না।'); data.activities = data.activities.filter(a => a.id !== id); });
+    return teacherSnapshot(db);
   },
   async saveProgress(id, entries) {
-    return mutate(db => {
+    await requireRoleSession('teacher');
+    const db = await mutate(db => {
       const activity = ownedActivity(db, id);
+      if (activity.type === 'exam') fail('Marks/Results কেবল Manager-approved Examination workflow-এ পরিবর্তন করা যাবে।');
       if (activity.status !== 'published' || activity.type === 'suggestion') fail('আগে কাজটি প্রকাশ করুন।');
       const allowed = roster().filter(s => matchesStudent(activity, s));
       for (const [studentId, raw] of Object.entries(entries)) {
@@ -151,19 +181,21 @@ export const teachingRepository = {
         activity.progress[studentId] = { value, updatedAt: new Date().toISOString() };
       }
     });
+    return teacherSnapshot(db);
   },
   async markHomeworkDone(id, student) {
-    return mutate(db => {
+    const db = await mutate(db => {
       const a = db.activities.find(item => item.id === id);
       if (!a || a.type !== 'homework' || a.status !== 'published' || !matchesStudent(a, student) || !roster().some(s => s.id === student.id && matchesStudent(a, s))) fail('এই বাড়ির কাজ সম্পন্ন জানানোর অনুমতি নেই।');
       if (a.progress[student.id]?.value === 'reviewed') return;
       a.progress[student.id] = { value: 'done', updatedAt: new Date().toISOString() };
     });
+    return studentSnapshot(db, student);
   }
 };
 export function watchTeachingData(callback) {
   window.addEventListener('storage', event => {
-    if ([null, TEACHING_KEY, STORAGE_KEYS.account, STORAGE_KEYS.student].includes(event.key)) callback();
+    if ([null, TEACHING_KEY, STORAGE_KEYS.account, STORAGE_KEYS.student, 'activePlus.manager.teacherAssignments.v1'].includes(event.key)) callback();
   });
   window.addEventListener('teaching-data-updated', callback);
 }

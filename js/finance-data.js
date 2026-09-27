@@ -1,6 +1,7 @@
 /* Finance domain helpers. Records live in the transactions collection.
    Swap the database adapter for Firestore later; the payment UI awaits its save. */
 import { KEYS, listDocumentsStrict, replaceDocumentsStrict } from './database.js';
+import { hasStaffSession, readStaffAccount } from './staff-auth.js';
 export const TRANSACTIONS_KEY = KEYS.transactions;
 export const DEFAULT_MONTHLY_FEE = 1500;
 export const MONTHS = ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'];
@@ -44,9 +45,15 @@ export function stampTransaction(fields, now = new Date()) {
   };
 }
 
+export function isFinalizedTransaction(tx) {
+  // Existing records predate review workflow and remain valid; new records must
+  // be explicitly approved by Manager before counting toward paid/due totals.
+  return tx?.status == null || tx.status === 'approved';
+}
+
 export function studentFeeSummary(student, transactions, now = new Date()) {
   const month = monthLabel(now);
-  const own = transactions.filter(tx => tx.studentId === student.id);
+  const own = transactions.filter(tx => tx.studentId === student.id && isFinalizedTransaction(tx));
   const monthly = own.filter(tx => tx.month === month);
   const configured = student.monthlyFee;
   const monthlyFee = configured != null && configured !== '' && Number.isFinite(Number(configured)) && Number(configured) >= 0
@@ -57,7 +64,9 @@ export function studentFeeSummary(student, transactions, now = new Date()) {
 }
 
 function validTransaction(tx) {
-  return Boolean(tx && tx.id && tx.studentId && Number.isFinite(Number(tx.amount)));
+  return Boolean(tx && tx.id && tx.studentId && Number.isFinite(Number(tx.amount))
+    && (tx.status == null || ['pending', 'approved', 'rejected'].includes(tx.status))
+    && (tx.reviewHistory == null || Array.isArray(tx.reviewHistory)));
 }
 
 function readTransactions() {
@@ -70,10 +79,41 @@ export const financeRepository = {
     const save = () => {
       // Re-read before writing so another tab's collections are not overwritten.
       const records = readTransactions();
-      if (!records.some(tx => tx.id === transaction.id)) records.unshift(transaction);
+      if (!records.some(tx => tx.id === transaction.id)) {
+        const entry = { ...transaction, status: 'pending', reviewHistory: [] };
+        // New collection attempts can never self-approve through this write path.
+        delete entry.reviewedAt; delete entry.reviewedBy; delete entry.reviewNote;
+        records.unshift(entry);
+      }
       replaceDocumentsStrict('transactions', records);
       return records;
     };
     return navigator.locks ? navigator.locks.request(TRANSACTIONS_KEY, save) : save();
+  },
+  async reviewTransaction(transactionId, decision, reason = '') {
+    if (!(await hasStaffSession('manager'))) throw Object.assign(new Error('শুধু Manager লেনদেন পর্যালোচনা করতে পারবেন।'), { code: 'ACCESS_DENIED' });
+    if (!['approved', 'rejected'].includes(decision)) throw new Error('সিদ্ধান্ত সঠিক নয়।');
+    const note = String(reason ?? '').trim().slice(0, 500);
+    if (decision === 'rejected' && !note) throw new Error('বাতিলের কারণ লিখুন।');
+    const reviewer = await readStaffAccount('manager');
+    const review = () => {
+      const records = readTransactions();
+      const index = records.findIndex(tx => tx.id === transactionId);
+      if (index < 0) throw Object.assign(new Error('লেনদেনটি পাওয়া যায়নি।'), { code: 'NOT_FOUND' });
+      const original = records[index];
+      if (original.status !== 'pending') throw Object.assign(new Error('এই এন্ট্রির সিদ্ধান্ত আগেই নেওয়া হয়েছে।'), { code: 'ALREADY_REVIEWED' });
+      const history = Array.isArray(original.reviewHistory) ? original.reviewHistory : [];
+      records[index] = {
+        ...original,
+        status: decision,
+        reviewedAt: new Date().toISOString(),
+        reviewedBy: reviewer?.username || 'manager',
+        reviewNote: note,
+        reviewHistory: [...history, { decision, reason: note, reviewedAt: new Date().toISOString(), reviewedBy: reviewer?.username || 'manager' }]
+      };
+      replaceDocumentsStrict('transactions', records);
+      return records;
+    };
+    return navigator.locks ? navigator.locks.request(TRANSACTIONS_KEY, review) : review();
   }
 };

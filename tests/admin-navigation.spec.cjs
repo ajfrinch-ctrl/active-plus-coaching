@@ -30,9 +30,8 @@ for (const width of [320, 390]) {
     await expect(tiles).toHaveCount(8);
     expect(await tiles.locator('img').evaluateAll(images => images.every(image => image.naturalWidth > 0))).toBe(true);
     expect(await tiles.locator('.admin-feature-label').evaluateAll(labels => labels.every(label => label.textContent.trim().length > 1))).toBe(true);
-    const shortcut = await page.locator('#dashCollectFee').boundingBox();
-    const footerBox = await footer.boundingBox();
-    expect(shortcut.y + shortcut.height).toBeLessThan(footerBox.y);
+    // System Owner monitoring is not mixed with the Cash Counter collection action.
+    await expect(page.locator('#dashCollectFee, #btnFinanceGoCollect')).toHaveCount(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     for (const view of mobileViews) {
       await bottom(page, view);
@@ -68,9 +67,10 @@ for (const width of [320, 390]) {
     await page.locator('#btnFinanceGoReport').click();
     await expect(page.locator('.admin-view[data-view-panel=reports]')).toBeVisible();
     await bottom(page, 'dashboard');
-    await page.locator('#dashCollectFee').click();
+    await expect(page.locator('#dashCollectFee')).toHaveCount(0);
+    await bottom(page, 'finance');
     await expect(page.locator('[data-finance-view=collection]')).toBeVisible();
-    await expect(page.locator('#feeStudentSearch')).toBeFocused();
+    await expect(page.locator('#feeStudentSearch, #feeCollectionForm')).toHaveCount(0);
     await expect(footer.locator('[aria-current=page]')).toHaveAttribute('data-admin-view', 'finance');
     expect(errors).toEqual([]);
   });
