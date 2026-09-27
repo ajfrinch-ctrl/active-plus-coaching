@@ -334,7 +334,7 @@ export function attemptCounters(exam, attempt) {
     unanswered: bn(unanswered),
     accuracy: attempted ? `${bn(Math.round(correct / attempted * 100))}%` : '—',
     accuracyOfTotal: total ? `${bn(Math.round(correct / total * 100))}%` : '—',
-    obtained: bn(Number(attempt?.score) || 0),
+    obtained: bn(Math.round(Number(attempt?.score) || 0)),
     marks: bn(totalMarks(exam))
   };
 }

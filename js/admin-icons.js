@@ -59,7 +59,18 @@ const STROKE_ICONS = Object.freeze({
   wallet: '<path d="M20.4 12.6V7.4H5.2a2.2 2.2 0 0 1 0-4.4h13.6v4.4"/><path d="M3.6 5.6v12a2.2 2.2 0 0 0 2.2 2.2h15.6v-5"/><path d="M17.6 12.6a2 2 0 0 0 0 4h3.8v-4z"/>',
   receipt: '<path d="M5 3.4v17.2l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V3.4l-2 1-2-1-2 1-2-1-2 1-2-1-2 1z"/><path d="M8.8 8h6.4M8.8 11.6h6.4M8.8 15.2h4"/>',
   calendar: '<rect x="3.6" y="5.4" width="16.8" height="15" rx="2.4"/><path d="M15.8 3.2v4M8.2 3.2v4M3.6 10.2h16.8"/>',
-  bolt: '<path d="M13.4 3.4 5.6 13.6h5l-1 7 7.8-10.2h-5z"/>'
+  bolt: '<path d="M13.4 3.4 5.6 13.6h5l-1 7 7.8-10.2h-5z"/>',
+  /* Report categories. Added here so the Reports module uses the same single
+     icon source as the rest of the app — no emoji, one 24×24 stroke grid. */
+  notice: '<path d="M4.4 10.2v3.4a1.6 1.6 0 0 0 1.6 1.6h1.2l4.8 3.8V5l-4.8 3.8H6a1.6 1.6 0 0 0-1.6 1.4z"/><path d="M16.4 9.4a4.6 4.6 0 0 1 0 5.2M18.8 7.2a8 8 0 0 1 0 9.6"/>',
+  exam: '<path d="M8.4 3.6h7.2a1.8 1.8 0 0 1 1.8 1.8v13.2a1.8 1.8 0 0 1-1.8 1.8H8.4a1.8 1.8 0 0 1-1.8-1.8V5.4a1.8 1.8 0 0 1 1.8-1.8z"/><path d="M9.6 8.4h4.8M9.6 12h4.8M9.6 15.6h2.8"/>',
+  result: '<circle cx="12" cy="9.4" r="5"/><path d="M8.6 14 7.4 20.6l4.6-2.4 4.6 2.4L15.4 14"/>',
+  attendance: '<circle cx="9.4" cy="8.4" r="3.4"/><path d="M3.2 19.8a6.2 6.2 0 0 1 12.4 0"/><path d="m15.8 12.4 2 2 3.6-4"/>',
+  assignment: '<path d="M6.2 3.6h8.4l4 4v12.8H6.2z"/><path d="M14.4 3.6v4h4"/><path d="M9 13.2h6M9 16.6h4"/>',
+  summary: '<path d="M4.2 20.2V4.2M4.2 20.2h15.6"/><path d="M8 16.6v-4M12 16.6V7.4M16 16.6v-6.4"/>',
+  teacher: '<path d="M3.4 5.4h9.2v6.2H3.4z"/><path d="M8 11.6v3.2M5.4 20.4h5.2"/><path d="M14.6 8.4h6M14.6 12.4h4.2"/>',
+  filter: '<path d="M3.6 5.2h16.8l-6.4 7.6v5.2l-4 2.4v-7.6z"/>',
+  money: '<rect x="2.8" y="6.4" width="18.4" height="11.2" rx="2.2"/><circle cx="12" cy="12" r="2.4"/><path d="M6.2 10.4v3.2M17.8 10.4v3.2"/>'
 });
 
 /** Every icon name Admin Panel code may use. */
