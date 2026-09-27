@@ -1,7 +1,7 @@
-/* Reports UI — the same five steps on every panel.
+/* Reports UI — the same six steps on every panel.
 
-     Reports → report type → the filters that report needs → Generate
-     → full preview → DOWNLOAD PDF
+   Reports → category → report type → the filters that report needs
+   → Generate → full preview → DOWNLOAD PDF / CSV
 
    The panel only provides a container; everything inside it is built here, so
    Admin, Manager, Teacher, Cash Counter and Student all get the same flow with
@@ -15,11 +15,10 @@
    Access is decided twice: the catalog hides what a role may not see, and
    report-access.js#enforceAccess decides again before any record is read.
 */
-import { escapeHtml } from './sanitize.js';
 import { iconMarkup } from './admin-icons.js';
 import {
-  CATEGORIES, PERIODS, FILTER_META, OPTION_VALUES, EMPTY_MESSAGE,
-  catalogFor, findReport, filterOptions, validateFilters, buildReportDocument, blocksHaveData
+  PERIODS, FILTER_META, OPTION_VALUES, EMPTY_MESSAGE,
+  catalogFor, filterOptions, validateFilters, buildReportDocument
 } from './report-catalog.js';
 import { resolveActor, actorScope, canAccess, enforceAccess, ROLE_LABEL } from './report-access.js';
 import { loadSnapshot } from './report-sources.js';
@@ -50,12 +49,48 @@ const isoDay = (time = Date.now()) => {
 };
 
 /** ActivePlus_Student_Master_List_2026-09-27.pdf */
-function fileNameFor(definition) {
+function fileNameFor(definition, extension = 'pdf') {
   const slug = String(definition.title || 'Report')
     .replace(/[^\p{L}\p{N}]+/gu, '_')
     .replace(/^_+|_+$/g, '')
     .slice(0, 60) || 'Report';
-  return `ActivePlus_${slug}_${isoDay()}.pdf`;
+  return `ActivePlus_${slug}_${isoDay()}.${extension}`;
+}
+
+/* The CSV is a second rendering of the SAME document blocks the preview and
+   the PDF show: same rows, same totals, same order. One walker, three views. */
+export function csvRowsFor(doc) {
+  const rows = [];
+  if (doc?.title) rows.push([doc.title]);
+  if (doc?.period) rows.push([doc.period]);
+  for (const item of doc?.blocks || []) {
+    if (!item) continue;
+    if (item.type === 'heading' || item.type === 'paragraph' || item.type === 'note') {
+      if (item.text) rows.push([item.text]);
+    } else if (item.type === 'keyValues') {
+      for (const pair of item.pairs || []) rows.push([pair[0], pair[1]]);
+    } else if (item.type === 'tiles') {
+      for (const tile of item.tiles || []) rows.push([tile.label, tile.value]);
+    } else if (item.type === 'table') {
+      if (item.title) rows.push([item.title]);
+      rows.push((item.columns || []).map(column => column.label));
+      for (const row of item.rows || []) rows.push(row);
+    } else if (item.type === 'questions') {
+      for (const question of item.questions || []) {
+        rows.push([`${question.no ? `${question.no}. ` : ''}${question.text || ''}`, question.marks !== undefined ? `${question.marks} মার্কস` : '']);
+        for (const option of question.options || []) rows.push(['', option.text ?? option]);
+        if (question.answerText || question.answer) rows.push(['উত্তর', question.answerText || question.answer]);
+      }
+    }
+  }
+  return rows;
+}
+
+/** UTF-8 BOM + quoted cells + CRLF — the app's CSV convention (Excel-friendly). */
+function csvBlobFor(rows) {
+  const cell = value => `"${String(value ?? '').replace(/"/g, '""')}"`;
+  const lines = rows.map(row => row.map(cell).join(','));
+  return new Blob([`\uFEFF${lines.join('\r\n')}`], { type: 'text/csv;charset=utf-8' });
 }
 
 function periodText(definition, filters) {
@@ -146,7 +181,7 @@ class ReportCenter {
     head.append(el('p', 'eyebrow', 'Reports'));
     const title = el('h2', 'rp-title', 'রিপোর্ট');
     head.append(title);
-    head.append(el('p', 'rp-hint', 'রিপোর্টের ধরন বেছে নিন → প্রয়োজনীয় filter দিন → Generate → Preview → Download PDF'));
+    head.append(el('p', 'rp-hint', 'ক্যাটাগরি → রিপোর্ট → প্রয়োজনীয় filter → Generate → Preview → PDF / CSV ডাউনলোড'));
     const who = el('p', 'rp-who');
     who.append(el('span', 'rp-who-role', roleLabel));
     who.append(el('span', 'rp-who-name', this.actor.name || this.actor.username || ''));
@@ -184,7 +219,11 @@ class ReportCenter {
 
   showScreen(node) {
     for (const screen of [this.categoryScreen, this.reportScreen, this.filterScreen, this.previewScreen]) {
-      screen.hidden = screen !== node;
+      const active = screen === node;
+      screen.hidden = !active;
+      // Inactive screens are emptied: every step rebuilds from state, and a
+      // stale hidden node must never linger behind the visible flow.
+      if (!active) screen.replaceChildren();
     }
   }
 
@@ -210,6 +249,8 @@ class ReportCenter {
       card.append(icon);
       const copy = el('span', 'rp-card-copy');
       copy.append(el('strong', '', category.labelBn));
+      const description = category.descriptionBn || category.description;
+      if (description) copy.append(el('small', 'rp-card-desc', description));
       copy.append(el('small', '', `${bn(category.reports.length)} টি রিপোর্ট`));
       card.append(copy);
       card.append(el('span', 'rp-card-go', '›'));
@@ -245,7 +286,7 @@ class ReportCenter {
       const filters = (definition.filters || []).map(key => FILTER_META[key]?.label).filter(Boolean);
       if (filters.length) copy.append(el('span', 'rp-report-filters', filters.join(' • ')));
       card.append(copy);
-      card.append(el('span', 'rp-card-go', '›'));
+      card.append(el('span', 'rp-report-action', 'শুরু করুন'));
       card.addEventListener('click', () => this.showFilters(definition));
       list.append(card);
     }
@@ -269,19 +310,25 @@ class ReportCenter {
       this.setStatus('আপনার এই রিপোর্ট দেখার অনুমতি নেই।', 'error');
       return;
     }
+    // "Change Filters" keeps what the user already picked for this report;
+    // opening a different report starts from its own defaults.
+    const returning = this.definition === definition && this.filters && Object.keys(this.filters).length > 0;
     this.definition = definition;
-    this.filters = {
-      period: definition.defaultPeriod && (definition.filters || []).includes('period') ? definition.defaultPeriod : 'all',
-      date: isoDay(),
-      week: isoDay(),
-      month: isoDay().slice(0, 7),
-      from: '',
-      to: ''
-    };
+    if (!returning) {
+      this.filters = {
+        period: definition.defaultPeriod && (definition.filters || []).includes('period') ? definition.defaultPeriod : 'all',
+        date: isoDay(),
+        week: isoDay(),
+        month: isoDay().slice(0, 7),
+        from: '',
+        to: ''
+      };
+    }
     this.setCrumbs([
       { label: 'রিপোর্ট', onOpen: () => this.showCategories() },
       { label: this.category ? this.category.labelBn : 'রিপোর্ট', onOpen: () => this.category && this.showReports(this.category) },
-      { label: definition.title }
+      { label: definition.title, onOpen: () => this.showFilters(definition) },
+      { label: 'Filter' }
     ]);
     this.showScreen(this.filterScreen);
     this.filterScreen.replaceChildren();
@@ -320,6 +367,7 @@ class ReportCenter {
       event.preventDefault();
       this.generate();
     });
+    this.syncPeriodExtras();
     this.setStatus('');
   }
 
@@ -398,9 +446,10 @@ class ReportCenter {
 
   syncPeriodExtras() {
     if (!this.periodExtrasNode) return;
-    const period = this.filters.period || 'all';
+    // The period modes name their one control: daily→date, weekly→week …
+    const wanted = ({ daily: 'date', weekly: 'week', monthly: 'month', custom: 'custom' })[this.filters.period || 'all'] || '';
     for (const node of this.periodExtrasNode.children) {
-      node.hidden = node.dataset.period !== period;
+      node.hidden = node.dataset.period !== wanted;
     }
   }
 
@@ -448,16 +497,22 @@ class ReportCenter {
   }
 
   showEmpty(definition, filters) {
+    this.setCrumbs([
+      { label: 'রিপোর্ট', onOpen: () => this.showCategories() },
+      { label: this.category ? this.category.labelBn : 'রিপোর্ট', onOpen: () => this.category && this.showReports(this.category) },
+      { label: definition.title, onOpen: () => this.showFilters(definition) },
+      { label: 'Preview' }
+    ]);
     this.showScreen(this.previewScreen);
     this.previewScreen.replaceChildren();
     const card = el('div', 'rp-empty');
     card.append(el('h3', '', definition.title));
     card.append(el('p', 'rp-empty-text', EMPTY_MESSAGE));
     card.append(el('p', 'rp-empty-meta', `Filter: ${periodText(definition, filters)}`));
-    const back = el('button', 'rp-back', 'Filter-এ ফিরুন');
-    back.type = 'button';
-    back.addEventListener('click', () => this.showFilters(definition));
-    card.append(back);
+    const change = el('button', 'rp-back', 'Filter বদলান');
+    change.type = 'button';
+    change.addEventListener('click', () => this.showFilters(definition));
+    card.append(change);
     this.previewScreen.append(card);
     this.setStatus(EMPTY_MESSAGE);
   }
@@ -489,12 +544,32 @@ class ReportCenter {
     scroll.append(this.pagesNode);
     this.previewScreen.append(scroll);
 
+    // Bottom actions: Back, Change Filters, Download PDF / CSV — PDF and CSV
+    // come from the same document the preview shows.
     const actions = el('div', 'rp-download-bar');
+    const secondary = el('div', 'rp-bar-secondary');
+    const back = el('button', 'rp-back', '← পেছনে');
+    back.type = 'button';
+    back.addEventListener('click', () => (this.category ? this.showReports(this.category) : this.showCategories()));
+    secondary.append(back);
+    const change = el('button', 'rp-back', 'Filter বদলান');
+    change.type = 'button';
+    change.addEventListener('click', () => this.showFilters(definition));
+    secondary.append(change);
+    actions.append(secondary);
+
+    const primary = el('div', 'rp-bar-primary');
     this.downloadButton = el('button', 'rp-download');
     this.downloadButton.type = 'button';
     this.downloadButton.innerHTML = `${iconMarkup('download', 'rp-icon-svg')}<span>DOWNLOAD PDF</span>`;
     this.downloadButton.addEventListener('click', () => this.download(definition));
-    actions.append(this.downloadButton);
+    primary.append(this.downloadButton);
+    this.csvButton = el('button', 'rp-csv-download');
+    this.csvButton.type = 'button';
+    this.csvButton.innerHTML = `${iconMarkup('download', 'rp-icon-svg')}<span>DOWNLOAD CSV</span>`;
+    this.csvButton.addEventListener('click', () => this.downloadCsv(definition));
+    primary.append(this.csvButton);
+    actions.append(primary);
     this.previewScreen.append(actions);
 
     this.fitPages();
@@ -522,6 +597,20 @@ class ReportCenter {
       this.setStatus(error?.message || 'PDF তৈরি করা যায়নি।', 'error');
     } finally {
       this.downloadButton.disabled = false;
+    }
+  }
+
+  /** The CSV is a second rendering of the same document — same rows, same order. */
+  downloadCsv(definition) {
+    if (!this.doc || !this.csvButton) return;
+    this.csvButton.disabled = true;
+    try {
+      downloadBlob(csvBlobFor(csvRowsFor(this.doc)), fileNameFor(definition, 'csv'));
+      this.setStatus('CSV ডাউনলোড শুরু হয়েছে — PDF ও CSV একই রিপোর্ট।', 'ok');
+    } catch (error) {
+      this.setStatus(error?.message || 'CSV তৈরি করা যায়নি।', 'error');
+    } finally {
+      this.csvButton.disabled = false;
     }
   }
 }

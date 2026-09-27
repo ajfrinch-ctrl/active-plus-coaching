@@ -337,6 +337,10 @@ html[data-theme="dark"] .learning-summary .learning-summary-pending {
 html[data-theme="dark"] .teaching-progress-line.pending { background: rgba(180, 83, 9, .2); }
 
 /* --- reports centre (css/reports.css) ------------------------------------ */
+html[data-theme="dark"] {
+  --rp-glass: var(--surface);
+  --rp-glass-strong: var(--surface);
+}
 html[data-theme="dark"] .rp-head {
   background: linear-gradient(135deg, rgba(23, 48, 42, .9), rgba(21, 36, 32, .8));
   border-color: rgba(255, 255, 255, .1);
@@ -353,6 +357,19 @@ html[data-theme="dark"] .rp-page { background: var(--surface); }
 html[data-theme="dark"] .rp-filters input { background: var(--surface); }
 html[data-theme="dark"] .rp-report-icon { background: linear-gradient(145deg, var(--mint-2), var(--surface)); }
 html[data-theme="dark"] .rp-status[data-tone="error"] { background: rgba(180, 83, 9, .18); }
+html[data-theme="dark"] .rp-back,
+html[data-theme="dark"] .rp-mini-btn {
+  background: var(--surface);
+  border-color: rgba(255, 255, 255, .12);
+}
+html[data-theme="dark"] .rp-report-action {
+  background: var(--mint-2);
+  color: var(--forest-text);
+}
+html[data-theme="dark"] .rp-csv-download {
+  background: var(--surface);
+  border-color: rgba(71, 211, 164, .45);
+}
 html[data-theme="dark"] .rp-download-bar {
   background: linear-gradient(180deg, rgba(13, 26, 23, 0), rgba(13, 26, 23, .92) 40%);
 }

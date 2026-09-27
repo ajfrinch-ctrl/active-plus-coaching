@@ -278,188 +278,17 @@
           আরও-তে ফিরুন
         </button>
         <div class="page-intro">
-          <div><p class="eyebrow">Report Center</p><h1 id="reportsTitle">রিপোর্ট জেনারেটর</h1></div>
+          <div><p class="eyebrow">Report Center</p><h1 id="reportsTitle">রিপোর্ট সেন্টার</h1></div>
         </div>
-        <p class="finance-hint reports-intro-hint">দুই ধরনের রিপোর্ট — আর্থিক লেনদেন আর শিক্ষার্থীর অগ্রগতি। ফিল্টার বা অপশন বদলালে সারাংশ সাথে সাথে আপডেট হয়, তারপর PDF বা CSV নামিয়ে নিন।</p>
+        <p class="finance-hint reports-intro-hint">ক্যাটাগরি থেকে রিপোর্ট বেছে নিন, প্রয়োজনীয় ফিল্টার দিন, তারপর রিপোর্ট তৈরি করে প্রিভিউ দেখুন — একই রিপোর্ট থেকে PDF ও CSV ডাউনলোড করা যায়। নিচের আর্থিক সারাংশ আপনার সংগ্রহ ও লেনদেনের চলমান হিসাব দেখায়।</p>
 
         <!-- Reports Module: type → filters → preview → PDF, on every role. -->
         <section class="rp-section" aria-labelledby="adminReportsTitle">
           <div class="page-intro">
-            <div><p class="eyebrow">Report builder</p><h2 id="adminReportsTitle">রিপোর্ট তৈরি, প্রিভিউ ও PDF</h2></div>
+            <div><p class="eyebrow">Report builder</p><h2 id="adminReportsTitle">রিপোর্ট তৈরি, প্রিভিউ ও ডাউনলোড</h2></div>
           </div>
           <div id="adminReports" class="rp-mount"></div>
         </section>
-
-        <!-- Group 1: money -->
-        <h2 class="reports-group-title">আর্থিক লেনদেন</h2>
-        <article class="admin-card report-card" data-report-card="collection">
-          <header class="admin-card-head report-card-head">
-            <div><p class="eyebrow">Collection Report</p><h2>কালেকশন রিপোর্ট</h2></div>
-            <div class="finance-header-actions">
-              <button class="mini-btn approve" type="button" data-report-pdf="collection">PDF ডাউনলোড</button>
-              <button class="mini-btn" type="button" data-report-csv="collection">CSV</button>
-            </div>
-          </header>
-          <p class="quick-report-desc">নির্বাচিত সময়ের সব ফি আদায় — মোট আয়, লেনদেনের সংখ্যা ও গড় আদায়সহ।</p>
-
-          <div class="report-filters">
-            <div>
-              <label for="reportMonth">সময়কাল</label>
-              <select id="reportMonth">
-                <option value="all">সব সময়</option>
-              </select>
-            </div>
-            <div>
-              <label for="reportClass">শ্রেণি</label>
-              <select id="reportClass">
-                <option value="all">সব শ্রেণি</option>
-              </select>
-            </div>
-            <div>
-              <label for="reportFeeType">ফি ধরন</label>
-              <select id="reportFeeType">
-                <option value="all">সব ধরন</option>
-              </select>
-            </div>
-            <div>
-              <label for="reportMethod">মাধ্যম</label>
-              <select id="reportMethod">
-                <option value="all">সব মাধ্যম</option>
-              </select>
-            </div>
-            <div class="report-filters-foot">
-              <button class="mini-btn filter-reset" type="button" id="reportFiltersReset">ফিল্টার রিসেট</button>
-            </div>
-          </div>
-
-          <div class="mobile-report-summary">
-            <div class="mobile-report-brand">
-              <img src="assets/icons/logo-128.png" alt="" width="40" height="40">
-              <div><strong>Active Plus Coaching</strong><small id="reportPeriod"></small></div>
-            </div>
-            <dl class="mobile-report-totals">
-              <div class="report-total-primary"><dt>মোট আদায়</dt><dd id="reportGrandTotal">৳০</dd></div>
-              <div><dt>লেনদেন</dt><dd id="reportTrxCount">০ টি</dd></div>
-              <div><dt>গড় আদায়</dt><dd id="reportAverage">৳০</dd></div>
-            </dl>
-            <p class="finance-hint">নির্বাচিত ফিল্টারের সব লেনদেন নিচে দেখানো হচ্ছে; ডাউনলোডে সম্পূর্ণ তালিকা যাবে।</p>
-          </div>
-          <div class="report-collection-list" id="reportCollectionList" role="list" aria-label="রিপোর্টের লেনদেন"></div>
-          <button class="report-list-more" type="button" id="reportListMore" hidden></button>
-        </article>
-
-        <div class="quick-report-grid" data-report-group="financial">
-          <article class="admin-card quick-report-card" data-report-card="today">
-            <header class="admin-card-head">
-              <div><p class="eyebrow">Today</p><h2>আজকের কালেকশন রিপোর্ট</h2></div>
-            </header>
-            <p class="quick-report-desc">আজকের সব ফি আদায়ের তালিকা ও মোট হিসাব।</p>
-            <p class="quick-report-meta" id="reportMeta-today">—</p>
-            <div class="quick-report-actions">
-              <button class="mini-btn approve" type="button" data-report-pdf="today">PDF ডাউনলোড</button>
-              <button class="mini-btn" type="button" data-report-csv="today">CSV</button>
-            </div>
-          </article>
-
-          <article class="admin-card quick-report-card" data-report-card="dues">
-            <header class="admin-card-head">
-              <div><p class="eyebrow">Dues</p><h2>বকেয়া রিপোর্ট</h2></div>
-            </header>
-            <p class="quick-report-desc">চলতি মাসে মাসিক বেতনের বকেয়া তালিকা।</p>
-            <p class="quick-report-meta" id="reportMeta-dues">—</p>
-            <div class="quick-report-actions">
-              <button class="mini-btn approve" type="button" data-report-pdf="dues">PDF ডাউনলোড</button>
-              <button class="mini-btn" type="button" data-report-csv="dues">CSV</button>
-            </div>
-          </article>
-        </div>
-
-        <!-- Group 2: students and academics -->
-        <h2 class="reports-group-title">শিক্ষার্থী ও একাডেমিক</h2>
-        <div class="quick-report-grid" data-report-group="academic">
-          <article class="admin-card quick-report-card" data-report-card="students">
-            <header class="admin-card-head">
-              <div><p class="eyebrow">Students</p><h2>শিক্ষার্থী তালিকা রিপোর্ট</h2></div>
-            </header>
-            <p class="quick-report-desc">সব শিক্ষার্থীর নাম, আইডি, শ্রেণি, বিভাগ, মোবাইল ও অবস্থাসহ পূর্ণ তালিকা।</p>
-            <p class="quick-report-meta" id="reportMeta-students">—</p>
-            <div class="quick-report-actions">
-              <button class="mini-btn approve" type="button" data-report-pdf="students">PDF ডাউনলোড</button>
-              <button class="mini-btn" type="button" data-report-csv="students">CSV</button>
-            </div>
-          </article>
-
-          <article class="admin-card quick-report-card" data-report-card="class">
-            <header class="admin-card-head">
-              <div><p class="eyebrow">Class-wise</p><h2>শ্রেণি অনুযায়ী শিক্ষার্থী রিপোর্ট</h2></div>
-            </header>
-            <p class="quick-report-desc">নির্দিষ্ট শ্রেণি/বিভাগের শিক্ষার্থী — যোগাযোগ, উপস্থিতি, ফলাফল ও বকেয়াসহ।</p>
-            <div class="report-select-row">
-              <select id="classReportClass" aria-label="শ্রেণি">
-                <option value="all">সব শ্রেণি</option>
-              </select>
-              <select id="classReportGroup" aria-label="বিভাগ">
-                <option value="all">সব বিভাগ</option>
-              </select>
-            </div>
-            <p class="quick-report-meta" id="reportMeta-class">—</p>
-            <div class="quick-report-actions">
-              <button class="mini-btn approve" type="button" data-report-pdf="class">PDF ডাউনলোড</button>
-              <button class="mini-btn" type="button" data-report-csv="class">CSV</button>
-              <button class="mini-btn" type="button" data-action="open-class-students">শিক্ষার্থী তালিকায় খুলুন</button>
-            </div>
-          </article>
-
-          <article class="admin-card quick-report-card" data-report-card="results">
-            <header class="admin-card-head">
-              <div><p class="eyebrow">Results</p><h2>ফলাফল রিপোর্ট</h2></div>
-            </header>
-            <p class="quick-report-desc">প্রকাশিত পরীক্ষার র‍্যাংক, প্রাপ্ত নম্বর, গ্রেড ও অনুপস্থিতির তালিকা।</p>
-            <div class="report-select-row">
-              <select id="resultExamSelect" aria-label="পরীক্ষা">
-                <option value="">পরীক্ষা নির্বাচন করুন</option>
-              </select>
-              <select id="resultClassFilter" aria-label="শ্রেণি">
-                <option value="all">সব শ্রেণি</option>
-              </select>
-            </div>
-            <p class="quick-report-meta" id="reportMeta-results">—</p>
-            <div class="quick-report-actions">
-              <button class="mini-btn approve" type="button" data-report-pdf="results">PDF ডাউনলোড</button>
-              <button class="mini-btn" type="button" data-report-csv="results">CSV</button>
-            </div>
-          </article>
-
-          <article class="admin-card quick-report-card" data-report-card="attendance">
-            <header class="admin-card-head">
-              <div><p class="eyebrow">Attendance</p><h2>উপস্থিতি-অনুপস্থিতি রিপোর্ট</h2></div>
-            </header>
-            <p class="quick-report-desc">ক্লাস সেশনভিত্তিক উপস্থিত, অনুপস্থিত ও দেরিতে আসা শিক্ষার্থীর তালিকা।</p>
-            <div class="report-select-row">
-              <select id="attendanceSessionSelect" aria-label="ক্লাস সেশন">
-                <option value="">ক্লাস সেশন নির্বাচন করুন</option>
-              </select>
-            </div>
-            <p class="quick-report-meta" id="reportMeta-attendance">—</p>
-            <div class="quick-report-actions">
-              <button class="mini-btn approve" type="button" data-report-pdf="attendance">PDF ডাউনলোড</button>
-              <button class="mini-btn" type="button" data-report-csv="attendance">CSV</button>
-            </div>
-          </article>
-
-          <article class="admin-card quick-report-card" data-report-card="routine">
-            <header class="admin-card-head">
-              <div><p class="eyebrow">Routine</p><h2>সাপ্তাহিক ক্লাস রুটিন রিপোর্ট</h2></div>
-            </header>
-            <p class="quick-report-desc">শনি থেকে বৃহস্পতি পর্যন্ত ক্লাসের সময়, শিক্ষক ও রুমসহ রুটিন।</p>
-            <p class="quick-report-meta" id="reportMeta-routine">—</p>
-            <div class="quick-report-actions">
-              <button class="mini-btn approve" type="button" data-report-pdf="routine">PDF ডাউনলোড</button>
-              <button class="mini-btn" type="button" data-report-csv="routine">CSV</button>
-            </div>
-          </article>
-        </div>
-      
 
         <!-- Finance Summary: read-only monitoring of the money that already
              came in. Collecting money is the Cash Counter's job, not Admin's. -->
@@ -614,58 +443,7 @@
           </article>
         </div>
 
-        <!-- Group 3: staff -->
-        <h2 class="reports-group-title">স্টাফ রিপোর্ট</h2>
-        <div class="quick-report-grid" data-report-group="staff">
-          <article class="admin-card quick-report-card" data-report-card="staff">
-            <header class="admin-card-head">
-              <div><p class="eyebrow">Staff</p><h2>স্টাফ তালিকা রিপোর্ট</h2></div>
-            </header>
-            <p class="quick-report-desc">সব স্টাফের Staff ID, নাম, রোল, যোগাযোগ, যোগদান ও অবস্থা।</p>
-            <p class="quick-report-meta" id="reportMeta-staff">—</p>
-            <div class="quick-report-actions">
-              <button class="mini-btn approve" type="button" data-report-pdf="staff">PDF ডাউনলোড</button>
-              <button class="mini-btn" type="button" data-report-csv="staff">CSV</button>
-            </div>
-          </article>
-
-          <article class="admin-card quick-report-card" data-report-card="staff-roles">
-            <header class="admin-card-head">
-              <div><p class="eyebrow">Role-wise</p><h2>রোলভিত্তিক স্টাফ রিপোর্ট</h2></div>
-            </header>
-            <p class="quick-report-desc">Admin / Manager / Teacher / Cash Counter / অন্যান্য — রোলভিত্তিক স্টাফ সংখ্যা।</p>
-            <p class="quick-report-meta" id="reportMeta-staff-roles">—</p>
-            <div class="quick-report-actions">
-              <button class="mini-btn approve" type="button" data-report-pdf="staff-roles">PDF ডাউনলোড</button>
-              <button class="mini-btn" type="button" data-report-csv="staff-roles">CSV</button>
-            </div>
-          </article>
-
-          <article class="admin-card quick-report-card" data-report-card="staff-status">
-            <header class="admin-card-head">
-              <div><p class="eyebrow">Active / Inactive</p><h2>সক্রিয় ও নিষ্ক্রিয় স্টাফ</h2></div>
-            </header>
-            <p class="quick-report-desc">কোন স্টাফ সক্রিয়, কোন স্টাফ নিষ্ক্রিয় বা স্থগিত — এক নজরে।</p>
-            <p class="quick-report-meta" id="reportMeta-staff-status">—</p>
-            <div class="quick-report-actions">
-              <button class="mini-btn approve" type="button" data-report-pdf="staff-status">PDF ডাউনলোড</button>
-              <button class="mini-btn" type="button" data-report-csv="staff-status">CSV</button>
-            </div>
-          </article>
-
-          <article class="admin-card quick-report-card" data-report-card="staff-activity">
-            <header class="admin-card-head">
-              <div><p class="eyebrow">Activity</p><h2>স্টাফ কার্যক্রম রিপোর্ট</h2></div>
-            </header>
-            <p class="quick-report-desc">প্রতিজন স্টাফের সঙ্গে যুক্ত রুটিন, লেনদেন, একাডেমিক কার্যক্রম ও পরীক্ষার সংখ্যা।</p>
-            <p class="quick-report-meta" id="reportMeta-staff-activity">—</p>
-            <div class="quick-report-actions">
-              <button class="mini-btn approve" type="button" data-report-pdf="staff-activity">PDF ডাউনলোড</button>
-              <button class="mini-btn" type="button" data-report-csv="staff-activity">CSV</button>
-            </div>
-          </article>
-        </div>
-      </section>
+        </section>
 
       <!-- Data Management -->
       <section class="admin-view" data-view-panel="data" aria-labelledby="dataTitle">

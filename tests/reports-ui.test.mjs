@@ -80,6 +80,8 @@ const reports = () => ctx.$$('#adminReports .rp-report');
 const fields = () => ctx.$$('#adminReports .rp-field');
 
 function openCategory(id) {
+  // Steps replace their screens — walk back through the breadcrumb like a thumb.
+  if (!ctx.$('#adminReports .rp-card')) ctx.click(ctx.$('#adminReports .rp-crumb'));
   const card = cards().find(node => node.dataset.category === id);
   assert.ok(card, `category ${id} is offered`);
   ctx.click(card);

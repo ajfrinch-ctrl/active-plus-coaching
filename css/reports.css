@@ -5,9 +5,9 @@
       icon-plus-text cards with no horizontal overflow anywhere;
    2. the preview, which is the PDF's own page geometry drawn by the browser —
       each page is a real 794 × 1123 A4 sheet scaled to the panel width, so
-      what you see is what you download.
+      what you see is what you download (PDF or CSV).
 
-   The DOWNLOAD PDF bar is full width and sits above the bottom navigation:
+   The download bar is full width and sits above the bottom navigation:
    it never hides under it and never covers the last line of a page. */
 :root {
   --rp-glass: rgba(255, 255, 255, .72);
@@ -316,6 +316,43 @@
 .rp-download:active { transform: translateY(1px); }
 .rp-download:disabled { opacity: .65; }
 
+/* Back / Change Filters sit above the download pair; PDF + CSV share the
+   bottom row (each stays a full-size thumb target). */
+.rp-bar-secondary { display: flex; gap: 8px; margin-bottom: 8px; }
+.rp-bar-secondary .rp-back { flex: 1 1 0; }
+.rp-bar-primary { display: flex; gap: 8px; }
+.rp-bar-primary .rp-download { flex: 1 1 0; }
+.rp-csv-download {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex: 1 1 0;
+  width: 100%;
+  min-height: 58px;
+  border: 1.5px solid var(--forest);
+  border-radius: var(--radius-md);
+  background: var(--rp-glass-strong);
+  color: var(--forest-dark-text);
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: .02em;
+}
+.rp-csv-download:active { transform: translateY(1px); }
+.rp-csv-download:disabled { opacity: .65; }
+
+/* The report card's action indicator. */
+.rp-report-action {
+  margin-left: auto;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--mint-2);
+  color: var(--forest-dark-text);
+  font-size: 11.5px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
 /* ---------- wider screens ---------- */
 
 @media (min-width: 560px) {
@@ -328,9 +365,13 @@
   .rp-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
+@media (max-width: 359px) {
+  .rp-bar-primary { flex-direction: column; }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .rp-card, .rp-report, .rp-download { transition: none; }
-  .rp-card:active, .rp-report:active, .rp-download:active { transform: none; }
+  .rp-card, .rp-report, .rp-download, .rp-csv-download { transition: none; }
+  .rp-card:active, .rp-report:active, .rp-download:active, .rp-csv-download:active { transform: none; }
 }
 
 /* High-contrast text stays readable on the glass surfaces. */

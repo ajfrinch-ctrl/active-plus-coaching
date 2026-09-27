@@ -62,7 +62,7 @@ body { color:var(--ink); background:radial-gradient(ellipse at 8% 4%,rgba(189,23
 .admin-more-item { min-height:72px; border-bottom-color:#edf3f0; }
 .admin-more-item:hover { background:#f5fbf8; }
 .admin-card-head { margin-bottom:15px; }
-.dash-finance-card,.report-card,.quick-report-card { border-radius:22px; }
+.dash-finance-card { border-radius:22px; }
 .finance-nav-pills { padding:5px; border:1px solid #deeee6; border-radius:16px; background:rgba(255,255,255,.76); }
 .finance-nav-pills .chip { border-radius:12px; }
 .chip,.home-count-pill,.home-date-pill,.saved-tag { border-radius:999px; }
@@ -89,11 +89,6 @@ button.exam-link small { color:rgba(255,255,255,.82); }
 .manager-student-card>p { margin:6px 0; color:var(--muted); font-size:13px; }
 .manager-decision-actions { display:flex; gap:10px; margin-top:14px; }
 .manager-decision-actions .admin-btn { flex:1; justify-content:center; }
-.manager-report-summary { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-bottom:14px; }
-.manager-report-summary .admin-stat-tile { padding:14px; }
-.manager-report-list { display:grid; gap:9px; }
-.manager-report-row { display:flex; flex-wrap:wrap; gap:6px 12px; align-items:center; justify-content:space-between; padding:13px; }
-.manager-report-row strong { flex-basis:100%; color:var(--forest-dark); }
 #managerExamWorkspace .exam-note { margin-bottom:12px; }
 .manager-approval-note { color:#8a6214; font-size:11px; font-weight:700; }
 .bootstrap-credential-row { margin:10px 0; padding:13px; }
