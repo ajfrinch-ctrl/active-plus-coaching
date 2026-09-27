@@ -13,6 +13,14 @@
   --mint-strong: #d1ebe2;
   --cream: #f4f7f6;
   --white: #ffffff;
+  /* Card/surface fill. Same value as --white in light mode, but only
+     --surface flips in the dark theme — --white stays true white because it is
+     also the text/icon color on green buttons and chips. */
+  --surface: #ffffff;
+  /* Forest greens used as text color; the dark theme lightens only these so
+     button backgrounds (color: var(--white) on green) keep full contrast. */
+  --forest-text: var(--forest);
+  --forest-dark-text: var(--forest-dark);
   --line: #e4ece8;
   --orange: #b45309;
   --coral: #c2410c;

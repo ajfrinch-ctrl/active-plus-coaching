@@ -25,7 +25,7 @@
   transform: translateY(-4px);
 }
 .topbar.is-scrolled {
-  background: var(--white) !important;
+  background: var(--surface) !important;
   box-shadow: 0 6px 20px rgba(4, 79, 58, .08);
 }
 @media (prefers-reduced-motion: reduce) {

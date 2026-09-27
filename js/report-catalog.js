@@ -29,16 +29,16 @@ import { BUILDERS } from './report-builders.js';
 /* ---------- categories ---------- */
 
 export const CATEGORIES = Object.freeze([
-  { id: 'student', label: 'Student Reports', labelBn: 'শিক্ষার্থী রিপোর্ট', icon: 'students' },
-  { id: 'fee', label: 'Fee & Accounts', labelBn: 'ফি ও হিসাব', icon: 'wallet' },
-  { id: 'cash', label: 'Cash Counter', labelBn: 'ক্যাশ কাউন্টার', icon: 'receipt' },
-  { id: 'academic', label: 'Academic', labelBn: 'একাডেমিক', icon: 'book' },
-  { id: 'exam', label: 'Examination', labelBn: 'পরীক্ষা', icon: 'exam' },
-  { id: 'result', label: 'Result', labelBn: 'ফলাফল', icon: 'result' },
-  { id: 'notice', label: 'Notice', labelBn: 'নোটিশ', icon: 'notice' },
-  { id: 'staff', label: 'Staff', labelBn: 'স্টাফ', icon: 'staff' },
-  { id: 'management', label: 'Management Summary', labelBn: 'ম্যানেজমেন্ট সারাংশ', icon: 'summary' },
-  { id: 'mine', label: 'আমার রিপোর্ট', labelBn: 'আমার রিপোর্ট', icon: 'profile' }
+  { id: 'student', label: 'Student Reports', labelBn: 'শিক্ষার্থী রিপোর্ট', icon: 'students', descriptionBn: 'তালিকা, প্রোফাইল, শ্রেণি ও অবস্থাভিত্তিক শিক্ষার্থী রিপোর্ট' },
+  { id: 'fee', label: 'Fee & Accounts', labelBn: 'ফি ও হিসাব', icon: 'wallet', descriptionBn: 'কালেকশন, বকেয়া, লেনদেন, রসিদ ও পেমেন্ট স্ট্যাটাস রিপোর্ট' },
+  { id: 'cash', label: 'Cash Counter', labelBn: 'ক্যাশ কাউন্টার', icon: 'receipt', descriptionBn: 'ক্যাশ সংগ্রহ, ক্লোজিং, অনুমোদন ও নিজ লেনদেনের রিপোর্ট' },
+  { id: 'academic', label: 'Academic', labelBn: 'একাডেমিক', icon: 'book', descriptionBn: 'ক্লাস, ব্যাচ, উপস্থিতি, অ্যাসাইনমেন্ট ও অগ্রগতি রিপোর্ট' },
+  { id: 'exam', label: 'Examination', labelBn: 'পরীক্ষা', icon: 'exam', descriptionBn: 'পরীক্ষার তালিকা, প্রশ্নপত্র, উত্তর, মার্কশিট ও ফলাফল রিপোর্ট' },
+  { id: 'result', label: 'Result', labelBn: 'ফলাফল', icon: 'result', descriptionBn: 'রেজাল্ট, মার্কস ও পারফরম্যান্স রিপোর্ট' },
+  { id: 'notice', label: 'Notice', labelBn: 'নোটিশ', icon: 'notice', descriptionBn: 'প্রকাশিত, ইতিহাস ও শ্রেণিভিত্তিক নোটিশ রিপোর্ট' },
+  { id: 'staff', label: 'Staff', labelBn: 'স্টাফ', icon: 'staff', descriptionBn: 'স্টাফ তালিকা, অ্যাসাইনমেন্ট ও কার্যক্রম রিপোর্ট' },
+  { id: 'management', label: 'Management Summary', labelBn: 'ম্যানেজমেন্ট সারাংশ', icon: 'summary', descriptionBn: 'ব্যবস্থাপনার সারাংশ রিপোর্ট' },
+  { id: 'mine', label: 'আমার রিপোর্ট', labelBn: 'আমার রিপোর্ট', icon: 'profile', descriptionBn: 'আমার পেমেন্ট, উপস্থিতি, পরীক্ষা ও ফলাফল রিপোর্ট' }
 ]);
 
 /* ---------- filters (a report only ever shows the ones it declares) ---------- */
@@ -116,10 +116,6 @@ export function catalogFor(role) {
       reports: REPORTS.filter(report => report.category === category.id && (report.roles || []).includes(role))
     }))
     .filter(category => category.reports.length);
-}
-
-export function reportCountFor(role) {
-  return REPORTS.filter(report => (report.roles || []).includes(role)).length;
 }
 
 /* ---------- data for the filter bar ---------- */

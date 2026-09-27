@@ -135,10 +135,6 @@ function normalizeBdMobile(value) {
   return mobile;
 }
 
-function sameText(a, b) {
-  return String(a ?? '').trim().toLocaleLowerCase() === String(b ?? '').trim().toLocaleLowerCase();
-}
-
 export function staffRoleLabel(role) {
   return STAFF_ROLE_META[role]?.labelBn || STAFF_ROLE_META[role]?.label || String(role || '—');
 }
@@ -294,12 +290,6 @@ export async function listStaff() {
 export async function findStaff(staffId) {
   const staff = await listStaff();
   return staff.find(record => record.staffId === staffId) || null;
-}
-
-/** Staff IDs are unique and permanent: no two records may ever share one. */
-export async function isStaffIdTaken(staffId) {
-  const staff = await listStaff();
-  return staff.some(record => record.staffId === staffId);
 }
 
 /* -------------------------------------------------------------------------

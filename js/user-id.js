@@ -68,7 +68,7 @@ const BENGALI_CHARS = /[\u0980-\u09FF]/;
 /* A Bengali consonant carries an inherent "o" (নতুন → notun). A following vowel
    sign, the virama (্) or the end of the word cancels it (রাসেল → rasel). */
 const BENGALI_CONSONANTS = /[\u0995-\u09B9\u09DC\u09DD\u09DF]/;
-const BENGALI_VOWEL_SIGNS = /[\u09BE-\u09C4\u09C7\u09C8\u09CB\u09CC\u09D7]/;
+
 const BENGALI_VIRAMA = '\u09CD';
 const BENGALI_INHERENT_VOWEL = 'o';
 

@@ -272,10 +272,6 @@ export function initLogin({ state, onAuthenticated }) {
 
 let firstAdminState = { available: false, preview: '' };
 
-export function firstAdminAvailable() {
-  return firstAdminState.available === true;
-}
-
 /** Every username already claimed on this device (case-insensitive compare). */
 function claimedUsernames() {
   const index = readJSON(KEYS.usernames, {}) || {};

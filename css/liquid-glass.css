@@ -187,8 +187,6 @@ body,
 .admin-card,
 .admin-more-menu,
 .dash-finance-card,
-.quick-report-card,
-.report-card,
 .finance-search-card,
 .pay-search-card,
 .pay-quick-profile,
@@ -232,8 +230,6 @@ body,
 .notice-strip,
 .detail-grid > div,
 .fee-balance-grid > div,
-.mobile-report-summary,
-.mobile-report-totals,
 .quick-tile,
 .teaching-resource,
 .learning-brief,
@@ -496,7 +492,7 @@ body,
 .admin-bottom-item.active span,
 .bottom-link[aria-current="page"] span:last-child,
 .admin-bottom-item[aria-current="page"] span {
-  color: var(--forest);
+  color: var(--forest-text);
 }
 
 /* Tap ripple-free feedback on the icon itself (§10: 1.00 → 1.10 → 1.00). */

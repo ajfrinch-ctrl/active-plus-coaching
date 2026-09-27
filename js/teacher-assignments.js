@@ -44,9 +44,7 @@ export function isTeacherAssigned(username, className, group = '') {
   const groupValue = groupKey(group);
   return listTeacherAssignments(username).some(item => item.className === className && (!groupValue ? !item.group : !item.group || groupKey(item.group) === groupValue));
 }
-export function hasTeacherClassAssignment(username, className) {
-  return listTeacherAssignments(username).some(item => item.className === className);
-}
+
 export async function saveTeacherAssignment({ id = '', className, group = '', subject } = {}) {
   await requireManagerSession();
   const teacher = await readStaffAccount('teacher');

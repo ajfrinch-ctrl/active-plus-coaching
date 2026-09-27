@@ -133,45 +133,6 @@ export const adminStudents = Object.freeze([
   }
 ]);
 
-export const adminNotices = Object.freeze([
-  {
-    id: 'NOT-2609-101',
-    title: 'নতুন ব্যাচের ভর্তি পরীক্ষার সময়সূচি',
-    body: 'দশম ও একাদশ শ্রেণির ভর্তি পরীক্ষা আগামী শনি-রবিবার বিকেল ৩টায় অনুষ্ঠিত হবে। পরীক্ষায় উপস্থিত হতে ID কার্ড সঙ্গে আনতে হবে।',
-    audience: 'সব শিক্ষার্থী',
-    date: '১৮ সেপ্টেম্বর ২০২৬'
-  },
-  {
-    id: 'NOT-2609-100',
-    title: 'ক্লাস রুটিন পরিবর্তন',
-    body: 'রবিবার থেকে মঙ্গলবারের উচ্চতর গণিত ক্লাসটি বিকেল ৪:৩০-এর পরিবর্তে সন্ধ্যা ৬:০০-এ শুরু হবে। বাকি ক্লাস আগের মতোই থাকছে।',
-    audience: 'বিজ্ঞান বিভাগ',
-    date: '১৫ সেপ্টেম্বর ২০২৬'
-  },
-  {
-    id: 'NOT-2609-099',
-    title: 'বার্ষিক দিবস রিপ্রজেন্টেশন',
-    body: 'বুধবার বিকেল ৪:৩০-তে বার্ষিক দিবসের রিপ্রজেন্টেশন হবে। সব শিক্ষার্থীকে যথা সময়ে উপস্থিত থাকতে হবে।',
-    audience: 'সব শিক্ষার্থী',
-    date: '১২ সেপ্টেম্বর ২০২৬'
-  }
-]);
-
-export const classEnrollment = Object.freeze([
-  { className: 'অষ্টম শ্রেণি', count: 6 },
-  { className: 'নবম শ্রেণি', count: 11 },
-  { className: 'দশম শ্রেণি', count: 14 },
-  { className: 'একাদশ শ্রেণি', count: 12 },
-  { className: 'দ্বাদশ শ্রেণি', count: 9 },
-  { className: 'ডিগ্রি ১ম বর্ষ', count: 4 },
-  { className: 'ডিগ্রি ২য় বর্ষ', count: 3 },
-  { className: 'ডিগ্রি ৩য় বর্ষ', count: 2 },
-  { className: 'অনার্স ১ম বর্ষ', count: 2 },
-  { className: 'অনার্স ২য় বর্ষ', count: 1 },
-  { className: 'অনার্স ৩য় বর্ষ', count: 1 },
-  { className: 'অনার্স ৪র্থ বর্ষ', count: 0 }
-]);
-
 export const classCodes = Object.freeze({
   'অষ্টম শ্রেণি': 'CLS-08',
   'নবম শ্রেণি': 'CLS-09',

@@ -92,13 +92,6 @@ export function writeJSON(key, value) {
   }
 }
 
-/** Missing key is null. Corrupt JSON throws and is left untouched. */
-export function readJSONStrict(key) {
-  const raw = storage().getItem(key);
-  if (raw === null) return null;
-  return JSON.parse(raw);
-}
-
 export function writeJSONStrict(key, value) {
   storage().setItem(key, JSON.stringify(value));
 }

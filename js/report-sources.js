@@ -66,16 +66,6 @@ export function formatDate(time) {
   return `${bn(date.getDate())} ${MONTHS[date.getMonth()]} ${bn(date.getFullYear())}`;
 }
 
-export function formatDateTime(time) {
-  const parsed = parseDate(time);
-  if (parsed === null) return '—';
-  const date = new Date(parsed);
-  let hour = date.getHours();
-  const suffix = hour >= 12 ? 'বিকাল' : 'সকাল';
-  const display = hour % 12 === 0 ? 12 : hour % 12;
-  return `${formatDate(parsed)} • ${bn(display)}:${pad(date.getMinutes())} ${suffix}`;
-}
-
 export const startOfDay = time => { const d = new Date(time); d.setHours(0, 0, 0, 0); return d.getTime(); };
 export const endOfDay = time => { const d = new Date(time); d.setHours(23, 59, 59, 999); return d.getTime(); };
 export const monthLabelOf = time => { const d = new Date(time); return `${MONTHS[d.getMonth()]} ${bn(d.getFullYear())}`; };
@@ -233,7 +223,6 @@ export const studentStatusLabel = Object.freeze({
   rejected: 'বাতিল'
 });
 
-export function studentClassOf(student) { return student?.className || '—'; }
 export function studentBatchOf(student) { return student?.group || 'সাধারণ'; }
 
 /* ---------- exams ---------- */

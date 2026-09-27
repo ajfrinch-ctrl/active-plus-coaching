@@ -11,7 +11,7 @@
 .course-filter small { color: var(--muted); font-size: 9px; font-weight: 600; }
 .course-list { display: flex; flex-direction: column; gap: 8px; }
 /* Tap a course to reveal its details (native details/summary accordion). */
-.course-item { border: 1px solid #edf0eb; border-radius: 14px; background: var(--white); box-shadow: var(--soft-shadow); overflow: hidden; }
+.course-item { border: 1px solid #edf0eb; border-radius: 14px; background: var(--surface); box-shadow: var(--soft-shadow); overflow: hidden; }
 .course-item[open] { border-color: #d9e7dc; box-shadow: 0 10px 22px rgba(20, 33, 28, .07); }
 .course-item summary { display: flex; align-items: center; gap: 9px; padding: 11px; cursor: pointer; list-style: none; user-select: none; }
 .course-item summary::-webkit-details-marker { display: none; }
@@ -24,7 +24,7 @@
 .mini-progress { display: block; height: 4px; margin-top: 7px; overflow: hidden; border-radius: 8px; background: #edf1ed; }
 .mini-progress i { display: block; height: 100%; border-radius: inherit; background: #66aa80; }
 .course-item-side { display: flex; align-items: center; gap: 7px; }
-.course-item-side > b { color: var(--forest); font-size: 12px; }.course-item-side > b small { font-size: 8px; }
+.course-item-side > b { color: var(--forest-text); font-size: 12px; }.course-item-side > b small { font-size: 8px; }
 .course-chevron { display: grid; place-items: center; width: 16px; height: 16px; color: var(--muted); transition: transform .18s ease; }
 .course-chevron svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .course-item[open] .course-chevron { transform: rotate(180deg); }

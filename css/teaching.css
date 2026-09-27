@@ -6,26 +6,26 @@
 .teacher-identity small { display: block; font-size: 12px; color: var(--muted); }
 .teacher-local-note { font-size: 11px !important; line-height: 1.7; color: var(--muted); margin-top: 18px; }
 .teacher-summary { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; margin-bottom: 16px; }
-.teacher-summary > div { padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--white); }
+.teacher-summary > div { padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
 .teacher-summary span { display: block; font-size: 12px; color: var(--muted); }
-.teacher-summary strong { color: var(--forest); font-size: 26px; }
+.teacher-summary strong { color: var(--forest-text); font-size: 26px; }
 .teacher-quick-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .teacher-quick-actions button { flex: 1; min-height: 48px; }
 .teacher-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 24px 0 12px; }
 .teacher-section-heading h2, .teaching-board h2 { font-size: 17px; color: var(--ink); }
 .teacher-section-heading small { color: var(--muted); font-size: 11px; }
 .teacher-record-list, .learning-list { display: grid; gap: 12px; margin-top: 12px; }
-.teaching-card { min-width: 0; padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--white); overflow-wrap: anywhere; }
+.teaching-card { min-width: 0; padding: 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); overflow-wrap: anywhere; }
 .teaching-card h3 { font-size: 16px; margin: 10px 0 6px; color: var(--ink); }
 .teaching-card p, .teaching-card small { color: var(--muted); font-size: 12px; line-height: 1.7; }
 .teaching-card small { display: block; }
 .teaching-card-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.teaching-kind { font-size: 11px; font-weight: 800; padding: 4px 9px; border-radius: 8px; background: var(--mint); color: var(--forest); }
+.teaching-kind { font-size: 11px; font-weight: 800; padding: 4px 9px; border-radius: 8px; background: var(--mint); color: var(--forest-text); }
 .teaching-status { margin-left: auto; font-size: 11px; color: var(--muted); }
-.teaching-status.published { color: var(--forest); }
+.teaching-status.published { color: var(--forest-text); }
 .teaching-status.draft { color: #a35a20; }
 .teaching-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
-.teaching-actions button, .teaching-resource, .learning-filter button { min-height: 44px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--white); color: var(--forest); font: inherit; font-size: 12px; font-weight: 700; }
+.teaching-actions button, .teaching-resource, .learning-filter button { min-height: 44px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--forest-text); font: inherit; font-size: 12px; font-weight: 700; }
 .teaching-actions button.danger { color: #b34834; }
 .teaching-actions button.primary { color: white; background: var(--forest); }
 .teaching-actions button:disabled { opacity: .55; cursor: wait; }
@@ -35,7 +35,7 @@
 .teaching-preview { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: 8px; }
 .teacher-toolbar { display: grid; gap: 8px; margin: 12px 0; padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: white; }
 .teacher-toolbar label, .teacher-form label { font-size: 12px; font-weight: 700; color: var(--ink); }
-.teacher-toolbar input, .teacher-toolbar select, .teacher-form input, .teacher-form select, .teacher-form textarea, .teacher-progress-row input, .teacher-progress-row select { width: 100%; min-width: 0; min-height: 44px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--white); color: var(--ink); font: inherit; font-size: 16px; }
+.teacher-toolbar input, .teacher-toolbar select, .teacher-form input, .teacher-form select, .teacher-form textarea, .teacher-progress-row input, .teacher-progress-row select { width: 100%; min-width: 0; min-height: 44px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); font: inherit; font-size: 16px; }
 .teacher-toolbar .chip-row { flex-wrap: wrap; margin-top: 8px; }
 .teacher-form { display: grid; gap: 8px; }
 .teacher-form > div { display: grid; gap: 6px; margin: 4px 0; }
@@ -56,13 +56,13 @@
 /* Category tiles: always two per row at half width each; a lone last tile
    spans the full row (2 → one row, 3 → 2+full, 4 → two rows, 5 → 2+2+full). */
 .learning-filter { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
-.learning-filter button { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; min-height: 52px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--white); color: var(--ink); text-align: left; }
+.learning-filter button { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; min-height: 52px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--ink); text-align: left; }
 .learning-filter button:last-child:nth-child(odd) { grid-column: 1 / -1; }
 .learning-filter button[aria-pressed="true"] { color: white; background: var(--forest); border-color: var(--forest); box-shadow: 0 8px 18px rgba(4, 121, 90, .16); }
-.teacher-home-link { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 16px; margin: 16px 0; border: 1px solid var(--line); border-radius: 16px; color: var(--forest); background: white; text-align: left; }
+.teacher-home-link { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 16px; margin: 16px 0; border: 1px solid var(--line); border-radius: 16px; color: var(--forest-text); background: white; text-align: left; }
 .teacher-home-link small { display: block; font-size: 12px; color: var(--muted); margin-top: 3px; }
 .teacher-home-link strong { font-size: 14px; }
-.learning-outcome { margin-top: 12px; padding: 10px; background: var(--mint); color: var(--forest) !important; border-radius: 10px; font-weight: 700; }
+.learning-outcome { margin-top: 12px; padding: 10px; background: var(--mint); color: var(--forest-text) !important; border-radius: 10px; font-weight: 700; }
 .learning-error { color: #a33e30 !important; padding: 12px; border: 1px solid #efc5bc; border-radius: 10px; }
 
 #teacherRecordsBack[hidden] { display: none; }
@@ -70,7 +70,7 @@
 #teacherOnlineExamHint[hidden] { display: none; }
 
 /* Student work board: glanceable progress, distinct types, generous touch targets. */
-.learning-home-icon { flex: 0 0 42px; width: 42px; height: 42px; display: grid; place-items: center; border-radius: 13px; color: var(--forest); background: var(--mint-strong); }
+.learning-home-icon { flex: 0 0 42px; width: 42px; height: 42px; display: grid; place-items: center; border-radius: 13px; color: var(--forest-text); background: var(--mint-strong); }
 .learning-home-icon svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .teacher-home-link { background: linear-gradient(120deg, var(--mint), var(--white)); border-color: var(--mint-strong); }
 .learning-home-copy { flex: 1; min-width: 0; }
@@ -79,8 +79,8 @@
 .learning-heading h2 { margin: 0; }
 .learning-heading p { font-size: 12px; color: var(--muted); margin-top: 4px; }
 .learning-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 18px 0 14px; }
-.learning-summary > div { padding: 12px 6px; text-align: center; border: 1px solid var(--line); border-radius: 14px; background: var(--white); }
-.learning-summary strong { display: block; font-size: 23px; line-height: 1.3; color: var(--forest-dark); }
+.learning-summary > div { padding: 12px 6px; text-align: center; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.learning-summary strong { display: block; font-size: 23px; line-height: 1.3; color: var(--forest-dark-text); }
 .learning-summary span { display: block; margin-top: 6px; font-size: 10px; color: var(--muted); }
 .learning-summary .learning-summary-pending { background: #fff8ed; border-color: #f4dfbc; }
 .learning-summary-pending strong { color: #97500d; }
@@ -94,7 +94,7 @@
 .learning-card .teaching-kind { color: var(--activity-color); background: var(--cream); }
 .learning-card .learning-state { margin-left: auto; font-size: 10px; color: var(--muted); }
 .learning-card.learning-homework .learning-state { color: #97500d; }
-.learning-card.learning-homework .learning-state.is-complete { color: var(--forest); }
+.learning-card.learning-homework .learning-state.is-complete { color: var(--forest-text); }
 .learning-card { padding: 0; border: 1px solid var(--line); overflow: hidden; }
 .learning-card { border-top: 3px solid var(--activity-color); }
 .learning-card-toggle { display: block; width: 100%; min-height: 44px; padding: 15px 17px 13px; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
@@ -117,7 +117,7 @@
 .learning-meta span { color: var(--muted); }
 .learning-card .teaching-body { line-height: 1.9; margin-top: 14px; }
 .learning-teacher { display: flex; align-items: center; gap: 8px; margin-top: 16px; }
-.learning-teacher > span { display: grid; place-items: center; flex: 0 0 28px; height: 28px; border-radius: 50%; color: var(--forest); background: var(--mint); font-size: 12px; }
+.learning-teacher > span { display: grid; place-items: center; flex: 0 0 28px; height: 28px; border-radius: 50%; color: var(--forest-text); background: var(--mint); font-size: 12px; }
 .learning-card-actions { border-top: 1px solid var(--line); margin-top: 14px; padding-top: 12px; }
 /* Supplementary-material popup: file name, live download status, actions. */
 .resource-modal-meta { margin: 0; color: var(--ink); font-size: 11px; font-weight: 700; line-height: 1.6; word-break: break-all; }
@@ -167,8 +167,8 @@
 
 .teaching-progress-line { margin-top: 8px; padding: 7px 10px; border-radius: 9px; font-size: 12px; font-weight: 700; }
 .teaching-progress-line.pending { background: #fdf1e7; color: #a35a20; }
-.teaching-progress-line.clear { background: var(--mint); color: var(--forest); }
-.teacher-all-clear { border-style: solid; border-color: var(--mint-strong); background: var(--mint); color: var(--forest); }
+.teaching-progress-line.clear { background: var(--mint); color: var(--forest-text); }
+.teacher-all-clear { border-style: solid; border-color: var(--mint-strong); background: var(--mint); color: var(--forest-text); }
 
 /* Type tabs + date groups make the flat record list scannable. */
 .teacher-type-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 12px 0 0; }
@@ -181,19 +181,19 @@
   padding: 8px 12px;
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: var(--white);
+  background: var(--surface);
   color: var(--ink);
   font: inherit;
   font-size: 12.5px;
   font-weight: 700;
 }
-.teacher-type-tabs button.active { border-color: var(--forest); background: var(--mint); color: var(--forest); }
+.teacher-type-tabs button.active { border-color: var(--forest); background: var(--mint); color: var(--forest-text); }
 .teacher-type-tabs .tab-count {
   min-width: 22px;
   padding: 2px 6px;
   border-radius: 99px;
   background: var(--mint-2);
-  color: var(--forest);
+  color: var(--forest-text);
   font-size: 11px;
   font-weight: 800;
   text-align: center;
@@ -207,7 +207,7 @@
   margin: 16px 0 -4px;
   padding-bottom: 6px;
   border-bottom: 1px dashed var(--line);
-  color: var(--forest);
+  color: var(--forest-text);
   font-size: 12.5px;
   font-weight: 800;
 }
@@ -221,7 +221,7 @@
   border: 1px dashed var(--mint-strong);
   border-radius: 12px;
   background: var(--mint);
-  color: var(--forest);
+  color: var(--forest-text);
   font-size: 12.5px;
   font-weight: 700;
 }
@@ -239,15 +239,15 @@
 /* Bulk marking: summary, quick fill and search above the student rows. */
 .teacher-progress-bar { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--mint-strong); border-radius: 12px; background: var(--mint); }
 .progress-summary { font-size: 12.5px; font-weight: 800; color: #a35a20; }
-.progress-summary.complete { color: var(--forest); }
+.progress-summary.complete { color: var(--forest-text); }
 .teacher-quick-fill { display: flex; flex-wrap: wrap; gap: 8px; }
 .teacher-quick-fill button {
   min-height: 38px;
   padding: 0 12px;
   border: 1px solid var(--line);
   border-radius: 99px;
-  background: var(--white);
-  color: var(--forest);
+  background: var(--surface);
+  color: var(--forest-text);
   font: inherit;
   font-size: 12px;
   font-weight: 700;

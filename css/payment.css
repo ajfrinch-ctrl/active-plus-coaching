@@ -66,18 +66,18 @@
   padding: 12px 14px;
   border: 1px solid var(--line);
   border-radius: 18px;
-  background: var(--white);
+  background: var(--surface);
   box-shadow: var(--soft-shadow);
 }
 .pay-pulse-mini .pay-pulse-label { color: var(--muted); }
-.pay-pulse-mini-value { margin-top: 3px; color: var(--forest-dark); font-size: 17px; font-weight: 900; }
+.pay-pulse-mini-value { margin-top: 3px; color: var(--forest-dark-text); font-size: 17px; font-weight: 900; }
 .pay-pulse-mini .pay-pulse-sub { color: var(--muted-2); }
 
 /* ---------- Search + one-tap picks ---------- */
 
 .pay-search-card .finance-search-body { padding: 16px; }
 .pay-search-input { position: relative; border-radius: 16px; border-color: #dbe7e0; background: #f7faf8; }
-.pay-search-input:focus-within { background: var(--white); }
+.pay-search-input:focus-within { background: var(--surface); }
 .pay-search-input input[type="search"] { min-height: 52px; font-size: 16px; }
 .pay-search-kbd {
   padding: 4px 9px;
@@ -108,7 +108,7 @@
 }
 .pay-pick strong { display: block; font-size: 12px; }
 .pay-pick small { display: block; margin-top: 2px; font-size: 10px; font-weight: 800; }
-.pay-pick.is-recent { border-color: var(--mint-strong); background: var(--mint); color: var(--forest-dark); }
+.pay-pick.is-recent { border-color: var(--mint-strong); background: var(--mint); color: var(--forest-dark-text); }
 .pay-pick[aria-pressed="true"] { border-color: var(--forest); box-shadow: 0 0 0 3px rgba(4, 121, 90, .12); }
 
 /* ---------- Profile + due hero ---------- */
@@ -126,7 +126,7 @@
 }
 .pay-due-hero.has-due { background: #fff4e8; }
 .pay-due-label { color: var(--muted); font-size: 10.5px; font-weight: 800; }
-.pay-due-value { margin-top: 3px; color: var(--forest-dark); font-size: 25px; font-weight: 900; letter-spacing: -.5px; }
+.pay-due-value { margin-top: 3px; color: var(--forest-dark-text); font-size: 25px; font-weight: 900; letter-spacing: -.5px; }
 .pay-due-hero.has-due .pay-due-value { color: #a35a20; }
 .pay-due-note { max-width: 44%; color: var(--muted); font-size: 10.5px; font-weight: 700; line-height: 1.5; text-align: right; }
 .pay-quick-profile .fee-balance-grid > div { border-radius: 14px; }
@@ -155,8 +155,8 @@
   border-radius: 18px;
   background: #f7fcf9;
 }
-.pay-amount-field:focus-within { border-color: var(--forest); background: var(--white); box-shadow: 0 0 0 3px rgba(4, 121, 90, .12); }
-.pay-amount-taka { color: var(--forest); font-size: 24px; font-weight: 900; }
+.pay-amount-field:focus-within { border-color: var(--forest); background: var(--surface); box-shadow: 0 0 0 3px rgba(4, 121, 90, .12); }
+.pay-amount-taka { color: var(--forest-text); font-size: 24px; font-weight: 900; }
 .pay-amount-field input#payFeeAmount {
   min-height: 62px;
   padding: 0;
@@ -175,7 +175,7 @@
   min-height: 52px;
   border: 1px solid var(--line);
   border-radius: 14px;
-  background: var(--white);
+  background: var(--surface);
   color: var(--ink);
   font-size: 19px;
   font-weight: 800;
@@ -196,13 +196,13 @@
   padding: 0 14px;
   border: 1px solid var(--line);
   border-radius: 99px;
-  background: var(--white);
+  background: var(--surface);
   color: var(--muted);
   font-size: 12px;
   font-weight: 800;
 }
 .pay-method-dot { width: 8px; height: 8px; border-radius: 50%; background: #cbd8cf; }
-.pay-method[aria-checked="true"] { border-color: var(--forest); color: var(--forest-dark); background: var(--mint); box-shadow: 0 0 0 3px rgba(4, 121, 90, .1); }
+.pay-method[aria-checked="true"] { border-color: var(--forest); color: var(--forest-dark-text); background: var(--mint); box-shadow: 0 0 0 3px rgba(4, 121, 90, .1); }
 .pay-method[aria-checked="true"] .pay-method-dot { background: var(--forest); }
 
 .pay-form-actions { display: flex; gap: 8px; margin-top: 16px; }
@@ -227,8 +227,8 @@
   height: 38px;
   border: 1px solid var(--line);
   border-radius: 12px;
-  color: var(--forest);
-  background: var(--white);
+  color: var(--forest-text);
+  background: var(--surface);
 }
 .pay-activity-refresh svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .pay-activity-list { display: grid; gap: 8px; padding: 16px; }
@@ -247,7 +247,7 @@
 .pay-activity-copy { flex: 1; min-width: 0; }
 .pay-activity-copy strong { display: block; font-size: 12.5px; overflow-wrap: anywhere; }
 .pay-activity-copy small { display: block; margin-top: 2px; color: var(--muted); font-size: 10.5px; }
-.pay-activity-amount { color: var(--forest-dark); font-size: 14px; font-weight: 900; }
+.pay-activity-amount { color: var(--forest-dark-text); font-size: 14px; font-weight: 900; }
 
 /* ---------- Sticky collect bar ---------- */
 
@@ -289,7 +289,7 @@
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  color: var(--forest);
+  color: var(--forest-text);
   background: var(--mint-2);
   box-shadow: 0 0 0 6px rgba(15, 154, 115, .12);
   animation: payPop .32s ease both;

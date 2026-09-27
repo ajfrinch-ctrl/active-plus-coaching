@@ -50,11 +50,9 @@ export function initStudentTeaching({ getStudent }) {
     const visible = activities.filter(a => filter === 'all' || a.type === filter);
     $('#learningList').innerHTML = visible.map(a => card(a, student)).join('') || '<p class="teacher-empty">এই বিভাগে তোমার জন্য এখনও কোনো কাজ প্রকাশ হয়নি।</p>';
     $('#learningCount').textContent = `${bn(activities.length)}টি প্রকাশিত কাজ • ${student.className}`;
-    $('#teacherHomeLink').hidden = activities.length === 0;
     const homework = activities.filter(a => a.type === 'homework');
     const done = homework.filter(a => ['done', 'reviewed'].includes(a.progress[student.id]?.value)).length;
     const remaining = homework.length - done;
-    $('#teacherHomeCount').textContent = remaining ? `${bn(remaining)}টি বাড়ির কাজ বাকি • সব কাজ দেখো` : `${bn(activities.length)}টি কাজ ও উপকরণ • খুলে দেখো`;
     $('#learningSummary').innerHTML = `<div><strong>${bn(activities.length)}</strong><span>মোট কাজ</span></div><div class="learning-summary-pending"><strong>${bn(remaining)}</strong><span>বাড়ির কাজ বাকি</span></div><div><strong>${bn(done)}</strong><span>বাড়ির কাজ সম্পন্ন</span></div>`;
     $('#learningFilters').querySelectorAll('button').forEach(button => {
       const type = button.dataset.learningFilter;

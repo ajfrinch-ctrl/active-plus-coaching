@@ -123,10 +123,6 @@ export const VIEW_CAPABILITIES = Object.freeze({
   profile: CAPABILITIES.PROFILE_VIEW
 });
 
-/** Views reachable from a bottom-bar tab. "more" is a container: it exists only
- *  while at least one sub-view is granted. */
-export const BOTTOM_VIEWS = Object.freeze(['dashboard', 'staff', 'students', 'reports', 'more']);
-
 /** Views reachable from the "More" menu. */
 export const MORE_VIEWS = Object.freeze(['roles', 'data', 'backup', 'security', 'settings', 'profile']);
 

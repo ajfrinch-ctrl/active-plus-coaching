@@ -4,11 +4,10 @@ import { loadRoster, saveRoster, syncAccountStatus, loadNotices, saveNotices, lo
 import { financeRepository, monthLabel, dateLabel, studentFeeSummary, newestTransactions, isFinalizedTransaction } from './finance-data.js';
 import { examRepository, examResults, MANAGER_ACTOR } from './exam-data.js';
 import { examMeta, resultMarkup, downloadResults } from './exam-ui.js';
-import { teachingRepository, todayISO, PROGRESS_LABELS, TEACHING_KEY } from './teaching-data.js';
+import { teachingRepository, todayISO, TEACHING_KEY } from './teaching-data.js';
 import { enabledClasses } from './config.js';
 import { classCodes, dayNames } from './admin-data.js';
 import { newId } from './database.js';
-import { downloadReportPDF, downloadCSV } from './report-generator.js';
 import { escapeHtml } from './sanitize.js';
 import { registerServiceWorker } from './service-worker.js';
 import { initFixedShell } from './fixed-shell.js';
@@ -30,7 +29,7 @@ const MORE_VIEWS = Object.freeze([
 const dayLabel = Object.freeze({ sat: 'শনিবার', sun: 'রবিবার', mon: 'সোমবার', tue: 'মঙ্গলবার', wed: 'বুধবার', thu: 'বৃহস্পতিবার' });
 const statusLabel = Object.freeze({ approved: 'সক্রিয়', pending: 'অপেক্ষমাণ', rejected: 'বাতিল' });
 let students = loadRoster(), notices = loadNotices(), routine = loadRoutine(), transactions = [], exams = { exams: [], attempts: [] }, teaching = { activities: [] }, managerAccount = null;
-let activeView = 'dashboard', studentScope = 'all', cashScope = 'pending', routineDay = 'sat', reportRows = [], examStarted = false, managerBusy = false;
+let activeView = 'dashboard', studentScope = 'all', cashScope = 'pending', routineDay = 'sat', examStarted = false, managerBusy = false;
 
 function toast(message, error = false) {
   const node = $('#managerToast'); if (!node) return;
@@ -121,7 +120,6 @@ function renderApprovals() {
 }
 function renderClasses() {
   $('#managerRoutineClass').innerHTML = `<option value="">শ্রেণি নির্বাচন</option>${enabledClasses.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('')}`;
-  $('#managerReportClass').innerHTML = '<option value="all">সব ক্লাস</option>' + enabledClasses.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
   $('#managerClassList').innerHTML = enabledClasses.map(className => {
     const classStudents = students.filter(student => student.className === className && student.status !== 'rejected');
     const groups = [...new Set(classStudents.map(student => student.group).filter(Boolean))];
@@ -191,43 +189,6 @@ function renderResults() {
 function renderProfile() {
   const account = managerAccount || {};
   $('#managerProfileCard').innerHTML = `<div class="manager-profile-list"><div><small>নাম</small><strong>${escapeHtml(account.fullName || 'Manager')}</strong></div><div><small>Username</small><strong>${escapeHtml(account.username || '—')}</strong></div><div><small>Contact</small><strong>${escapeHtml(account.mobile || '—')}</strong></div><div><small>Email</small><strong>${escapeHtml(account.email || '—')}</strong></div><div><small>Role</small><strong>Manager — Operational Controller</strong></div><div><small>Account status</small><strong>${escapeHtml(account.status || account.accountStatus || 'active')}</strong></div></div>`;
-}
-function reportRowsFor(type, className, from = '', to = '') {
-  const classMatches = record => className === 'all' || record.className === className;
-  const periodMatches = record => {
-    if (!from && !to) return true;
-    const raw = type === 'exams' ? record.startAt : record.createdAt || record.date;
-    const date = type === 'exams' ? (Number.isFinite(Number(raw)) ? new Date(Number(raw)).toISOString().slice(0, 10) : '') : String(raw || '').slice(0, 10);
-    return Boolean(date) && (!from || date >= from) && (!to || date <= to);
-  };
-  if (type === 'students') return students.filter(s => classMatches(s) && periodMatches(s)).map(s => [s.id, s.name, s.className, s.group || '', statusLabel[s.status] || s.status, s.mobile || '']);
-  if (type === 'active-students') return students.filter(s => s.status === 'approved' && classMatches(s) && periodMatches(s)).map(s => [s.id, s.name, s.className, s.group || '', s.mobile || '', s.guardianMobile || '']);
-  if (type === 'pending') return students.filter(s => s.status === 'pending' && classMatches(s) && periodMatches(s)).map(s => [s.id, s.name, s.className, s.group || '', s.mobile || '', s.enrolledAt || '']);
-  if (type === 'due-list') return students.filter(s => s.status === 'approved' && classMatches(s) && studentFeeSummary(s, transactions).due > 0).map(s => [s.id, s.name, s.className, s.group || '', studentFeeSummary(s, transactions).due, s.mobile || '']);
-  if (type === 'payments') return transactions.filter(isFinalizedTransaction).filter(tx => classMatches(tx) && periodMatches(tx)).map(tx => [tx.date, tx.studentName, tx.studentId, tx.className, tx.method, tx.amount]);
-  if (type === 'cash-counter') return transactions.filter(classMatches).filter(periodMatches).map(tx => [tx.date, tx.studentName, tx.studentId, tx.collectedBy || 'পুরোনো record', tx.method, tx.amount, tx.status || 'approved', tx.reviewedBy || '', tx.reviewNote || '']);
-  if (type === 'attendance') return (teaching.activities || []).filter(a => a.type === 'routine' && classMatches(a) && periodMatches(a)).map(a => [a.date, a.className, a.title, a.teacherName, Object.values(a.progress || {}).filter(p => p.value === 'present').length, Object.values(a.progress || {}).filter(p => p.value === 'absent').length]);
-  if (type === 'teaching') return (teaching.activities || []).filter(a => classMatches(a) && periodMatches(a)).map(a => [a.date, a.className, a.type, a.title, a.teacherName, a.status]);
-  return exams.exams.filter(e => classMatches(e) && periodMatches(e)).map(e => [e.title, e.className, e.subject, e.status, new Date(e.startAt).toLocaleDateString('bn-BD'), e.type]);
-}
-function reportColumns(type) {
-  if (type === 'students') return ['Student ID', 'নাম', 'ক্লাস', 'Batch/Group', 'Status', 'মোবাইল'];
-  if (type === 'active-students') return ['Student ID', 'নাম', 'ক্লাস', 'Batch/Group', 'মোবাইল', 'Guardian mobile'];
-  if (type === 'pending') return ['Application ID', 'নাম', 'ক্লাস', 'Batch/Group', 'যোগাযোগ', 'আবেদন তারিখ'];
-  if (type === 'due-list') return ['Student ID', 'নাম', 'ক্লাস', 'Batch/Group', 'বর্তমান বকেয়া', 'মোবাইল'];
-  if (type === 'payments') return ['তারিখ', 'শিক্ষার্থী', 'Student ID', 'ক্লাস', 'মাধ্যম', 'অনুমোদিত টাকা'];
-  if (type === 'cash-counter') return ['তারিখ', 'শিক্ষার্থী', 'Student ID', 'Cash Counter', 'মাধ্যম', 'টাকা', 'Status', 'Reviewed by', 'Reject reason'];
-  if (type === 'attendance') return ['তারিখ', 'ক্লাস', 'Activity', 'Teacher', 'উপস্থিত', 'অনুপস্থিত'];
-  if (type === 'teaching') return ['তারিখ', 'ক্লাস', 'ধরন', 'Activity', 'Teacher', 'Status'];
-  return ['পরীক্ষা', 'ক্লাস', 'বিষয়', 'Status', 'তারিখ', 'Type'];
-}
-function renderReportPreview() {
-  const type = $('#managerReportType').value, className = $('#managerReportClass').value || 'all';
-  const rows = reportRowsFor(type, className, $('#managerReportFrom').value, $('#managerReportTo').value);
-  reportRows = rows;
-  const columns = reportColumns(type);
-  $('#managerReportPreview').innerHTML = rows.length ? `<p><strong>${bn(rows.length)}টি record</strong> • ${escapeHtml(columns[0])}–এর preview</p><table><thead><tr>${columns.map(col => `<th>${escapeHtml(col)}</th>`).join('')}</tr></thead><tbody>${rows.slice(0, 100).map(row => `<tr>${row.map(value => `<td>${escapeHtml(value)}</td>`).join('')}</tr>`).join('')}</tbody></table>${rows.length > 100 ? `<p class="finance-hint">Preview-তে প্রথম ১০০টি row; export-এ সব ${bn(rows.length)}টি row থাকবে।</p>` : ''}` : '<p class="admin-empty">এই filter-এ কোনো বাস্তব record নেই।</p>';
-  $('#managerDownloadPDF').disabled = !rows.length; $('#managerDownloadCSV').disabled = !rows.length;
 }
 async function loadOperationalData() {
   students = loadRoster(); notices = loadNotices(); routine = loadRoutine();
@@ -412,19 +373,6 @@ $('#managerRoutineForm').addEventListener('submit', async event => {
   routine[routineDay].classes.push({ id: newId('RTN'), className: String(data.get('className')), subject: String(data.get('subject')).trim(), teacher: String(data.get('teacher')).trim(), room: String(data.get('room')).trim(), time: label, period, tag: 'প্রকাশিত', tone: 'green', createdAt: new Date().toISOString(), status: 'published' });
   if (!saveRoutine(routine)) return toast('Routine সংরক্ষণ হয়নি।', true);
   event.currentTarget.reset(); routineDay = routineDay; renderRoutine(); toast('Routine প্রকাশিত হয়েছে।');
-});
-$('#managerReportForm').addEventListener('submit', event => { event.preventDefault(); renderReportPreview(); });
-$('#managerReportType').addEventListener('change', renderReportPreview); $('#managerReportClass').addEventListener('change', renderReportPreview);
-$('#managerDownloadCSV').addEventListener('click', () => {
-  if (!reportRows.length) return;
-  const type = $('#managerReportType').value; downloadCSV(`manager-${type}-${todayISO()}.csv`, reportColumns(type).map(label => ({ label })), reportRows);
-});
-$('#managerDownloadPDF').addEventListener('click', async event => {
-  if (!reportRows.length) return;
-  const button = event.currentTarget; button.disabled = true;
-  try { const type = $('#managerReportType').value; await downloadReportPDF(`manager-${type}-${todayISO()}.pdf`, { title: 'Manager Operational Report', subtitle: `${$('#managerReportType').selectedOptions[0].textContent} • ${reportRows.length} records`, period: `${$('#managerReportFrom').value || 'শুরু'} — ${$('#managerReportTo').value || 'বর্তমান'}`, columns: reportColumns(type).map(label => ({ label })), rows: reportRows, summary: [{ label: 'Total records', value: bn(reportRows.length) }] }); }
-  catch { toast('PDF তৈরি হয়নি। আবার চেষ্টা করুন।', true); }
-  finally { button.disabled = !reportRows.length; }
 });
 $('#managerChangePassword').addEventListener('click', () => openStaffPasswordDialog({ role: 'manager', mode: 'change' }));
 $('#managerTogglePassword').addEventListener('click', () => { const input = $('#managerPassword'); input.type = input.type === 'password' ? 'text' : 'password'; });

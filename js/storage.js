@@ -14,7 +14,6 @@ import { encryptValue, decryptValue, isEncryptedEnvelope } from './secure-store.
 import { buildSessionRecord, isSessionRecordValid, DAY_MS } from './session.js';
 
 const SESSION_DAYS_REMEMBER = 90;
-const SESSION_DAYS_TAB = 1;
 const TAB_SESSION_MARKER = '1';
 
 function getStorage(type = 'local') {
@@ -272,17 +271,6 @@ export function saveAppConfig(config) {
   return writeJSON(STORAGE_KEYS.appConfig, config);
 }
 
-export function clearAllSecurity() {
-  try {
-    const local = getStorage('local');
-    local?.removeItem(SESSION_KEY);
-    local?.removeItem(STORAGE_KEYS.sessionExpiry);
-    local?.removeItem(STORAGE_KEYS.trustedDevice);
-    local?.removeItem(STORAGE_KEYS.skipSecurity);
-    getStorage('session')?.removeItem(SESSION_KEY);
-  } catch { /* no-op */ }
-}
-
 export function generateStudentId(className) {
   const now = new Date();
   const year = String(now.getFullYear()).slice(-2);
@@ -303,6 +291,3 @@ export function generateStudentId(className) {
   return `${year}${month}${classCodes[className] || '0'}${salt}${String(sequence).padStart(3, '0')}`;
 }
 
-export const STUDENT_SESSION_RULES = Object.freeze({
-  rememberDays: SESSION_DAYS_REMEMBER, tabDays: SESSION_DAYS_TAB, dayMs: DAY_MS
-});
