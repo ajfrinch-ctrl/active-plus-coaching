@@ -2,12 +2,16 @@ const { test, expect } = require('./fixtures.cjs');
 const KEY = 'activePlus.teaching.v1';
 test.use({ viewport: { width: 390, height: 844 } });
 async function enter(page) {
+  await page.addInitScript(() => {
+    const names = ['অষ্টম শ্রেণি', 'নবম শ্রেণি', 'দশম শ্রেণি', 'একাদশ শ্রেণি', 'দ্বাদশ শ্রেণি', 'ডিগ্রি ১ম বর্ষ', 'ডিগ্রি ২য় বর্ষ', 'ডিগ্রি ৩য় বর্ষ', 'অনার্স ১ম বর্ষ', 'অনার্স ২য় বর্ষ', 'অনার্স ৩য় বর্ষ', 'অনার্স ৪র্থ বর্ষ'];
+    localStorage.setItem('activePlus.manager.teacherAssignments.v1', JSON.stringify(names.map((className, index) => ({ id: `TAS-${index}`, teacherUsername: 'teacher.apc', teacherName: 'Test Teacher', className, group: '', subject: 'Test' }))));
+  });
   await page.goto('/teacher.html'); await page.locator('#teacherEnter').click(); await expect(page.locator('#teacherShell')).toBeVisible();
 }
 async function create(page, type, title, overrides = {}) {
-  const nav = ['suggestion'].includes(type) ? 'more' : type;
-  await page.locator(`.admin-bottom [data-teacher-view=${nav}]`).click();
-  if (type === 'suggestion') await page.locator('#teacherMore [data-teacher-view=suggestion]').click();
+  const nav = type;
+  await page.locator('.admin-bottom [data-teacher-view=more]').click();
+  await page.locator(`#teacherMore [data-teacher-view=${nav}]`).click();
   await page.locator('#teacherNewActivity').click();
   await page.locator('#activity-title').fill(title);
   await page.locator('#activity-subject').fill('গণিত');
@@ -34,31 +38,29 @@ async function seed(page, activities) {
   }, activities);
 }
 
-test('exam CRUD, draft isolation, zero marks and reload persistence', async ({ page, context }) => {
+test('exam drafts must use Manager approval workflow; legacy marks are read-only', async ({ page, context }) => {
   await enter(page);
-  let card = await create(page, 'exam', 'গণিত মূল্যায়ন', { status: 'draft', group: 'বিজ্ঞান' });
-  await expect(card.locator('[data-record-action=progress]')).toHaveCount(0);
+  await page.locator('.admin-bottom [data-teacher-view=more]').click();
+  await page.locator('#teacherMore [data-teacher-view=online-exams]').click();
+  await page.locator('#teacherExamWorkspace [data-exam-action=new-mcq]').click();
+  await page.locator('[name=title]').fill('গণিত মূল্যায়ন'); await page.locator('[name=subject]').fill('গণিত');
+  await page.locator('[name=template]').fill('প্রশ্ন: ২ + ২ কত?\nA: ৪\nB: ৫\nC: ৬\nD: ৭\nউত্তর: A');
+  await page.locator('[data-exam-form] [type=submit]').click();
+  await expect(page.locator('#teacherExamWorkspace [data-managed-exam]')).toContainText('খসড়া');
+  await page.locator('#teacherExamWorkspace [data-exam-action=request]').click();
+  await expect(page.locator('#teacherExamWorkspace [data-managed-exam]')).toContainText('অনুমোদনের অপেক্ষায়');
+  await page.locator('.admin-bottom [data-teacher-view=more]').click(); await page.locator('#teacherMore [data-teacher-view=exam]').click();
+  await expect(page.locator('#teacherNewActivity')).toBeHidden();
+  const blocked = await page.evaluate(async () => {
+    try {
+      const { teachingRepository } = await import('/js/teaching-data.js');
+      await teachingRepository.saveActivity({ type: 'exam', title: 'বাইপাস পরীক্ষা', subject: 'গণিত', className: 'দশম শ্রেণি', date: '2026-10-01', time: '17:00', duration: 60, totalMarks: 100, status: 'published' });
+      return false;
+    } catch (error) { return /Examination workflow/.test(error.message); }
+  });
+  expect(blocked).toBe(true);
   const student = await studentPage(context);
-  await expect(student.locator('#learningList .teaching-card')).toHaveCount(0);
-  await card.locator('[data-record-action=edit]').click(); await page.locator('#activity-status').selectOption('published'); await page.locator('#teacherActivityForm [type=submit]').click();
-  await expect(student.locator('#learningList')).toContainText('গণিত মূল্যায়ন');
-  await card.locator('[data-record-action=progress]').click();
-  await expect(page.locator('[data-progress-id]')).toHaveCount(2);
-  await page.locator('[data-progress-id="AP-1024"]').fill('0');
-  await page.locator('[data-progress-id="260810021"]').fill('88');
-  await page.locator('#teacherProgressForm [type=submit]').click();
-  await student.locator('.bottom-nav [data-view=results]').click();
-  await expect(student.locator('#teacherResultsList')).toContainText('প্রাপ্ত নম্বর: ০ / ১০০');
-  await expect(student.locator('#teacherResultsList')).not.toContainText('৮৮');
-  await page.reload(); await page.locator('#teacherEnter').click(); await page.locator('.admin-bottom [data-teacher-view=exam]').click();
-  card = page.locator('#teacherRecordList .teaching-card'); await card.locator('[data-record-action=progress]').click();
-  await expect(page.locator('[data-progress-id="AP-1024"]')).toHaveValue('0'); await page.locator('#teacherModalClose').click();
-  await card.locator('[data-record-action=edit]').click(); await page.locator('#activity-totalMarks').fill('80'); await page.locator('#teacherActivityForm [type=submit]').click();
-  await expect(page.locator('#teacherSaveError')).toContainText('পূর্ণমান'); await expect(page.locator('#activity-totalMarks')).toHaveValue('80'); await page.locator('#teacherModalClose').click();
-  await card.locator('[data-record-action=delete]').click(); await page.locator('[data-close-teacher]').click(); await expect(card).toBeVisible();
-  await card.locator('[data-record-action=delete]').click(); await page.locator('#teacherDeleteForm [type=submit]').click();
-  await expect(page.locator('#teacherRecordList .teaching-card')).toHaveCount(0);
-  await expect(student.locator('#teacherResultsBoard')).toBeHidden();
+  await expect(student.locator('#studentExamWorkspace')).not.toContainText('গণিত মূল্যায়ন');
 });
 
 test('homework student self-report is visible to teacher, review is visible to student', async ({ page, context }) => {
@@ -102,7 +104,7 @@ test('suggestions, subject links, class/group scope, draft filter and escaped co
 });
 
 test('write failure keeps entered work and does not falsely save; corrupt storage fails closed', async ({ page }) => {
-  await enter(page); await page.locator('[data-new-activity=homework]').click();
+  await enter(page); await page.locator('.admin-bottom [data-teacher-view=more]').click(); await page.locator('#teacherMore [data-teacher-view=homework]').click(); await page.locator('#teacherNewActivity').click();
   await page.locator('#activity-title').fill('হারাবে না'); await page.locator('#activity-subject').fill('গণিত');
   await page.evaluate(key => { const real = Storage.prototype.setItem; Storage.prototype.setItem = function(k, v) { if (k === key) throw new DOMException('quota', 'QuotaExceededError'); return real.call(this, k, v); }; }, KEY);
   await page.locator('#teacherActivityForm [type=submit]').click(); await expect(page.locator('#teacherSaveError')).toContainText('সংরক্ষণ হয়নি');
@@ -133,7 +135,7 @@ for (const viewport of [{ width: 320, height: 740 }, { width: 390, height: 844 }
       const top = document.querySelector('.admin-topbar').getBoundingClientRect(), foot = document.querySelector('.admin-bottom').getBoundingClientRect(), main = document.querySelector('#teacherMain').getBoundingClientRect();
       return Math.abs(top.top) < 1 && Math.abs(foot.bottom - innerHeight) < 1 && Math.abs(main.top - top.bottom) <= 1 && Math.abs(main.bottom - foot.top) <= 1 && document.documentElement.scrollWidth <= innerWidth && document.querySelector('#teacherShell').offsetWidth <= 480 && window.scrollY === 0;
     })).toBe(true);
-    await page.locator('.admin-bottom [data-teacher-view=exam]').click(); await expect.poll(() => page.locator('#teacherMain').evaluate(el => el.scrollTop)).toBe(0);
+    await page.locator('.admin-bottom [data-teacher-view=more]').click(); await page.locator('#teacherMore [data-teacher-view=homework]').click(); await expect.poll(() => page.locator('#teacherMain').evaluate(el => el.scrollTop)).toBe(0);
     await page.locator('#teacherNewActivity').click(); await expect(page.locator('#teacherMain')).toHaveCSS('overflow-y', 'hidden');
     await page.locator('#activity-title').fill('মোবাইল পরীক্ষা'); await page.locator('#activity-subject').fill('গণিত');
     const submit = page.locator('#teacherActivityForm [type=submit]'); await submit.scrollIntoViewIfNeeded();

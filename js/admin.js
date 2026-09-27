@@ -7,7 +7,7 @@ import { loadAppConfig, saveAppConfig, loadAccount, saveAccount } from './storag
 import { loadRoster, saveRoster, syncAccountStatus, loadNotices, saveNotices, loadRoutine, saveRoutine } from './office-data.js';
 import { authenticateStaff, createInitialAdmin, ensureBootstrapStaffAccounts, readStaffAccount, staffAccountRecordExists, saveStaffSession, hasStaffSession, clearStaffSession, goToLoginPage } from './staff-auth.js';
 import { openStaffPasswordDialog } from './staff-password-dialog.js';
-import { financeRepository, monthLabel, dateLabel, searchStudents, studentFeeSummary, newestTransactions, stampTransaction, TRANSACTIONS_KEY } from './finance-data.js';
+import { financeRepository, monthLabel, dateLabel, searchStudents, studentFeeSummary, newestTransactions, stampTransaction, isFinalizedTransaction, TRANSACTIONS_KEY } from './finance-data.js';
 import { newId } from './database.js';
 import { receiptMarkup, downloadReceipt } from './finance-receipt.js';
 import { downloadReportPDF, downloadCSV } from './report-generator.js';
@@ -213,21 +213,18 @@ function renderDashboard() {
   renderFinanceSummary();
 }
 
-/* Dashboard money summary: today and this month at a glance. */
+/* System-level finance overview: aggregate records only, no daily cash workflow. */
 function renderFinanceSummary() {
   const money = value => '৳' + bn(Math.round(value).toLocaleString('en-US'));
-  const today = dateLabel(new Date());
   const month = monthLabel();
-  const todayTx = state.transactions.filter(tx => tx.date === today);
-  const monthTx = state.transactions.filter(tx => tx.month === month);
-  const todayTotal = todayTx.reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+  const finalized = state.transactions.filter(isFinalizedTransaction);
+  const monthTx = finalized.filter(tx => tx.month === month);
   const monthTotal = monthTx.reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
-  const grandTotal = state.transactions.reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+  const grandTotal = finalized.reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
   const monthDue = state.students.filter(s => s.status === 'approved')
     .reduce((sum, student) => sum + studentFeeSummary(student, state.transactions).due, 0);
-  if ($('#dashTodayAmount')) {
-    $('#dashTodayAmount').textContent = money(todayTotal);
-    $('#dashTodaySub').textContent = `${bn(todayTx.length)} টি লেনদেন`;
+  if ($('#dashTransactionCount')) {
+    $('#dashTransactionCount').textContent = `${bn(state.transactions.length)} টি`;
     $('#dashMonthAmount').textContent = money(monthTotal);
     $('#dashMonthSub').textContent = month;
     $('#dashMonthDue').textContent = money(monthDue);
@@ -812,8 +809,9 @@ function populateReportFilterOptions() {
 }
 
 function renderFinanceStats() {
-  const totalCollected = state.transactions.reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
-  const monthCollected = state.transactions.filter(tx => tx.month === monthLabel())
+  const finalized = state.transactions.filter(isFinalizedTransaction);
+  const totalCollected = finalized.reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+  const monthCollected = finalized.filter(tx => tx.month === monthLabel())
     .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
   const totalDue = state.students.filter(s => s.status === 'approved')
     .reduce((sum, student) => sum + studentFeeSummary(student, state.transactions).due, 0);
@@ -826,7 +824,9 @@ function renderFinanceStats() {
 }
 
 function renderFeeSearch() {
-  const query = $('#feeStudentSearch').value.trim();
+  const searchInput = $('#feeStudentSearch');
+  if (!searchInput) return; // Finance collection UI is removed for read-only roles.
+  const query = searchInput.value.trim();
   const matches = searchStudents(state.students, query);
   $('#feeSearchStatus').textContent = !query ? '' : matches.length ? `${bn(matches.length)} জন শিক্ষার্থী পাওয়া গেছে` : 'কোনো শিক্ষার্থী পাওয়া যায়নি';
   $('#feeSearchResults').innerHTML = matches.map(student => `
@@ -837,7 +837,7 @@ function renderFeeSearch() {
 }
 
 function selectFeeStudent(id) {
-  if (state.savingFee) return;
+  if (!access.has(CAPABILITIES.FINANCE_COLLECT) || state.savingFee || !$('#feeCollectionForm')) return;
   state.feeStudentId = id;
   $('#feeCollectionForm').reset();
   $('#feeCollectionForm').hidden = true;
@@ -849,15 +849,17 @@ function selectFeeStudent(id) {
 }
 
 function renderFeeProfile() {
+  const profile = $('#feeQuickProfile');
+  if (!profile) return; // No collection profile should render in Admin's read-only view.
   const student = state.students.find(s => s.id === state.feeStudentId);
   if (!student) {
-    $('#feeQuickProfile').innerHTML = '<p class="admin-empty">উপরে সার্চ করে শিক্ষার্থীর নামের উপর ক্লিক করুন।</p>';
+    profile.innerHTML = '<p class="admin-empty">উপরে সার্চ করে শিক্ষার্থীর নামের উপর ক্লিক করুন।</p>';
     return;
   }
   const summary = studentFeeSummary(student, state.transactions);
   const status = statusMeta[student.status] || { label: student.status || 'অজানা', className: '' };
   const money = value => '৳' + bn(value.toLocaleString('en-US'));
-  $('#feeQuickProfile').innerHTML = `
+  profile.innerHTML = `
     <div class="fee-profile-heading">
       <span class="student-avatar" aria-hidden="true">${escapeHtml(student.name.charAt(0))}</span>
       <div><h3>${escapeHtml(student.name)}</h3><small>Student ID: ${escapeHtml(student.id)}</small></div>
@@ -879,6 +881,7 @@ function renderFeeProfile() {
 }
 
 function beginFeePayment() {
+  if (!access.has(CAPABILITIES.FINANCE_COLLECT)) return;
   const student = state.students.find(s => s.id === state.feeStudentId);
   if (!student || !state.financeReady || state.savingFee) return;
   const summary = studentFeeSummary(student, state.transactions);
@@ -911,6 +914,7 @@ function renderRecentTransactions() {
         <div class="trx-right">
           <span class="trx-amount">৳${bn(Number(tx.amount).toLocaleString('en-US'))}</span>
           <span class="trx-date">${escapeHtml(tx.date)}</span>
+          ${tx.status === 'pending' ? '<span class="badge badge-pending">Manager approval বাকি</span>' : tx.status === 'rejected' ? '<span class="badge badge-rejected">বাতিল</span>' : ''}
           <button class="mini-btn" type="button" data-action="view-receipt" data-trx-id="${escapeHtml(tx.id)}">রসিদ দেখুন</button>
           <button class="mini-btn" type="button" data-action="download-receipt" data-trx-id="${escapeHtml(tx.id)}">ডাউনলোড</button>
         </div>
@@ -930,6 +934,7 @@ function renderStudentLedger() {
   const query = ($('#ledgerSearch')?.value || '').trim();
   const searched = query ? searchStudents(studentsWithStatus, query) : studentsWithStatus;
 
+  const canCollect = access.has(CAPABILITIES.FINANCE_COLLECT);
   const filtered = searched.filter(s => {
     if (state.ledgerFilter === 'due') return !s.isPaid;
     if (state.ledgerFilter === 'paid') return s.isPaid;
@@ -951,7 +956,7 @@ function renderStudentLedger() {
             ${student.isPaid ? 'পরিশোধিত' : 'বকেয়া'}
           </span>
           <div class="student-actions">
-            ${!student.isPaid ? `
+            ${!student.isPaid && canCollect ? `
               <button class="mini-btn approve" type="button" data-action="quick-collect" data-id="${student.id}">
                 ফি গ্রহণ
               </button>` : `
@@ -967,6 +972,7 @@ function renderStudentLedger() {
 function filteredReportTransactions() {
   const { month, className, feeType, method } = state.reportFilters;
   return newestTransactions(state.transactions.filter(tx =>
+    isFinalizedTransaction(tx) &&
     (month === 'all' || tx.month === month) &&
     (className === 'all' || tx.className === className) &&
     (feeType === 'all' || tx.feeType === feeType) &&
@@ -1438,6 +1444,11 @@ async function handleReportDownload(button) {
 
 async function collectFee(event) {
   event.preventDefault();
+  // The Admin panel is read-only for finance; collection stays with Payment/Cash Counter.
+  if (!access.has(CAPABILITIES.FINANCE_COLLECT)) {
+    toast('ফি গ্রহণের জন্য পেমেন্ট কাউন্টার ব্যবহার করুন');
+    return;
+  }
   const form = event.currentTarget;
   if (state.savingFee || !state.financeReady || form.hidden) return;
   if (!form.reportValidity()) return;
@@ -2026,8 +2037,11 @@ const handleFinanceClick = event => {
     const tx = state.transactions.find(t => t.id === trxId);
     if (tx) saveReceiptFile(tx, button);
   } else if (action === 'quick-collect') {
+    if (!access.has(CAPABILITIES.FINANCE_COLLECT)) return;
     setFinanceTab('collection');
-    $('#feeStudentSearch').value = id;
+    const search = $('#feeStudentSearch');
+    if (!search) return;
+    search.value = id;
     selectFeeStudent(id);
   } else if (action === 'view-student-receipts') {
     const studentTxs = newestTransactions(state.transactions.filter(t => t.studentId === id));

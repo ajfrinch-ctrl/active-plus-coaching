@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { adminStudents, initialTransactions } from '../js/admin-data.js';
-import { searchStudents, studentFeeSummary, newestTransactions, monthLabel, dateLabel, financeRepository, TRANSACTIONS_KEY } from '../js/finance-data.js';
+import { searchStudents, studentFeeSummary, newestTransactions, monthLabel, dateLabel, financeRepository, TRANSACTIONS_KEY, isFinalizedTransaction } from '../js/finance-data.js';
+import { seedStaffSession } from './staff-harness.mjs';
 import { receiptMarkup, imagePDF } from '../js/finance-receipt.js';
 const now = new Date(2026, 8, 22);
 
@@ -28,6 +29,41 @@ test('partial tuition, other fee types, wrong year and overpayments', () => {
   assert.equal(studentFeeSummary({ ...student, monthlyFee: 2500 }, txs, now).due, 2000);
   assert.equal(studentFeeSummary({ ...student, monthlyFee: 0 }, [], now).due, 0);
   assert.equal(studentFeeSummary(student, [], now).lastPayment, null);
+});
+
+test('pending and rejected Counter entries never settle tuition; legacy and approved records do', () => {
+  const student = adminStudents.find(s => s.id === '260613004');
+  const base = { studentId: student.id, feeType: 'মাসিক বেতন', month: monthLabel(now), amount: 500, date: dateLabel(now) };
+  const pending = { ...base, status: 'pending' }, rejected = { ...base, id: 'rejected', status: 'rejected' };
+  const approved = { ...base, id: 'approved', status: 'approved' }, legacy = { ...base, id: 'legacy' };
+  assert.equal(isFinalizedTransaction(pending), false);
+  assert.equal(isFinalizedTransaction(rejected), false);
+  assert.equal(isFinalizedTransaction(approved), true);
+  assert.equal(isFinalizedTransaction(legacy), true);
+  assert.equal(studentFeeSummary(student, [pending, rejected], now).tuitionPaid, 0);
+  assert.equal(studentFeeSummary(student, [pending, approved], now).tuitionPaid, 500);
+});
+
+test('Manager review changes only approval metadata, stores a trail and denies repeat/unauthenticated calls', async () => {
+  const rows = new Map();
+  const store = { getItem: key => rows.get(key) ?? null, setItem: (key, value) => rows.set(key, value), removeItem: key => rows.delete(key) };
+  globalThis.window = { localStorage: store, sessionStorage: store };
+  const entry = { id: 'pending-1', studentId: 'AP-1024', studentName: 'Raisa', amount: 750, method: 'Cash', collectedBy: 'পেমেন্ট কাউন্টার', status: 'pending', reviewHistory: [] };
+  rows.set(TRANSACTIONS_KEY, JSON.stringify([entry]));
+  await assert.rejects(() => financeRepository.reviewTransaction(entry.id, 'approved'), { code: 'ACCESS_DENIED' });
+  seedStaffSession(window, 'manager');
+  const approvedRows = await financeRepository.reviewTransaction(entry.id, 'approved');
+  const approved = approvedRows[0];
+  for (const field of ['id', 'studentId', 'studentName', 'amount', 'method', 'collectedBy']) assert.equal(approved[field], entry[field]);
+  assert.equal(approved.status, 'approved'); assert.equal(approved.reviewHistory.length, 1);
+  assert.equal(approved.reviewHistory[0].decision, 'approved');
+  await assert.rejects(() => financeRepository.reviewTransaction(entry.id, 'rejected', 'duplicate'), { code: 'ALREADY_REVIEWED' });
+  const second = { ...entry, id: 'pending-2' };
+  rows.set(TRANSACTIONS_KEY, JSON.stringify([second, ...approvedRows]));
+  await assert.rejects(() => financeRepository.reviewTransaction(second.id, 'rejected', '   '), /কারণ লিখুন/);
+  const rejectedRows = await financeRepository.reviewTransaction(second.id, 'rejected', 'রসিদে তথ্য অসম্পূর্ণ');
+  assert.equal(rejectedRows.find(tx => tx.id === second.id).reviewNote, 'রসিদে তথ্য অসম্পূর্ণ');
+  assert.equal(rejectedRows.find(tx => tx.id === second.id).reviewHistory[0].reason, 'রসিদে তথ্য অসম্পূর্ণ');
 });
 
 test('dynamic dates work across month/year boundaries', () => {
@@ -57,13 +93,18 @@ test('an empty ledger stays empty; a seeded ledger persists, merges saves and re
   await financeRepository.saveTransaction(tx);
   const after = await financeRepository.listTransactions();
   assert.equal(after.length, before.length + 1);
-  assert.deepEqual(after[0], tx);
+  assert.deepEqual(after[0], { ...tx, status: 'pending', reviewHistory: [] });
   await financeRepository.saveTransaction(tx); // Idempotent save by ID.
   assert.equal((await financeRepository.listTransactions()).length, after.length);
   const otherTab = { ...tx, id: 'other-tab' };
   storage.set(TRANSACTIONS_KEY, JSON.stringify([otherTab, ...after]));
   await financeRepository.saveTransaction({ ...tx, id: 'second' });
   assert.equal((await financeRepository.listTransactions()).length, after.length + 2);
+  await financeRepository.saveTransaction({ ...tx, id: 'spoof-approved', status: 'approved', reviewedBy: 'counter', reviewHistory: [{ decision: 'approved' }] });
+  const spoofed = (await financeRepository.listTransactions()).find(item => item.id === 'spoof-approved');
+  assert.equal(spoofed.status, 'pending');
+  assert.deepEqual(spoofed.reviewHistory, []);
+  assert.equal(spoofed.reviewedBy, undefined);
   storage.set(TRANSACTIONS_KEY, 'corrupt-json');
   await assert.rejects(financeRepository.listTransactions());
   await assert.rejects(financeRepository.saveTransaction(tx));

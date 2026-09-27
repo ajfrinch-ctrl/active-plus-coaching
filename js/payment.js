@@ -4,7 +4,7 @@
    roster, which starts empty. */
 import { feeCategories, paymentMethods } from './admin-data.js';
 import { loadRoster } from './office-data.js';
-import { financeRepository, monthLabel, dateLabel, searchStudents, studentFeeSummary, latinDigits, stampTransaction } from './finance-data.js';
+import { financeRepository, monthLabel, dateLabel, searchStudents, studentFeeSummary, latinDigits, stampTransaction, isFinalizedTransaction, TRANSACTIONS_KEY } from './finance-data.js';
 import { receiptMarkup, downloadReceipt, createReceiptPNG } from './finance-receipt.js';
 import { toBanglaNumber } from './ui.js';
 import { registerServiceWorker } from './service-worker.js';
@@ -187,12 +187,14 @@ function renderPulse() {
   const month = monthLabel();
   const todays = state.transactions.filter(tx => tx.date === today);
   const monthly = state.transactions.filter(tx => tx.month === month);
+  const finalizedToday = todays.filter(isFinalizedTransaction);
+  const finalizedMonth = monthly.filter(isFinalizedTransaction);
   const total = list => list.reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
   const dueStudents = state.students.filter(student => summaryOf(student).due > 0).length;
-  $('#payTodayAmount').textContent = money(total(todays));
-  $('#payTodayCount').textContent = todays.length ? `${bn(todays.length)}টি লেনদেন সম্পন্ন` : 'এখনও কোনো লেনদেন নেই';
-  $('#payMonthAmount').textContent = money(total(monthly));
-  $('#payMonthCount').textContent = `${bn(monthly.length)}টি লেনদেন`;
+  $('#payTodayAmount').textContent = money(total(finalizedToday));
+  $('#payTodayCount').textContent = `${bn(finalizedToday.length)} অনুমোদিত • ${bn(todays.filter(tx => tx.status === 'pending').length)} অপেক্ষমাণ`;
+  $('#payMonthAmount').textContent = money(total(finalizedMonth));
+  $('#payMonthCount').textContent = `${bn(finalizedMonth.length)} অনুমোদিত • ${bn(monthly.filter(tx => tx.status === 'pending').length)} অপেক্ষমাণ`;
   $('#payDueStudents').textContent = `${bn(dueStudents)} জন`;
 }
 
@@ -230,7 +232,7 @@ function renderActivity() {
         <span class="student-avatar" aria-hidden="true">${escapeHtml(String(tx.studentName || '?').charAt(0))}</span>
         <span class="pay-activity-copy">
           <strong>${escapeHtml(tx.studentName)}</strong>
-          <small>${escapeHtml(tx.feeType)} • ${escapeHtml(tx.month)} • ${escapeHtml(tx.method)}</small>
+          <small>${escapeHtml(tx.feeType)} • ${escapeHtml(tx.month)} • ${escapeHtml(tx.method)} • ${tx.status === 'pending' ? 'Manager approval বাকি' : tx.status === 'rejected' ? 'বাতিল' : 'অনুমোদিত'}</small>
         </span>
         <span class="pay-activity-amount">${money(tx.amount)}</span>
       </button>`).join('')
@@ -485,6 +487,8 @@ $('#payCollectionForm').addEventListener('submit', async event => {
     trxRef: $('#payFeeTrxId').value.trim(),
     date: dateLabel(now),
     collectedBy: 'পেমেন্ট কাউন্টার',
+    status: 'pending',
+    reviewHistory: [],
     note: $('#payFeeNote').value.trim()
   }, now);
   state.saving = true;
@@ -516,7 +520,7 @@ $('#payCollectionForm').addEventListener('submit', async event => {
   renderQuickPicks();
   renderActivity();
   renderProfile();
-  toast(`${student.name}-এর ${money(amount)} ফি সফলভাবে জমা নেওয়া হয়েছে`, 'success');
+  toast(`${student.name}-এর পেমেন্ট এন্ট্রি জমা হয়েছে; Manager অনুমোদনের অপেক্ষায়`, 'success');
   openReceiptModal(tx, student);
 });
 
@@ -678,6 +682,11 @@ document.addEventListener('keydown', event => {
     searchInput.focus();
     searchInput.select();
   }
+});
+
+// Manager review in another same-origin tab updates provisional receipts/statuses.
+window.addEventListener('storage', event => {
+  if (event.key === TRANSACTIONS_KEY || event.key === null) void loadTransactions();
 });
 
 /* ---------- Returning session: a remembered device (or a sign-in from the

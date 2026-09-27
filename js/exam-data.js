@@ -1,6 +1,8 @@
 /* Local exam workflow adapter, NOT secure online authentication/proctoring.
    A production API must own authorization, time, answer keys and accepted submissions. */
 import { teachingRepository, DEMO_TEACHER } from './teaching-data.js';
+import { isTeacherAssigned } from './teacher-assignments.js';
+import { hasStaffSession, readStaffAccount } from './staff-auth.js';
 import { enabledClasses } from './config.js';
 import { KEYS, readRaw, writeRaw } from './database.js';
 export const EXAM_KEY = KEYS.exams;
@@ -63,11 +65,16 @@ export function classExamDate(startAt) {
 export function examMatchesClass(exam, className) {
   return !exam.className || exam.className === className;
 }
+export function examMatchesStudent(exam, student) {
+  const normalize = value => String(value || '').normalize('NFC').trim().replace(/\s*বিভাগ$/, '').trim();
+  return examMatchesClass(exam, student?.className) && (!exam.group || normalize(exam.group) === normalize(student?.group));
+}
 export function validateExam(input) {
   const title = String(input.title || '').trim(), subject = String(input.subject || '').trim();
   if (!title || title.length > 150 || !subject || subject.length > 80) fail('পরীক্ষার নাম ও একটি বিষয় দিন।');
-  const className = String(input.className || '').trim();
+  const className = String(input.className || '').trim(), group = String(input.group || '').trim();
   if (className && !enabledClasses.includes(className)) fail('সঠিক শ্রেণি নির্বাচন করুন।');
+  if (group.length > 80) fail('Batch/Group সর্বোচ্চ ৮০ অক্ষরের মধ্যে দিন।');
   const startAt = Number(input.startAt), endAt = Number(input.endAt), lateMinutes = input.type === 'mcq' ? Number(input.lateMinutes ?? 10) : 0, negative = Number(input.negative ?? 0), passPercent = Number(input.passPercent ?? 33);
   if (!Number.isFinite(startAt) || !Number.isFinite(endAt) || endAt <= startAt || endAt - startAt > 86400000 || startAt < 1577836800000 || endAt > 4102444800000) fail('সঠিক শুরু ও শেষ সময় দিন; সময়কাল সর্বোচ্চ ২৪ ঘণ্টা।');
   if (input.type === 'mcq' && (!Number.isInteger(lateMinutes) || lateMinutes < 1 || lateMinutes * 60000 > endAt - startAt)) fail('দেরিতে প্রবেশের সীমা ১ মিনিট থেকে পরীক্ষার সময়কালের মধ্যে দিন।');
@@ -76,7 +83,7 @@ export function validateExam(input) {
   const instructions = String(input.instructions || '').trim();
   if (instructions.length > 2000) fail('নির্দেশনা সর্বোচ্চ ২০০০ অক্ষরে দিন।');
   const questions = parseQuestions(input.template, input.type);
-  return { title, subject, className, type: input.type, startAt, endAt, lateMinutes, negative: input.type === 'mcq' ? negative : 0, passPercent, instructions, template: input.template, questions };
+  return { title, subject, className, group, type: input.type, startAt, endAt, lateMinutes, negative: input.type === 'mcq' ? negative : 0, passPercent, instructions, template: input.template, questions };
 }
 function read() {
   const raw = readRaw(EXAM_KEY);
@@ -110,13 +117,24 @@ async function mutate(fn) {
   return navigator.locks ? navigator.locks.request(EXAM_KEY, task) : task();
 }
 function examById(db, id) { const e = db.exams.find(e => e.id === id); if (!e) fail('পরীক্ষাটি পাওয়া যায়নি।'); return e; }
-function teacherOwns(exam, actor) { if (actor?.role !== 'teacher' || actor.id !== exam.teacherId) fail('শুধু দায়িত্বপ্রাপ্ত শিক্ষক এই কাজ করতে পারবেন।'); }
+function teacherOwns(exam, actor) {
+  if (actor?.role !== 'teacher' || actor.id !== exam.teacherId || !isTeacherAssigned('teacher.apc', exam.className, exam.group || '')) fail('শুধু দায়িত্বপ্রাপ্ত শিক্ষক এবং Manager-assigned class এই কাজ করতে পারবেন।');
+}
 function requireManager(actor) { if (actor?.role !== 'manager') fail('শুধু Manager পরীক্ষা অনুমোদন করতে পারবেন।'); }
-async function eligibleStudent(student) {
-  const roster = await teachingRepository.listStudents();
-  const found = roster.find(s => s.id === student?.id);
-  if (!found) fail('শুধু অনুমোদিত শিক্ষার্থী পরীক্ষা দিতে পারবে।');
-  return { id: found.id, name: found.name, className: found.className };
+async function requireRoleSession(role) {
+  if (!(await hasStaffSession(role))) fail(`সক্রিয় ${role === 'teacher' ? 'Teacher' : 'Manager'} session ছাড়া এই কাজ করা যাবে না।`);
+  const account = await readStaffAccount(role);
+  if (!account || ['disabled', 'inactive', 'rejected'].includes(account.status) || account.accountStatus === 'disabled') fail(`সক্রিয় ${role === 'teacher' ? 'Teacher' : 'Manager'} profile ছাড়া এই কাজ করা যাবে না।`);
+}
+function eligibleParticipant(exam, student) {
+  const found = (exam.participants || []).find(person => person.id === student?.id);
+  if (!found) fail('শুধু পরীক্ষার অনুমোদিত participant পরীক্ষা দিতে পারবে।');
+  return { id: found.id, name: found.name, className: found.className, group: found.group || '' };
+}
+function teacherExamSnapshot(db, actor = TEACHER_ACTOR) {
+  const exams = db.exams.filter(exam => exam.teacherId === actor.id && isTeacherAssigned('teacher.apc', exam.className, exam.group || ''));
+  const ids = new Set(exams.map(exam => exam.id));
+  return { ...db, exams, attempts: db.attempts.filter(attempt => ids.has(attempt.examId)) };
 }
 function attemptById(db, id, studentId) {
   const a = db.attempts.find(a => a.id === id && a.studentId === studentId);
@@ -159,46 +177,77 @@ export function examResults(db, exam) {
   return rows.map((a, index) => ({ ...a, rank: rows.findIndex(other => other.score === a.score) + 1, grade: gradeFor(a.score, totalMarks(exam), exam.passPercent) }));
 }
 export const examRepository = {
-  async list() { return read(); },
+  async list(actor) {
+    const db = read();
+    if (actor?.role === 'teacher') return teacherExamSnapshot(db, actor);
+    return db;
+  },
   async listStudents() { return teachingRepository.listStudents(); },
   async saveDraft(input, actor = TEACHER_ACTOR) {
     if (actor.role !== 'teacher') fail('শিক্ষক প্রশ্ন তৈরি করবেন।');
+    await requireRoleSession('teacher');
     const fields = validateExam(input);
-    return mutate(db => {
+    const teacher = await readStaffAccount('teacher');
+    const teacherName = String(teacher?.fullName || teacher?.username || '').trim();
+    if (!teacherName) fail('Teacher profile পাওয়া যায়নি।');
+    if (!isTeacherAssigned(teacher.username || 'teacher.apc', fields.className, fields.group)) fail('এই class/batch-এর জন্য Manager assignment নেই।');
+    const db = await mutate(db => {
       const old = input.id ? examById(db, input.id) : null;
       if (old) { teacherOwns(old, actor); if (old.status === 'published' || db.attempts.some(a => a.examId === old.id)) fail('প্রকাশিত/চালু পরীক্ষার প্রশ্ন বদলানো যাবে না।'); }
-      const exam = { ...fields, id: old?.id || `EX-${crypto.randomUUID()}`, teacherId: actor.id, teacherName: DEMO_TEACHER.name, status: 'draft', reviewNote: '', createdAt: old?.createdAt || Date.now(), updatedAt: Date.now(), participants: [] };
+      const exam = { ...fields, id: old?.id || `EX-${crypto.randomUUID()}`, teacherId: actor.id, teacherName, status: 'draft', reviewNote: '', createdAt: old?.createdAt || Date.now(), updatedAt: Date.now(), participants: [] };
       if (old) db.exams[db.exams.indexOf(old)] = exam; else db.exams.unshift(exam);
     });
+    return teacherExamSnapshot(db, actor);
   },
   async requestApproval(id, actor = TEACHER_ACTOR) {
-    return mutate(db => { const e = examById(db, id); teacherOwns(e, actor); if (!['draft', 'rejected'].includes(e.status)) fail('এই পরীক্ষা ইতিমধ্যে পাঠানো/প্রকাশ করা হয়েছে।'); validateExam(e); if (e.startAt <= Date.now()) fail('পরীক্ষার শুরুর সময় ভবিষ্যতে দিন।'); e.status = 'pending'; e.reviewNote = ''; });
+    await requireRoleSession('teacher');
+    const db = await mutate(db => { const e = examById(db, id); teacherOwns(e, actor); if (!['draft', 'rejected'].includes(e.status)) fail('এই পরীক্ষা ইতিমধ্যে পাঠানো/প্রকাশ করা হয়েছে।'); validateExam(e); if (e.startAt <= Date.now()) fail('পরীক্ষার শুরুর সময় ভবিষ্যতে দিন।'); e.status = 'pending'; e.reviewNote = ''; });
+    return teacherExamSnapshot(db, actor);
   },
   async review(id, decision, options = {}, actor) {
     requireManager(actor);
-    const students = await teachingRepository.listStudents();
+    await requireRoleSession('manager');
+    const students = await teachingRepository.listApprovedStudents();
     return mutate(db => {
       const e = examById(db, id); if (e.status !== 'pending') fail('শুধু অপেক্ষমাণ পরীক্ষা পর্যালোচনা করা যাবে।');
       if (decision === 'publish') {
         if (e.startAt <= Date.now()) fail('শুরুর সময় পেরিয়েছে। সংশোধনের জন্য শিক্ষককে ফেরত দিন।');
         const validated = validateExam({ ...e, negative: options.negative ?? e.negative });
-        e.negative = validated.negative; e.status = 'published'; e.publishedAt = Date.now();
-        e.participants = students.map(s => ({ id: s.id, name: s.name, className: s.className }));
+        e.negative = validated.negative; e.status = 'published'; e.publishedAt = Date.now(); e.resultsPublished = false;
+        e.participants = students.filter(student => examMatchesStudent(e, student)).map(s => ({ id: s.id, name: s.name, className: s.className, group: s.group || '' }));
       } else if (decision === 'reject') {
         const note = String(options.note || '').trim(); if (!note || note.length > 500) fail('সংশোধনের কারণ লিখুন (সর্বোচ্চ ৫০০ অক্ষর)।');
         e.status = 'rejected'; e.reviewNote = note;
       } else fail('সঠিক সিদ্ধান্ত নির্বাচন করুন।');
     });
   },
+  async publishResults(id, actor = MANAGER_ACTOR) {
+    requireManager(actor);
+    await requireRoleSession('manager');
+    return mutate(db => {
+      const exam = examById(db, id);
+      if (exam.status !== 'published' || Date.now() < exam.endAt) fail('পরীক্ষা শেষ হওয়ার আগে ফলাফল প্রকাশ করা যাবে না।');
+      if (exam.resultsPublished) fail('ফলাফল ইতিমধ্যে প্রকাশিত হয়েছে।');
+      if (db.attempts.some(attempt => attempt.examId === id && ['active', 'queued'].includes(attempt.status))) fail('অপেক্ষমাণ/অফলাইন উত্তর জমা শেষ না হওয়া পর্যন্ত ফলাফল প্রকাশ করা যাবে না।');
+      if (exam.type !== 'mcq') {
+        const recorded = new Set(db.attempts.filter(attempt => attempt.examId === id && attempt.status === 'submitted').map(attempt => attempt.studentId));
+        const absent = new Set(exam.absentIds || []);
+        if (exam.participants.some(person => !recorded.has(person.id) && !absent.has(person.id))) fail('সব অংশগ্রহণকারীর নম্বর বা অনুপস্থিতির রেকর্ড সম্পন্ন হয়নি।');
+      }
+      exam.resultsPublished = true; exam.resultsPublishedAt = Date.now();
+    });
+  },
   async deleteDraft(id, actor = TEACHER_ACTOR) {
-    return mutate(db => { const e = examById(db, id); teacherOwns(e, actor); if (!['draft', 'rejected'].includes(e.status)) fail('প্রকাশিত/অপেক্ষমাণ পরীক্ষা মুছতে পারবেন না।'); db.exams = db.exams.filter(e => e.id !== id); });
+    await requireRoleSession('teacher');
+    const db = await mutate(db => { const e = examById(db, id); teacherOwns(e, actor); if (!['draft', 'rejected'].includes(e.status)) fail('প্রকাশিত/অপেক্ষমাণ পরীক্ষা মুছতে পারবেন না।'); db.exams = db.exams.filter(e => e.id !== id); });
+    return teacherExamSnapshot(db, actor);
   },
   async startAttempt(examId, student) {
-    const person = await eligibleStudent(student);
     return mutate(db => {
-      const e = examById(db, examId), now = Date.now();
+      const e = examById(db, examId), person = eligibleParticipant(e, student), now = Date.now();
       if (e.type !== 'mcq' || e.status !== 'published' || now < e.startAt || now >= e.endAt) fail('এখন পরীক্ষা শুরু করা যাবে না।');
-      if (!examMatchesClass(e, person.className)) fail('এই পরীক্ষাটি তোমার শ্রেণির জন্য নয়।');
+      if (!examMatchesStudent(e, person)) fail('এই পরীক্ষা তোমার শ্রেণি/ব্যাচের জন্য নয়.');
+      if (!e.participants?.some(item => item.id === person.id)) fail('এই পরীক্ষার অংশগ্রহণকারী তালিকায় তোমার নাম নেই।');
       const own = db.attempts.filter(a => a.examId === e.id && a.studentId === person.id);
       if (own.some(a => a.status === 'active')) return;
       if (!own.length && now > e.startAt + e.lateMinutes * 60000) fail('দেরিতে প্রবেশের সময়সীমা শেষ।');
@@ -236,19 +285,24 @@ export const examRepository = {
     });
   },
   async markWrittenAbsent(examId, student, actor = TEACHER_ACTOR) {
-    const person = await eligibleStudent(student);
-    return mutate(db => {
-      const e = examById(db, examId); teacherOwns(e, actor);
+    await requireRoleSession('teacher');
+    const db = await mutate(db => {
+      const e = examById(db, examId); teacherOwns(e, actor); const person = eligibleParticipant(e, student);
+      if (!examMatchesStudent(e, person) || !e.participants.some(item => item.id === person.id)) fail('শিক্ষার্থী এই পরীক্ষার assigned class/batch roster-এ নেই।');
+      if (e.resultsPublished) fail('Manager ফলাফল প্রকাশ করেছেন; নম্বর আর পরিবর্তন করা যাবে না।');
       if (e.status !== 'published' || e.type === 'mcq' || Date.now() < new Date(`${classExamDate(e.startAt)}T00:00:00+06:00`).getTime()) fail('ক্লাসে পরীক্ষার দিন থেকে উপস্থিতি দেওয়া যাবে।');
       if (db.attempts.some(a => a.examId === e.id && a.studentId === person.id)) fail('এই শিক্ষার্থীর নম্বর আছে; অনুপস্থিত করা যাবে না।');
       e.absentIds = [...new Set([...(e.absentIds || []), person.id])];
       if (!e.participants.some(s => s.id === person.id)) e.participants.push(person);
     });
+    return teacherExamSnapshot(db, actor);
   },
   async saveWrittenScore(examId, student, questionScores, actor = TEACHER_ACTOR) {
-    const person = await eligibleStudent(student);
-    return mutate(db => {
-      const e = examById(db, examId); teacherOwns(e, actor);
+    await requireRoleSession('teacher');
+    const db = await mutate(db => {
+      const e = examById(db, examId); teacherOwns(e, actor); const person = eligibleParticipant(e, student);
+      if (!examMatchesStudent(e, person) || !e.participants.some(item => item.id === person.id)) fail('শিক্ষার্থী এই পরীক্ষার assigned class/batch roster-এ নেই।');
+      if (e.resultsPublished) fail('Manager ফলাফল প্রকাশ করেছেন; নম্বর আর পরিবর্তন করা যাবে না।');
       if (e.status !== 'published' || e.type === 'mcq' || Date.now() < new Date(`${classExamDate(e.startAt)}T00:00:00+06:00`).getTime()) fail('ক্লাসে পরীক্ষার দিন থেকে নম্বর দেওয়া যাবে।');
       if (e.questions.some(q => !Object.hasOwn(questionScores, q.id) || !['string', 'number'].includes(typeof questionScores[q.id]) || !String(questionScores[q.id]).trim() || !Number.isFinite(Number(questionScores[q.id])) || round(Number(questionScores[q.id])) !== Number(questionScores[q.id]) || Number(questionScores[q.id]) < 0 || Number(questionScores[q.id]) > q.marks)) fail('প্রতিটি প্রশ্নের নম্বর শূন্য থেকে পূর্ণমানের মধ্যে দিন।');
       const score = round(e.questions.reduce((sum, q) => sum + Number(questionScores[q.id]), 0));
@@ -259,6 +313,7 @@ export const examRepository = {
       e.absentIds = (e.absentIds || []).filter(id => id !== person.id);
       if (!e.participants.some(s => s.id === person.id)) e.participants.push(person);
     });
+    return teacherExamSnapshot(db, actor);
   }
 };
 export function watchExams(callback) {

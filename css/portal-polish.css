@@ -1,0 +1,68 @@
+/* Shared phone-navigation polish across Student, Admin, Manager and Teacher. */
+.bottom-nav,
+.admin-bottom {
+  height: calc(72px + var(--safe-bottom));
+  padding: 5px 8px var(--safe-bottom);
+  border-top: 1px solid rgba(218,232,221,.95);
+  background: rgba(255,255,255,.97);
+  box-shadow: 0 -5px 20px rgba(21,68,38,.07);
+}
+.bottom-link,
+.admin-bottom-item {
+  gap: 3px;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+.bottom-link .nav-chip,
+.admin-bottom-item .nav-chip {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 33px;
+  border-radius: 12px;
+  transition: background-color .18s ease, transform .18s ease, box-shadow .18s ease;
+}
+.bottom-link svg,
+.admin-bottom-item svg,
+.admin-bottom-item .nav-icon {
+  width: 23px;
+  height: 23px;
+  object-fit: contain;
+  transition: transform .18s ease;
+}
+.bottom-link span:last-child,
+.admin-bottom-item .nav-label,
+.admin-bottom-item > span:not(.nav-chip) {
+  max-width: 100%;
+  font-size: 10.5px;
+  font-weight: 650;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+.bottom-link.active .nav-chip,
+.admin-bottom-item.active .nav-chip,
+.admin-bottom-item[aria-current="page"] .nav-chip {
+  transform: translateY(-1px);
+  background: #e7f5e9;
+  box-shadow: 0 3px 9px rgba(28,109,54,.12), inset 0 1px 0 #fff;
+}
+.bottom-link.active svg,
+.admin-bottom-item.active svg,
+.admin-bottom-item[aria-current="page"] svg,
+.admin-bottom-item.active .nav-icon,
+.admin-bottom-item[aria-current="page"] .nav-icon {
+  transform: scale(1.08);
+}
+.bottom-link:focus-visible .nav-chip,
+.admin-bottom-item:focus-visible .nav-chip {
+  outline: 3px solid rgba(24,126,57,.45);
+  outline-offset: 2px;
+}
+@media (max-width:360px) {
+  .bottom-nav,.admin-bottom { padding-left:4px; padding-right:4px; }
+  .bottom-link .nav-chip,.admin-bottom-item .nav-chip { width:36px; height:31px; }
+  .bottom-link span:last-child,.admin-bottom-item .nav-label,.admin-bottom-item > span:not(.nav-chip) { font-size:9.5px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .bottom-link .nav-chip,.admin-bottom-item .nav-chip,.bottom-link svg,.admin-bottom-item svg,.admin-bottom-item .nav-icon { transition:none; }
+}

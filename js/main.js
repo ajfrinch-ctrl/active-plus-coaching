@@ -20,6 +20,7 @@ import { initDynamicTheme } from './theme.js';
 import { initFixedShell } from './fixed-shell.js';
 import { initStudentExams } from './student-exams.js';
 import { initStudentTeaching } from './student-teaching.js';
+import { initStudentDashboard } from './student-dashboard.js';
 
 initFixedShell();
 
@@ -123,6 +124,7 @@ const state = {
 };
 const refreshExams = initStudentExams({ getStudent: () => state.student, getAccount: () => state.account });
 const refreshTeaching = initStudentTeaching({ getStudent: () => state.student });
+const refreshDashboard = initStudentDashboard({ getStudent: () => state.student, getAccount: () => state.account });
 
 function handleAction(action) {
   switch (action) {
@@ -162,6 +164,7 @@ function handleAction(action) {
 
 function enterApp() {
   openStudentApp(state);
+  refreshDashboard();
   refreshTeaching();
   refreshExams();
   refreshNotices();

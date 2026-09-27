@@ -88,6 +88,6 @@ test('stamped payments keep the exact saved fields plus a sortable time', () => 
   assert.equal(tx.amount, 100);
   setup();
   return financeRepository.saveTransaction(tx).then(saved => {
-    assert.deepEqual(saved[0], tx);
+    assert.deepEqual(saved[0], { ...tx, status: 'pending', reviewHistory: [] });
   });
 });

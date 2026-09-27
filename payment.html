@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https:; manifest-src 'self'; worker-src 'self'; base-uri 'self'; object-src 'none'">
+  <meta name="referrer" content="no-referrer">
+  <script src="js/sanitize-url.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
   <meta name="theme-color" content="#04795a">
   <meta name="description" content="Active Plus Coaching পেমেন্ট রিসিভ প্যানেল — শিক্ষার্থী খুঁজে দ্রুত ফি গ্রহণ, রসিদ PDF ডাউনলোড ও হোয়াটসঅ্যাপে ছবি পাঠানো।">
@@ -21,6 +23,7 @@
   <link rel="stylesheet" href="css/icon-experience.css">
   <link rel="stylesheet" href="css/app-redesign.css">
   <link rel="preload" href="assets/fonts/NotoSansBengali-Variable.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="stylesheet" href="css/portal-polish.css">
 </head>
 <body class="pay-body">
   <!-- Entry screen: the login page can also sign in here, so this is a fallback, not a wall. -->
@@ -102,7 +105,7 @@
         <div class="pay-pulse-tile is-today">
           <span class="pay-pulse-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-wallet"></use></svg></span>
           <div>
-            <p class="pay-pulse-label">আজকের আদায়</p>
+            <p class="pay-pulse-label">আজকের অনুমোদিত আদায়</p>
             <p class="pay-pulse-value" id="payTodayAmount">৳০</p>
             <p class="pay-pulse-sub" id="payTodayCount">এখনও কোনো লেনদেন নেই</p>
           </div>

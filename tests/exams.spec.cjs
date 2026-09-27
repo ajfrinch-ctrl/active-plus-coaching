@@ -5,6 +5,7 @@ const t0 = new Date('2026-10-01T09:00:00Z'), start = new Date('2026-10-01T10:00:
 const template = 'প্রশ্ন: বাংলাদেশের রাজধানী কোনটি?\nA: ঢাকা\nB: চট্টগ্রাম\nC: খুলনা\nD: রাজশাহী\nউত্তর: A\n---\nপ্রশ্ন: ৫ + ৩ = কত?\nA: ৬\nB: ৭\nC: ৮\nD: ৯\nউত্তর: C';
 test.use({ viewport: { width: 390, height: 844 }, timezoneId: 'UTC' });
 async function teacher(page) {
+  await page.addInitScript(() => localStorage.setItem('activePlus.manager.teacherAssignments.v1', JSON.stringify([{ id: 'TAS-TENTH', teacherUsername: 'teacher.apc', teacherName: 'Test Teacher', className: 'দশম শ্রেণি', group: '', subject: 'গণিত' }])));
   await page.clock.setFixedTime(t0); await page.goto('/teacher.html'); await page.locator('#teacherEnter').click(); await page.locator('.admin-bottom [data-teacher-view=more]').click(); await page.locator('#teacherMore [data-teacher-view=online-exams]').click();
 }
 async function manager(context) {
@@ -15,7 +16,8 @@ async function manager(context) {
     if (!result.ok && !result.error.includes('আগেই নির্ধারিত')) throw new Error(result.error);
   });
   await page.locator('#managerUsername').fill('manager.apc'); await page.locator('#managerPassword').fill('Apc-Test-2026'); await page.locator('#managerLoginForm [type=submit]').click();
-  await page.locator('[data-manager-view=exams]').click(); return page;
+  await page.locator('.manager-bottom [data-manager-view=more]').click();
+  await page.locator('#managerMoreDrawer [data-manager-view=exams]').click(); return page;
 }
 async function student(context) {
   const page = await context.newPage(); await page.clock.setFixedTime(start); await page.goto('/index.html'); if (await page.locator('#authScreen').isVisible()) await page.locator('#demoLoginButton').click(); await page.locator('#homeView [data-view=exams]').click(); return page;
@@ -34,10 +36,19 @@ async function publishUI(page) {
   const root = page.locator('#managerExamWorkspace'); await root.locator('[data-exam-action=detail]').click();
   await root.locator('[name=negative]').fill('0.5'); await root.locator('[value=publish]').click(); await expect(root.locator('[data-managed-exam]')).toContainText('প্রকাশিত');
 }
+async function releaseResults(office, pupil) {
+  await office.clock.setFixedTime(new Date(end.getTime() + 60_000));
+  await office.locator('.manager-bottom [data-manager-view=more]').click();
+  await office.locator('#managerMoreDrawer [data-manager-view=results]').click();
+  await office.locator('[data-manager-action=publish-results]').click();
+  await expect(office.locator('#managerResultList')).toContainText('ফলাফল প্রকাশিত');
+  await pupil.clock.setFixedTime(new Date(end.getTime() + 60_000));
+  await pupil.locator('[data-student-exam-action=refresh]').click();
+}
 async function seed(page, extra = {}) {
   return page.evaluate(async extra => {
     const { examRepository: repo, examTemplate, MANAGER_ACTOR } = await import('/js/exam-data.js');
-    let db = await repo.saveDraft({ title: 'ডেমো পরীক্ষা', type: 'mcq', subject: 'গণিত', template: examTemplate('mcq'), startAt: new Date('2026-10-01T10:00:00Z').getTime(), endAt: new Date('2026-10-01T11:00:00Z').getTime(), lateMinutes: 10, negative: .5, passPercent: 33, ...extra });
+    let db = await repo.saveDraft({ title: 'ডেমো পরীক্ষা', type: 'mcq', subject: 'গণিত', className: 'দশম শ্রেণি', template: examTemplate('mcq'), startAt: new Date('2026-10-01T10:00:00Z').getTime(), endAt: new Date('2026-10-01T11:00:00Z').getTime(), lateMinutes: 10, negative: .5, passPercent: 33, ...extra });
     const id = db.exams[0].id; await repo.requestApproval(id); await repo.review(id, 'publish', {}, MANAGER_ACTOR); return id;
   }, extra);
 }
@@ -45,7 +56,7 @@ async function finish(page) {
   await page.locator('[data-student-exam-action=confirm]').click(); await page.locator('[data-student-exam-action=finish]').click();
 }
 
-test('teacher paste → Manager approval → mobile MCQ, immediate public score, no early answer PDF', async ({ page, context }) => {
+test('teacher paste → Manager approval → Manager result publishing controls the public score', async ({ page, context }) => {
   const errors = []; page.on('pageerror', e => errors.push(e.message)); await teacher(page); await createUI(page);
   const pupil = await student(context); await expect(pupil.locator('#studentExamWorkspace [data-student-exam]')).toHaveCount(0);
   const office = await manager(context); await publishUI(office);
@@ -53,6 +64,9 @@ test('teacher paste → Manager approval → mobile MCQ, immediate public score,
   await pupil.clock.setFixedTime(start);
   await pupil.locator('[data-student-exam-action=start]').click(); await expect(pupil.locator('.exam-question')).toHaveCount(2); await expect(pupil.locator('[data-answer-question]')).toHaveCount(8);
   await pupil.locator('[data-answer-question=q1][value=B]').check(); await pupil.locator('[data-answer-question=q2][value=C]').check(); await finish(pupil);
+  await expect(pupil.locator('#studentExamWorkspace')).toContainText('ফলাফল Manager-এর প্রকাশের অপেক্ষায়');
+  await expect(pupil.locator('#studentExamWorkspace')).not.toContainText('০.৫ / ২');
+  await releaseResults(office, pupil); await pupil.locator('[data-student-exam-action=results]').click();
   await expect(pupil.locator('#studentExamWorkspace')).toContainText('০.৫ / ২'); await expect(pupil.locator('.exam-results')).toContainText('রাইসা ইসলাম');
   await expect(pupil.locator('.exam-results')).not.toContainText('01700000000'); await expect(pupil.locator('[data-student-exam-action=solutions]')).toHaveCount(0);
   expect(errors).toEqual([]);
@@ -65,6 +79,8 @@ test('running average unlocks one retake, all questions persist and only best sc
   await pupil.evaluate(async id => { const { examRepository:r }=await import('/js/exam-data.js'); let db=await r.startAttempt(id,{id:'260810021'}); const a=db.attempts.find(a=>a.studentId==='260810021'); await r.saveAnswer(a.id,a.studentId,'q1','A'); await r.saveAnswer(a.id,a.studentId,'q2','C'); await r.finishAttempt(a.id,a.studentId); }, id);
   await expect(pupil.locator('[data-student-exam-action=start]')).toBeVisible(); await pupil.locator('[data-student-exam-action=start]').click();
   await pupil.locator('[data-answer-question=q1][value=B]').check(); await finish(pupil);
+  await expect(pupil.locator('#studentExamWorkspace')).toContainText('ফলাফল Manager-এর প্রকাশের অপেক্ষায়');
+  const office = await manager(context); await releaseResults(office, pupil); await pupil.locator('[data-student-exam-action=results]').click();
   await expect(pupil.locator('#studentExamWorkspace')).toContainText('তোমার প্রচেষ্টা ২'); await expect(pupil.locator('[data-student-exam-action=start]')).toHaveCount(0);
   const mine = pupil.locator('.exam-results .exam-card').filter({has:pupil.getByRole('heading',{name:'রাইসা ইসলাম'})}); await expect(mine).toContainText('১ / ২');
 });
@@ -99,6 +115,7 @@ for (const type of ['written','short']) {
     await page.clock.setFixedTime(new Date('2026-10-02T09:00:00Z')); const teacherRoot=page.locator('#teacherExamWorkspace'); await teacherRoot.locator('[data-exam-action=grade]').click();
     await teacherRoot.locator('[name=studentId]').selectOption('AP-1024'); await teacherRoot.locator('[name=q1]').fill('4'); await teacherRoot.locator('[name=q2]').fill('2'); await teacherRoot.locator('[value=marks]').click();
     await teacherRoot.locator('[name=studentId]').selectOption('260810021'); await teacherRoot.locator('[value=absent]').click();
+    const resultOffice = await manager(context); await releaseResults(resultOffice, pupil);
     await pupil.locator('[data-student-exam-action=results]').click(); await expect(pupil.locator('.exam-results')).toContainText('৬ / ৮');
     await teacherRoot.locator('[data-exam-action=list]').click(); await teacherRoot.locator('[data-exam-action=report]').click(); await expect(teacherRoot).toContainText('অনুপস্থিত');
     const csvPromise=page.waitForEvent('download'); await teacherRoot.locator('[data-exam-action=csv]').click(); const csv=await fs.readFile(await (await csvPromise).path(),'utf8'); expect(csv).toContain('অনুপস্থিত'); expect(csv).toContain('রাইসা ইসলাম'); expect(csv).not.toContain('01700000000');

@@ -38,8 +38,8 @@ test('teacher activities, roster and online exam authoring are populated',async(
   await page.locator('[data-exam-action=new-mcq]').click(); await noEmpty(page.locator('[data-exam-form]')); await expect(page.locator('[data-parsed-preview]')).toContainText('২টি প্রশ্ন');
 });
 
-test('admin finance, notices, routine and approvals show examples but never save automatically',async({page})=>{
-  await enterAdmin(page); await page.locator('.admin-bottom [data-admin-view=finance]').click(); await expect(page.locator('#feeStudentSearch')).toHaveValue('রাইসা'); await page.locator('.fee-search-result').first().click(); await page.locator('#feeProfileCollect').click(); await noEmpty(page.locator('#feeCollectionForm'));
+test('admin finance monitoring, notices and routine show examples without automatic writes',async({page})=>{
+  await enterAdmin(page); await page.locator('.admin-bottom [data-admin-view=finance]').click(); await expect(page.locator('#recentTrxList .trx-item')).toHaveCount(5); await expect(page.locator('#feeStudentSearch, #feeCollectionForm, #feeProfileCollect')).toHaveCount(0);
   expect(await page.evaluate(key=>JSON.parse(localStorage.getItem(key)).length,FINANCE)).toBe(7);
   await page.locator('.admin-bottom [data-admin-view=routine]').click(); await noEmpty(page.locator('#addRoutineForm'));
   await page.locator('.admin-bottom [data-admin-view=more]').click(); await page.locator('.admin-more-item[data-admin-view=notices]').click(); await noEmpty(page.locator('#noticeForm'));

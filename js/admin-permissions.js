@@ -55,7 +55,6 @@ const ADMIN = Object.freeze([
   CAPABILITIES.STUDENTS_VIEW,
   CAPABILITIES.STUDENTS_MANAGE,
   CAPABILITIES.FINANCE_VIEW,
-  CAPABILITIES.FINANCE_COLLECT,
   CAPABILITIES.REPORTS_VIEW,
   CAPABILITIES.NOTICES_MANAGE,
   CAPABILITIES.ROUTINE_MANAGE,
@@ -126,10 +125,8 @@ export const ADMIN_MORE_NAV = Object.freeze([
   { view: 'teaching', label: 'শিক্ষক প্যানেল', hint: 'শিক্ষক প্যানেল খুলুন', icon: 'teaching', capability: CAPABILITIES.TEACHING_PANEL, order: 6 }
 ]);
 
-/** Dashboard tiles: one large icon + one clear label each, generated only for
- *  the capabilities the signed-in role holds. */
-/* The fee-collection entry point is the full-width "ফি গ্রহণ করুন" card, so the
-   grid lists the sections instead of repeating that action. */
+/** Dashboard tiles show system sections only, generated from the capabilities
+ *  the signed-in role holds. Daily cash collection is intentionally not a tile. */
 export const ADMIN_FEATURE_TILES = Object.freeze([
   { view: 'students', label: 'শিক্ষার্থী', icon: 'users', capability: CAPABILITIES.STUDENTS_VIEW, order: 1 },
   { view: 'finance', label: 'হিসাব', icon: 'finance', capability: CAPABILITIES.FINANCE_VIEW, order: 2 },

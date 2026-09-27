@@ -169,9 +169,8 @@ export function initAdminPanelShell({ access, onNavigate } = {}) {
   const moreItems = renderMoreMenu(document, access, navigate);
   const tiles = renderFeatureGrid(document.querySelector('#adminFeatureGrid'), tileEntries, navigate);
 
-  // Title chip and the fee-collection card keep the same generated language.
+  // The system-overview title uses the same generated icon language as the nav.
   paintIcon(document.querySelector('.admin-hero-icon'), 'dashboard', 'admin-hero-icon-image');
-  paintIcon(document.querySelector('#dashCollectFee .admin-dashboard-collect-icon'), 'payment', 'admin-collect-icon-image');
 
   // Hero summary tiles: students, then running classes.
   const heroIcons = ['users', 'classes'];

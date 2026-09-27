@@ -1,4 +1,4 @@
-const CACHE_NAME = 'active-plus-student-v66-populated-role-demo';
+const CACHE_NAME = 'active-plus-student-v70-teacher-assignments-results';
 const APP_SHELL = [
   './offline-roles.html',
   './css/offline-roles.css',
@@ -63,7 +63,10 @@ const APP_SHELL = [
   './assets/icons/admin/logout.png',
   './css/icon-experience.css',
   './css/app-redesign.css',
+  './css/student-home.css',
+  './css/portal-polish.css',
   './css/admin-panel-ui.css',
+  './css/manager-panel.css',
   './css/tokens.css',
   './css/pending.css',
   './css/shell.css',
@@ -87,6 +90,7 @@ const APP_SHELL = [
   './js/secure-store.js',
   './js/session.js',
   './js/sanitize.js',
+  './js/sanitize-url.js',
   './js/staff-password-dialog.js',
   './js/demo-data.js',
   './js/demo-forms.js',
@@ -96,6 +100,7 @@ const APP_SHELL = [
   './js/exam-pdf.js',
   './js/material-pdf.js',
   './js/student-exams.js',
+  './js/student-dashboard.js',
   './js/account-policy.js',
   './js/storage.js',
   './js/ui.js',
@@ -125,6 +130,7 @@ const APP_SHELL = [
   './js/payment.js',
   './js/teacher.js',
   './js/teaching-data.js',
+  './js/teacher-assignments.js',
   './js/student-teaching.js',
   './js/admin-data.js',
   './js/office-data.js',

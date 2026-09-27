@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https:; manifest-src 'self'; worker-src 'self'; base-uri 'self'; object-src 'none'">
+  <meta name="referrer" content="no-referrer">
+  <script src="js/sanitize-url.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
   <meta name="theme-color" content="#04795a">
   <meta name="description" content="Active Plus Coaching এডমিন প্যানেল — ইউজারনেম ও পাসওয়ার্ড দিয়ে প্রবেশ।">
@@ -23,6 +25,7 @@
        Loaded last so the panel always speaks the shared design language. -->
   <link rel="stylesheet" href="css/admin-panel-ui.css">
   <link rel="preload" href="assets/fonts/NotoSansBengali-Variable.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="stylesheet" href="css/portal-polish.css">
 </head>
 <body>
   <!-- First-run owner-controlled setup; shown only while the Admin record is absent. -->
@@ -125,7 +128,7 @@
 
 
     <main class="admin-main" id="adminMain">
-      <!-- Compact home: essential summary and one collection shortcut. -->
+      <!-- System overview: monitoring summaries without daily cash-entry actions. -->
       <section class="admin-view active" data-view-panel="dashboard" aria-labelledby="dashTitle">
         <article class="admin-hero">
           <div class="admin-hero-head">
@@ -161,11 +164,6 @@
         <!-- Permission-driven section grid: one large icon + one clear label per
              section, rendered only for the capabilities this role holds. -->
         <div class="admin-feature-grid" id="adminFeatureGrid" aria-label="অনুমোদিত বিভাগসমূহ"></div>
-        <button class="admin-dashboard-collect" id="dashCollectFee" type="button" data-admin-cap="finance.collect">
-          <span class="admin-dashboard-collect-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-wallet"></use></svg></span>
-          <span><strong>ফি গ্রহণ করুন</strong><small>শিক্ষার্থী খুঁজে পেমেন্ট নিন</small></span>
-          <svg class="admin-menu-arrow" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg>
-        </button>
         <article class="admin-card dash-finance-card" aria-labelledby="dashFinanceTitle">
           <header class="admin-card-head dash-finance-head">
             <div><p class="eyebrow">Money &amp; Fees</p><h2 id="dashFinanceTitle">অর্থ ব্যবস্থাপনা ও ফি সারাংশ</h2></div>
@@ -173,9 +171,9 @@
           </header>
           <div class="dash-finance-grid">
             <div class="dash-finance-tile tone-mint">
-              <small>আজকের আদায়</small>
-              <strong id="dashTodayAmount">৳০</strong>
-              <span id="dashTodaySub">০ টি লেনদেন</span>
+              <small>সিস্টেমে মোট লেনদেন</small>
+              <strong id="dashTransactionCount">০ টি</strong>
+              <span>সংরক্ষিত আর্থিক রেকর্ড</span>
             </div>
             <div class="dash-finance-tile tone-blue">
               <small>এই মাসের আদায়</small>
@@ -361,12 +359,8 @@
       <!-- Finance & Fee Collection & Reports -->
       <section class="admin-view" data-view-panel="finance" aria-labelledby="financeTitle">
         <div class="page-intro">
-          <div><p class="eyebrow">Financial Management</p><h1 id="financeTitle">অর্থব্যবস্থাপনা ও ফি কালেকশন</h1></div>
+          <div><p class="eyebrow">Finance Monitoring</p><h1 id="financeTitle">অর্থ পর্যবেক্ষণ ও রিপোর্ট</h1></div>
           <div class="finance-header-actions">
-            <button class="mini-btn approve" type="button" id="btnFinanceGoCollect">
-              <svg aria-hidden="true" viewBox="0 0 24 24" style="width:13px;height:13px;"><use href="#icon-plus"></use></svg>
-              ফি গ্রহণ
-            </button>
             <button class="mini-btn" type="button" id="btnFinanceGoReport">
               <svg aria-hidden="true" viewBox="0 0 24 24" style="width:13px;height:13px;"><use href="#icon-clipboard"></use></svg>
               রিপোর্ট
@@ -394,13 +388,13 @@
         </div>
 
         <div class="finance-nav-pills" id="financeSubNav">
-          <button class="chip active" type="button" data-finance-tab="collection">ফি গ্রহণ ও লেনদেন</button>
+          <button class="chip active" type="button" data-finance-tab="collection">লেনদেন দেখুন</button>
           <button class="chip" type="button" data-finance-tab="students">শিক্ষার্থী ফি লেজার</button>
         </div>
 
-        <!-- Sub-panel 1: Fee collection form + recent transactions -->
+        <!-- Sub-panel 1: Read-only transaction monitoring -->
         <div class="finance-panel active" data-finance-view="collection">
-          <article class="admin-card finance-search-card">
+          <article class="admin-card finance-search-card" data-admin-cap="finance.collect">
             <header class="admin-card-head">
               <div><p class="eyebrow">Student Search</p><h2>শিক্ষার্থী খুঁজুন</h2></div>
               <a class="mini-btn pay-panel-link" href="payment.html" title="পেমেন্ট রিসিভ প্যানেল" data-admin-cap="payment.panel">পেমেন্ট রিসিভ প্যানেল</a>
@@ -418,7 +412,7 @@
             </div>
           </article>
           <div class="admin-duo">
-            <article class="admin-card">
+            <article class="admin-card" data-admin-cap="finance.collect">
               <header class="admin-card-head">
                 <div><p class="eyebrow">Student Quick Profile</p><h2>প্রোফাইল ও ফি গ্রহণ</h2></div>
               </header>

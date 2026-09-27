@@ -151,10 +151,12 @@ test('profile shows brief info, payment saves, receipt PDF downloads', async ({ 
   await page.locator('#payReceiptDownload').click();
   expect((await pdf).suggestedFilename()).toMatch(/^REC-.*\.pdf$/);
 
-  // Closing refreshes the profile: this month's paid grew by 800.
+  // Counter entry stays provisional until Manager approval; it cannot reduce dues yet.
+  expect(added.status).toBe('pending');
+  await expect(page.locator('#payReceiptBody')).toContainText('Manager অনুমোদনাধীন');
   await page.locator('#payReceiptClose').click();
   await expect(page.locator('#payReceiptBackdrop')).toBeHidden();
-  await expect(page.locator('#payQuickProfile .fee-balance-grid')).toContainText('৳২,৩০০');
+  await expect(page.locator('#payQuickProfile .fee-balance-grid')).toContainText('৳১,৫০০');
 });
 
 test('WhatsApp share goes straight to the student number, even when Web Share exists', async ({ page }) => {

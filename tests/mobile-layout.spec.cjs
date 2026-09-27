@@ -53,11 +53,8 @@ for (const viewport of viewports) {
     expect((await page.locator('.admin-bottom').boundingBox()).width).toBe(shell.width);
     await page.locator('.admin-bottom [data-admin-view=finance]').click();
     expect(await page.locator('[data-finance-view=collection] .admin-duo').evaluate(el => getComputedStyle(el).gridTemplateColumns.split(' ').length)).toBe(1);
-    await page.locator('#feeStudentSearch').fill('ইমরান');
-    await page.locator('.fee-search-result').click();
-    await page.locator('#feeProfileCollect').click();
-    expect(await page.locator('#feeCollectionForm .form-grid-2').first().evaluate(el => getComputedStyle(el).gridTemplateColumns.split(' ').length)).toBe(1);
-    await noOverflow(page, '#feeCollectionForm');
+    await expect(page.locator('#feeStudentSearch, #feeCollectionForm, #feeProfileCollect, #btnFinanceGoCollect')).toHaveCount(0);
+    await noOverflow(page, '#recentTrxList');
     await page.locator('#btnFinanceGoReport').click();
     await expect(page.locator('.admin-view[data-view-panel=reports]')).toBeVisible();
     await expect(page.locator('#btnPrintReport, .pad-statement, table')).toHaveCount(0);

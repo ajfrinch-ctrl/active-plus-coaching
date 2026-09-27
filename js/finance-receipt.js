@@ -27,11 +27,12 @@ export function receiptMarkup(tx, logo = 'assets/icons/app-logo.png') {
       <div class="receipt-brand-title">Active Plus Coaching</div>
       <div class="receipt-sub">${escape(brand.tagline)}</div>
       <div class="receipt-address">${escape(brand.address)}</div>
-      <div class="receipt-badge-title">মানি রসিদ (PAID)</div>
+      <div class="receipt-badge-title">${tx.status === 'pending' ? 'অস্থায়ী পেমেন্ট স্লিপ • অনুমোদন বাকি' : tx.status === 'rejected' ? 'বাতিল পেমেন্ট এন্ট্রি' : 'মানি রসিদ (PAID)'}</div>
     </div>
     <dl class="receipt-meta-grid">${fields.map(([label, value]) => `<div><dt>${label}</dt><dd>${escape(value)}</dd></div>`).join('')}</dl>
-    <div class="receipt-amount-block"><div><span>মোট পরিশোধিত টাকা</span><strong>৳${bn(Number(tx.amount).toLocaleString('en-US'))}</strong></div><span class="receipt-paid-seal">✓ পরিশোধিত</span></div>
-    <p class="receipt-note">নোট: ${escape(tx.note || 'ফি পরিশোধ সম্পন্ন')}</p>
+    <div class="receipt-amount-block"><div><span>${tx.status === 'pending' ? 'Manager অনুমোদনাধীন টাকা' : tx.status === 'rejected' ? 'রেকর্ডকৃত এন্ট্রি (বাতিল)' : 'মোট পরিশোধিত টাকা'}</span><strong>৳${bn(Number(tx.amount).toLocaleString('en-US'))}</strong></div><span class="receipt-paid-seal">${tx.status === 'pending' ? '⏳ অনুমোদন বাকি' : tx.status === 'rejected' ? '✕ বাতিল' : '✓ পরিশোধিত'}</span></div>
+    ${tx.reviewNote ? `<p class="receipt-note">Manager-এর কারণ: ${escape(tx.reviewNote)}</p>` : ''}
+    <p class="receipt-note">নোট: ${escape(tx.note || (tx.status === 'pending' ? 'এন্ট্রি Manager-এর পর্যালোচনার অপেক্ষায়' : tx.status === 'rejected' ? 'এন্ট্রি অনুমোদিত হয়নি' : 'ফি পরিশোধ সম্পন্ন'))}</p>
     <div class="receipt-footer-sign"><div>আদায়কারী: ${escape(tx.collectedBy || 'এডমিন')}</div><div class="receipt-signature-line">কর্তৃপক্ষের স্বাক্ষর</div></div>
   </div>`;
 }
