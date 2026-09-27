@@ -73,9 +73,6 @@ const STROKE_ICONS = Object.freeze({
   money: '<rect x="2.8" y="6.4" width="18.4" height="11.2" rx="2.2"/><circle cx="12" cy="12" r="2.4"/><path d="M6.2 10.4v3.2M17.8 10.4v3.2"/>'
 });
 
-/** Every icon name Admin Panel code may use. */
-export const ADMIN_ICON_NAMES = Object.freeze(Object.keys(STROKE_ICONS));
-
 /**
  * One `<svg>` element per icon: fixed 24×24 grid, stroked with currentColor,
  * `aria-hidden` because every icon sits next to a real text label.

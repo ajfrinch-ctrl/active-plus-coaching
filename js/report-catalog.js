@@ -118,10 +118,6 @@ export function catalogFor(role) {
     .filter(category => category.reports.length);
 }
 
-export function reportCountFor(role) {
-  return REPORTS.filter(report => (report.roles || []).includes(role)).length;
-}
-
 /* ---------- data for the filter bar ---------- */
 
 /** Everything the filter dropdowns need, scoped to what the actor may see. */

@@ -403,14 +403,6 @@ export async function flagStaffPasswordChange(role) {
   return writeStaffAccount(role, { ...account, mustChangePassword: true, updatedAt: new Date().toISOString() });
 }
 
-/** Clear the must-change marker (after the owner replaced the password). */
-export async function clearStaffPasswordChange(role) {
-  const account = await readStaffAccount(role);
-  if (!account) return false;
-  const { mustChangePassword: _mustChangePassword, ...profile } = account;
-  return writeStaffAccount(role, { ...profile, updatedAt: new Date().toISOString() });
-}
-
 /** Change password from inside a panel: the current password must match. */
 export async function changeStaffPassword(role, currentPassword, nextPassword, confirmPassword) {
   const spec = staffSpec(role);

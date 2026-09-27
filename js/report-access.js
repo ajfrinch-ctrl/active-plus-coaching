@@ -11,9 +11,6 @@ import { hasStaffSession, readStaffAccount } from './staff-auth.js';
 import { loadAccount, hasSession } from './storage.js';
 import { listTeacherAssignments } from './teacher-assignments.js';
 
-/** The five report roles. "payment" is the Cash Counter desk. */
-export const REPORT_ROLES = Object.freeze(['admin', 'manager', 'teacher', 'cash', 'student']);
-
 export const ROLE_LABEL = Object.freeze({
   admin: 'Admin',
   manager: 'Manager',
@@ -202,10 +199,6 @@ export function scopeExams(exams, actor, scope) {
 /** One student's own records — the only records a Student may ever read. */
 export function ownStudent(students, studentId) {
   return students.filter(student => String(student.id) === String(studentId));
-}
-
-export function ownTransactions(transactions, studentId) {
-  return transactions.filter(tx => String(tx.studentId) === String(studentId));
 }
 
 export { deny };

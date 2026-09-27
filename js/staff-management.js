@@ -762,8 +762,4 @@ export function initStaffManagement({ onChanged } = {}) {
   state.wired = true;
 }
 
-export function staffManagementState() {
-  return { ...state, rows: filteredStaff() };
-}
-
 export { STAFF_ROLE_META, STAFF_STATUS };

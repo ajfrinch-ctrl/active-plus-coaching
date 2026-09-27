@@ -122,10 +122,7 @@ export function addNote(doc, text) {
   doc.blocks.push(block('note', { text }));
   return doc;
 }
-export function addSpacer(doc, height = 10) {
-  doc.blocks.push(block('spacer', { height }));
-  return doc;
-}
+
 export function addKeyValues(doc, pairs, { columns = 2, gap = 10 } = {}) {
   doc.blocks.push(block('keyValues', { pairs: (pairs || []).filter(Boolean), columns, gap }));
   return doc;

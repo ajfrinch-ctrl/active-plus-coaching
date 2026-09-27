@@ -287,8 +287,7 @@ js/
   service-worker.js     service worker registration
   config.js             classes, schedule and local defaults
   theme.js              time and weather visual states
-  scroll-header.js      scroll-aware student name in topbar
-  ui.js                 shared DOM and feedback helpers
+    ui.js                 shared DOM and feedback helpers
   admin.js              Admin Panel UI: views, actions, modals
   admin-permissions.js  Admin capability catalog + role map + route/visibility guards
   admin-panel-ui.js     Admin shell: bottom bar, "More" menu, dashboard icon grid
@@ -296,8 +295,7 @@ js/
   staff-directory.js    স্টাফ পরিচয়: Staff ID, রোল-ভিত্তিক অনুমতি, Admin-only CRUD
   staff-management.js   স্টাফ ম্যানেজমেন্ট UI: কার্ড, ফর্ম, প্রোফাইল, রিসেট, ডিলিট
   payment.js            Standalone Payment Receive desk: search, payment, receipt, WhatsApp
-  report-generator.js   Admin report center: offline branded PDF + Excel-ready CSV
-  admin-data.js         dummy student/notice/enrollment dataset
+    admin-data.js         dummy student/notice/enrollment dataset
 ```
 
 ভবিষ্যতে Admin Panel-এর **শিক্ষার্থী অ্যাপ ম্যানেজমেন্ট** অংশ থেকে enabled class, routine, course, notice ও result data নিয়ন্ত্রণ করার জন্য config ও storage adapter আলাদা রাখা হয়েছে। API যুক্ত করার সময় মূল UI feature files বদলানোর প্রয়োজন হবে না।
