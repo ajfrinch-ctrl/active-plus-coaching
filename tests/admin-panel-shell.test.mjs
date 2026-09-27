@@ -35,38 +35,48 @@ before(async () => {
   await import('../js/admin.js');
   await ctx.waitFor(() => ctx.$('#adminShell').hidden === false);
   await ctx.waitFor(() => ctx.$$('#adminFeatureGrid .admin-feature-tile').length > 0);
+  await ctx.waitFor(() => Boolean(ctx.$('.admin-bottom [aria-current="page"]')));
 });
 
-test('the Admin role grants reports, users and management — and nothing else', () => {
+test('the Admin role keeps system control only — no daily operations', () => {
   const access = createAccess('admin');
   for (const capability of [
     CAPABILITIES.DASHBOARD,
+    CAPABILITIES.STAFF_MANAGE,
+    CAPABILITIES.ROLES_MANAGE,
     CAPABILITIES.STUDENTS_VIEW,
     CAPABILITIES.STUDENTS_MANAGE,
-    CAPABILITIES.FINANCE_VIEW,
     CAPABILITIES.REPORTS_VIEW,
+    CAPABILITIES.DATA_MANAGE,
+    CAPABILITIES.BACKUP_MANAGE,
+    CAPABILITIES.SECURITY_MANAGE,
+    CAPABILITIES.SETTINGS_MANAGE,
+    CAPABILITIES.PROFILE_VIEW
+  ]) {
+    assert.equal(access.has(capability), true, `Admin must keep ${capability}`);
+  }
+  // Cash Counter / Manager / Teacher territory, including daily operations.
+  for (const capability of [
+    CAPABILITIES.FINANCE_COLLECT,
     CAPABILITIES.NOTICES_MANAGE,
     CAPABILITIES.ROUTINE_MANAGE,
     CAPABILITIES.CLASSES_MANAGE,
     CAPABILITIES.APP_MANAGE,
-    CAPABILITIES.EXAMS_VIEW
-  ]) {
-    assert.equal(access.has(capability), true, `Admin must keep ${capability}`);
-  }
-  // Manager / Teacher / Payment-counter territory, including daily fee collection.
-  for (const capability of [
-    CAPABILITIES.FINANCE_COLLECT,
-    CAPABILITIES.STUDENTS_APPROVE,
+    CAPABILITIES.EXAMS_VIEW,
     CAPABILITIES.EXAMS_PUBLISH,
+    CAPABILITIES.STUDENTS_APPROVE,
     CAPABILITIES.TEACHING_PANEL,
     CAPABILITIES.PAYMENT_PANEL
   ]) {
     assert.equal(access.has(capability), false, `Admin must not hold ${capability}`);
   }
-  assert.equal(createAccess('manager').allowsView('finance'), false);
-  assert.equal(createAccess('admin').allowsView('finance'), true);
+  assert.equal(createAccess('admin').allowsView('finance'), false, 'the collection view no longer exists');
+  assert.equal(createAccess('admin').allowsView('routine'), false);
+  assert.equal(createAccess('admin').allowsView('notices'), false);
+  assert.equal(createAccess('admin').allowsView('staff'), true);
   assert.equal(createAccess('payment').has(CAPABILITIES.FINANCE_COLLECT), true, 'Cash Counter keeps fee collection');
   assert.equal(createAccess('manager').has(CAPABILITIES.STUDENTS_APPROVE), true, 'Manager keeps student approval');
+  assert.equal(createAccess('manager').has(CAPABILITIES.NOTICES_MANAGE), false);
   assert.equal(createAccess('admin').defaultView(), 'dashboard');
 });
 
@@ -75,7 +85,10 @@ test('the panel boots without markup or module errors', () => {
 });
 
 test('hash routes resolve only to known views', () => {
-  assert.equal(routeFromHash('#finance'), 'finance');
+  assert.equal(routeFromHash('#staff'), 'staff');
+  assert.equal(routeFromHash('#finance'), null, 'collection is not an Admin route any more');
+  assert.equal(routeFromHash('#routine'), null);
+  assert.equal(routeFromHash('#notices'), null);
   assert.equal(routeFromHash('#') + '', 'null');
   assert.equal(routeFromHash('#approvals'), null);
   assert.equal(routeFromHash('#/students'), 'students');
@@ -84,42 +97,51 @@ test('hash routes resolve only to known views', () => {
 
 test('the bottom bar renders one icon + label per permitted tab', () => {
   const items = ctx.$$('.admin-bottom button');
-  assert.deepEqual(items.map(button => button.dataset.adminView), ['dashboard', 'students', 'finance', 'routine', 'more']);
+  assert.deepEqual(items.map(button => button.dataset.adminView), ['dashboard', 'staff', 'students', 'reports', 'more']);
   for (const button of items) {
-    const icon = button.querySelector('img.nav-icon');
+    // Exactly one icon, drawn inside a fixed container: the chip.
+    const chip = button.querySelector('.nav-chip');
+    const icon = chip?.querySelector('svg.nav-icon');
     const label = button.querySelector('.nav-label');
+    assert.ok(chip, `${button.dataset.adminView} has no icon container`);
     assert.ok(icon, `${button.dataset.adminView} has no generated icon`);
-    assert.match(icon.getAttribute('src'), /^assets\/icons\//);
-    assert.equal(icon.getAttribute('alt'), '');
+    assert.equal(chip.children.length, 1, `${button.dataset.adminView} paints more than one icon`);
+    assert.equal(icon.getAttribute('aria-hidden'), 'true');
+    assert.ok(icon.querySelector('path, circle, ellipse, rect'), `${button.dataset.adminView} icon is empty`);
     assert.ok(label && label.textContent.trim().length > 1, `${button.dataset.adminView} has no label`);
   }
   // The active tab is marked for both CSS and assistive tech.
   assert.equal(ctx.$$('.admin-bottom [aria-current="page"]').length, 1);
   assert.equal(ctx.$('.admin-bottom [aria-current="page"]').dataset.adminView, 'dashboard');
-  // Every tab uses this panel's own generated set, not the shared glass family.
-  for (const button of items) {
-    assert.match(button.querySelector('img.nav-icon').getAttribute('src'), /^assets\/icons\/admin\//);
+  // Header actions: icon + label, one icon each, never an emoji or a stray PNG.
+  for (const selector of ['.admin-exit', '.admin-app-link']) {
+    const action = ctx.$(selector);
+    assert.ok(action, `${selector} is missing`);
+    assert.equal(action.querySelectorAll('svg.topbar-icon').length, 1, `${selector} paints more than one icon`);
+    assert.ok(action.textContent.trim().length > 1, `${selector} lost its label`);
   }
-  assert.equal(ctx.$('.admin-exit img.topbar-icon').getAttribute('src'), 'assets/icons/admin/logout.png');
-  assert.equal(ctx.$('.admin-app-link img.topbar-icon').getAttribute('src'), 'assets/icons/admin/app.png');
 });
 
 test('the dashboard grid is generated from the permission model', () => {
   const tiles = ctx.$$('#adminFeatureGrid .admin-feature-tile');
   assert.deepEqual(tiles.map(tile => tile.dataset.adminView), [
-    'students', 'finance', 'reports', 'notices', 'routine', 'exams', 'classes', 'app-management'
+    'staff', 'students', 'reports', 'roles', 'security', 'settings', 'data', 'backup', 'profile'
   ]);
   for (const tile of tiles) {
-    const icon = tile.querySelector('.admin-feature-icon img');
+    const wrap = tile.querySelector('.admin-feature-icon');
+    const icon = wrap?.querySelector('svg');
     assert.ok(icon, `${tile.dataset.adminView} tile has no icon`);
-    assert.match(icon.getAttribute('src'), /^assets\/icons\//);
+    assert.equal(wrap.children.length, 1, `${tile.dataset.adminView} tile paints more than one icon`);
     assert.ok(tile.querySelector('.admin-feature-label')?.textContent.trim().length > 1);
     assert.ok(tile.dataset.adminCap, `${tile.dataset.adminView} tile carries no capability`);
   }
-  // System overview uses a generated icon and exposes no daily collection CTA.
-  assert.ok(ctx.$('.admin-hero-icon img'));
+  // System overview uses one generated icon and exposes no daily collection CTA.
+  assert.ok(ctx.$('.admin-hero-icon svg'));
   assert.equal(ctx.$('#dashCollectFee'), null);
-  assert.equal(ctx.$$('.admin-hero-stats .tile-icon img').length, 2);
+  // Four snapshot tiles: students, staff, classes, protected accounts.
+  assert.equal(ctx.$$('.admin-hero-stats .tile-icon svg').length, 4);
+  assert.ok(ctx.$('#dashStaffCount'), 'the dashboard counts staff');
+  assert.ok(ctx.$('#dashProtectedCount'), 'the dashboard shows protected accounts');
 });
 
 test('nothing outside the Admin role survives in the DOM', () => {
@@ -132,40 +154,43 @@ test('nothing outside the Admin role survives in the DOM', () => {
   assert.equal(ctx.$('.pay-panel-link'), null);
   assert.equal(ctx.$$('[data-admin-cap="teaching.panel"]').length, 0);
   assert.equal(ctx.$$('[data-admin-cap="payment.panel"]').length, 0);
-  // Finance reports/monitoring remain, while cash-entry controls are removed.
-  assert.ok(ctx.$('[data-view-panel="finance"]'));
-  assert.equal(ctx.$$('#feeStudentSearch, #feeCollectionForm, #btnFinanceGoCollect, #dashCollectFee').length, 0);
+  // Daily operations are entirely gone — views and every control inside them.
+  for (const view of ['finance', 'routine', 'notices', 'exams']) {
+    assert.equal(ctx.$(`.admin-view[data-view-panel="${view}"]`), null, `${view} must not be an Admin section`);
+  }
+  assert.equal(ctx.$$('#feeStudentSearch, #feeCollectionForm, #btnFinanceGoCollect, #dashCollectFee, #addRoutineForm, #noticeForm').length, 0);
   assert.equal(ctx.$$('#studentLedgerList [data-action="quick-collect"]').length, 0);
-  assert.equal(ctx.$$('.admin-view[data-view-panel="finance"] [data-finance-tab]').length, 2);
-  // Granted sections are untouched.
-  for (const view of ['dashboard', 'students', 'finance', 'routine', 'more', 'exams', 'notices', 'reports', 'app-management', 'classes']) {
+  // Reports still carry the read-only finance summary (two tabs, no entry form).
+  assert.equal(ctx.$$('[data-finance-tab]').length, 2);
+  assert.ok(ctx.$('[data-finance-tab="collection"]'), 'the ledger stays in Reports');
+  // System sections are untouched.
+  for (const view of ['dashboard', 'staff', 'roles', 'students', 'reports', 'data', 'backup', 'security', 'settings', 'profile', 'more']) {
     assert.equal(ctx.$$(`[data-admin-view="${view}"]`).length > 0, true, `${view} should still be reachable`);
   }
 });
 
-test('the exam workspace lists exams without any approval/publish control', () => {
-  const workspace = ctx.$('#adminExamWorkspace');
-  assert.ok(workspace);
-  assert.equal(workspace.querySelectorAll('[data-review-form]').length, 0);
-  const labels = ctx.$$('#adminExamWorkspace button').map(button => button.textContent);
+test('no exam publish/approval control lives in the Admin panel', () => {
+  // Exam records are read in Reports; publishing stays with the Manager portal.
+  assert.equal(ctx.$('#adminExamWorkspace'), null, 'the exam workspace left the Admin panel');
+  const labels = ctx.$$('.admin-shell button').map(button => button.textContent);
   for (const label of labels) {
-    assert.doesNotMatch(label, /প্রকাশ|অনুমোদন দিয়ে/, 'Admin must not publish or approve exams');
+    assert.doesNotMatch(label, /প্রকাশ করুন|অনুমোদন দিয়ে|ফি গ্রহণ/, 'Admin must not publish, approve or collect');
   }
 });
 
 test('a hash route opens a permitted view and moves the active tab', async () => {
-  ctx.window.location.hash = '#finance';
-  await ctx.waitFor(() => ctx.$('.admin-view[data-view-panel="finance"]').classList.contains('active'));
-  assert.equal(ctx.$('.admin-bottom [aria-current="page"]').dataset.adminView, 'finance');
+  ctx.window.location.hash = '#staff';
+  await ctx.waitFor(() => ctx.$('.admin-view[data-view-panel="staff"]').classList.contains('active'));
+  assert.equal(ctx.$('.admin-bottom [aria-current="page"]').dataset.adminView, 'staff');
 
-  ctx.window.location.hash = '#reports';
-  await ctx.waitFor(() => ctx.$('.admin-view[data-view-panel="reports"]').classList.contains('active'));
+  ctx.window.location.hash = '#settings';
+  await ctx.waitFor(() => ctx.$('.admin-view[data-view-panel="settings"]').classList.contains('active'));
   assert.equal(ctx.$('.admin-bottom [aria-current="page"]').dataset.adminView, 'more');
 
-  // An unknown route never moves the panel.
-  ctx.window.location.hash = '#approvals';
+  // A route that belongs to another panel never moves the panel.
+  ctx.window.location.hash = '#finance';
   await ctx.flush();
-  assert.equal(ctx.$('.admin-view[data-view-panel="reports"]').classList.contains('active'), true);
+  assert.equal(ctx.$('.admin-view[data-view-panel="settings"]').classList.contains('active'), true);
   ctx.window.location.hash = '';
 });
 
@@ -178,7 +203,9 @@ test('a role with no capability leaves the panel empty — menus, cards and rout
   // Every capability-gated section is gone; only the "More" container (which has
   // no capability of its own) is left for the shell to decide about.
   assert.deepEqual(fresh.$$('.admin-view').map(view => view.dataset.viewPanel), ['more']);
-  assert.equal(fresh.$$('.admin-more-item').length, 0);
+  // The logout row is not capability-gated: a signed-in user may always leave.
+  assert.equal(fresh.$$('.admin-more-item').length, 1);
+  assert.equal(fresh.$('.admin-more-item')?.id, 'adminMoreLogout');
   assert.equal(fresh.$$('#adminFeatureGrid .admin-feature-tile').length, 0);
   assert.equal(fresh.$$('[data-admin-cap]').length, 0);
   assert.ok(removed.views.length > 0);

@@ -8,6 +8,7 @@ import { toBanglaNumber as bn } from './ui.js';
 import { initExamManager } from './exam-manager.js';
 import { initFixedShell } from './fixed-shell.js';
 import { registerServiceWorker } from './service-worker.js';
+import { mountReports, refreshReports } from './reports.js';
 import { teachingRepository, DEMO_TEACHER, ACTIVITY_TYPES, PROGRESS_LABELS, escapeText as esc, todayISO, displayDate, safeResourceURL, matchesStudent, searchTeachingStudents, watchTeachingData } from './teaching-data.js';
 
 const $ = selector => document.querySelector(selector);
@@ -443,6 +444,7 @@ async function showTeacherShell() {
     $('#teacherEntry').hidden = true;
     $('#teacherShell').hidden = false;
     setView('home');
+    mountReports($('#teacherReports'), { panel: 'teacher' });
     if (button) button.disabled = !teacherRegistrationOpen();
     return true;
   }
@@ -532,7 +534,10 @@ document.addEventListener('keydown', event => {
     else if (!event.shiftKey && document.activeElement === items.at(-1)) { event.preventDefault(); items[0]?.focus(); }
   }
 });
-watchTeachingData(() => { if (!state.busy && !$('#teacherShell').hidden) reload(); });
+watchTeachingData(() => {
+  if (!state.busy && !$('#teacherShell').hidden) reload();
+  refreshReports($('#teacherReports'));
+});
 
 // An existing device-bound session opens the panel without asking again.
 hasStaffSession('teacher').then(valid => { if (valid) showTeacherShell(); });

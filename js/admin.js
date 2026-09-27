@@ -1,28 +1,52 @@
-/* Admin panel. Username and password are required; the roster, notices and
-   routine start empty and stay on this device. */
+/* Admin panel — System Control + Staff Management + Permissions + Security +
+   Data + Reports + Settings.
+
+   Scope note: daily operations are NOT here on purpose.
+     • fee collection / cash-counter entry  → payment.html (Cash Counter)
+     • routine entry, daily notices         → manager.html (Manager)
+     • student approval, exam publish       → manager.html (Manager)
+     • teaching, homework, attendance       → teacher.html (Teacher)
+   Admin sees system-level monitoring, owns every staff identity (Staff ID) and
+   keeps the device's data safe. Username and password are required; the roster,
+   notices and routine start empty and stay on this device. */
 import { enabledClasses, DEFAULT_APP_SETTINGS, ADMIN_ID, DEFAULT_PIN } from './config.js';
 import { toBanglaNumber } from './ui.js';
 import { classCodes, dayNames, feeCategories, paymentMethods } from './admin-data.js';
 import { loadAppConfig, saveAppConfig, loadAccount, saveAccount } from './storage.js';
-import { loadRoster, saveRoster, syncAccountStatus, loadNotices, saveNotices, loadRoutine, saveRoutine } from './office-data.js';
-import { authenticateStaff, createInitialAdmin, ensureBootstrapStaffAccounts, readStaffAccount, staffAccountRecordExists, saveStaffSession, hasStaffSession, clearStaffSession, goToLoginPage } from './staff-auth.js';
+import { loadRoster, saveRoster, syncAccountStatus, loadNotices, loadRoutine } from './office-data.js';
+import { authenticateStaff, changeStaffPassword, updateStaffProfile, ensureBootstrapStaffAccounts, readStaffAccount, staffAccountRecordExists, saveStaffSession, hasStaffSession, clearStaffSession, goToLoginPage, STAFF_SESSION_RULES, STAFF_KEYS_LIST } from './staff-auth.js';
 import { openStaffPasswordDialog } from './staff-password-dialog.js';
 import { financeRepository, monthLabel, dateLabel, searchStudents, studentFeeSummary, newestTransactions, stampTransaction, isFinalizedTransaction, TRANSACTIONS_KEY } from './finance-data.js';
-import { newId } from './database.js';
+import { newId, KEYS, readJSON, writeJSON } from './database.js';
 import { receiptMarkup, downloadReceipt } from './finance-receipt.js';
 import { downloadReportPDF, downloadCSV } from './report-generator.js';
+import { mountReports, refreshReports } from './reports.js';
 import { examRepository, totalMarks, examResults, EXAM_KEY } from './exam-data.js';
 import { teachingRepository, displayDate, PROGRESS_LABELS, TEACHING_KEY } from './teaching-data.js';
-import { initExamManager } from './exam-manager.js';
 import { registerServiceWorker } from './service-worker.js';
 import { initFixedShell } from './fixed-shell.js';
 import { escapeHtml } from './sanitize.js';
 import { createAccess, CAPABILITIES, routeFromHash } from './admin-permissions.js';
 import { initAdminPanelShell } from './admin-panel-ui.js';
+import { paintIcon } from './admin-icons.js';
+import {
+  BACKUP_STAMP_KEY,
+  STAFF_DIRECTORY_KEY,
+  STAFF_ROLE_META,
+  STAFF_ROLES,
+  STAFF_DIRECTORY_RULES,
+  listStaff,
+  staffActivitySummary,
+  staffCounts,
+  staffRoleLabel,
+  staffStatusLabel,
+  staffReportRows
+} from './staff-directory.js';
+import { initStaffManagement, renderStaff } from './staff-management.js';
+import { ROLE_CAPABILITIES } from './admin-permissions.js';
 
 initFixedShell();
 registerServiceWorker();
-initExamManager('#adminExamWorkspace', 'admin');
 
 const bn = toBanglaNumber;
 const $ = selector => document.querySelector(selector);
@@ -55,7 +79,12 @@ const state = {
   classFilter: 'all',
   examDb: null,
   teachingDb: null,
-  query: ''
+  query: '',
+  /* Staff directory snapshot: kept in sync with js/staff-directory.js so the
+     dashboard, reports, security and staff views read the same truth. */
+  staff: [],
+  staffCounts: { total: 0, active: 0, inactive: 0, suspended: 0, passwordDue: 0, byRole: {} },
+  staffActivity: []
 };
 
 /* ---------- Role-based access ----------
@@ -79,8 +108,9 @@ function toast(message) {
 }
 
 function persistStudents() { saveRoster(state.students); }
-function persistNotices() { saveNotices(state.notices); }
-function persistRoutine() { saveRoutine(state.routine); }
+/* Notices and the weekly routine are no longer written from this panel — both
+   are Manager-owned records (manager.html). They are only read here, for the
+   routine report and the data-management statistics. */
 
 function showBootstrapCredentials(accounts) {
   if (!accounts?.length) return;
@@ -107,8 +137,17 @@ async function enterPanel({ bootstrapCredentials = [] } = {}) {
   const account = await readStaffAccount('admin');
   access = createAccess(account?.role || 'admin');
   initAdminPanelShell({ access, onNavigate: navigate });
+  // The "More → লগআউট" row carries the same icon language as the top bar.
+  paintIcon($('#adminMoreLogout .admin-more-icon'), 'logout', 'admin-more-icon-svg apc-icon-svg');
+  // Staff Management is wired once; it re-reads the directory on every render
+  // and calls back so the dashboard, reports and security stay in sync.
+  initStaffManagement({ onChanged: onStaffChanged });
+  await refreshStaffSnapshot();
   renderAll();
-  // A deep link (admin.html#finance) opens only when this role may see it;
+  // The Reports Module re-reads who is signed in and what they may see.
+  mountReports($('#adminReports'), { panel: 'admin' });
+  if (viewExists('reports')) renderStaffReportMeta();
+  // A deep link (admin.html#staff) opens only when this role may see it;
   // anything else falls back to the first permitted tab.
   const route = routeFromHash(window.location.hash);
   setView(route && access.allowsView(route) ? route : state.activeView);
@@ -130,7 +169,7 @@ function exitPanel() {
 
 /* ---------- View switching ---------- */
 
-const moreViews = new Set(['notices', 'app-management', 'classes', 'exams', 'reports']);
+const moreViews = new Set(['roles', 'data', 'backup', 'security', 'settings', 'profile']);
 
 /**
  * Open one Admin Panel view.
@@ -179,10 +218,6 @@ function navigate(view, source) {
     renderStudents();
   }
   if (!setView(target)) return false;
-  if (target === 'finance' && source?.dataset?.adminAction === 'collect') {
-    setFinanceTab('collection');
-    $('#feeStudentSearch')?.focus({ preventScroll: true });
-  }
   if (source?.matches?.('.admin-more-item, .admin-more-back')) {
     const heading = $('.admin-view.active h1');
     heading?.setAttribute('tabindex', '-1');
@@ -207,6 +242,10 @@ function renderDashboard() {
     $('#dashPendingCount').classList.toggle('has-pending', pendingCount > 0);
   }
   $('#dashClassCount').textContent = bn(state.enabled.size);
+  if ($('#dashStaffCount')) $('#dashStaffCount').textContent = bn(state.staffCounts.active || 0);
+  if ($('#dashProtectedCount')) {
+    $('#dashProtectedCount').textContent = bn(state.staff.filter(staff => staff.protected).length || 0);
+  }
   const today = new Date();
   $('#adminTodayDate').textContent = dateLabel(today);
   $('#adminTodayDate').dateTime = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
@@ -556,154 +595,9 @@ function closeModal() {
   target?.focus({ preventScroll: true });
 }
 
-/* ---------- Notices ---------- */
-
-function renderNotices() {
-  $('#noticeList').innerHTML = state.notices.length
-    ? state.notices.map(notice => `
-      <article class="notice-item">
-        <div class="notice-item-top">
-          <div>
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;flex-wrap:wrap;">
-              <strong>${notice.title}</strong>
-              <span class="audit-id-badge amber">${notice.id}</span>
-            </div>
-          </div>
-          <button class="icon-btn" type="button" data-action="delete-notice" data-id="${notice.id}" aria-label="${notice.title} নোটিশটি মুছুন">
-            <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-trash"></use></svg>
-          </button>
-        </div>
-        <p>${notice.body}</p>
-        <div class="notice-meta">
-          <span class="audience-chip">${notice.audience}</span>
-          <small>${notice.date}</small>
-        </div>
-      </article>`).join('')
-    : '<p class="admin-empty">এখনও কোনো নোটিশ প্রকাশ হয়নি।</p>';
-}
-
-function publishNotice(event) {
-  event.preventDefault();
-  const title = $('#noticeTitle').value.trim();
-  const body = $('#noticeBody').value.trim();
-  const audience = $('#noticeAudience').value;
-  if (!title || !body) {
-    toast('নোটিশের শিরোনাম ও বিবরণ দিন');
-    return;
-  }
-  const now = new Date();
-  const noticeUniqueId = newId('NOT');
-  state.notices.unshift({
-    id: noticeUniqueId,
-    title,
-    body,
-    audience,
-    date: dateLabel(now),
-    createdAt: now.toISOString()
-  });
-  event.target.reset();
-  persistNotices();
-  renderNotices();
-  renderDashboard();
-  toast(`নোটিশ [${noticeUniqueId}] প্রকাশিত হয়েছে`);
-}
-
-/* ---------- Routine ---------- */
-
-function toBengaliTime(value) {
-  const [hour, minute] = value.split(':').map(Number);
-  const period = hour < 4 ? 'ভোর' : hour < 12 ? 'সকাল' : hour < 16 ? 'বিকেল' : 'সন্ধ্যা';
-  const hour12 = hour % 12 === 0 ? 12 : hour % 12;
-  const time = bn(`${String(hour12).padStart(2, '0')}:${String(minute).padStart(2, '0')}`);
-  return { time, period };
-}
-
-function routineTeachers() {
-  return [...new Set(Object.values(state.routine).flatMap(info => info.classes.map(cls => cls.teacher).filter(Boolean)))];
-}
-
-function routineSubjects() {
-  return [...new Set(Object.values(state.routine).flatMap(info => info.classes.map(cls => cls.subject).filter(Boolean)))];
-}
-
-function renderRoutine() {
-  $('#routineDayTabs').innerHTML = Object.keys(state.routine).map(day => `
-    <button class="day-tab ${day === state.activeDay ? 'active' : ''}" type="button" data-routine-day="${day}">
-      ${dayNames[day]}<small>${bn(state.routine[day].classes.length)}</small>
-    </button>`).join('');
-
-  $('#addRoutineHeading').textContent = `নতুন ক্লাস যোগ করুন — ${dayNames[state.activeDay]}`;
-
-  // Which class the new class is for — dropdown from the enabled class list.
-  const classSelect = $('#routineClass');
-  if (classSelect && classSelect.options.length <= 1) {
-    classSelect.innerHTML = '<option value="" disabled selected>শ্রেণি নির্বাচন করুন</option>' +
-      enabledClasses.map(className => `<option value="${escapeHtml(className)}">${escapeHtml(className)}</option>`).join('');
-  }
-  const teacherList = $('#routineTeacherList');
-  if (teacherList) {
-    teacherList.innerHTML = routineTeachers().map(teacher => `<option value="${escapeHtml(teacher)}"></option>`).join('');
-  }
-  // Subject autofill: previously typed subjects become suggestions while typing.
-  const subjectList = $('#routineSubjectList');
-  if (subjectList) subjectList.innerHTML = routineSubjects().map(subject => `<option value="${escapeHtml(subject)}"></option>`).join('');
-
-  const classes = state.routine[state.activeDay].classes;
-  $('#routineList').innerHTML = classes.length
-    ? classes.map((cls, index) => `
-      <div class="routine-row">
-        <div class="routine-time"><strong>${cls.time}</strong><small>${cls.period}</small></div>
-        <div class="routine-copy">
-          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-            <strong>${cls.subject}</strong>
-            ${cls.className ? `<span class="audit-id-badge purple">${escapeHtml(cls.className)}</span>` : ''}
-            <span class="audit-id-badge blue">${cls.id || `RTN-${state.activeDay.toUpperCase()}-${String(index + 1).padStart(2, '0')}`}</span>
-          </div>
-          <small>${cls.teacher} • ${cls.room}</small>
-        </div>
-        <span class="routine-tag">${cls.tag}</span>
-        <button class="icon-btn" type="button" data-action="delete-routine" data-index="${index}" aria-label="এই ক্লাসটি মুছুন">
-          <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-trash"></use></svg>
-        </button>
-      </div>`).join('')
-    : '<p class="admin-empty">এই দিনে এখনও কোনো ক্লাস যোগ করা হয়নি।</p>';
-}
-
-function addRoutineClass(event) {
-  event.preventDefault();
-  const className = $('#routineClass').value;
-  const subject = $('#routineSubject').value.trim();
-  const teacher = $('#routineTeacher').value.trim();
-  const room = $('#routineRoom').value.trim();
-  const time = $('#routineTime').value;
-  if (!className || !subject || !teacher || !room || !time) {
-    toast('শ্রেণি, বিষয়, শিক্ষক, রুম ও সময় নির্বাচন/লিখুন');
-    return;
-  }
-  const { time: bengaliTime, period } = toBengaliTime(time);
-  const classUniqueId = newId('RTN');
-  state.routine[state.activeDay].classes.push({
-    id: classUniqueId,
-    className,
-    time: bengaliTime,
-    period,
-    subject,
-    teacher,
-    room,
-    tag: 'নতুন',
-    tone: 'green',
-    createdAt: new Date().toISOString()
-  });
-  // Keep subject and class handy for the next entry; reset only the rest.
-  const nextSubject = subject;
-  event.target.reset();
-  $('#routineTime').value = '18:00';
-  $('#routineSubject').value = nextSubject;
-  persistRoutine();
-  renderRoutine();
-  renderDashboard();
-  toast(`${className} • ${subject} [${classUniqueId}] রুটিনে যোগ হয়েছে`);
-}
+/* Notices and weekly routine entry were removed from this panel: both are
+   daily operations owned by the Manager portal (manager.html). The records
+   themselves stay in the shared collections, so reports can still read them. */
 
 /* ---------- Classes ---------- */
 
@@ -1162,7 +1056,102 @@ function reportDataSets() {
       };
     })(),
     results: selectedResultReport(),
-    attendance: selectedAttendanceReport()
+    attendance: selectedAttendanceReport(),
+    staff: {
+      title: 'স্টাফ তালিকা রিপোর্ট',
+      subtitle: 'সব স্টাফের Staff ID, নাম, রোল, যোগাযোগ ও অবস্থা (Student ID এখানে নেই)',
+      period: `মোট ${bn(state.staff.length)} জন স্টাফ • ${dateLabel()}`,
+      columns: staffReportColumns(),
+      rows: staffReportRows(state.staff).map(staffReportRow),
+      summary: [
+        { label: 'মোট স্টাফ', value: `${bn(state.staff.length)} জন` },
+        { label: 'সক্রিয়', value: `${bn(state.staffCounts.active || 0)} জন` },
+        { label: 'নিষ্ক্রিয়/স্থগিত', value: `${bn((state.staffCounts.inactive || 0) + (state.staffCounts.suspended || 0))} জন` },
+        { label: 'পাসওয়ার্ড বদল বাকি', value: `${bn(state.staffCounts.passwordDue || 0)} জন` }
+      ],
+      note: 'নোট: Staff ID স্থায়ী পরিচয় — কোনো স্টাফ মুছে ফেললে তার ইতিহাসের রেকর্ড অক্ষত থাকে।'
+    },
+    'staff-roles': {
+      title: 'রোলভিত্তিক স্টাফ রিপোর্ট',
+      subtitle: 'Admin / Manager / Teacher / Cash Counter / অন্যান্য — রোলভিত্তিক স্টাফ সংখ্যা',
+      period: `মোট ${bn(state.staff.length)} জন স্টাফ`,
+      columns: [
+        { label: 'রোল', width: 1.4 },
+        { label: 'মোট', width: 0.8 },
+        { label: 'সক্রিয়', width: 0.8 },
+        { label: 'নিষ্ক্রিয়', width: 0.8 },
+        { label: 'স্থগিত', width: 0.8 }
+      ],
+      rows: STAFF_ROLES.map(role => {
+        const own = state.staff.filter(staff => staff.role === role);
+        return [
+          staffRoleLabel(role),
+          bn(own.length),
+          bn(own.filter(staff => staff.status === 'active').length),
+          bn(own.filter(staff => staff.status === 'inactive').length),
+          bn(own.filter(staff => staff.status === 'suspended').length)
+        ];
+      }),
+      summary: [
+        { label: 'মোট স্টাফ', value: `${bn(state.staff.length)} জন` },
+        { label: 'রোল সংখ্যা', value: `${bn(STAFF_ROLES.length)} টি` }
+      ]
+    },
+    'staff-status': {
+      title: 'সক্রিয় ও নিষ্ক্রিয় স্টাফ রিপোর্ট',
+      subtitle: 'স্ট্যাটাসভিত্তিক স্টাফ তালিকা — কে লগইন করতে পারবে',
+      period: `সক্রিয় ${bn(state.staffCounts.active || 0)} জন • বন্ধ ${bn((state.staffCounts.inactive || 0) + (state.staffCounts.suspended || 0))} জন`,
+      columns: [
+        { label: 'Staff ID', width: 1 },
+        { label: 'নাম', width: 1.6 },
+        { label: 'রোল', width: 1.2 },
+        { label: 'স্ট্যাটাস', width: 1 },
+        { label: 'লগইন', width: 0.9 }
+      ],
+      rows: state.staff.map(staff => [
+        staff.staffId,
+        staff.fullName,
+        staffRoleLabel(staff.role),
+        staffStatusLabel(staff.status),
+        staff.status === 'active' ? 'চালু' : 'বন্ধ'
+      ]),
+      summary: [
+        { label: 'সক্রিয়', value: `${bn(state.staffCounts.active || 0)} জন` },
+        { label: 'নিষ্ক্রিয়', value: `${bn(state.staffCounts.inactive || 0)} জন` },
+        { label: 'স্থগিত', value: `${bn(state.staffCounts.suspended || 0)} জন` }
+      ],
+      note: 'নোট: নিষ্ক্রিয় বা স্থগিত স্টাফ লগইন করতে পারে না, তবে তার আগের লেনদেন/উপস্থিতি/পরীক্ষার রেকর্ড অক্ষত থাকে।'
+    },
+    'staff-activity': {
+      title: 'স্টাফ কার্যক্রম রিপোর্ট',
+      subtitle: 'প্রতিজন স্টাফের সঙ্গে যুক্ত রুটিন, লেনদেন, একাডেমিক কার্যক্রম ও পরীক্ষা',
+      period: `মোট ${bn(state.staff.length)} জন স্টাফ`,
+      columns: [
+        { label: 'Staff ID', width: 1 },
+        { label: 'নাম', width: 1.5 },
+        { label: 'রোল', width: 1.1 },
+        { label: 'রুটিন ক্লাস', width: 0.9 },
+        { label: 'লেনদেন', width: 0.8 },
+        { label: 'একাডেমিক', width: 0.9 },
+        { label: 'পরীক্ষা', width: 0.8 },
+        { label: 'মোট', width: 0.8 }
+      ],
+      rows: state.staffActivity.map(({ staff, activity }) => [
+        staff.staffId,
+        staff.fullName,
+        staffRoleLabel(staff.role),
+        bn(activity.routine),
+        bn(activity.transactions),
+        bn(activity.teaching),
+        bn(activity.exams),
+        bn(activity.total)
+      ]),
+      summary: [
+        { label: 'ইতিহাসযুক্ত স্টাফ', value: `${bn(state.staffActivity.filter(entry => entry.activity.hasHistory).length)} জন` },
+        { label: 'মোট রেকর্ড', value: bn(state.staffActivity.reduce((sum, entry) => sum + entry.activity.total, 0)) }
+      ],
+      note: 'নোট: ইতিহাস থাকা স্টাফ অ্যাকাউন্ট মুছে ফেলা যায় না — তাকে নিষ্ক্রিয় করলে ইতিহাস অক্ষত থাকে।'
+    }
   };
 }
 
@@ -1175,6 +1164,7 @@ function renderReportCards() {
   meta('dues', `${bn(dues.rows.length)} জনের বকেয়া • ${dues.summary[0].value}`);
   meta('students', `মোট ${bn(state.students.length)} জন • অনুমোদিত ${bn(state.students.filter(s => s.status === 'approved').length)} জন`);
   meta('routine', `${bn(Object.values(state.routine).reduce((sum, info) => sum + info.classes.length, 0))} টি ক্লাস সাপ্তাহিক রুটিনে`);
+  renderStaffReportMeta();
 }
 
 /* ---------- Class-wise students, exam results and attendance reports ---------- */
@@ -1674,6 +1664,455 @@ function resetAppSettingsToDefault() {
   toast('শিক্ষার্থী অ্যাপের ডিফল্ট সেটিংস সফলভাবে প্রয়োগ করা হয়েছে');
 }
 
+/* ---------- Roles & Permissions ----------
+   A read-only projection of the role tree that already exists in this
+   repository (firestore.rules, functions/index.js, manager.html). Nothing here
+   edits it: Admin sees who may do what, and whose job an operation is. */
+
+const ROLE_ORDER = Object.freeze(['admin', 'manager', 'teacher', 'payment', 'student']);
+
+const ROLE_SUMMARY = Object.freeze({
+  admin: 'System Control, স্টাফ ম্যানেজমেন্ট, অনুমতি, সিকিউরিটি, ডেটা, ব্যাকআপ, রিপোর্ট ও সেটিংস',
+  manager: 'দৈনন্দিন অপারেশন: শিক্ষার্থী অনুমোদন, নোটিশ, রুটিন, পরীক্ষা প্রকাশ, হিসাব পর্যালোচনা',
+  teacher: 'ক্লাস, বাড়ির কাজ, উপস্থিতি, সাজেশন ও পরীক্ষা — Teacher প্যানেল',
+  payment: 'ফি গ্রহণ ও ক্যাশ কাউন্টার এন্ট্রি — Payment রিসিভ প্যানেল',
+  student: 'নিজের প্রোফাইল, রুটিন, কোর্স, ফলাফল ও নোটিশ — শিক্ষার্থী অ্যাপ'
+});
+
+const CAPABILITY_LABELS = Object.freeze({
+  'dashboard.view': 'সিস্টেম ড্যাশবোর্ড',
+  'staff.manage': 'স্টাফ ম্যানেজমেন্ট (CRUD)',
+  'roles.manage': 'রোল ও অনুমতি দেখা',
+  'students.view': 'শিক্ষার্থী তালিকা ও প্রোফাইল',
+  'students.manage': 'শিক্ষার্থী রেকর্ড হালনাগাদ',
+  'students.approve': 'শিক্ষার্থী অনুমোদন/বাতিল',
+  'reports.view': 'রিপোর্ট সেন্টার',
+  'data.manage': 'ডেটা ম্যানেজমেন্ট',
+  'backup.manage': 'ব্যাকআপ ও রিস্টোর',
+  'security.manage': 'সিকিউরিটি পর্যবেক্ষণ',
+  'settings.manage': 'সিস্টেম সেটিংস',
+  'profile.view': 'নিজের প্রোফাইল',
+  'finance.view': 'হিসাব পর্যবেক্ষণ',
+  'finance.collect': 'ফি গ্রহণ',
+  'notices.manage': 'নোটিশ প্রকাশ',
+  'routine.manage': 'ক্লাস রুটিন এন্ট্রি',
+  'classes.manage': 'ক্লাস চালু/বন্ধ',
+  'app.manage': 'শিক্ষার্থী অ্যাপ কন্ট্রোল',
+  'exams.view': 'পরীক্ষা দেখা',
+  'exams.publish': 'পরীক্ষা প্রকাশ/প্রত্যাখ্যান',
+  'teaching.panel': 'Teacher প্যানেল',
+  'payment.panel': 'Payment প্যানেল'
+});
+
+const ROLE_ICONS = Object.freeze({
+  admin: 'shield',
+  manager: 'sliders',
+  teacher: 'book',
+  payment: 'wallet',
+  student: 'users'
+});
+
+function renderRoles() {
+  const host = $('#rolesMatrix');
+  if (!host) return;
+  const counts = state.staffCounts.byRole || {};
+  host.innerHTML = ROLE_ORDER.map(role => {
+    const capabilities = ROLE_CAPABILITIES[role] || [];
+    const staffRole = role === 'payment' ? 'cash-counter' : role;
+    const meta = STAFF_ROLE_META[staffRole];
+    const label = meta ? `${meta.labelBn} (${meta.label})` : role === 'student' ? 'শিক্ষার্থী (Student)' : role;
+    const chips = Object.keys(CAPABILITY_LABELS).map(capability => `
+      <li class="${capabilities.includes(capability) ? '' : 'is-denied'}">${escapeHtml(CAPABILITY_LABELS[capability])}</li>`).join('');
+    const staffCount = role === 'student' ? state.students.length : (counts[staffRole] ?? 0);
+    return `
+      <article class="admin-card role-card">
+        <header class="admin-card-head">
+          <div>
+            <p class="eyebrow">${escapeHtml(role === 'student' ? 'Student' : meta ? meta.label : role)}</p>
+            <h2>${escapeHtml(label)}</h2>
+          </div>
+          <span class="badge ${role === 'admin' ? 'badge-approved' : 'badge-pending'}">${role === 'student' ? bn(state.students.length) : bn(staffCount)} ${role === 'student' ? 'জন শিক্ষার্থী' : 'জন স্টাফ'}</span>
+        </header>
+        <div class="role-head">
+          <span class="role-icon" aria-hidden="true"></span>
+          <div><h3>${escapeHtml(ROLE_SUMMARY[role] || '')}</h3>
+          <small>${capabilities.length ? `${bn(capabilities.length)}টি অনুমতি • Admin এই রোলের কাজ নিজের প্যানেলে আনে না` : 'Admin প্যানেলে কোনো অনুমতি নেই'}</small></div>
+        </div>
+        <ul class="role-cap-list">${chips}</ul>
+      </article>`;
+  }).join('');
+  host.querySelectorAll('.role-card').forEach((card, index) => {
+    paintIcon(card.querySelector('.role-icon'), ROLE_ICONS[ROLE_ORDER[index]] || 'shield', 'role-icon-svg');
+  });
+}
+
+/* ---------- Data Management ---------- */
+
+const DATA_COLLECTIONS = Object.freeze([
+  { key: KEYS.students, label: 'শিক্ষার্থী (Roster)', hint: 'নিবন্ধন, শ্রেণি, স্ট্যাটাস' },
+  { key: KEYS.transactions, label: 'লেনদেন (Finance)', hint: 'ফি আদায়ের রেকর্ড ও রসিদ তথ্য' },
+  { key: KEYS.notices, label: 'নোটিশ', hint: 'প্রকাশিত ঘোষণা' },
+  { key: KEYS.routine, label: 'ক্লাস রুটিন', hint: 'সাপ্তাহিক ক্লাস ও শিক্ষক' },
+  { key: KEYS.teaching, label: 'একাডেমিক কার্যক্রম', hint: 'বাড়ির কাজ, উপস্থিতি, সাজেশন' },
+  { key: KEYS.exams, label: 'পরীক্ষা', hint: 'প্রশ্নপত্র, উত্তর ও ফলাফল' },
+  { key: KEYS.settings, label: 'অ্যাপ সেটিংস', hint: 'কনফিগারেশন ও ব্র্যান্ডিং' },
+  { key: STAFF_DIRECTORY_KEY, label: 'স্টাফ ডিরেক্টরি', hint: 'Staff ID, রোল ও অ্যাসাইনমেন্ট' }
+]);
+
+function collectionCount(key) {
+  const value = readJSON(key, null);
+  if (Array.isArray(value)) return value.length;
+  if (value && typeof value === 'object') {
+    if (Array.isArray(value.records)) return value.records.length;
+    if (Array.isArray(value.activities)) return value.activities.length;
+    if (Array.isArray(value.exams)) return value.exams.length;
+    if (KEYS.routine === key) {
+      return Object.values(value).reduce((sum, day) => sum + (Array.isArray(day?.classes) ? day.classes.length : 0), 0);
+    }
+    return Object.keys(value).length;
+  }
+  return 0;
+}
+
+function storageNote() {
+  let bytes = 0;
+  try {
+    for (let index = 0; index < window.localStorage.length; index += 1) {
+      const key = window.localStorage.key(index);
+      if (!key || !key.startsWith('activePlus') && !key.startsWith('active-plus')) continue;
+      bytes += (window.localStorage.getItem(key) || '').length * 2;
+    }
+  } catch { return 'স্টোরেজ হিসাব করা যায়নি।'; }
+  const kb = Math.round(bytes / 1024);
+  return `আনুমানিক ব্যবহৃত স্টোরেজ: ${bn(kb)} KB • সব তথ্য শুধু এই ডিভাইসে থাকে (কোনো সার্ভার নয়)।`;
+}
+
+function renderDataManagement() {
+  const list = $('#dataCollectionList');
+  const select = $('#dataClearSelect');
+  if (!list && !select) return;
+  const rows = DATA_COLLECTIONS.map(item => ({ ...item, count: collectionCount(item.key) }));
+  if (list) {
+    list.innerHTML = rows.map(row => `
+      <div class="data-row">
+        <div>
+          <strong>${escapeHtml(row.label)}</strong>
+          <small>${escapeHtml(row.hint)}</small>
+        </div>
+        <span class="data-count">${bn(row.count)} টি</span>
+      </div>`).join('');
+  }
+  const note = $('#dataStorageNote');
+  if (note) note.textContent = storageNote();
+  if (select && !select.options.length) {
+    select.innerHTML = DATA_COLLECTIONS
+      .map(item => `<option value="${escapeHtml(item.key)}">${escapeHtml(item.label)}</option>`).join('');
+  }
+}
+
+function clearSelectedCollection() {
+  const select = $('#dataClearSelect');
+  const key = select?.value;
+  if (!key) return;
+  const item = DATA_COLLECTIONS.find(entry => entry.key === key);
+  if (!item) return;
+  const count = collectionCount(key);
+  openModal('Data Management', `${item.label} মুছে ফেলবেন?`, `
+    <p class="staff-confirm-copy">এই সংগ্রহের <strong>${bn(count)}</strong> টি রেকর্ড স্থায়ীভাবে মুছে যাবে। আগে Backup &amp; Restore থেকে ব্যাকআপ নেওয়ার পরামর্শ দেওয়া হয়।</p>
+    <div class="modal-actions">
+      <button class="admin-btn ghost" type="button" data-modal-action="close">বাতিল</button>
+      <button class="admin-btn danger" type="button" data-modal-action="clear-data" data-clear-key="${escapeHtml(key)}">মুছে ফেলুন</button>
+    </div>`);
+  const button = $('#adminModalBody [data-modal-action="clear-data"]');
+  button?.addEventListener('click', async () => {
+    if (!access.has(CAPABILITIES.DATA_MANAGE)) {
+      closeModal();
+      toast('এই কাজটি শুধু Admin করতে পারবেন।');
+      return;
+    }
+    if (key === STAFF_DIRECTORY_KEY) {
+      closeModal();
+      toast('স্টাফ ডিরেক্টরি সরাসরি মুছে ফেলা যায় না — স্টাফ ম্যানেজমেন্ট ব্যবহার করুন।');
+      return;
+    }
+    try {
+      window.localStorage.removeItem(key);
+    } catch {
+      closeModal();
+      toast('ডেটা মুছে ফেলা যায়নি — স্টোরেজ পরীক্ষা করুন।');
+      return;
+    }
+    closeModal();
+    toast(`${item.label} মুছে ফেলা হয়েছে`);
+    await loadFinanceTransactions();
+    await loadAcademicData();
+    state.students = loadRoster();
+    state.routine = loadRoutine();
+    state.notices = loadNotices();
+    await refreshStaffSnapshot();
+    renderAll();
+  });
+}
+
+/* ---------- Backup & Restore ---------- */
+
+const BACKUP_KEYS = Object.freeze([
+  ...new Set([
+    ...Object.values(KEYS),
+    ...STAFF_KEYS_LIST,
+    STAFF_DIRECTORY_KEY,
+    'activePlus.initialAdminUsername.v1'
+  ])
+]);
+
+function renderBackup() {
+  paintIcon($('#backupExportButton .apc-icon'), 'download', 'apc-icon');
+  paintIcon($('#backupRestoreButton .apc-icon'), 'upload', 'apc-icon');
+  const badge = $('#backupLastBadge');
+  if (!badge) return;
+  const stamp = readJSON(BACKUP_STAMP_KEY, null);
+  const text = stamp ? String(stamp).slice(0, 10) : 'এখনো কোনো ব্যাকআপ নেওয়া হয়নি';
+  badge.textContent = stamp ? `সর্বশেষ: ${escapeHtml(text)}` : text;
+  badge.className = `badge ${stamp ? 'badge-approved' : 'badge-pending'}`;
+}
+
+function backupFileName() {
+  return `APC-backup-${new Date().toISOString().slice(0, 10)}.json`;
+}
+
+async function exportBackup() {
+  if (!access.has(CAPABILITIES.BACKUP_MANAGE)) {
+    toast('ব্যাকআপ শুধু Admin নিতে পারবেন।');
+    return;
+  }
+  const payload = { kind: 'active-plus-backup', version: 1, createdAt: new Date().toISOString(), data: {} };
+  for (const key of BACKUP_KEYS) {
+    const raw = window.localStorage.getItem(key);
+    if (raw !== null) payload.data[key] = raw;
+  }
+  try {
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = backupFileName();
+    document.body.append(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    writeJSON(BACKUP_STAMP_KEY, new Date().toISOString());
+    renderBackup();
+    toast('ব্যাকআপ ডাউনলোড শুরু হয়েছে');
+  } catch {
+    toast('ব্যাকআপ তৈরি করা যায়নি — ব্রাউজারের ডাউনলোড অনুমতি পরীক্ষা করুন।');
+  }
+}
+
+async function restoreBackup(file) {
+  const status = $('#backupStatus');
+  if (!file) return;
+  if (!access.has(CAPABILITIES.BACKUP_MANAGE)) {
+    if (status) status.textContent = 'রিস্টোর শুধু Admin করতে পারবেন।';
+    return;
+  }
+  let payload;
+  try {
+    payload = JSON.parse(await file.text());
+  } catch {
+    if (status) status.textContent = 'এটি সঠিক ব্যাকআপ ফাইল নয় (JSON পড়া যায়নি)।';
+    return;
+  }
+  if (payload?.kind !== 'active-plus-backup' || !payload.data || typeof payload.data !== 'object') {
+    if (status) status.textContent = 'এই ফাইলটি Active Plus ব্যাকআপ নয়।';
+    return;
+  }
+  const keys = Object.keys(payload.data);
+  openModal('Backup & Restore', 'ব্যাকআপ ফিরিয়ে আনবেন?', `
+    <p class="staff-confirm-copy">এই ফাইলে <strong>${bn(keys.length)}</strong>টি সংগ্রহ আছে (${escapeHtml(String(payload.createdAt || '').slice(0, 10))})। রিস্টোর করলে বর্তমান ডেটা এই তথ্য দিয়ে বদলে যাবে।</p>
+    <div class="modal-actions">
+      <button class="admin-btn ghost" type="button" data-modal-action="close">বাতিল</button>
+      <button class="admin-btn primary" type="button" data-modal-action="restore">রিস্টোর করুন</button>
+    </div>`);
+  $('#adminModalBody [data-modal-action="restore"]')?.addEventListener('click', async () => {
+    closeModal();
+    try {
+      for (const [key, value] of Object.entries(payload.data)) {
+        if (BACKUP_KEYS.includes(key)) window.localStorage.setItem(key, String(value));
+      }
+    } catch {
+      if (status) status.textContent = 'রিস্টোর করা যায়নি — স্টোরেজ পরীক্ষা করুন।';
+      return;
+    }
+    if (status) status.textContent = `${bn(keys.length)}টি সংগ্রহ ফিরিয়ে আনা হয়েছে।`;
+    toast('ব্যাকআপ থেকে ডেটা ফিরিয়ে আনা হয়েছে');
+    window.setTimeout(() => window.location.reload(), 1200);
+  });
+}
+
+/* ---------- Security ---------- */
+
+async function renderSecurity() {
+  const host = $('#securityPanels');
+  if (!host) return;
+  const owner = await readStaffAccount('admin');
+  const ownerStaff = state.staff.find(staff => staff.role === 'admin') || null;
+  const passwordDue = state.staff.filter(staff => staff.mustChangePassword);
+  const protectedStaff = state.staff.filter(staff => staff.protected);
+  const rows = [
+    ['System Owner', escapeHtml(owner?.fullName || '—')],
+    ['Owner Username', escapeHtml(owner?.username || '—')],
+    ['Owner Staff ID', ownerStaff ? `<span class="staff-id-badge">${escapeHtml(ownerStaff.staffId)}</span>` : '—'],
+    ['স্ট্যাটাস', '<span class="badge badge-approved">Protected • মুছে বা নিষ্ক্রিয় করা যায় না</span>'],
+    ['Session নীতি', `${bn(STAFF_SESSION_RULES.rememberDays)} দিন (এই ডিভাইসে বাঁধা টোকেন) • ট্যাব-সেশন ট্যাব বন্ধ হলে শেষ`],
+    ['Password নীতি', `${bn(STAFF_DIRECTORY_RULES.passwordMin)}–${bn(STAFF_DIRECTORY_RULES.passwordMax)} অক্ষর • PBKDF2 হ্যাশ • কখনো প্লেইন-টেক্সট নয়`],
+    ['স্টাফ ম্যানেজমেন্ট', 'শুধু Admin • বাটন লুকানোই নয়, প্রতিটি পরিবর্তনে Admin সেশন যাচাই হয়'],
+    ['Student ID বনাম Staff ID', escapeHtml(STAFF_DIRECTORY_RULES.studentIdNote)]
+  ];
+  host.innerHTML = `
+    <article class="admin-card">
+      <header class="admin-card-head">
+        <div><p class="eyebrow">System Owner</p><h2>এডমিন পরিচয় ও সুরক্ষা</h2></div>
+        <span class="badge badge-approved">Protected</span>
+      </header>
+      <div class="security-list">
+        ${rows.map(([label, value]) => `
+          <div class="security-row"><div><dt>${escapeHtml(label)}</dt><dd>${value}</dd></div></div>`).join('')}
+      </div>
+    </article>
+    <article class="admin-card">
+      <header class="admin-card-head">
+        <div><p class="eyebrow">Password Health</p><h2>পাসওয়ার্ড বদল বাকি</h2></div>
+        <span class="badge ${passwordDue.length ? 'badge-pending' : 'badge-approved'}">${bn(passwordDue.length)} জন</span>
+      </header>
+      ${passwordDue.length ? `
+        <div class="security-list">
+          ${passwordDue.map(staff => `
+            <div class="security-row">
+              <div>
+                <dt>${escapeHtml(staffRoleLabel(staff.role))} • <span class="staff-id-badge">${escapeHtml(staff.staffId)}</span></dt>
+                <dd>${escapeHtml(staff.fullName)} (${escapeHtml(staff.username)})</dd>
+              </div>
+              <button class="mini-btn" type="button" data-security-reset="${escapeHtml(staff.staffId)}">রিসেট</button>
+            </div>`).join('')}
+        </div>`
+      : '<p class="admin-empty">সব অ্যাকাউন্টের পাসওয়ার্ড হালনাগাদ — বকেয়া কিছু নেই।</p>'}
+      <p class="finance-hint">Admin রিসেট করলে নতুন পাসওয়ার্ড সাময়িক থাকে: সংশ্লিষ্ট স্টাফ প্রথম লগইনে তা বদলাতে বাধ্য থাকে। পাসওয়ার্ড কখনো দেখানো হয় না।</p>
+    </article>
+    <article class="admin-card">
+      <header class="admin-card-head">
+        <div><p class="eyebrow">Protected Accounts</p><h2>সুরক্ষিত অ্যাকাউন্ট</h2></div>
+        <span class="badge badge-approved">${bn(protectedStaff.length)} টি</span>
+      </header>
+      <div class="security-list">
+        ${protectedStaff.map(staff => `
+          <div class="security-row">
+            <div>
+              <dt><span class="staff-id-badge">${escapeHtml(staff.staffId)}</span> ${escapeHtml(staffRoleLabel(staff.role))}</dt>
+              <dd>${escapeHtml(staff.fullName)} — মুছে ফেলা ও নিষ্ক্রিয় করা বন্ধ, যাতে System Owner লক-আউট না হয়।</dd>
+            </div>
+          </div>`).join('') || '<p class="admin-empty">কোনো সুরক্ষিত অ্যাকাউন্ট পাওয়া যায়নি।</p>'}
+      </div>
+    </article>
+    <article class="admin-card">
+      <header class="admin-card-head">
+        <div><p class="eyebrow">Role Boundary</p><h2>দৈনন্দিন কাজের মালিকানা</h2></div>
+      </header>
+      <div class="security-list">
+        <div class="security-row"><div><dt>ফি গ্রহণ / ক্যাশ কাউন্টার</dt><dd>Cash Counter (payment.html) — Admin শুধু পর্যবেক্ষণ করে</dd></div></div>
+        <div class="security-row"><div><dt>শিক্ষার্থী অনুমোদন, নোটিশ, রুটিন, পরীক্ষা প্রকাশ</dt><dd>Manager (manager.html)</dd></div></div>
+        <div class="security-row"><div><dt>ক্লাস, বাড়ির কাজ, উপস্থিতি</dt><dd>Teacher (teacher.html)</dd></div></div>
+      </div>
+    </article>`;
+  host.querySelectorAll('[data-security-reset]').forEach(button => {
+    button.addEventListener('click', () => {
+      navigate('staff', null);
+      window.setTimeout(() => {
+        const card = $(`[data-staff-card="${button.dataset.securityReset}"] [data-staff-action="more"]`);
+        card?.click();
+        window.setTimeout(() => $(`[data-staff-card="${button.dataset.securityReset}"] [data-staff-action="reset"]`)?.click(), 60);
+      }, 80);
+    });
+  });
+}
+
+/* ---------- Admin Profile ---------- */
+
+async function renderAdminProfile() {
+  const host = $('#adminProfileCard');
+  if (!host) return;
+  const account = await readStaffAccount('admin');
+  const staff = state.staff.find(item => item.role === 'admin') || null;
+  const rows = [
+    ['পূর্ণ নাম', escapeHtml(account?.fullName || '—')],
+    ['ইউজারনেম', escapeHtml(account?.username || '—')],
+    ['Staff ID', staff ? `<span class="staff-id-badge">${escapeHtml(staff.staffId)}</span>` : '—'],
+    ['Role', `${escapeHtml(staffRoleLabel('admin'))} • System Owner`],
+    ['মোবাইল', escapeHtml(account?.mobile || '—')],
+    ['ইমেইল', escapeHtml(account?.email || '—')],
+    ['স্ট্যাটাস', '<span class="badge badge-approved">Protected • সক্রিয়</span>'],
+    ['যোগদান', escapeHtml(String(account?.createdAt || '').slice(0, 10) || '—')]
+  ];
+  // The same card fills the editable identity form: name, mobile, email.
+  if ($('#adminProfileName')) $('#adminProfileName').value = account?.fullName || '';
+  if ($('#adminProfileMobile')) $('#adminProfileMobile').value = account?.mobile || '';
+  if ($('#adminProfileEmail')) $('#adminProfileEmail').value = account?.email || '';
+  if ($('#adminProfileUserId')) $('#adminProfileUserId').textContent = account?.username || '—';
+
+  host.innerHTML = `
+    <header class="admin-card-head">
+      <div><p class="eyebrow">Admin Profile</p><h2>আমার পরিচয়</h2></div>
+      <span class="badge badge-approved">Current Admin → Protected</span>
+    </header>
+    <div class="profile-list">
+      ${rows.map(([label, value]) => `
+        <div class="profile-row"><div><dt>${escapeHtml(label)}</dt><dd>${value}</dd></div></div>`).join('')}
+    </div>
+    <p class="finance-hint">System Owner পরিচয় সুরক্ষিত: এই অ্যাকাউন্ট মুছে ফেলা, নিষ্ক্রিয় করা বা রোল বদল করা যায় না — ফলে কখনো লক-আউট হয় না।</p>`;
+}
+
+/* ---------- Staff reports (Report Center) ---------- */
+
+function staffReportColumns() {
+  return [
+    { label: 'Staff ID', width: 1 },
+    { label: 'নাম', width: 1.6 },
+    { label: 'রোল', width: 1.1 },
+    { label: 'ইউজারনেম', width: 1.2 },
+    { label: 'মোবাইল', width: 1.1 },
+    { label: 'অবস্থা', width: 0.9 },
+    { label: 'যোগদান', width: 1 },
+    { label: 'অ্যাসাইনমেন্ট', width: 1.5 }
+  ];
+}
+
+function staffReportRow(record) {
+  return [
+    record.staffId,
+    record.name,
+    record.roleLabel,
+    record.username,
+    record.mobile ? bn(record.mobile) : '—',
+    record.statusLabel,
+    record.joiningDate || '—',
+    record.assignment || '—'
+  ];
+}
+
+function renderStaffReportMeta() {
+  const meta = (key, text) => {
+    const el = $(`#reportMeta-${key}`);
+    if (el) el.textContent = text;
+  };
+  const counts = state.staffCounts;
+  meta('staff', `মোট ${bn(counts.total)} জন স্টাফ • সক্রিয় ${bn(counts.active)} জন`);
+  meta('staff-roles', STAFF_ROLES.map(role => `${staffRoleLabel(role)} ${bn(counts.byRole[role] || 0)}`).join(' • '));
+  meta('staff-status', `সক্রিয় ${bn(counts.active)} জন • নিষ্ক্রিয় ${bn(counts.inactive)} জন • স্থগিত ${bn(counts.suspended)} জন`);
+  const active = state.staffActivity.filter(entry => entry.activity.hasHistory);
+  meta('staff-activity', active.length
+    ? `${bn(active.length)} জন স্টাফের সঙ্গে ইতিহাস যুক্ত`
+    : 'কোনো স্টাফের সঙ্গে রেকর্ড যুক্ত নেই');
+}
+
 /* ---------- Render everything ---------- */
 
 /** A view is rendered only while it exists — the capability layer removes the
@@ -1682,14 +2121,45 @@ function viewExists(view) {
   return Boolean($(`.admin-view[data-view-panel="${view}"]`));
 }
 
+/**
+ * Refresh the staff snapshot from the directory. Every view that talks about
+ * staff (dashboard, staff, roles, reports, security) reads this one copy, so a
+ * change made in Staff Management is reflected everywhere.
+ */
+async function refreshStaffSnapshot() {
+  state.staff = await listStaff();
+  state.staffCounts = staffCounts(state.staff);
+  state.staffActivity = state.staff.map(staff => ({
+    staff,
+    activity: staffActivitySummary(staff)
+  }));
+}
+
 function renderAll() {
   if (viewExists('dashboard')) renderDashboard();
   if (viewExists('students')) renderStudents();
-  if (viewExists('notices')) renderNotices();
-  if (viewExists('routine')) renderRoutine();
-  if (viewExists('classes')) renderClasses();
-  if (viewExists('finance')) renderFinance();
-  if (viewExists('app-management')) renderAppManagement();
+  if (viewExists('settings')) renderAppManagement();
+  if (viewExists('settings')) renderClasses();
+  if (viewExists('reports')) renderFinance();
+  if (viewExists('roles')) renderRoles();
+  if (viewExists('data')) renderDataManagement();
+  if (viewExists('backup')) renderBackup();
+  if (viewExists('security')) renderSecurity();
+  if (viewExists('profile')) renderAdminProfile();
+  if (viewExists('staff')) void renderStaff();
+}
+
+/** Called by Staff Management after every create / edit / delete / status
+ *  change, so the dashboard counters and reports never go stale. */
+function onStaffChanged() {
+  void refreshStaffSnapshot().then(() => {
+    renderDashboard();
+    renderReportCards();
+    if (viewExists('reports')) renderStaffReportMeta();
+    if (viewExists('roles')) renderRoles();
+    if (viewExists('security')) renderSecurity();
+    if (viewExists('profile')) renderAdminProfile();
+  });
 }
 
 /* ---------- Wiring ---------- */
@@ -1730,35 +2200,10 @@ async function enterAdminPanel(remember, bootstrapCredentials = []) {
   await enterPanel({ bootstrapCredentials });
 }
 
-$('#initialAdminForm')?.addEventListener('submit', async event => {
-  event.preventDefault();
-  const form = event.currentTarget;
-  const submit = form.querySelector('[type="submit"]');
-  const error = $('#initialAdminError');
-  const data = new FormData(form);
-  if (error) { error.hidden = true; error.textContent = ''; }
-  if (submit) { submit.disabled = true; submit.setAttribute('aria-busy', 'true'); }
-  try {
-    const result = await createInitialAdmin({
-      fullName: data.get('fullName'), mobile: data.get('mobile'), email: data.get('email'),
-      username: data.get('username'), password: data.get('password'), confirmPassword: data.get('confirmPassword')
-    });
-    if (!result.ok) {
-      if (error) { error.textContent = result.error || 'Admin Account তৈরি করা যায়নি।'; error.hidden = false; }
-      return;
-    }
-    form.reset();
-    $('#initialAdminSetup').hidden = true;
-    $('#adminEntry').hidden = false;
-    $('#adminLoginUser').value = result.account.username;
-    $('#adminLoginPin').value = data.get('password') || '';
-    await enterAdminPanel(true, result.bootstrapAccounts || []);
-  } catch {
-    if (error) { error.textContent = 'Account সংরক্ষণ করা যায়নি। স্টোরেজ পরীক্ষা করে আবার চেষ্টা করুন।'; error.hidden = false; }
-  } finally {
-    if (submit) { submit.disabled = false; submit.removeAttribute('aria-busy'); }
-  }
-});
+/* The first Admin Account is created once, from the login page (index.html).
+   This panel never shows a creation form, and js/staff-auth.js refuses
+   createInitialAdmin() while an Admin record exists — so a direct call, a copied
+   URL or a hidden route cannot start the workflow a second time. */
 
 $('#bootstrapCredentialsDone')?.addEventListener('click', () => { $('#bootstrapCredentialsBackdrop').hidden = true; });
 $('#bootstrapCopyCredentials')?.addEventListener('click', async () => {
@@ -1821,11 +2266,7 @@ window.addEventListener('hashchange', () => {
   navigate(route, null);
 });
 
-$('#dashCollectFee')?.addEventListener('click', event => {
-  if (!navigate('finance', event.currentTarget)) return;
-  setFinanceTab('collection');
-  $('#feeStudentSearch')?.focus({ preventScroll: true });
-});
+/* Fee collection is the Cash Counter's job; this panel keeps no handler. */
 
 $('#studentSearch').addEventListener('input', event => {
   state.query = event.target.value;
@@ -1879,37 +2320,83 @@ const studentAction = event => {
 };
 $('#studentList').addEventListener('click', studentAction);
 
-$('#noticeForm').addEventListener('submit', publishNotice);
-$('#noticeList').addEventListener('click', event => {
-  const button = event.target.closest('[data-action="delete-notice"]');
-  if (!button) return;
-  state.notices = state.notices.filter(notice => notice.id !== button.dataset.id);
-  persistNotices();
-  renderNotices();
-  renderDashboard();
-  toast('নোটিশ মুছে ফেলা হয়েছে');
-});
-
-$('#routineDayTabs').addEventListener('click', event => {
-  const tab = event.target.closest('[data-routine-day]');
-  if (!tab) return;
-  state.activeDay = tab.dataset.routineDay;
-  renderRoutine();
-});
-
-$('#addRoutineForm').addEventListener('submit', addRoutineClass);
-
-$('#routineList').addEventListener('click', event => {
-  const button = event.target.closest('[data-action="delete-routine"]');
-  if (!button) return;
-  state.routine[state.activeDay].classes.splice(Number(button.dataset.index), 1);
-  persistRoutine();
-  renderRoutine();
-  renderDashboard();
-  toast('ক্লাসটি রুটিন থেকে মুছে ফেলা হয়েছে');
-});
+/* Notice publishing and routine entry now live in the Manager portal, so this
+   panel keeps no handler for them. */
 
 $('#classList').addEventListener('change', toggleClass);
+
+/* ---------- Staff, Data, Backup, Security and Profile wiring ---------- */
+
+$('#dataRefreshButton')?.addEventListener('click', async () => {
+  renderDataManagement();
+  await refreshStaffSnapshot();
+  toast('ডেটা পরিসংখ্যান হালনাগাদ করা হয়েছে');
+});
+
+$('#dataClearButton')?.addEventListener('click', clearSelectedCollection);
+
+$('#backupExportButton')?.addEventListener('click', exportBackup);
+
+$('#backupFileInput')?.addEventListener('change', event => {
+  restoreBackup(event.target.files?.[0]);
+});
+
+$('#adminMoreLogout')?.addEventListener('click', exitPanel);
+
+$('#adminProfileForm')?.addEventListener('submit', async event => {
+  event.preventDefault();
+  const error = $('#adminProfileError');
+  if (error) { error.hidden = true; error.textContent = ''; }
+  const fullName = String($('#adminProfileName')?.value || '').trim().replace(/\s+/g, ' ');
+  const mobile = String($('#adminProfileMobile')?.value || '').trim();
+  const email = String($('#adminProfileEmail')?.value || '').trim().toLowerCase();
+  if (fullName.length < 2 || fullName.length > 100) {
+    if (error) { error.textContent = 'পূর্ণ নাম লিখুন (২–১০০ অক্ষর)।'; error.hidden = false; }
+    return;
+  }
+  if (!/^01[3-9]\d{8}$/.test(mobile)) {
+    if (error) { error.textContent = 'সঠিক ১১ সংখ্যার মোবাইল নম্বর দিন (যেমন: ০১৭XXXXXXXX)।'; error.hidden = false; }
+    return;
+  }
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (error) { error.textContent = 'সঠিক ইমেইল ঠিকানা দিন অথবা ফাঁকা রাখুন।'; error.hidden = false; }
+    return;
+  }
+  // Only name/mobile/email move. The Login User ID and the Staff ID are locked
+  // inside updateStaffProfile, so this form cannot rewrite the identity even
+  // if it is submitted straight from the console.
+  const result = await updateStaffProfile('admin', { fullName, mobile, email });
+  if (!result.ok) {
+    if (error) { error.textContent = result.error || 'তথ্য সংরক্ষণ করা যায়নি।'; error.hidden = false; }
+    return;
+  }
+  toast('প্রোফাইল হালনাগাদ করা হয়েছে');
+  await refreshStaffSnapshot();
+  renderAdminProfile();
+});
+
+$('#adminPasswordForm')?.addEventListener('submit', async event => {
+  event.preventDefault();
+  // Captured now: event.currentTarget is nulled once the dispatch (and the
+  // awaits below) is over, so the form must be reset through this reference.
+  const form = event.currentTarget;
+  const error = $('#adminPasswordError');
+  const current = $('#adminCurrentPassword')?.value || '';
+  const next = $('#adminNewPassword')?.value || '';
+  const confirm = $('#adminConfirmPassword')?.value || '';
+  if (error) { error.hidden = true; error.textContent = ''; }
+  if (next !== confirm) {
+    if (error) { error.textContent = 'দুইবার লেখা নতুন পাসওয়ার্ড মিলছে না।'; error.hidden = false; }
+    return;
+  }
+  const result = await changeStaffPassword('admin', current, next, confirm);
+  if (!result.ok) {
+    if (error) { error.textContent = result.error || 'পাসওয়ার্ড বদল করা যায়নি।'; error.hidden = false; }
+    return;
+  }
+  form?.reset();
+  toast('পাসওয়ার্ড বদল করা হয়েছে');
+});
 
 /* ---------- Finance Wiring ---------- */
 
@@ -1919,14 +2406,8 @@ $('#financeSubNav')?.addEventListener('click', event => {
   setFinanceTab(tab.dataset.financeTab);
 });
 
-$('#btnFinanceGoCollect')?.addEventListener('click', () => {
-  setFinanceTab('collection');
-  $('#feeStudentSearch')?.focus();
-});
-
-$('#btnFinanceGoReport')?.addEventListener('click', () => {
-  setView('reports');
-});
+/* The finance sub-navigation lives inside Reports now: switching tabs is all
+   it needs; there is no "go collect" shortcut any more. */
 
 $('#feeCollectionForm')?.addEventListener('submit', collectFee);
 $('#feeCollectionForm')?.addEventListener('click', event => {
@@ -2084,16 +2565,20 @@ window.addEventListener('storage', event => {
 // The full-profile first-run form appears only if no Admin record has ever been stored.
 // A corrupt existing record is never silently replaced by a new first owner.
 async function initAdminEntry() {
-  const exists = staffAccountRecordExists('admin');
-  const setup = $('#initialAdminSetup');
+  const exists = await staffAccountRecordExists('admin');
   const login = $('#adminEntry');
+  const notice = $('#adminNoAccount');
+  const form = $('#adminLoginForm');
   if (!exists) {
-    if (setup) setup.hidden = false;
-    if (login) login.hidden = true;
-    $('#initialAdminName')?.focus({ preventScroll: true });
+    // No Admin on this device: the one-time creation form is on the login page.
+    if (login) login.hidden = false;
+    if (notice) notice.hidden = false;
+    if (form) form.hidden = true;
+    notice?.querySelector('a')?.focus({ preventScroll: true });
     return;
   }
-  if (setup) setup.hidden = true;
+  if (notice) notice.hidden = true;
+  if (form) form.hidden = false;
   if (login) login.hidden = false;
   const account = await readStaffAccount('admin');
   if (!account) {

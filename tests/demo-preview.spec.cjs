@@ -38,13 +38,18 @@ test('teacher activities, roster and online exam authoring are populated',async(
   await page.locator('[data-exam-action=new-mcq]').click(); await noEmpty(page.locator('[data-exam-form]')); await expect(page.locator('[data-parsed-preview]')).toContainText('২টি প্রশ্ন');
 });
 
-test('admin finance monitoring, notices and routine show examples without automatic writes',async({page})=>{
-  await enterAdmin(page); await page.locator('.admin-bottom [data-admin-view=finance]').click(); await expect(page.locator('#recentTrxList .trx-item')).toHaveCount(5); await expect(page.locator('#feeStudentSearch, #feeCollectionForm, #feeProfileCollect')).toHaveCount(0);
+test('admin monitoring and staff show examples without automatic writes',async({page})=>{
+  await enterAdmin(page);
+  await page.locator('.admin-bottom [data-admin-view=reports]').click();
+  await expect(page.locator('#recentTrxList .trx-item')).toHaveCount(5);
+  await expect(page.locator('#feeStudentSearch, #feeCollectionForm, #feeProfileCollect')).toHaveCount(0);
   expect(await page.evaluate(key=>JSON.parse(localStorage.getItem(key)).length,FINANCE)).toBe(7);
-  await page.locator('.admin-bottom [data-admin-view=routine]').click(); await noEmpty(page.locator('#addRoutineForm'));
-  await page.locator('.admin-bottom [data-admin-view=more]').click(); await page.locator('.admin-more-item[data-admin-view=notices]').click(); await noEmpty(page.locator('#noticeForm'));
-  await page.locator('.admin-bottom [data-admin-view=more]').click(); await page.locator('[data-admin-view=exams]').click(); await expect(page.locator('[data-managed-exam]')).toHaveCount(8);
-  const pending=page.locator('[data-managed-exam]').filter({hasText:'ডেমো: Admin অনুমোদনের অপেক্ষায়'}); await pending.locator('[data-exam-action=detail]').click(); await noEmpty(page.locator('[data-review-form]'));
+  // Routine entry, notice publishing and exam approval live in the other panels.
+  await expect(page.locator('#addRoutineForm, #noticeForm, [data-managed-exam]')).toHaveCount(0);
+  // Staff identities are ready from the first sign-in: one Staff ID per role.
+  await page.locator('.admin-bottom [data-admin-view=staff]').click();
+  await expect(page.locator('#staffList .staff-card')).toHaveCount(4);
+  await expect(page.locator('#staffList .staff-id-badge').first()).toHaveText('STF-0001');
   expect(await page.evaluate(key=>JSON.parse(localStorage.getItem(key)).exams.find(e=>e.id.endsWith('-pending')).status,EXAMS)).toBe('pending');
 });
 

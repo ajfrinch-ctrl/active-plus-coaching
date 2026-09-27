@@ -1,0 +1,525 @@
+/* ============================================================================
+   Admin Panel icon system — one fixed container per icon, nothing overlaps
+   ----------------------------------------------------------------------------
+   Loaded LAST (after admin.css → mobile.css → liquid-glass → icon-experience →
+   app-redesign → admin-panel-ui → portal-polish) so these rules are final.
+
+   The rules that fix the reported icon problems
+   ---------------------------------------------
+   1. ONE icon per container. css/icon-experience.css paints the same symbol
+      twice — once as a CSS background-image on the chip and once as an inline
+      <svg> — and hides the vector with `display:none`. Both backgrounds are
+      switched off here and the vector is switched back on, so a single icon
+      paints inside a single container.
+   2. The container owns the geometry. Every icon holder is a flex box with a
+      fixed inline size, `overflow:hidden`, centred content. The SVG inside is
+      sized explicitly (never `100%` of an unknown box) and capped with
+      `max-width/max-height:100%`, so it can never leave the drop.
+   3. No growth by transform. The active/tap states used to scale chips and
+      icons past their box (and over the label below). They are replaced by
+      colour, background and shadow changes.
+   4. Icon + label share one layout. Bottom navigation is always
+      **icon on top, label underneath**; header actions are always
+      **icon + label side by side**. Never mixed inside the same navigation.
+   5. Usability beats decoration. No 9px labels, no low-contrast text, no
+      heavy blur behind a label: the glass stays, the text stays readable.
+
+   Presentation only — no roles, no routes, no storage.
+   ========================================================================== */
+
+/* ---------------------------------------------------------------------------
+   01 — Kill the double-painted icon (background image + hidden vector)
+   ------------------------------------------------------------------------ */
+.admin-shell .nav-chip,
+.admin-shell .admin-hero-icon,
+.admin-shell .admin-stat-tile .tile-icon,
+.admin-shell .admin-stat-icon,
+.admin-shell .admin-more-icon,
+.admin-shell .admin-feature-icon,
+.admin-shell .admin-dashboard-collect-icon,
+.admin-shell .topbar-icon,
+.admin-shell .apc-icon,
+.admin-shell .staff-search-icon,
+.admin-shell .staff-stat-icon,
+.admin-shell .staff-avatar,
+.admin-shell .staff-inline-icon {
+  background-image: none !important;
+}
+
+/* css/icon-experience.css paints a PNG over any <svg> whose <use> matches a
+   known symbol and hides the vector. Inside a panel shell that is the second,
+   overlapping icon — remove the background, restore the stroke. */
+.admin-shell svg:has(> use) {
+  background-image: none !important;
+}
+
+.admin-shell svg:has(> use) > use {
+  display: inline !important;
+  opacity: 1 !important;
+}
+
+.admin-shell svg {
+  opacity: 1 !important;
+}
+
+/* ---------------------------------------------------------------------------
+   02 — One shape for every icon: stroked, currentColor, capped by its box
+   ------------------------------------------------------------------------ */
+.admin-shell svg:not(.icon-sprite),
+.admin-shell .apc-icon > svg {
+  /* inline-block, not block: an icon that sits inside a line of text (a badge,
+     a hint) must stay on that line. Inside a flex container it is blockified
+     automatically, so the centred containers behave exactly the same. */
+  display: inline-block;
+  vertical-align: middle;
+  flex: 0 0 auto;
+  max-width: 100%;
+  max-height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* The shared container contract: fixed box, centred, clipped. */
+.admin-shell .apc-icon,
+.admin-shell .nav-chip,
+.admin-shell .admin-hero-icon,
+.admin-shell .admin-stat-tile .tile-icon,
+.admin-shell .admin-stat-icon,
+.admin-shell .admin-more-icon,
+.admin-shell .admin-feature-icon,
+.admin-shell .admin-dashboard-collect-icon,
+.admin-shell .topbar-icon,
+.admin-shell .staff-search-icon,
+.admin-shell .staff-stat-icon,
+.admin-shell .staff-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ---------------------------------------------------------------------------
+   03 — Header: back / app link / logout / profile, icon then label
+   ------------------------------------------------------------------------ */
+.admin-shell .admin-topbar-inner {
+  gap: 8px;
+}
+
+.admin-shell .admin-brand {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.admin-shell .admin-brand span {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.admin-shell .admin-brand strong,
+.admin-shell .admin-brand small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-shell .admin-topbar-actions {
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+.admin-shell .admin-app-link,
+.admin-shell .admin-exit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: background var(--g-fast) var(--g-ease), color var(--g-fast) var(--g-ease);
+}
+
+/* Labels were hidden by an earlier stylesheet — the logout label must be
+   readable, so it comes back with real spacing next to its icon. */
+.admin-shell .admin-app-link > span:last-child,
+.admin-shell .admin-exit > span:last-child {
+  display: inline !important;
+}
+
+/* The shared drop for buttons and inline controls: 18px of icon inside a
+   22px box, so the glyph never touches the label next to it. */
+.admin-shell .apc-icon {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+}
+
+.admin-shell .apc-icon > svg {
+  width: 100%;
+  height: 100%;
+}
+
+.admin-shell .topbar-icon {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+}
+
+.admin-shell .topbar-icon > svg {
+  width: 20px;
+  height: 20px;
+}
+
+.admin-shell .admin-exit .topbar-icon > svg {
+  stroke-width: 2;
+}
+
+.admin-shell .admin-app-link:active,
+.admin-shell .admin-exit:active {
+  transform: scale(.97);
+}
+
+/* Back buttons and other inline icon+text controls never let the icon ride
+   over the text: fixed 18px box, then a gap, then the label. */
+.admin-shell .admin-more-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+}
+
+.admin-shell .admin-more-back svg {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 17px;
+}
+
+.admin-shell .admin-more-back span,
+.admin-shell .admin-more-back {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------------------
+   04 — Bottom navigation: fixed, safe, icon above label, no growth
+   ------------------------------------------------------------------------ */
+.admin-shell .admin-bottom {
+  gap: 2px;
+  padding: 7px 6px !important;
+  box-sizing: border-box;
+}
+
+.admin-shell .admin-bottom-item {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 52px;
+  padding: 0 2px;
+  gap: 2px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 18px;
+  color: #4e625b;
+  transition: color var(--g-fast) var(--g-ease), background var(--g-fast) var(--g-ease);
+}
+
+/* Icon drop: fixed 42×34, the icon is 26×26 inside it — 8px of air on the
+   sides and 4px above/below, so nothing can touch the label or the next tab. */
+.admin-shell .admin-bottom-item .nav-chip {
+  width: 42px !important;
+  height: 34px !important;
+  border-radius: 13px !important;
+  background: transparent !important;
+  transition: background var(--g-base) var(--g-ease), box-shadow var(--g-base) var(--g-ease);
+}
+
+.admin-shell .admin-bottom-item .nav-chip > svg {
+  width: 25px;
+  height: 25px;
+}
+
+/* Labels: one line, 11px minimum, never clipped mid-word on a real phone. */
+.admin-shell .admin-bottom-item .nav-label {
+  max-width: 100%;
+  margin: 0;
+  color: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -.1px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Active tab: brighter chip + darker icon + bolder label. No scaling, so the
+   icon can never creep over the label or out of the bar. */
+.admin-shell .admin-bottom-item.active,
+.admin-shell .admin-bottom-item[aria-current="page"] {
+  color: var(--forest-dark, #056148);
+}
+
+.admin-shell .admin-bottom-item.active .nav-chip,
+.admin-shell .admin-bottom-item[aria-current="page"] .nav-chip {
+  transform: none !important;
+  background:
+    radial-gradient(120% 140% at 22% 0%, rgba(255, 255, 255, .95) 0%, rgba(255, 255, 255, 0) 60%),
+    linear-gradient(170deg, rgba(255, 255, 255, .96), rgba(214, 243, 232, .94)) !important;
+  box-shadow:
+    0 6px 14px rgba(4, 121, 90, .16),
+    inset 0 1px 0 rgba(255, 255, 255, .95),
+    0 0 0 1px rgba(4, 121, 90, .16);
+}
+
+.admin-shell .admin-bottom-item.active .nav-chip > svg,
+.admin-shell .admin-bottom-item[aria-current="page"] .nav-chip > svg {
+  stroke-width: 2.2;
+}
+
+.admin-shell .admin-bottom-item.active .nav-label,
+.admin-shell .admin-bottom-item[aria-current="page"] .nav-label {
+  font-weight: 800;
+}
+
+.admin-shell .admin-bottom-item:active .nav-chip {
+  transform: none !important;
+  background: rgba(223, 242, 231, .9) !important;
+}
+
+/* ---------------------------------------------------------------------------
+   05 — Dashboard grid, hero tiles and stat drops
+   ------------------------------------------------------------------------ */
+.admin-shell .admin-feature-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, .72);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .95),
+    0 6px 14px rgba(11, 61, 48, .1);
+}
+
+.admin-shell .admin-feature-icon > svg {
+  width: 32px;
+  height: 32px;
+}
+
+.admin-shell .admin-feature-tile:hover .admin-feature-icon,
+.admin-shell .admin-feature-tile:active .admin-feature-icon {
+  transform: none;
+}
+
+.admin-shell .admin-feature-tile:active .admin-feature-icon {
+  background: rgba(223, 242, 231, .95);
+}
+
+.admin-shell .admin-hero-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 13px;
+  background: rgba(223, 242, 230, .62);
+}
+
+.admin-shell .admin-hero-icon > svg {
+  width: 22px;
+  height: 22px;
+}
+
+.admin-shell .admin-hero-title {
+  min-width: 0;
+  gap: 10px;
+}
+
+.admin-shell .admin-hero-head {
+  gap: 10px;
+  flex-wrap: nowrap;
+}
+
+.admin-shell .admin-hero-head h1,
+.admin-shell .admin-hero-title h1 {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-shell .admin-stat-tile .tile-icon {
+  width: 44px;
+  height: 44px;
+  margin-bottom: 8px;
+  border-radius: 14px;
+}
+
+.admin-shell .admin-stat-tile .tile-icon > svg {
+  width: 24px;
+  height: 24px;
+}
+
+.admin-shell .admin-stat-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 13px;
+  flex: 0 0 40px;
+}
+
+.admin-shell .admin-stat-icon > svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* ---------------------------------------------------------------------------
+   06 — "More" menu rows: icon, then title + hint, then the arrow
+   ------------------------------------------------------------------------ */
+.admin-shell .admin-more-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 72px;
+  padding: 12px !important;
+  box-sizing: border-box;
+  border-radius: var(--g-r-md, 16px);
+  text-align: left;
+}
+
+.admin-shell .admin-more-icon {
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  border-radius: 15px;
+  background: rgba(255, 255, 255, .72);
+}
+
+.admin-shell .admin-more-icon > svg {
+  width: 26px;
+  height: 26px;
+}
+
+.admin-shell .admin-more-copy {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.admin-shell .admin-more-copy strong,
+.admin-shell .admin-more-copy small {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.admin-shell .admin-more-item .admin-menu-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  margin-left: auto;
+}
+
+.admin-shell .admin-more-item.is-logout {
+  color: var(--coral, #c0503c);
+}
+
+.admin-shell .admin-more-item.is-logout .admin-more-copy strong {
+  color: var(--coral, #c0503c);
+}
+
+/* ---------------------------------------------------------------------------
+   07 — Small inline icons inside buttons, chips and meta rows
+   ------------------------------------------------------------------------ */
+.admin-shell .mini-btn,
+.admin-shell .chip,
+.admin-shell .admin-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  max-width: 100%;
+}
+
+.admin-shell .mini-btn > svg,
+.admin-shell .chip > svg,
+.admin-shell .admin-btn > svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+}
+
+.admin-shell .mini-btn > span,
+.admin-shell .admin-btn > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------------------
+   08 — Responsive guards: 430 / 380 / 340 / 320 px
+   Nothing spills sideways and no label drops below 11px.
+   ------------------------------------------------------------------------ */
+@media (max-width: 430px) {
+  .admin-shell .admin-feature-icon { width: 56px; height: 56px; }
+  .admin-shell .admin-feature-icon > svg { width: 30px; height: 30px; }
+  .admin-shell .admin-more-icon { width: 44px; height: 44px; flex: 0 0 44px; }
+  .admin-shell .admin-more-icon > svg { width: 24px; height: 24px; }
+}
+
+@media (max-width: 380px) {
+  /* Keep the logout label (it must stay obvious); the secondary app link
+     becomes icon-only so the header never scrolls sideways. */
+  .admin-shell .admin-app-link > span:last-child { display: none !important; }
+  .admin-shell .admin-app-link { padding: 0 10px; }
+  .admin-shell .admin-feature-icon { width: 52px; height: 52px; }
+  .admin-shell .admin-feature-icon > svg { width: 28px; height: 28px; }
+  .admin-shell .admin-bottom-item .nav-chip { width: 38px !important; height: 32px !important; }
+  .admin-shell .admin-bottom-item .nav-chip > svg { width: 23px; height: 23px; }
+  .admin-shell .admin-bottom-item .nav-label { font-size: 11px; }
+}
+
+@media (max-width: 340px) {
+  .admin-shell .admin-brand small { display: none; }
+  .admin-shell .admin-feature-icon { width: 48px; height: 48px; }
+  .admin-shell .admin-feature-icon > svg { width: 26px; height: 26px; }
+  .admin-shell .admin-bottom-item .nav-chip > svg { width: 22px; height: 22px; }
+  .admin-shell .admin-more-icon { width: 40px; height: 40px; flex: 0 0 40px; }
+  .admin-shell .admin-more-icon > svg { width: 22px; height: 22px; }
+}
+
+/* The panel never scrolls sideways, whatever the screen. */
+.admin-shell,
+.admin-shell .admin-main,
+.admin-shell .admin-view,
+.admin-shell .admin-card {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+/* Honour reduced motion: no entrance, no float, no tap growth anywhere. */
+@media (prefers-reduced-motion: reduce) {
+  .admin-shell .admin-feature-tile,
+  .admin-shell .nav-chip,
+  .admin-shell .admin-more-icon,
+  .admin-shell .admin-hero-icon,
+  .admin-shell .tile-icon,
+  .admin-shell .admin-stat-icon {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+}

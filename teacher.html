@@ -23,6 +23,7 @@
   <link rel="stylesheet" href="css/app-redesign.css">
   <link rel="preload" href="assets/fonts/NotoSansBengali-Variable.ttf" as="font" type="font/ttf" crossorigin>
   <link rel="stylesheet" href="css/portal-polish.css">
+  <link rel="stylesheet" href="css/reports.css">
 </head>
 <body>
   <section class="auth-screen admin-auth-screen" id="teacherEntry" aria-labelledby="teacherEntryTitle">
@@ -129,7 +130,7 @@
       </section>
       <section id="teacherClasses" class="teacher-view" aria-labelledby="teacherClassesTitle" hidden><button class="admin-more-back" type="button" data-teacher-view="more">← আরও-তে ফিরুন</button><div class="page-intro"><h1 id="teacherClassesTitle">My Classes</h1></div><div id="teacherClassList" class="teacher-record-list"></div></section>
       <section id="teacherRoutine" class="teacher-view" aria-labelledby="teacherRoutineTitle" hidden><button class="admin-more-back" type="button" data-teacher-view="more">← আরও-তে ফিরুন</button><div class="page-intro"><h1 id="teacherRoutineTitle">Routine</h1></div><p class="teacher-local-note">এটি Manager-এর schedule-এর read-only view। Teacher এখান থেকে routine পরিবর্তন করতে পারবেন না।</p><div id="teacherRoutineList" class="teacher-record-list"></div></section>
-      <section id="teacherAcademicReports" class="teacher-view" aria-labelledby="teacherAcademicReportsTitle" hidden><button class="admin-more-back" type="button" data-teacher-view="more">← আরও-তে ফিরুন</button><div class="page-intro"><h1 id="teacherAcademicReportsTitle">Academic Reports</h1></div><div id="teacherAcademicReportList" class="teacher-record-list"></div></section>
+      <section id="teacherAcademicReports" class="teacher-view" aria-labelledby="teacherAcademicReportsTitle" hidden><button class="admin-more-back" type="button" data-teacher-view="more">← আরও-তে ফিরুন</button><div class="page-intro"><h1 id="teacherAcademicReportsTitle">Academic Reports</h1></div><div id="teacherAcademicReportList" class="teacher-record-list"></div><section class="rp-section" aria-labelledby="teacherReportsTitle"><div class="page-intro"><div><p class="eyebrow">Academic reports</p><h2 id="teacherReportsTitle">রিপোর্ট তৈরি, প্রিভিউ ও PDF</h2></div></div><div id="teacherReports" class="rp-mount"></div></section></section>
       <section id="teacherProfile" class="teacher-view" aria-labelledby="teacherProfileTitle" hidden><button class="admin-more-back" type="button" data-teacher-view="more">← আরও-তে ফিরুন</button><div class="page-intro"><h1 id="teacherProfileTitle">Teacher Profile</h1></div><article id="teacherProfileCard" class="admin-card"></article><button class="admin-btn primary" type="button" id="teacherChangePassword">নিজের পাসওয়ার্ড পরিবর্তন</button></section>
     </main>
     <nav class="admin-bottom" aria-label="Teacher navigation">

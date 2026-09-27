@@ -27,7 +27,11 @@ const text = selector => ctx.$(selector).textContent;
 const rows = () => ctx.$$('#reportCollectionList .report-payment').length;
 
 test('every report card is present with its download buttons', () => {
-  const keys = ['collection', 'today', 'dues', 'students', 'class', 'results', 'attendance', 'routine'];
+  const keys = [
+    'collection', 'today', 'dues', 'students', 'class', 'results', 'attendance', 'routine',
+    // Staff reports: identity, role-wise, active/inactive and activity.
+    'staff', 'staff-roles', 'staff-status', 'staff-activity'
+  ];
   // The panel itself must survive any markup edit: navigation and the
   // delegated download handler both key off this section.
   assert.equal(ctx.$$('.admin-view[data-view-panel="reports"]').length, 1);
@@ -39,11 +43,15 @@ test('every report card is present with its download buttons', () => {
     assert.ok(ctx.$(`[data-report-csv="${key}"]`), `missing CSV button for ${key}`);
     if (key !== 'collection') assert.ok(ctx.$(`#reportMeta-${key}`), `missing meta for ${key}`);
   }
-  // Two labelled groups: money first, students/academics after.
-  assert.equal(ctx.$$('.reports-group-title').length, 2);
-  assert.deepEqual(ctx.$$('.reports-group-title').map(el => el.textContent), ['আর্থিক লেনদেন', 'শিক্ষার্থী ও একাডেমিক']);
+  // Four labelled groups: money, students/academics, the finance summary and
+  // the staff reports (Admin owns staff, so staff reports live here).
+  assert.equal(ctx.$$('.reports-group-title').length, 4);
+  assert.deepEqual(ctx.$$('.reports-group-title').map(el => el.textContent), [
+    'আর্থিক লেনদেন', 'শিক্ষার্থী ও একাডেমিক', 'আর্থিক সারাংশ (Finance Summary)', 'স্টাফ রিপোর্ট'
+  ]);
   const groups = ctx.$$('.quick-report-grid');
-  assert.deepEqual(groups.map(g => g.dataset.reportGroup), ['financial', 'academic']);
+  assert.deepEqual(groups.map(g => g.dataset.reportGroup), ['financial', 'academic', 'staff']);
+  assert.equal(ctx.$('[data-report-group="staff"]').querySelectorAll('[data-report-card]').length, 4);
   assert.deepEqual(
     ctx.$('[data-report-group="financial"]').querySelectorAll('[data-report-card]').length + 1, 3,
     'collection + today + dues in the money group'

@@ -1,6 +1,9 @@
 const { test, expect } = require('./fixtures.cjs');
-const mobileViews = ['dashboard', 'students', 'finance', 'routine', 'more'];
-const moreViews = ['notices', 'app-management', 'classes', 'exams', 'reports'];
+// System Control + Staff Management + Permissions + Security + Data + Reports
+// + Settings. Daily operations (cash entry, routine, notices, exam publish)
+// belong to the Cash Counter, Manager and Teacher panels and are not here.
+const mobileViews = ['dashboard', 'staff', 'students', 'reports', 'more'];
+const moreViews = ['roles', 'data', 'backup', 'security', 'settings', 'profile'];
 async function enter(page) {
   await page.goto('/admin.html');
   await page.locator('#adminLoginForm button[type=submit]').click();
@@ -21,14 +24,16 @@ for (const width of [320, 390]) {
     await expect(page.locator('#dashTitle')).toBeVisible();
     await expect(page.locator('#adminTodayDate')).toHaveText('২২ সেপ্টেম্বর ২০২৬');
     await expect(page.locator('#adminTodayDate')).toHaveAttribute('datetime', '2026-09-22');
-    await expect(page.locator('.admin-hero-stats .admin-stat-tile')).toHaveCount(2);
+    await expect(page.locator('.admin-hero-stats .admin-stat-tile')).toHaveCount(4);
     // Student approval is a Manager decision: the queue shortcut never renders.
     await expect(page.locator('.admin-hero-foot, #dashPendingCount')).toHaveCount(0);
     await expect(page.locator('#dashAppStatusRow, #dashTodayList, #dashPendingList, #dashNoticeCount')).toHaveCount(0);
     // Permission grid: one generated icon + one label per allowed section.
     const tiles = page.locator('#adminFeatureGrid .admin-feature-tile');
-    await expect(tiles).toHaveCount(8);
-    expect(await tiles.locator('img').evaluateAll(images => images.every(image => image.naturalWidth > 0))).toBe(true);
+    await expect(tiles).toHaveCount(9);
+    // One inline SVG per tile, inside a fixed container: never a missing image.
+    expect(await tiles.locator('.admin-feature-icon svg').evaluateAll(icons => icons.length)).toBe(9);
+    expect(await tiles.locator('.admin-feature-icon > svg').evaluateAll(icons => icons.every(icon => icon.querySelector('path, circle, rect')))).toBe(true);
     expect(await tiles.locator('.admin-feature-label').evaluateAll(labels => labels.every(label => label.textContent.trim().length > 1))).toBe(true);
     // System Owner monitoring is not mixed with the Cash Counter collection action.
     await expect(page.locator('#dashCollectFee, #btnFinanceGoCollect')).toHaveCount(0);
@@ -39,16 +44,28 @@ for (const width of [320, 390]) {
       await expect(footer.locator('[aria-current=page]')).toHaveCount(1);
       await expect(footer.locator('[aria-current=page]')).toHaveAttribute('data-admin-view', view);
     }
-    // Every footer tab shows its generated icon (no emoji, no empty chip).
-    const icons = page.locator('.admin-bottom img.nav-icon');
+    // Every footer tab shows exactly one icon, inside its chip (no emoji, no
+    // empty chip, no second painted icon).
+    const icons = page.locator('.admin-bottom .nav-chip > svg.nav-icon');
     await expect(icons).toHaveCount(5);
-    expect(await icons.evaluateAll(images => images.every(image => image.naturalWidth > 0))).toBe(true);
-    // The selected tab is visibly larger than the idle ones, and it stays that way.
-    const activeIcon = await page.locator('.admin-bottom [aria-current=page] img.nav-icon').boundingBox();
-    const idleIcon = await page.locator('.admin-bottom button:not([aria-current=page]) img.nav-icon').first().boundingBox();
-    expect(activeIcon.width).toBeGreaterThan(idleIcon.width);
+    expect(await icons.evaluateAll(list => list.every(icon => Boolean(icon.querySelector('path, circle, rect'))))).toBe(true);
+    // The selected tab changes colour and background — it never grows past its
+    // container, so an icon can never ride over the label below it.
+    const activeChip = await page.locator('.admin-bottom [aria-current=page] .nav-chip').boundingBox();
+    const activeIcon = await page.locator('.admin-bottom [aria-current=page] svg.nav-icon').boundingBox();
+    const idleIcon = await page.locator('.admin-bottom button:not([aria-current=page]) svg.nav-icon').first().boundingBox();
+    expect(activeIcon.width).toBeLessThanOrEqual(activeChip.width);
+    expect(activeIcon.height).toBeLessThanOrEqual(activeChip.height);
+    expect(activeIcon.width).toBe(idleIcon.width);
+    const activeBg = await page.locator('.admin-bottom [aria-current=page] .nav-chip').evaluate(el => getComputedStyle(el).backgroundImage);
+    const idleBg = await page.locator('.admin-bottom button:not([aria-current=page]) .nav-chip').first().evaluate(el => getComputedStyle(el).backgroundImage);
+    expect(activeBg).not.toBe(idleBg);
+    // Labels stay readable and are never clipped away.
+    expect(await page.locator('.admin-bottom .nav-label').evaluateAll(labels => labels.every(label => label.textContent.trim().length > 1))).toBe(true);
+    expect(await page.locator('.admin-bottom .nav-label').evaluateAll(labels => labels.every(label => parseFloat(getComputedStyle(label).fontSize) >= 11))).toBe(true);
 
-    await expect(page.locator('.admin-more-item')).toHaveCount(5);
+    // Six system sections plus the always-available logout row.
+    await expect(page.locator('.admin-more-item')).toHaveCount(7);
     await expect(page.locator('.teacher-panel-link')).toHaveCount(0);
     for (const view of moreViews) {
       const button = page.locator(`.admin-more-item[data-admin-view="${view}"]`);
@@ -63,15 +80,14 @@ for (const width of [320, 390]) {
       await expect(page.locator('.admin-more-menu')).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     }
-    await bottom(page, 'finance');
-    await page.locator('#btnFinanceGoReport').click();
-    await expect(page.locator('.admin-view[data-view-panel=reports]')).toBeVisible();
-    await bottom(page, 'dashboard');
-    await expect(page.locator('#dashCollectFee')).toHaveCount(0);
-    await bottom(page, 'finance');
+    await bottom(page, 'reports');
     await expect(page.locator('[data-finance-view=collection]')).toBeVisible();
     await expect(page.locator('#feeStudentSearch, #feeCollectionForm')).toHaveCount(0);
-    await expect(footer.locator('[aria-current=page]')).toHaveAttribute('data-admin-view', 'finance');
+    await expect(footer.locator('[aria-current=page]')).toHaveAttribute('data-admin-view', 'reports');
+    await bottom(page, 'staff');
+    await expect(page.locator('#staffList .staff-card').first()).toBeVisible();
+    await bottom(page, 'dashboard');
+    await expect(page.locator('#dashCollectFee')).toHaveCount(0);
     expect(errors).toEqual([]);
   });
 }
@@ -99,14 +115,14 @@ test('a hash route opens only what this role may open', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await enter(page);
   await expect(page.locator('.admin-view[data-view-panel=dashboard]')).toBeVisible();
-  await page.evaluate(() => { window.location.hash = '#finance'; });
-  await expect(page.locator('.admin-view[data-view-panel=finance]')).toBeVisible();
-  await expect(page.locator('.admin-bottom [aria-current=page]')).toHaveAttribute('data-admin-view', 'finance');
+  await page.evaluate(() => { window.location.hash = '#staff'; });
+  await expect(page.locator('.admin-view[data-view-panel=staff]')).toBeVisible();
+  await expect(page.locator('.admin-bottom [aria-current=page]')).toHaveAttribute('data-admin-view', 'staff');
   // Unknown or foreign routes never move the panel.
-  await page.evaluate(() => { window.location.hash = '#approvals'; });
-  await expect(page.locator('.admin-view[data-view-panel=finance]')).toBeVisible();
+  await page.evaluate(() => { window.location.hash = '#finance'; });
+  await expect(page.locator('.admin-view[data-view-panel=staff]')).toBeVisible();
   await page.evaluate(() => { window.location.hash = '#teaching'; });
-  await expect(page.locator('.admin-view[data-view-panel=finance]')).toBeVisible();
+  await expect(page.locator('.admin-view[data-view-panel=staff]')).toBeVisible();
   // Nothing role-foreign is in the DOM in the first place.
   await expect(page.locator('.teacher-panel-link, .pay-panel-link')).toHaveCount(0);
 });
@@ -118,7 +134,7 @@ test('secondary controls remain functional and dashboard updates without removed
   await enter(page);
   const original = await page.locator('#dashClassCount').innerText();
   await bottom(page, 'more');
-  await page.locator('.admin-more-item[data-admin-view=classes]').click();
+  await page.locator('.admin-more-item[data-admin-view=settings]').click();
   const enabled = page.locator('#classList input:checked');
   const count = await enabled.count();
   const className = await enabled.first().getAttribute('data-class-name');
@@ -127,14 +143,20 @@ test('secondary controls remain functional and dashboard updates without removed
   const newCount = String(count - 1).replace(/\d/g, digit => '০১২৩৪৫৬৭৮৯'[digit]);
   await expect(page.locator('#dashClassCount')).toHaveText(newCount);
   expect(newCount).not.toBe(original);
+  // Notice publishing belongs to the Manager portal: creating a staff account
+  // is the Admin-side equivalent and must stay fully functional.
+  await bottom(page, 'staff');
+  await page.locator('#staffCreateButton').click();
+  await page.locator('#staffField-fullName').fill('মোবাইল স্টাফ');
+  await page.locator('#staffField-username').fill('mobile.staff.apc');
+  await page.locator('#staffField-password').fill('Mobile-2026');
+  await page.locator('#staffField-confirmPassword').fill('Mobile-2026');
+  await page.locator('#staffField-role').selectOption('manager');
+  await page.locator('#staffForm button[type=submit]').click();
+  await expect(page.locator('#staffList')).toContainText('মোবাইল স্টাফ');
+  await expect(page.locator('#staffList .staff-id-badge').first()).toContainText('STF-');
   await bottom(page, 'more');
-  await page.locator('.admin-more-item[data-admin-view=notices]').click();
-  await page.locator('#noticeTitle').fill('নতুন নোটিশ');
-  await page.locator('#noticeBody').fill('আগামীকালের ক্লাসের সময়সূচি দেখুন।');
-  await page.locator('#noticeForm button[type=submit]').click();
-  await expect(page.locator('#noticeList')).toContainText('নতুন নোটিশ');
-  await bottom(page, 'more');
-  await page.locator('.admin-more-item[data-admin-view=app-management]').click();
+  await page.locator('.admin-more-item[data-admin-view=settings]').click();
   await expect(page.locator('#cfgMaintenanceMode')).toBeAttached();
   await page.locator('#btnSaveTopAppSettings').click();
   await expect(page.locator('.admin-toast')).toContainText('সংরক্ষিত');

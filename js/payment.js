@@ -19,6 +19,7 @@ import {
   changePaymentPin
 } from './payment-auth.js';
 import { openStaffPasswordDialog } from './staff-password-dialog.js';
+import { mountReports, refreshReports } from './reports.js';
 
 export { PAYMENT_USER_ID };
 
@@ -80,6 +81,7 @@ async function enterPanel(remember) {
   // caret land late (or never, if the counter starts typing immediately).
   $('#payStudentSearch').focus();
   await loadTransactions();
+  mountReports($('#paymentReports'), { panel: 'payment' });
 }
 
 $('#payLoginForm').addEventListener('submit', async event => {
@@ -160,6 +162,8 @@ async function loadTransactions() {
     $('#payLoadError').hidden = false;
   }
   renderAll();
+  // A counter report must never show a collection the ledger does not have.
+  refreshReports($('#paymentReports'));
 }
 
 /* ---------- Months (same rule as the admin panel) ---------- */

@@ -17,6 +17,7 @@ import { STAFF_KEYS, KEYS, readJSON, writeJSON } from './database.js';
 import { hashPassword, verifyPassword, isPasswordRecord } from './password-hash.js';
 import { encryptValue, decryptValue, isEncryptedEnvelope } from './secure-store.js';
 import { buildSessionRecord, isSessionRecordValid, DAY_MS } from './session.js';
+import { generateLoginId, normalizeLoginId } from './user-id.js';
 
 const REMEMBER_DAYS = 90;
 const TAB_SESSION_MARKER = '1';
@@ -58,6 +59,10 @@ export const STAFF_ACCOUNTS = Object.freeze({
 
 export const STAFF_USERNAMES = Object.freeze(Object.values(STAFF_ACCOUNTS).map(account => account.username));
 
+/** Every device-local storage key that holds a staff account or session.
+ *  Backup & Restore uses the list so nothing staff-owned is left behind. */
+export const STAFF_KEYS_LIST = Object.freeze(Object.values(STAFF_ACCOUNTS).flatMap(account => [account.accountKey, account.sessionKey]));
+
 export function normalizeStaffUsername(value) {
   return String(value ?? '').trim().toLowerCase();
 }
@@ -81,24 +86,34 @@ function normalizeBdMobile(value) {
   return mobile;
 }
 
-/** Create the one and only first-admin profile. Never leaves an incomplete record. */
-export async function createInitialAdmin({ fullName, mobile, email = '', username, password, confirmPassword } = {}) {
+/**
+ * Create the one and only first-admin profile. Never leaves an incomplete record.
+ *
+ * The Login User ID is ALWAYS generated here — "firstname.admin.apc"
+ * (js/user-id.js). A username passed by a caller is ignored on purpose: no
+ * screen, console call or modified request may pick the owner's login id, and
+ * the first-use workflow stays impossible once one Admin exists.
+ */
+export async function createInitialAdmin({ fullName, mobile, email = '', password, confirmPassword } = {}) {
   if (await readStaffAccount('admin')) return { ok: false, error: 'প্রথম Admin Account ইতিমধ্যে তৈরি হয়েছে।' };
   const name = String(fullName ?? '').trim().replace(/\s+/g, ' ');
   const phone = normalizeBdMobile(mobile);
   const mail = String(email ?? '').trim().toLowerCase();
-  const handle = normalizeStaffUsername(username);
   if (name.length < 2 || name.length > 100) return { ok: false, error: 'পূর্ণ নাম লিখুন (২–১০০ অক্ষর)।' };
   if (!/^01[3-9]\d{8}$/.test(phone)) return { ok: false, error: 'সঠিক বাংলাদেশি মোবাইল নম্বর লিখুন।' };
   if (mail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) return { ok: false, error: 'সঠিক ইমেইল ঠিকানা লিখুন অথবা ফাঁকা রাখুন।' };
-  if (!USERNAME_PATTERN.test(handle)) return { ok: false, error: 'ইউজারনেম ৪–২০ অক্ষরের হতে হবে; ইংরেজি ছোট হাতের অক্ষর দিয়ে শুরু করুন, অক্ষর/সংখ্যা/ডট/আন্ডারস্কোর ব্যবহার করুন।' };
-  if (handle === 'admin' || handle === 'administrator' || handle === 'root' || handle === 'null' || handle === 'undefined') return { ok: false, error: 'এই ইউজারনেমটি সংরক্ষিত, অন্য একটি বেছে নিন।' };
   const passwordIssue = passwordProblem(password, confirmPassword);
   if (passwordIssue) return { ok: false, error: passwordIssue };
 
-  const otherStaffNames = Object.values(STAFF_ACCOUNTS).filter(item => item.role !== 'admin').map(item => normalizeStaffUsername(item.username));
   const index = readJSON(KEYS.usernames, {}) || {};
-  if (otherStaffNames.includes(handle) || Object.hasOwn(index, handle)) return { ok: false, error: 'এই ইউজারনেমটি ইতিমধ্যে ব্যবহৃত — অন্য একটি বেছে নিন।' };
+  // Auto-generated: first name + role + ".apc", numbered on the first name
+  // ("rasal2.admin.apc") when the plain id is already claimed.
+  const handle = generateLoginId({
+    fullName: name,
+    role: 'admin',
+    taken: [...Object.keys(index), ...STAFF_USERNAMES]
+  });
+  if (!USERNAME_PATTERN.test(handle)) return { ok: false, error: 'ইউজারনেম তৈরি করা যায়নি — নাম পরিবর্তন করে আবার চেষ্টা করুন।' };
 
   const createdAt = new Date().toISOString();
   const account = {
@@ -109,7 +124,9 @@ export async function createInitialAdmin({ fullName, mobile, email = '', usernam
   };
   // Claim username first, then write the encrypted staff profile; roll back the
   // claim if storage fails so a half-created Admin cannot block future setup.
-  const claimed = { ...index, [handle]: 'staff:admin' };
+  // Hashing is slow, so the registry is re-read here: writing a snapshot that
+  // was taken before an `await` could silently drop a claim made meanwhile.
+  const claimed = { ...(readJSON(KEYS.usernames, {}) || {}), [handle]: 'staff:admin' };
   if (!writeJSON(KEYS.usernames, claimed)) return { ok: false, error: PASSWORD_STORE_FAILED };
   if (!(await writeStaffAccount('admin', account))) {
     const rollback = readJSON(KEYS.usernames, {}) || {};
@@ -155,7 +172,9 @@ export async function ensureBootstrapStaffAccounts(ownerUsername = 'admin.apc') 
     }
   } catch { return { ok: false, error: PASSWORD_STORE_FAILED }; }
   if (!pending.length) return { ok: true, accounts: [] };
-  const claimed = { ...index };
+  // Re-read the registry: hashing above is slow, so writing the snapshot taken
+  // at the top of this function would drop a username claimed in the meantime.
+  const claimed = { ...(readJSON(KEYS.usernames, {}) || {}) };
   pending.forEach(account => { claimed[account.username] = `staff:${account.role}`; });
   if (!writeJSON(KEYS.usernames, claimed)) return { ok: false, error: PASSWORD_STORE_FAILED };
   const written = [];
@@ -208,6 +227,45 @@ export async function readStaffAccount(role) {
     try { return JSON.parse(plaintext); } catch { return null; }
   }
   return raw && typeof raw === 'object' ? raw : null;
+}
+
+/** Fields an account holder may edit on their own profile. */
+const PROFILE_FIELDS = Object.freeze(['fullName', 'mobile', 'email']);
+/** Identity that never changes — not even when the profile form is bypassed. */
+const LOCKED_PROFILE_FIELDS = Object.freeze(['role', 'staffId', 'username', 'createdAt', 'owner', 'status']);
+
+/**
+ * Update the editable part of a staff account (name, mobile, email).
+ *
+ * The locked identity is re-applied from the stored record on purpose, so a
+ * direct call cannot rewrite the role, the Staff ID or the Login User ID.
+ * Returns `{ ok:true, account }` or `{ ok:false, error }`.
+ */
+export async function updateStaffProfile(role, patch = {}) {
+  const current = await readStaffAccount(role);
+  if (!current) return { ok: false, error: 'এই রোলের কোনো অ্যাকাউন্ট পাওয়া যায়নি।' };
+  const next = { ...current };
+  for (const key of PROFILE_FIELDS) {
+    if (!Object.prototype.hasOwnProperty.call(patch, key)) continue;
+    const value = String(patch[key] ?? '').trim();
+    if (key === 'mobile') {
+      const phone = normalizeBdMobile(value);
+      if (!/^01[3-9]\d{8}$/.test(phone)) return { ok: false, error: 'সঠিক বাংলাদেশি মোবাইল নম্বর লিখুন।' };
+      next.mobile = phone;
+    } else if (key === 'email') {
+      const mail = value.toLowerCase();
+      if (mail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) return { ok: false, error: 'সঠিক ইমেইল ঠিকানা দিন অথবা ফাঁকা রাখুন।' };
+      next.email = mail;
+    } else {
+      const name = value.replace(/\s+/g, ' ');
+      if (name.length < 2 || name.length > 100) return { ok: false, error: 'পূর্ণ নাম লিখুন (২–১০০ অক্ষর)।' };
+      next.fullName = name;
+    }
+  }
+  for (const key of LOCKED_PROFILE_FIELDS) next[key] = current[key];
+  next.updatedAt = new Date().toISOString();
+  if (!(await writeStaffAccount(role, next))) return { ok: false, error: 'তথ্য সংরক্ষণ করা যায়নি — স্টোরেজ পরীক্ষা করুন।' };
+  return { ok: true, account: next };
 }
 
 async function writeStaffAccount(role, account) {
@@ -332,6 +390,25 @@ export async function setStaffPassword(role, nextPassword, confirmPassword) {
   });
   if (!saved) return { ok: false, error: PASSWORD_STORE_FAILED };
   return { ok: true };
+}
+
+/**
+ * Mark the stored password as due for a change on the next sign-in.
+ * Used when Admin resets a role account's password from Staff Management:
+ * the reset credential is temporary until its owner replaces it.
+ */
+export async function flagStaffPasswordChange(role) {
+  const account = await readStaffAccount(role);
+  if (!account) return false;
+  return writeStaffAccount(role, { ...account, mustChangePassword: true, updatedAt: new Date().toISOString() });
+}
+
+/** Clear the must-change marker (after the owner replaced the password). */
+export async function clearStaffPasswordChange(role) {
+  const account = await readStaffAccount(role);
+  if (!account) return false;
+  const { mustChangePassword: _mustChangePassword, ...profile } = account;
+  return writeStaffAccount(role, { ...profile, updatedAt: new Date().toISOString() });
 }
 
 /** Change password from inside a panel: the current password must match. */

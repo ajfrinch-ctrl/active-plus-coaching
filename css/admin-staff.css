@@ -1,0 +1,948 @@
+/* ============================================================================
+   Admin Panel — Staff Management, Roles, Data, Backup, Security, Profile
+   ----------------------------------------------------------------------------
+   Mobile-first, glass surface, same tokens as the rest of the panel
+   (css/admin-panel-ui.css). Loaded after css/admin-icon-system.css, so every
+   container here inherits the "icon can never leave its box" contract.
+
+   Layout rules kept deliberately boring so nothing can overlap:
+     • one column everywhere; grids collapse to a single column under 380px
+     • every row is a flex box with `min-width:0` on the text side
+     • long words (Bengali names, emails, IDs) wrap with `overflow-wrap:anywhere`
+   ========================================================================== */
+
+.admin-shell .page-intro {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-shell .page-intro > div {
+  min-width: 0;
+  flex: 1 1 220px;
+}
+
+.admin-shell .staff-create-btn {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 14px;
+  font-size: 12.5px;
+}
+
+.admin-shell .staff-create-btn .apc-icon {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+}
+
+.admin-shell .staff-create-btn .apc-icon > svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ---------------------------------------------------------------------------
+   01 — Stats row
+   ------------------------------------------------------------------------ */
+.admin-shell .staff-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.admin-shell .staff-stat-tile {
+  min-width: 0;
+  padding: 12px 11px;
+  border: 1px solid var(--panel-line);
+  border-radius: var(--g-r-md, 16px);
+  background: var(--panel-card-solid, #fff);
+  box-shadow: var(--g-shadow-sm, 0 4px 12px rgba(11, 61, 48, .06));
+}
+
+.admin-shell .staff-stat-tile.tone-mint { background: rgba(223, 242, 231, .55); }
+.admin-shell .staff-stat-tile.tone-blue { background: rgba(224, 238, 250, .55); }
+.admin-shell .staff-stat-tile.tone-amber { background: rgba(252, 239, 216, .6); }
+.admin-shell .staff-stat-tile.tone-lilac { background: rgba(235, 230, 251, .6); }
+
+.admin-shell .staff-stat-icon {
+  width: 38px;
+  height: 38px;
+  margin-bottom: 7px;
+  border-radius: 13px;
+  color: var(--forest, #04795a);
+  background: rgba(255, 255, 255, .85);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9), 0 3px 9px rgba(11, 61, 48, .1);
+}
+
+.admin-shell .staff-stat-icon > svg {
+  width: 21px;
+  height: 21px;
+}
+
+.admin-shell .staff-stat-label {
+  color: var(--panel-muted, #4e625b);
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.admin-shell .staff-stat-value {
+  margin-top: 2px;
+  color: var(--ink, #16241f);
+  font-size: 19px;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+/* ---------------------------------------------------------------------------
+   02 — Toolbar: search + role filter + status filter
+   ------------------------------------------------------------------------ */
+.admin-shell .staff-toolbar {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.admin-shell .staff-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 10px;
+  border: 1px solid var(--panel-line);
+  border-radius: 14px;
+  background: var(--panel-card-solid, #fff);
+}
+
+.admin-shell .staff-search:focus-within {
+  border-color: var(--forest, #04795a);
+  box-shadow: 0 0 0 3px rgba(4, 121, 90, .12);
+}
+
+.admin-shell .staff-search-icon {
+  width: 26px;
+  height: 26px;
+  flex: 0 0 26px;
+  color: var(--forest, #04795a);
+}
+
+.admin-shell .staff-search-icon > svg {
+  width: 18px;
+  height: 18px;
+}
+
+.admin-shell .staff-search input {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 46px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 16px; /* iOS never zooms on focus */
+  color: var(--panel-text, #16241f);
+}
+
+.admin-shell .staff-search-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 10px;
+  background: rgba(11, 61, 48, .06);
+  color: var(--panel-muted, #4e625b);
+}
+
+.admin-shell .staff-search-clear svg {
+  width: 16px;
+  height: 16px;
+}
+
+.admin-shell .staff-filter-block {
+  min-width: 0;
+}
+
+.admin-shell .staff-filter-label {
+  margin-bottom: 6px;
+  color: var(--panel-muted, #4e625b);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .2px;
+}
+
+.admin-shell .staff-toolbar .chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.admin-shell .staff-count-badge {
+  display: block;
+  color: var(--panel-muted, #4e625b);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+/* ---------------------------------------------------------------------------
+   03 — Staff cards
+   ------------------------------------------------------------------------ */
+.admin-shell .staff-list {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-shell .staff-card {
+  min-width: 0;
+  padding: 14px 13px 13px;
+  border: 1px solid var(--panel-line);
+  border-radius: var(--g-r-md, 16px);
+  background: linear-gradient(180deg, rgba(255, 255, 255, .94), rgba(240, 250, 246, .86));
+  box-shadow: var(--g-shadow-sm, 0 4px 12px rgba(11, 61, 48, .06)), inset 0 1px 0 rgba(255, 255, 255, .9);
+}
+
+.admin-shell .staff-card.is-inactive {
+  background: linear-gradient(180deg, rgba(255, 255, 255, .9), rgba(244, 246, 245, .9));
+  border-style: dashed;
+}
+
+.admin-shell .staff-card.is-protected {
+  border-color: rgba(4, 121, 90, .3);
+}
+
+.admin-shell .staff-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  min-width: 0;
+}
+
+.admin-shell .staff-avatar {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  border-radius: 15px;
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 800;
+  background: linear-gradient(150deg, #0a8c68, #04795a 70%, #056148);
+  box-shadow: 0 6px 14px rgba(4, 121, 90, .22), inset 0 1px 0 rgba(255, 255, 255, .35);
+}
+
+.admin-shell .staff-avatar.large {
+  width: 56px;
+  height: 56px;
+  flex: 0 0 56px;
+  border-radius: 18px;
+  font-size: 22px;
+}
+
+.admin-shell .staff-card-identity {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.admin-shell .staff-card-name {
+  display: block;
+  min-width: 0;
+  color: var(--ink, #16241f);
+  font-size: 14.5px;
+  font-weight: 800;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.admin-shell .staff-card-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 5px;
+  min-width: 0;
+}
+
+.admin-shell .staff-id-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border: 1px solid rgba(4, 121, 90, .22);
+  border-radius: 8px;
+  background: rgba(223, 242, 231, .8);
+  color: var(--forest-dark, #056148);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .2px;
+  white-space: nowrap;
+}
+
+.admin-shell .staff-tag {
+  display: inline-block;
+  max-width: 100%;
+  padding: 3px 9px;
+  border-radius: 99px;
+  background: rgba(11, 61, 48, .07);
+  color: var(--panel-text, #16241f);
+  font-size: 11px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-shell .staff-tag.role-admin { background: rgba(4, 121, 90, .14); color: #056148; }
+.admin-shell .staff-tag.role-manager { background: rgba(224, 238, 250, .9); color: #1d4f8a; }
+.admin-shell .staff-tag.role-teacher { background: rgba(252, 239, 216, .9); color: #8a5a13; }
+.admin-shell .staff-tag.role-cash-counter { background: rgba(235, 230, 251, .9); color: #4c4195; }
+.admin-shell .staff-tag.muted { background: transparent; color: var(--panel-muted, #4e625b); }
+
+.admin-shell .staff-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--panel-muted, #4e625b);
+  font-size: 11.5px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.admin-shell .staff-inline-icon {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 15px;
+}
+
+.admin-shell .staff-inline-icon > svg {
+  width: 15px;
+  height: 15px;
+}
+
+.admin-shell .staff-protected-note,
+.admin-shell .staff-password-note,
+.admin-shell .staff-id-lock {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 9px;
+  padding: 8px 10px;
+  border-radius: 11px;
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.admin-shell .staff-protected-note {
+  border: 1px solid rgba(4, 121, 90, .22);
+  background: rgba(223, 242, 231, .75);
+  color: #056148;
+}
+
+.admin-shell .staff-password-note {
+  border: 1px solid rgba(176, 118, 22, .25);
+  background: rgba(252, 239, 216, .8);
+  color: #8a5a13;
+}
+
+.admin-shell .staff-id-lock {
+  border: 1px dashed rgba(4, 121, 90, .3);
+  background: rgba(223, 242, 231, .6);
+  color: var(--panel-muted, #4e625b);
+}
+
+.admin-shell .staff-id-lock strong {
+  color: var(--forest-dark, #056148);
+}
+
+.admin-shell .staff-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.admin-shell .staff-card-actions .mini-btn {
+  flex: 1 1 0;
+  min-width: 92px;
+}
+
+.admin-shell .staff-more-menu {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 8px;
+  border: 1px solid var(--panel-line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .92);
+}
+
+.admin-shell .staff-more-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 11px;
+  background: transparent;
+  color: var(--panel-text, #16241f);
+  font-size: 12.5px;
+  font-weight: 700;
+  text-align: left;
+}
+
+.admin-shell .staff-more-item:active {
+  background: rgba(223, 242, 231, .9);
+}
+
+.admin-shell .staff-more-item.danger {
+  color: #a33e30;
+}
+
+.admin-shell .staff-more-item.danger .staff-inline-icon {
+  color: #a33e30;
+}
+
+/* ---------------------------------------------------------------------------
+   04 — Forms (shared by staff create/edit and the profile password form)
+   ------------------------------------------------------------------------ */
+.admin-shell .staff-form {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-shell .staff-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.admin-shell .staff-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.admin-shell .staff-field.wide,
+.admin-shell .staff-form > .staff-field {
+  grid-column: 1 / -1;
+}
+
+.admin-shell .staff-field > label,
+.admin-shell .staff-field > .auto-id-label {
+  color: var(--ink, #16241f);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.admin-shell .staff-field input,
+.admin-shell .staff-field select,
+.admin-shell .staff-field textarea {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 12px;
+  border: 1px solid var(--panel-line);
+  border-radius: 13px;
+  background: var(--panel-card-solid, #fff);
+  color: var(--panel-text, #16241f);
+  font: inherit;
+  font-size: 16px;
+  box-sizing: border-box;
+}
+
+.admin-shell .staff-field textarea {
+  padding: 10px 12px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.admin-shell .staff-field select[multiple] {
+  min-height: 108px;
+  padding: 6px;
+}
+
+.admin-shell .staff-field input:focus,
+.admin-shell .staff-field select:focus,
+.admin-shell .staff-field textarea:focus {
+  outline: 3px solid rgba(4, 121, 90, .35);
+  outline-offset: 1px;
+  border-color: var(--forest, #04795a);
+}
+
+.admin-shell .staff-field small {
+  color: var(--panel-muted, #4e625b);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.admin-shell .staff-field input[aria-invalid="true"],
+.admin-shell .staff-field select[aria-invalid="true"] {
+  border-color: #c0503c;
+}
+
+.admin-shell .staff-assignment {
+  padding: 12px;
+  border: 1px solid var(--panel-line);
+  border-radius: 14px;
+  background: rgba(223, 242, 231, .35);
+}
+
+.admin-shell .staff-form-section {
+  margin-bottom: 10px;
+  color: var(--forest-dark, #056148);
+  font-size: 11.5px;
+  font-weight: 900;
+  letter-spacing: .3px;
+}
+
+/* ---------------------------------------------------------------------------
+   05 — Modals (create / edit / profile / password / delete)
+   ------------------------------------------------------------------------ */
+.admin-shell .staff-modal-backdrop .staff-modal,
+.staff-modal-backdrop .staff-modal {
+  max-height: min(86vh, 720px);
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.staff-modal-backdrop .staff-modal.is-wide {
+  width: min(100% - 24px, 460px);
+}
+
+.staff-modal-backdrop .admin-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.staff-modal-backdrop .admin-modal-header > div {
+  min-width: 0;
+}
+
+.staff-modal-backdrop .admin-modal-header h2 {
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.staff-modal-backdrop .admin-modal-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--panel-line);
+  border-radius: 12px;
+  background: var(--panel-card-solid, #fff);
+  color: var(--panel-muted, #4e625b);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.staff-modal-backdrop .modal-close-icon {
+  width: 17px;
+  height: 17px;
+}
+
+.staff-modal-backdrop .modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.staff-modal-backdrop .modal-actions .admin-btn {
+  flex: 1 1 auto;
+  min-height: 46px;
+}
+
+.admin-shell .admin-btn.danger,
+.staff-modal-backdrop .admin-btn.danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 46px;
+  padding: 0 14px;
+  border: 1px solid #b8472f;
+  border-radius: 13px;
+  background: linear-gradient(160deg, #d4553a, #b8472f);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 800;
+}
+
+.admin-shell .admin-btn.danger > svg,
+.staff-modal-backdrop .admin-btn.danger > svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+}
+
+.admin-shell .staff-confirm-copy {
+  margin-bottom: 10px;
+  color: var(--panel-text, #16241f);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+/* ---------------------------------------------------------------------------
+   06 — Profile, activity and history
+   ------------------------------------------------------------------------ */
+.admin-shell .staff-profile-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  min-width: 0;
+}
+
+.admin-shell .staff-profile-head > div {
+  min-width: 0;
+}
+
+.admin-shell .staff-profile-head strong {
+  display: block;
+  color: var(--ink, #16241f);
+  font-size: 15px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.admin-shell .staff-profile-head p {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 5px;
+}
+
+.admin-shell .staff-activity {
+  margin-top: 14px;
+}
+
+.admin-shell .staff-activity-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.admin-shell .staff-activity-grid > div {
+  padding: 10px;
+  border: 1px solid var(--panel-line);
+  border-radius: 12px;
+  background: rgba(223, 242, 231, .4);
+}
+
+.admin-shell .staff-activity-grid small {
+  display: block;
+  color: var(--panel-muted, #4e625b);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.admin-shell .staff-activity-grid strong {
+  display: block;
+  margin-top: 3px;
+  color: var(--ink, #16241f);
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.admin-shell .staff-history {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-shell .staff-history li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(11, 61, 48, .05);
+  color: var(--panel-text, #16241f);
+  font-size: 11.5px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.admin-shell .staff-history small {
+  flex: 0 0 auto;
+  color: var(--panel-muted, #4e625b);
+  font-weight: 700;
+}
+
+/* ---------------------------------------------------------------------------
+   07 — Roles matrix, data, backup, security, profile cards
+   ------------------------------------------------------------------------ */
+.admin-shell .role-card {
+  min-width: 0;
+}
+
+.admin-shell .role-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  min-width: 0;
+}
+
+.admin-shell .role-head .role-icon {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  border-radius: 14px;
+  color: var(--forest, #04795a);
+  background: rgba(223, 242, 231, .7);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9);
+}
+
+.admin-shell .role-head .role-icon > svg {
+  width: 22px;
+  height: 22px;
+}
+
+.admin-shell .role-head h3 {
+  min-width: 0;
+  color: var(--ink, #16241f);
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.admin-shell .role-head small {
+  display: block;
+  margin-top: 2px;
+  color: var(--panel-muted, #4e625b);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.admin-shell .role-cap-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-shell .role-cap-list li {
+  max-width: 100%;
+  padding: 5px 10px;
+  border-radius: 99px;
+  background: rgba(223, 242, 231, .75);
+  color: var(--forest-dark, #056148);
+  font-size: 11px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.admin-shell .role-cap-list li.is-denied {
+  background: rgba(176, 72, 47, .08);
+  color: #8f3d2c;
+}
+
+.admin-shell .data-collection-list {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-shell .data-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 1px solid var(--panel-line);
+  border-radius: 13px;
+  background: var(--panel-card-solid, #fff);
+}
+
+.admin-shell .data-row > div {
+  min-width: 0;
+}
+
+.admin-shell .data-row strong {
+  display: block;
+  color: var(--ink, #16241f);
+  font-size: 12.5px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.admin-shell .data-row small {
+  display: block;
+  margin-top: 2px;
+  color: var(--panel-muted, #4e625b);
+  font-size: 11px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.admin-shell .data-row .data-count {
+  flex: 0 0 auto;
+  padding: 4px 10px;
+  border-radius: 99px;
+  background: rgba(223, 242, 231, .8);
+  color: var(--forest-dark, #056148);
+  font-size: 11.5px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.admin-shell .security-list,
+.admin-shell .profile-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.admin-shell .security-row,
+.admin-shell .profile-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--panel-line);
+  border-radius: 13px;
+  background: var(--panel-card-solid, #fff);
+}
+
+.admin-shell .security-row > div,
+.admin-shell .profile-row > div {
+  min-width: 0;
+}
+
+.admin-shell .security-row dt,
+.admin-shell .profile-row dt {
+  color: var(--panel-muted, #4e625b);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.admin-shell .security-row dd,
+.admin-shell .profile-row dd {
+  margin: 3px 0 0;
+  color: var(--ink, #16241f);
+  font-size: 12.5px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+/* ---------------------------------------------------------------------------
+   08 — Small screens: one column, nothing clipped, no sideways scrolling
+   ------------------------------------------------------------------------ */
+@media (max-width: 430px) {
+  .admin-shell .staff-form-grid,
+  .admin-shell .staff-activity-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .admin-shell .staff-stats {
+    gap: 8px;
+  }
+  .admin-shell .staff-card-actions .mini-btn {
+    min-width: 84px;
+  }
+}
+
+@media (max-width: 380px) {
+  .admin-shell .staff-stats {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .admin-shell .staff-card {
+    padding: 12px 11px;
+  }
+  .admin-shell .staff-avatar {
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    font-size: 16px;
+  }
+  .staff-modal-backdrop .modal-actions .admin-btn {
+    flex: 1 1 100%;
+  }
+}
+
+@media (max-width: 340px) {
+  .admin-shell .staff-card-actions .mini-btn {
+    flex: 1 1 100%;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   09 — Auto-generated Login User ID (js/user-id.js)
+   First Name + Role + ".apc" — shown, never typed, never clipped.
+   ------------------------------------------------------------------------ */
+.admin-shell .auto-id-preview,
+.staff-modal-backdrop .auto-id-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 10px 12px;
+  border: 1px dashed rgba(4, 121, 90, .35);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .96), rgba(223, 242, 231, .65));
+  color: var(--forest-dark, #056148);
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 13.5px;
+  font-weight: 800;
+  letter-spacing: .2px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  cursor: default;
+  user-select: all;
+}
+
+.admin-shell .auto-id-preview::before,
+.staff-modal-backdrop .auto-id-preview::before {
+  content: '';
+  flex: 0 0 15px;
+  width: 15px;
+  height: 15px;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23056148' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4.8' y='10.4' width='14.4' height='10.4' rx='2.6'/%3E%3Cpath d='M8.2 10.4V7.9a3.8 3.8 0 0 1 7.6 0v2.5'/%3E%3C/svg%3E");
+  opacity: .8;
+}
+
+/* The "no Admin on this device" notice on the Admin login screen. */
+.admin-shell .admin-no-account,
+.admin-auth-screen .admin-no-account {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 14px;
+  border: 1px dashed rgba(4, 121, 90, .35);
+  border-radius: var(--g-r-md, 16px);
+  background: rgba(223, 242, 231, .6);
+}
+
+.admin-shell .admin-no-account p,
+.admin-auth-screen .admin-no-account p {
+  margin: 0;
+  color: var(--panel-text, #16241f);
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.6;
+}
