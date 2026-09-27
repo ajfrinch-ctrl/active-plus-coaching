@@ -4,80 +4,57 @@
    js/admin-permissions.js, and rendered here from the capabilities of the
    signed-in role:
 
-     • the bottom bar      (icon + label, animated active state)
+     • the bottom bar      (icon + label, clear active state)
      • the "More" menu     (icon + label + hint)
      • the dashboard grid  (large icon + clear label)
+     • the top bar         (student-app link + logout)
 
-   Each entry carries its own AI-generated icon from assets/icons/admin (the
-   shared water-drop glass family lives in assets/icons/glass). No emoji and no
-   generic placeholder: every symbol means one specific section. Entries whose
-   capability is not granted are never rendered at all, and
+   Every icon comes from js/admin-icons.js: one inline SVG, drawn on a 24×24
+   grid, inside a fixed-size glass container. The container owns the geometry
+   and clips (see css/admin-icon-system.css), so an icon can never overlap a
+   label, another icon, a card edge or the bottom bar.
+
+   Entries whose capability is not granted are never rendered at all, and
    `enforceCapabilities()` drops the matching views from the DOM.
 
    Presentation only — no storage, no routing rules and no business logic. */
 
-import {
-  ADMIN_BOTTOM_NAV,
-  ADMIN_MORE_NAV,
-  ADMIN_FEATURE_TILES,
-  enforceCapabilities
-} from './admin-permissions.js';
+import { ADMIN_BOTTOM_NAV, ADMIN_MORE_NAV, ADMIN_FEATURE_TILES, enforceCapabilities } from './admin-permissions.js';
+import { iconElement, paintIcon } from './admin-icons.js';
 
-/* One icon per section. assets/icons/admin holds the set generated for this
-   panel; only the Teacher entry (never granted here) falls back to the shared
-   water-drop family in assets/icons/glass. */
-export const ADMIN_ICON_FILES = Object.freeze({
-  dashboard: 'assets/icons/admin/dashboard.png',
-  users: 'assets/icons/admin/users.png',
-  finance: 'assets/icons/admin/finance.png',
-  payment: 'assets/icons/admin/payment.png',
-  reports: 'assets/icons/admin/reports.png',
-  notices: 'assets/icons/admin/notices.png',
-  classes: 'assets/icons/admin/classes.png',
-  app: 'assets/icons/admin/app.png',
-  exams: 'assets/icons/admin/exams.png',
-  routine: 'assets/icons/admin/routine.png',
-  more: 'assets/icons/admin/more.png',
-  logout: 'assets/icons/admin/logout.png',
-  teaching: 'assets/icons/glass/suggestion.png'
+/* The bottom bar and the "More" menu use the same icon language, so a section
+   looks identical wherever it appears. */
+export const ADMIN_BOTTOM_ICONS = Object.freeze({
+  dashboard: 'dashboard',
+  staff: 'staff',
+  students: 'students',
+  reports: 'reports',
+  roles: 'roles',
+  security: 'security',
+  settings: 'settings',
+  data: 'data',
+  backup: 'backup',
+  profile: 'profile',
+  more: 'more'
 });
-
-function iconImage(key, className) {
-  const img = document.createElement('img');
-  img.className = className || 'panel-icon';
-  img.src = ADMIN_ICON_FILES[key] || ADMIN_ICON_FILES.dashboard;
-  img.alt = '';
-  img.setAttribute('aria-hidden', 'true');
-  img.decoding = 'async';
-  img.draggable = false;
-  return img;
-}
-
-/** Replace the inline SVG of an existing chip with the generated icon. */
-function paintIcon(container, key, className) {
-  if (!container) return null;
-  const svg = container.querySelector('svg');
-  if (svg) svg.remove();
-  container.querySelector('img')?.remove();
-  container.append(iconImage(key, className));
-  return container;
-}
 
 /* ---------- Bottom bar ---------- */
 
 function renderBottomBar(bar, entries, onNavigate) {
   if (!bar) return [];
   bar.replaceChildren();
-  const buttons = entries.map(entry => {
+  const buttons = entries.map((entry, index) => {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'admin-bottom-item';
     button.dataset.adminView = entry.view;
     if (entry.capability) button.dataset.adminCap = entry.capability;
 
+    // Fixed container: the icon can never grow past it, so it can never
+    // collide with the label below or with the next tab.
     const chip = document.createElement('span');
     chip.className = 'nav-chip';
-    chip.append(iconImage(entry.icon, 'nav-icon'));
+    chip.append(iconElement(ADMIN_BOTTOM_ICONS[entry.icon] || entry.icon, 'nav-icon apc-icon-svg'));
 
     const label = document.createElement('span');
     label.className = 'nav-label';
@@ -85,6 +62,12 @@ function renderBottomBar(bar, entries, onNavigate) {
 
     button.append(chip, label);
     button.addEventListener('click', () => onNavigate(entry.view, button));
+    // The first tab starts active so the bar is never state-less while the
+    // router decides where to land (setView corrects it immediately after).
+    if (index === 0) {
+      button.classList.add('active');
+      button.setAttribute('aria-current', 'page');
+    }
     bar.append(button);
     return button;
   });
@@ -99,7 +82,7 @@ function renderMoreMenu(root, access, onNavigate) {
   root.querySelectorAll('.admin-more-item').forEach(item => {
     const entry = ADMIN_MORE_NAV.find(candidate => candidate.view === item.dataset.adminView);
     if (!entry) return;
-    paintIcon(item.querySelector('.admin-more-icon'), entry.icon, 'admin-more-icon-image');
+    paintIcon(item.querySelector('.admin-more-icon'), ADMIN_BOTTOM_ICONS[entry.icon] || entry.icon, 'admin-more-icon-svg apc-icon-svg');
     const label = item.querySelector('.admin-more-copy strong');
     const hint = item.querySelector('.admin-more-copy small');
     if (label && entry.label && !label.textContent.trim()) label.textContent = entry.label;
@@ -132,7 +115,7 @@ function renderFeatureGrid(container, entries, onNavigate) {
 
     const iconWrap = document.createElement('span');
     iconWrap.className = 'admin-feature-icon';
-    iconWrap.append(iconImage(entry.icon, 'admin-feature-icon-image'));
+    iconWrap.append(iconElement(ADMIN_BOTTOM_ICONS[entry.icon] || entry.icon, 'admin-feature-icon-svg apc-icon-svg'));
 
     const label = document.createElement('span');
     label.className = 'admin-feature-label';
@@ -147,6 +130,12 @@ function renderFeatureGrid(container, entries, onNavigate) {
   if (tiles.length % 2 === 1) tiles.at(-1)?.classList.add('is-wide');
   container.hidden = tiles.length === 0;
   return tiles;
+}
+
+/** Header actions: link to the student app, then logout (icon + label). */
+function renderTopBar() {
+  paintIcon(document.querySelector('.admin-app-link .topbar-icon'), 'app', 'topbar-icon apc-icon-svg');
+  paintIcon(document.querySelector('.admin-exit .topbar-icon'), 'logout', 'topbar-icon apc-icon-svg');
 }
 
 /**
@@ -169,26 +158,24 @@ export function initAdminPanelShell({ access, onNavigate } = {}) {
   const moreItems = renderMoreMenu(document, access, navigate);
   const tiles = renderFeatureGrid(document.querySelector('#adminFeatureGrid'), tileEntries, navigate);
 
-  // The system-overview title uses the same generated icon language as the nav.
-  paintIcon(document.querySelector('.admin-hero-icon'), 'dashboard', 'admin-hero-icon-image');
+  // System overview title uses the same icon language as the navigation.
+  paintIcon(document.querySelector('.admin-hero-icon'), 'dashboard', 'admin-hero-icon-svg apc-icon-svg');
 
-  // Hero summary tiles: students, then running classes.
-  const heroIcons = ['users', 'classes'];
+  // Hero summary tiles, in document order (see admin.html).
+  const heroIcons = ['students', 'staff', 'data', 'security'];
   document.querySelectorAll('.admin-hero-stats .admin-stat-tile .tile-icon').forEach((chip, index) => {
-    paintIcon(chip, heroIcons[index] || 'dashboard', 'admin-tile-icon-image');
+    paintIcon(chip, heroIcons[index] || 'dashboard', 'admin-tile-icon-svg apc-icon-svg');
   });
 
-  // Finance summary: total collected, this month, dues, transactions.
-  const statIcons = ['finance', 'routine', 'payment', 'reports'];
+  // Finance summary tiles (Reports → Finance Summary), in document order.
+  const statIcons = ['receipt', 'calendar', 'wallet', 'bolt'];
   document.querySelectorAll('.admin-stats .admin-stat .admin-stat-icon').forEach((chip, index) => {
-    paintIcon(chip, statIcons[index] || 'finance', 'admin-stat-icon-image');
+    paintIcon(chip, statIcons[index] || 'receipt', 'admin-stat-icon-svg apc-icon-svg');
   });
 
-  // Top bar: logo link to the shared login page, then logout.
-  paintIcon(document.querySelector('.admin-app-link'), 'app', 'topbar-icon');
-  paintIcon(document.querySelector('.admin-exit'), 'logout', 'topbar-icon');
+  renderTopBar();
 
   return { access, removed, bottomEntries, moreEntries, tileEntries, bottomButtons, moreItems, tiles };
 }
 
-export { iconImage, paintIcon };
+export { iconElement, paintIcon };

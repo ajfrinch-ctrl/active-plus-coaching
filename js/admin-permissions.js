@@ -2,20 +2,19 @@
    that already exists in this repository.
 
    Sources of truth (never modified by this file):
-     • firestore.rules      — Admin owns finance, reports, notices, routine,
-                              settings and exam records; a Manager is the only
-                              role that may approve/reject a student or
+     • firestore.rules      — Admin owns reports, settings, notices, routine,
+                              transactions and exam records; a Manager is the
+                              only role that may approve/reject a student or
                               publish/reject a pending exam.
      • functions/index.js   — "Manager is the only role allowed to publish or
                               reject pending exam records."
      • manager.html         — the separate approval portal (students + exams).
      • teacher.html / payment.html — their own panels, each with its own role.
 
-   The module adds no storage key, no role, no workflow and no business rule.
-   It converts the role the signed-in staff account already carries into the
-   set of Admin Panel views, menus, cards, shortcuts, actions and routes that
-   may exist for that role, and provides the helpers used to enforce it on both
-   sides of the app:
+   The module adds no storage key, no role and no business rule. It converts the
+   role the signed-in staff account already carries into the set of Admin Panel
+   views, menus, cards, shortcuts, actions and routes that may exist for that
+   role, and provides the helpers used to enforce it on both sides of the app:
 
      1. UI visibility  — mark anything role-specific with `data-admin-cap`;
                          `enforceCapabilities()` removes what is not granted.
@@ -24,18 +23,43 @@
 
    Removing an element (instead of styling it away) keeps unauthorised markup,
    data and handlers out of the DOM entirely, so a hidden feature can never be
-   reached by keyboard, inspect-element or a copied URL. */
+   reached by keyboard, inspect-element or a copied URL.
+
+   ---------------------------------------------------------------------------
+   Admin Panel scope (System Control + Staff + Permissions + Security + Data +
+   Reports + Settings)
+   ---------------------------------------------------------------------------
+   Daily operations are NOT Admin territory and are deliberately not granted
+   here — they stay in the panel that owns them:
+
+     • fee collection / cash-counter entry  → payment.html (Cash Counter)
+     • routine entry, daily notices         → manager.html (Manager)
+     • student approval, exam publish       → manager.html (Manager)
+     • class teaching, homework, attendance → teacher.html (Teacher)
+*/
 
 /** Every capability the Admin Panel can expose. Keys are stable strings so
  *  markup (`data-admin-cap`), the view map and tests all speak one language. */
 export const CAPABILITIES = Object.freeze({
+  /* System-level sections the Admin Panel owns. */
   DASHBOARD: 'dashboard.view',
+  STAFF_MANAGE: 'staff.manage',
+  ROLES_MANAGE: 'roles.manage',
   STUDENTS_VIEW: 'students.view',
   STUDENTS_MANAGE: 'students.manage',
+  REPORTS_VIEW: 'reports.view',
+  DATA_MANAGE: 'data.manage',
+  BACKUP_MANAGE: 'backup.manage',
+  SECURITY_MANAGE: 'security.manage',
+  SETTINGS_MANAGE: 'settings.manage',
+  PROFILE_VIEW: 'profile.view',
+
+  /* Kept so the existing role boundary stays readable in one place. None of
+     these is granted to Admin: they belong to the Manager / Teacher / Cash
+     Counter panels and to their own portals. */
   STUDENTS_APPROVE: 'students.approve',
   FINANCE_VIEW: 'finance.view',
   FINANCE_COLLECT: 'finance.collect',
-  REPORTS_VIEW: 'reports.view',
   NOTICES_MANAGE: 'notices.manage',
   ROUTINE_MANAGE: 'routine.manage',
   CLASSES_MANAGE: 'classes.manage',
@@ -46,21 +70,21 @@ export const CAPABILITIES = Object.freeze({
   PAYMENT_PANEL: 'payment.panel'
 });
 
-/* The Admin role: reports, users and management (finance, notices, routine,
-   classes, student-app control and exam records). Approval decisions belong to
-   the Manager portal, teaching belongs to the Teacher panel and the payment
-   desk belongs to the Payment counter — none of those are granted here. */
+/* The Admin role: system control, staff management, permissions, security,
+   data, backup, reports, settings and the student overview. Daily collection,
+   routine entry, notice publishing and teaching are intentionally absent. */
 const ADMIN = Object.freeze([
   CAPABILITIES.DASHBOARD,
+  CAPABILITIES.STAFF_MANAGE,
+  CAPABILITIES.ROLES_MANAGE,
   CAPABILITIES.STUDENTS_VIEW,
   CAPABILITIES.STUDENTS_MANAGE,
-  CAPABILITIES.FINANCE_VIEW,
   CAPABILITIES.REPORTS_VIEW,
-  CAPABILITIES.NOTICES_MANAGE,
-  CAPABILITIES.ROUTINE_MANAGE,
-  CAPABILITIES.CLASSES_MANAGE,
-  CAPABILITIES.APP_MANAGE,
-  CAPABILITIES.EXAMS_VIEW
+  CAPABILITIES.DATA_MANAGE,
+  CAPABILITIES.BACKUP_MANAGE,
+  CAPABILITIES.SECURITY_MANAGE,
+  CAPABILITIES.SETTINGS_MANAGE,
+  CAPABILITIES.PROFILE_VIEW
 ]);
 
 /* Kept for completeness so the same helper can drive any staff panel later.
@@ -88,54 +112,56 @@ export const ROLE_CAPABILITIES = Object.freeze({
 /** Which capability unlocks each Admin Panel view (route guard). */
 export const VIEW_CAPABILITIES = Object.freeze({
   dashboard: CAPABILITIES.DASHBOARD,
+  staff: CAPABILITIES.STAFF_MANAGE,
+  roles: CAPABILITIES.ROLES_MANAGE,
   students: CAPABILITIES.STUDENTS_VIEW,
-  finance: CAPABILITIES.FINANCE_VIEW,
-  routine: CAPABILITIES.ROUTINE_MANAGE,
-  exams: CAPABILITIES.EXAMS_VIEW,
-  notices: CAPABILITIES.NOTICES_MANAGE,
   reports: CAPABILITIES.REPORTS_VIEW,
-  'app-management': CAPABILITIES.APP_MANAGE,
-  classes: CAPABILITIES.CLASSES_MANAGE
+  data: CAPABILITIES.DATA_MANAGE,
+  backup: CAPABILITIES.BACKUP_MANAGE,
+  security: CAPABILITIES.SECURITY_MANAGE,
+  settings: CAPABILITIES.SETTINGS_MANAGE,
+  profile: CAPABILITIES.PROFILE_VIEW
 });
 
 /** Views reachable from a bottom-bar tab. "more" is a container: it exists only
  *  while at least one sub-view is granted. */
-export const BOTTOM_VIEWS = Object.freeze(['dashboard', 'students', 'finance', 'routine', 'more']);
+export const BOTTOM_VIEWS = Object.freeze(['dashboard', 'staff', 'students', 'reports', 'more']);
 
 /** Views reachable from the "More" menu. */
-export const MORE_VIEWS = Object.freeze(['exams', 'notices', 'reports', 'app-management', 'classes']);
+export const MORE_VIEWS = Object.freeze(['roles', 'data', 'backup', 'security', 'settings', 'profile']);
 
 /** Bottom-bar entries. `order` keeps the tab order stable no matter which
  *  entries survive the capability filter. */
 export const ADMIN_BOTTOM_NAV = Object.freeze([
-  { view: 'dashboard', label: 'হোম', icon: 'dashboard', capability: CAPABILITIES.DASHBOARD, order: 1 },
-  { view: 'students', label: 'শিক্ষার্থী', icon: 'users', capability: CAPABILITIES.STUDENTS_VIEW, order: 2 },
-  { view: 'finance', label: 'হিসাব', icon: 'finance', capability: CAPABILITIES.FINANCE_VIEW, order: 3 },
-  { view: 'routine', label: 'রুটিন', icon: 'routine', capability: CAPABILITIES.ROUTINE_MANAGE, order: 4 },
+  { view: 'dashboard', label: 'ড্যাশবোর্ড', icon: 'dashboard', capability: CAPABILITIES.DASHBOARD, order: 1 },
+  { view: 'staff', label: 'স্টাফ', icon: 'staff', capability: CAPABILITIES.STAFF_MANAGE, order: 2 },
+  { view: 'students', label: 'শিক্ষার্থী', icon: 'students', capability: CAPABILITIES.STUDENTS_VIEW, order: 3 },
+  { view: 'reports', label: 'রিপোর্ট', icon: 'reports', capability: CAPABILITIES.REPORTS_VIEW, order: 4 },
   { view: 'more', label: 'আরও', icon: 'more', capability: null, order: 5 }
 ]);
 
 /** "More" menu entries (same shape as the bottom bar, plus a description). */
 export const ADMIN_MORE_NAV = Object.freeze([
-  { view: 'exams', label: 'পরীক্ষা', hint: 'পরীক্ষার তালিকা ও ফলাফল রিপোর্ট', icon: 'exams', capability: CAPABILITIES.EXAMS_VIEW, order: 1 },
-  { view: 'notices', label: 'নোটিশ', hint: 'নোটিশ প্রকাশ ও ব্যবস্থাপনা', icon: 'notices', capability: CAPABILITIES.NOTICES_MANAGE, order: 2 },
-  { view: 'reports', label: 'রিপোর্ট', hint: 'সব রিপোর্ট PDF/CSV ডাউনলোড', icon: 'reports', capability: CAPABILITIES.REPORTS_VIEW, order: 3 },
-  { view: 'app-management', label: 'শিক্ষার্থী অ্যাপ', hint: 'অ্যাপের অবস্থা ও কন্ট্রোল', icon: 'app', capability: CAPABILITIES.APP_MANAGE, order: 4 },
-  { view: 'classes', label: 'ক্লাস সেটিংস', hint: 'ক্লাস চালু বা বন্ধ করুন', icon: 'classes', capability: CAPABILITIES.CLASSES_MANAGE, order: 5 },
-  { view: 'teaching', label: 'শিক্ষক প্যানেল', hint: 'শিক্ষক প্যানেল খুলুন', icon: 'teaching', capability: CAPABILITIES.TEACHING_PANEL, order: 6 }
+  { view: 'roles', label: 'Roles & Permissions', hint: 'রোলভিত্তিক অনুমতির ম্যাট্রিক্স', icon: 'roles', capability: CAPABILITIES.ROLES_MANAGE, order: 1 },
+  { view: 'data', label: 'Data Management', hint: 'ডেটা সংগ্রহ, পরিসংখ্যান ও পরিষ্কার', icon: 'data', capability: CAPABILITIES.DATA_MANAGE, order: 2 },
+  { view: 'backup', label: 'Backup & Restore', hint: 'সম্পূর্ণ ব্যাকআপ নিন ও ফিরিয়ে আনুন', icon: 'backup', capability: CAPABILITIES.BACKUP_MANAGE, order: 3 },
+  { view: 'security', label: 'সিকিউরিটি', hint: 'সেশন, পাসওয়ার্ড নীতি ও সুরক্ষিত অ্যাকাউন্ট', icon: 'security', capability: CAPABILITIES.SECURITY_MANAGE, order: 4 },
+  { view: 'settings', label: 'সিস্টেম সেটিংস', hint: 'অ্যাপ কন্ট্রোল, ক্লাস ও ব্র্যান্ডিং', icon: 'settings', capability: CAPABILITIES.SETTINGS_MANAGE, order: 5 },
+  { view: 'profile', label: 'Admin Profile', hint: 'নিজের পরিচয় ও পাসওয়ার্ড', icon: 'profile', capability: CAPABILITIES.PROFILE_VIEW, order: 6 }
 ]);
 
 /** Dashboard tiles show system sections only, generated from the capabilities
- *  the signed-in role holds. Daily cash collection is intentionally not a tile. */
+ *  the signed-in role holds. No daily cash/fee entry tile. */
 export const ADMIN_FEATURE_TILES = Object.freeze([
-  { view: 'students', label: 'শিক্ষার্থী', icon: 'users', capability: CAPABILITIES.STUDENTS_VIEW, order: 1 },
-  { view: 'finance', label: 'হিসাব', icon: 'finance', capability: CAPABILITIES.FINANCE_VIEW, order: 2 },
+  { view: 'staff', label: 'স্টাফ ম্যানেজমেন্ট', icon: 'staff', capability: CAPABILITIES.STAFF_MANAGE, order: 1 },
+  { view: 'students', label: 'শিক্ষার্থী', icon: 'students', capability: CAPABILITIES.STUDENTS_VIEW, order: 2 },
   { view: 'reports', label: 'রিপোর্ট', icon: 'reports', capability: CAPABILITIES.REPORTS_VIEW, order: 3 },
-  { view: 'notices', label: 'নোটিশ', icon: 'notices', capability: CAPABILITIES.NOTICES_MANAGE, order: 4 },
-  { view: 'routine', label: 'রুটিন', icon: 'routine', capability: CAPABILITIES.ROUTINE_MANAGE, order: 5 },
-  { view: 'exams', label: 'পরীক্ষা', icon: 'exams', capability: CAPABILITIES.EXAMS_VIEW, order: 6 },
-  { view: 'classes', label: 'ক্লাস সেটিংস', icon: 'classes', capability: CAPABILITIES.CLASSES_MANAGE, order: 7 },
-  { view: 'app-management', label: 'অ্যাপ কন্ট্রোল', icon: 'app', capability: CAPABILITIES.APP_MANAGE, order: 8 }
+  { view: 'roles', label: 'Roles & Permissions', icon: 'roles', capability: CAPABILITIES.ROLES_MANAGE, order: 4 },
+  { view: 'security', label: 'সিকিউরিটি', icon: 'security', capability: CAPABILITIES.SECURITY_MANAGE, order: 5 },
+  { view: 'settings', label: 'সিস্টেম সেটিংস', icon: 'settings', capability: CAPABILITIES.SETTINGS_MANAGE, order: 6 },
+  { view: 'data', label: 'Data Management', icon: 'data', capability: CAPABILITIES.DATA_MANAGE, order: 7 },
+  { view: 'backup', label: 'Backup & Restore', icon: 'backup', capability: CAPABILITIES.BACKUP_MANAGE, order: 8 },
+  { view: 'profile', label: 'Admin Profile', icon: 'profile', capability: CAPABILITIES.PROFILE_VIEW, order: 9 }
 ]);
 
 export function capabilitiesForRole(role) {
@@ -186,7 +212,7 @@ export function viewCapability(view) {
   return VIEW_CAPABILITIES[String(view || '').trim()] || null;
 }
 
-/** Route in the URL hash (admin.html#finance). Empty when absent/unknown. */
+/** Route in the URL hash (admin.html#staff). Empty when absent/unknown. */
 export function routeFromHash(hash) {
   const key = String(hash || '').replace(/^#/, '').replace(/^\/+/, '').trim();
   if (!key) return null;

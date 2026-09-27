@@ -19,7 +19,7 @@ for (const width of [320, 360, 375, 390, 412, 430]) {
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     await setup(page);
-    for (const view of ['dashboard', 'students', 'finance', 'routine', 'more', 'exams', 'notices', 'reports', 'classes', 'app-management']) {
+    for (const view of ['dashboard', 'staff', 'students', 'reports', 'more', 'roles', 'data', 'backup', 'security', 'settings', 'profile']) {
       await page.evaluate(view => { location.hash = view; }, view);
       await expect(page.locator(`.admin-view.active[data-view-panel="${view}"]`)).toBeVisible();
       const result = await page.evaluate(() => {
@@ -41,13 +41,25 @@ for (const width of [320, 360, 375, 390, 412, 430]) {
       expect(result, view).toEqual({ overflow: [], pageOverflow: false, covered: false, footerVisible: true, labels: true });
     }
     await expect(page.locator('.admin-bottom button')).toHaveCount(5);
-    const images = page.locator('.admin-shell img[src^="assets/icons/admin/"]');
-    for (const image of await images.all()) {
-      await expect.poll(() => image.evaluate(el => el.complete && el.naturalWidth > 0)).toBe(true);
-    }
-    await page.locator('.admin-bottom [data-admin-view="finance"]').click();
-    await expect(page.locator('.admin-bottom [aria-current="page"]')).toHaveAttribute('data-admin-view', 'finance');
-    await page.evaluate(() => { location.hash = 'teaching'; });
+    // Icons are inline SVG now: one per container, drawn, and never overflowing
+    // the chip, card, button, header or bottom bar that holds them.
+    const icons = page.locator('.admin-shell svg.nav-icon, .admin-shell svg.admin-feature-icon-svg, .admin-shell svg.admin-more-icon-svg, .admin-shell svg.topbar-icon');
+    expect(await icons.count()).toBeGreaterThan(4);
+    const iconFit = await page.evaluate(() => {
+      const bad = [];
+      for (const svg of document.querySelectorAll('.admin-shell svg.nav-icon, .admin-shell svg.admin-feature-icon-svg, .admin-shell svg.admin-more-icon-svg, .admin-shell svg.topbar-icon')) {
+        const box = svg.getBoundingClientRect();
+        const parent = svg.parentElement.getBoundingClientRect();
+        if (!box.width || !box.height) bad.push('empty:' + svg.parentElement.className);
+        else if (box.width > parent.width + 1 || box.height > parent.height + 1) bad.push('overflow:' + svg.parentElement.className);
+        if (!svg.querySelector('path, circle, rect')) bad.push('blank:' + svg.parentElement.className);
+      }
+      return bad;
+    });
+    expect(iconFit).toEqual([]);
+    await page.locator('.admin-bottom [data-admin-view="staff"]').click();
+    await expect(page.locator('.admin-bottom [aria-current="page"]')).toHaveAttribute('data-admin-view', 'staff');
+    await page.evaluate(() => { location.hash = 'finance'; });
     await expect(page.locator('[data-view-panel="teaching"]')).toHaveCount(0);
     expect(errors).toEqual([]);
   });

@@ -51,11 +51,11 @@ for (const viewport of viewports) {
     const shell = await page.locator('#adminShell').boundingBox();
     expect(shell.width).toBe(Math.min(viewport.width,480));
     expect((await page.locator('.admin-bottom').boundingBox()).width).toBe(shell.width);
-    await page.locator('.admin-bottom [data-admin-view=finance]').click();
+    await page.locator('.admin-bottom [data-admin-view=reports]').click();
+    await expect(page.locator('[data-finance-view=collection]').first()).toBeVisible();
     expect(await page.locator('[data-finance-view=collection] .admin-duo').evaluate(el => getComputedStyle(el).gridTemplateColumns.split(' ').length)).toBe(1);
     await expect(page.locator('#feeStudentSearch, #feeCollectionForm, #feeProfileCollect, #btnFinanceGoCollect')).toHaveCount(0);
     await noOverflow(page, '#recentTrxList');
-    await page.locator('#btnFinanceGoReport').click();
     await expect(page.locator('.admin-view[data-view-panel=reports]')).toBeVisible();
     await expect(page.locator('#btnPrintReport, .pad-statement, table')).toHaveCount(0);
     await page.locator('#reportMonth').selectOption('all');

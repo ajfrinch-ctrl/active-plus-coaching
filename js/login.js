@@ -19,6 +19,7 @@ import {
   STAFF_ACCOUNTS, normalizeStaffUsername, authenticateStaff, saveStaffSession, resolveStaffRoleByUsername
 } from './staff-auth.js';
 import { openStaffPasswordDialog } from './staff-password-dialog.js';
+import { authenticateDirectoryStaff, changeDirectoryStaffPassword, findDirectoryStaffByUsername } from './staff-directory.js';
 import { isPasswordRecord } from './password-hash.js';
 
 const STAFF_PANEL = Object.freeze({ admin: 'admin.html', manager: 'manager.html', teacher: 'teacher.html', payment: 'payment.html' });
@@ -72,8 +73,29 @@ function syncLoginHints() {
     }
   };
   const known = staffRoleFor(value);
-  if (known) paint(known);
-  else resolveStaffRoleByUsername(value).then(paint).catch(() => paint(null));
+  if (known) { paint(known); return; }
+  resolveStaffRoleByUsername(value)
+    .then(role => (role ? role : staffPanelRoleFor(value)))
+    .then(paint)
+    .catch(() => paint(null));
+}
+
+/* A username created in Staff Management is not one of the four fixed role
+   names, so the panel it belongs to comes from the staff directory. */
+async function staffPanelRoleFor(value) {
+  try {
+    const staff = await findDirectoryStaffByUsername(value);
+    return staff ? staffRolePanelOf(staff) : null;
+  } catch { return null; }
+}
+
+function staffRolePanelOf(staff) {
+  const role = staff?.role;
+  if (role === 'manager') return 'manager';
+  if (role === 'teacher') return 'teacher';
+  if (role === 'cash-counter') return 'payment';
+  if (role === 'admin') return 'admin';
+  return null; // "other" staff have no panel of their own yet
 }
 
 async function enterStaffPanel(role, remember) {
@@ -117,6 +139,32 @@ async function handleStaffLogin(role, typedId, pin) {
   await enterStaffPanel(role, remember);
 }
 
+/* A staff identity created in Staff Management: same password rules, same
+   forced-change flow, and a deactivated account simply cannot get in. */
+async function handleDirectoryStaffLogin(directory, remember) {
+  const { staff, mustChangePassword } = directory;
+  const role = staffRolePanelOf(staff);
+  if (!role) {
+    setAuthMessage('এই স্টাফ অ্যাকাউন্টের জন্য এই ডিভাইসে কোনো প্যানেল নির্ধারিত নয়।');
+    return;
+  }
+  if (role === 'teacher' && loadAppConfig().allowTeacherRegistration === false) {
+    setAuthMessage('শিক্ষক প্যানেল প্রবেশ এই মুহূর্তে এডমিন কর্তৃক বন্ধ রাখা হয়েছে।');
+    return;
+  }
+  if (mustChangePassword) {
+    openStaffPasswordDialog({
+      role,
+      mode: 'change',
+      onSubmit: (next, confirm) => changeDirectoryStaffPassword(staff.staffId, $('#loginPin').value, next, confirm),
+      onDone: () => enterStaffPanel(role, remember),
+      onCancel: () => setAuthMessage('নিরাপত্তার জন্য নতুন পাসওয়ার্ড নির্ধারণ করা বাধ্যতামূলক।')
+    });
+    return;
+  }
+  await enterStaffPanel(role, remember);
+}
+
 async function handleLogin(event, state, onAuthenticated) {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
@@ -127,6 +175,22 @@ async function handleLogin(event, state, onAuthenticated) {
   const staffRole = await resolveStaffRoleByUsername(typedId);
   if (staffRole) {
     await handleStaffLogin(staffRole, typedId, pin);
+    return;
+  }
+  // A Staff ID identity created from Admin → Staff Management.
+  const directory = await authenticateDirectoryStaff(typedId, pin);
+  if (directory.ok) {
+    await handleDirectoryStaffLogin(directory, $('#rememberMe')?.checked !== false);
+    return;
+  }
+  if (directory.code === 'INACTIVE') {
+    setAuthMessage(directory.error || 'এই স্টাফ অ্যাকাউন্টটি নিষ্ক্রিয়।');
+    return;
+  }
+  // The username belongs to a Staff Management account, so a wrong password is
+  // a staff error — it must not fall through to the student path.
+  if (directory.code === 'WRONG_PASSWORD') {
+    setAuthMessage('স্টাফ ইউজারনেম বা পাসওয়ার্ড সঠিক নয়। আবার চেষ্টা করুন।');
     return;
   }
 

@@ -58,6 +58,10 @@ export const STAFF_ACCOUNTS = Object.freeze({
 
 export const STAFF_USERNAMES = Object.freeze(Object.values(STAFF_ACCOUNTS).map(account => account.username));
 
+/** Every device-local storage key that holds a staff account or session.
+ *  Backup & Restore uses the list so nothing staff-owned is left behind. */
+export const STAFF_KEYS_LIST = Object.freeze(Object.values(STAFF_ACCOUNTS).flatMap(account => [account.accountKey, account.sessionKey]));
+
 export function normalizeStaffUsername(value) {
   return String(value ?? '').trim().toLowerCase();
 }
@@ -109,7 +113,9 @@ export async function createInitialAdmin({ fullName, mobile, email = '', usernam
   };
   // Claim username first, then write the encrypted staff profile; roll back the
   // claim if storage fails so a half-created Admin cannot block future setup.
-  const claimed = { ...index, [handle]: 'staff:admin' };
+  // Hashing is slow, so the registry is re-read here: writing a snapshot that
+  // was taken before an `await` could silently drop a claim made meanwhile.
+  const claimed = { ...(readJSON(KEYS.usernames, {}) || {}), [handle]: 'staff:admin' };
   if (!writeJSON(KEYS.usernames, claimed)) return { ok: false, error: PASSWORD_STORE_FAILED };
   if (!(await writeStaffAccount('admin', account))) {
     const rollback = readJSON(KEYS.usernames, {}) || {};
@@ -155,7 +161,9 @@ export async function ensureBootstrapStaffAccounts(ownerUsername = 'admin.apc') 
     }
   } catch { return { ok: false, error: PASSWORD_STORE_FAILED }; }
   if (!pending.length) return { ok: true, accounts: [] };
-  const claimed = { ...index };
+  // Re-read the registry: hashing above is slow, so writing the snapshot taken
+  // at the top of this function would drop a username claimed in the meantime.
+  const claimed = { ...(readJSON(KEYS.usernames, {}) || {}) };
   pending.forEach(account => { claimed[account.username] = `staff:${account.role}`; });
   if (!writeJSON(KEYS.usernames, claimed)) return { ok: false, error: PASSWORD_STORE_FAILED };
   const written = [];
@@ -332,6 +340,25 @@ export async function setStaffPassword(role, nextPassword, confirmPassword) {
   });
   if (!saved) return { ok: false, error: PASSWORD_STORE_FAILED };
   return { ok: true };
+}
+
+/**
+ * Mark the stored password as due for a change on the next sign-in.
+ * Used when Admin resets a role account's password from Staff Management:
+ * the reset credential is temporary until its owner replaces it.
+ */
+export async function flagStaffPasswordChange(role) {
+  const account = await readStaffAccount(role);
+  if (!account) return false;
+  return writeStaffAccount(role, { ...account, mustChangePassword: true, updatedAt: new Date().toISOString() });
+}
+
+/** Clear the must-change marker (after the owner replaced the password). */
+export async function clearStaffPasswordChange(role) {
+  const account = await readStaffAccount(role);
+  if (!account) return false;
+  const { mustChangePassword: _mustChangePassword, ...profile } = account;
+  return writeStaffAccount(role, { ...profile, updatedAt: new Date().toISOString() });
 }
 
 /** Change password from inside a panel: the current password must match. */

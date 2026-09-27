@@ -72,12 +72,12 @@ function trapTab(overlay, event) {
  * (a new password is mandatory before the panel opens). `onDone` runs after
  * the password is stored; the caller then saves the session and enters.
  */
-export function openStaffPasswordDialog({ role, mode = 'change', onDone, onCancel }) {
+export function openStaffPasswordDialog({ role, mode = 'change', onDone, onCancel, onSubmit }) {
   closeStaffPasswordDialog();
   const overlay = buildDom(role, mode);
   document.body.append(overlay);
   document.body.classList.add('modal-open');
-  const state = { role, mode, onDone, onCancel, overlay };
+  const state = { role, mode, onDone, onCancel, onSubmit, overlay };
   openDialog = state;
 
   const form = overlay.querySelector('.staff-pw-form');
@@ -119,9 +119,13 @@ export function openStaffPasswordDialog({ role, mode = 'change', onDone, onCance
       submit.setAttribute('aria-busy', 'true');
     }
     try {
-      const result = mode === 'setup'
-        ? await provisionStaffAccount(role, next, confirm)
-        : await setStaffPassword(role, next, confirm);
+      // `onSubmit` lets a caller store the password somewhere else — a Staff
+      // Management identity keeps its hash on its own directory record.
+      const result = onSubmit
+        ? await onSubmit(next, confirm)
+        : mode === 'setup'
+          ? await provisionStaffAccount(role, next, confirm)
+          : await setStaffPassword(role, next, confirm);
       if (!result.ok) {
         showError(result.error || 'পাসওয়ার্ড সংরক্ষণ করা যায়নি। আবার চেষ্টা করুন।');
         return;

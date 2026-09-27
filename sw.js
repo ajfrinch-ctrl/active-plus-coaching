@@ -1,4 +1,4 @@
-const CACHE_NAME = 'active-plus-student-v70-teacher-assignments-results';
+const CACHE_NAME = 'active-plus-student-v71-admin-staff-management';
 const APP_SHELL = [
   './offline-roles.html',
   './css/offline-roles.css',
@@ -16,6 +16,8 @@ const APP_SHELL = [
   './css/mobile.css',
   './css/exams.css',
   './css/teaching.css',
+  './css/admin-icon-system.css',
+  './css/admin-staff.css',
   './css/receipt.css',
   './manifest.json',
   './favicon.ico',
@@ -138,6 +140,10 @@ const APP_SHELL = [
   './js/finance-receipt.js',
   './js/report-generator.js',
   './js/admin-permissions.js',
+  './js/admin-icons.js',
+  './js/admin-panel-ui.js',
+  './js/staff-directory.js',
+  './js/staff-management.js',
   './js/admin-panel-ui.js'
 ];
 

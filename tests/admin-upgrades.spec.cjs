@@ -1,5 +1,6 @@
-/* Admin upgrades: routine form controls, student privacy + editing, dashboard money
-   summary, the dedicated Report Center downloads and teacher registration control. */
+/* Admin upgrades: staff management, student privacy + editing, dashboard money
+   summary, the dedicated Report Center downloads and teacher registration control.
+   Routine/notices entry is Manager territory, so it is tested in manager.html. */
 const { test, expect } = require('./fixtures.cjs');
 const fs = require('node:fs/promises');
 
@@ -22,38 +23,65 @@ test('dashboard shows today and this-month money summary with a details shortcut
   await expect(page.locator('#dashMonthSub')).toHaveText('সেপ্টেম্বর ২০২৬');
   await expect(page.locator('#dashMonthDue')).toHaveText('৳১,৫০০');
   await expect(page.locator('#dashTotalAmount')).toHaveText('৳১২,৩০০');
-  await page.locator('[data-admin-view=finance]').filter({ hasText: 'বিস্তারিত হিসাব' }).click();
-  await expect(page.locator('[data-view-panel=finance]')).toBeVisible();
+  await page.locator('.dash-finance-card [data-admin-view=reports]').click();
+  await expect(page.locator('[data-view-panel=reports]')).toBeVisible();
 });
 
-test('routine form: class selector, teacher dropdown and subject autofill', async ({ page }) => {
+test('staff management: create, edit, deactivate, reset password and delete', async ({ page }) => {
   await enter(page);
-  await bottom(page, 'routine');
-  // Class dropdown offers every enabled class; teacher dropdown lists the routine teachers.
-  await expect(page.locator('#routineClass option')).toHaveCount(13);
-  await expect(page.locator('#routineTeacher option')).toHaveCount(7);
-  await expect(page.locator('#routineTeacher')).toContainText('মো. সাইফুল ইসলাম');
-  // Subject autofill starts from the subjects already in the routine.
-  await expect(page.locator('#routineSubjectList option[value="উচ্চতর গণিত"]')).toHaveCount(1);
-  await page.locator('#routineSubject').fill('গণিত ল্যাব');
-  await page.locator('#routineClass').selectOption('নবম শ্রেণি');
-  await page.locator('#routineTeacher').selectOption('তানভীর আহমেদ');
-  await page.locator('#routineRoom').fill('রুম ৩০৫');
-  await page.locator('#addRoutineForm button[type=submit]').click();
-  await expect(page.locator('.admin-toast')).toContainText('নবম শ্রেণি • গণিত ল্যাব');
-  const row = page.locator('.routine-row', { hasText: 'গণিত ল্যাব' });
-  await expect(row).toContainText('নবম শ্রেণি');
-  await expect(row).toContainText('তানভীর আহমেদ');
-  // The new subject is remembered: it appears in the autofill list and stays in the input.
-  await expect(page.locator('#routineSubjectList option[value="গণিত ল্যাব"]')).toHaveCount(1);
-  await expect(page.locator('#routineSubject')).toHaveValue('গণিত ল্যাব');
-  // Second entry with the same subject only needs class/teacher/room again.
-  await page.locator('#routineClass').selectOption('নবম শ্রেণি');
-  await page.locator('#routineTeacher').selectOption('তানভীর আহমেদ');
-  await page.locator('#routineRoom').fill('রুম ৩০৬');
-  await page.locator('#addRoutineForm button[type=submit]').click();
-  await expect(page.locator('.routine-row', { hasText: 'গণিত ল্যাব' })).toHaveCount(2);
+  await bottom(page, 'staff');
+  // The four system roles are already here with permanent Staff IDs.
+  await expect(page.locator('#staffList .staff-card')).toHaveCount(4);
+  await expect(page.locator('#staffList .staff-id-badge').first()).toHaveText('STF-0001');
+  // Create a Teacher: the ID is assigned, never typed.
+  await page.locator('#staffCreateButton').click();
+  await page.locator('#staffField-fullName').fill('আপগ্রেড শিক্ষক');
+  await page.locator('#staffField-username').fill('upgrade.teacher.apc');
+  await page.locator('#staffField-password').fill('Upgrade-2026');
+  await page.locator('#staffField-confirmPassword').fill('Upgrade-2026');
+  await page.locator('#staffField-role').selectOption('teacher');
+  await page.locator('#staffField-subjects').fill('পদার্থবিজ্ঞান');
+  await page.locator('#staffForm button[type=submit]').click();
+  const card = page.locator('#staffList .staff-card', { hasText: 'আপগ্রেড শিক্ষক' });
+  await expect(card).toBeVisible();
+  await expect(card.locator('.staff-id-badge')).toHaveText('STF-0005');
+  // A password is never shown anywhere in the list.
+  await expect(page.locator('#staffList')).not.toContainText('Upgrade-2026');
+  // Edit: the Staff ID is locked, everything else is editable.
+  await card.locator('[data-staff-action=edit]').click();
+  await expect(page.locator('#staffField-staffId')).toHaveCount(0);
+  await page.locator('#staffField-mobile').fill('01799887766');
+  await page.locator('#staffForm button[type=submit]').click();
+  await expect(card).toContainText('01799887766');
+  // More → Deactivate, then back to active.
+  await card.locator('[data-staff-action=more]').click();
+  await card.locator('[data-staff-action=status]').click();
+  await expect(card).toContainText('নিষ্ক্রিয়');
+  await card.locator('[data-staff-action=more]').click();
+  await card.locator('[data-staff-action=status]').click();
+  await expect(card).toContainText('সক্রিয়');
+  // More → Reset password: never displayed, change forced on next login.
+  await card.locator('[data-staff-action=more]').click();
+  await card.locator('[data-staff-action=reset]').click();
+  await page.locator('#staffField-newPassword').fill('Reset-2026');
+  await page.locator('#staffField-confirmNewPassword').fill('Reset-2026');
+  await page.locator('#staffForm button[type=submit]').click();
+  await expect(card).toContainText('পাসওয়ার্ড বদল');
+  // More → Delete needs a confirmation modal; cancel keeps the account.
+  await card.locator('[data-staff-action=more]').click();
+  await card.locator('[data-staff-action=delete]').click();
+  await expect(page.locator('#staffModalBody')).toContainText('স্থায়ীভাবে মুছে ফেলতে চান');
+  await page.locator('#staffModalBody [data-staff-modal=close]').click();
+  await expect(card).toBeVisible();
+  // The current Admin is protected: no delete, no deactivate, no role change.
+  const owner = page.locator('#staffList .staff-card', { hasText: 'STF-0001' });
+  await expect(owner).toContainText('Protected');
+  await owner.locator('[data-staff-action=more]').click();
+  await expect(owner.locator('[data-staff-action=delete]')).toHaveCount(0);
+  await expect(owner.locator('[data-staff-action=status]')).toHaveCount(0);
 });
+
+/* Routine entry is a Manager job (manager.html), so this panel has no form. */
 
 test('student management hides personal info until selected and supports editing', async ({ page }) => {
   await enter(page);
@@ -101,8 +129,7 @@ test('student management hides personal info until selected and supports editing
 test('report center: filters, live totals and PDF/CSV downloads', async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-09-22T12:00:00Z'));
   await enter(page);
-  await bottom(page, 'more');
-  await page.locator('.admin-more-item[data-admin-view=reports]').click();
+  await bottom(page, 'reports');
   await expect(page.locator('#reportsTitle')).toBeVisible();
   // Filter dropdowns are populated from the shared dataset.
   await expect(page.locator('#reportClass option')).toHaveCount(13);
@@ -144,7 +171,7 @@ test('report center: filters, live totals and PDF/CSV downloads', async ({ page 
 test('teacher registration is controlled from the admin panel and enforced in teacher.html', async ({ page }) => {
   await enter(page);
   await bottom(page, 'more');
-  await page.locator('.admin-more-item[data-admin-view=app-management]').click();
+  await page.locator('.admin-more-item[data-admin-view=settings]').click();
   await expect(page.locator('#cfgTeacherRegistration')).toBeChecked();
   await expect(page.locator('#teacherRegBadge')).toHaveText('খোলা আছে');
   await expect(page.locator('#teacherRegList')).toContainText('মো. সাইফুল ইসলাম');
@@ -161,7 +188,7 @@ test('teacher registration is controlled from the admin panel and enforced in te
   await page.locator('#adminLoginForm button[type=submit]').click();
   await expect(page.locator('#adminShell')).toBeVisible();
   await bottom(page, 'more');
-  await page.locator('.admin-more-item[data-admin-view=app-management]').click();
+  await page.locator('.admin-more-item[data-admin-view=settings]').click();
   await page.locator('#cfgTeacherRegistration').evaluate(el => el.click());
   await page.locator('#btnSaveTopAppSettings').click();
   await expect(page.locator('.admin-toast')).toContainText('খোলা আছে');
@@ -192,8 +219,7 @@ test('class-wise, results and attendance reports download; class filter simplifi
   });
   await page.reload();
   await enter(page);
-  await bottom(page, 'more');
-  await page.locator('.admin-more-item[data-admin-view=reports]').click();
+  await bottom(page, 'reports');
 
   // Class-wise report: pick a class, see its students and open them in management.
   await page.locator('#classReportClass').selectOption('দশম শ্রেণি');
@@ -214,8 +240,7 @@ test('class-wise, results and attendance reports download; class filter simplifi
   await expect(page.locator('#studentList .student-row')).toHaveCount(1);
 
   // Results report: online exam attempts, ranks, grades and absentees.
-  await bottom(page, 'more');
-  await page.locator('.admin-more-item[data-admin-view=reports]').click();
+  await bottom(page, 'reports');
   const examValue = await page.locator('#resultExamSelect option', { hasText: 'সম্পন্ন MCQ' }).getAttribute('value');
   await page.locator('#resultExamSelect').selectOption(examValue);
   await expect(page.locator('#reportMeta-results')).toHaveText('জমা ৩ জন • অনুপস্থিত ১ জন');

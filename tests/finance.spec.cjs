@@ -8,7 +8,7 @@ async function enterFinance(page, width = 390) {
   await page.clock.setFixedTime(new Date('2026-09-22T12:00:00Z'));
   await page.goto('/admin.html');
   await page.locator('#adminLoginForm button[type=submit]').click();
-  await page.locator('.admin-bottom [data-admin-view=finance]').click();
+  await page.locator('.admin-bottom [data-admin-view=reports]').click();
 }
 
 async function verifyPDF(page, bytes) {
@@ -48,8 +48,8 @@ for (const width of [320, 390, 1280]) {
     await expect(page.locator('#studentLedgerList .ledger-item').first()).toContainText('ইমরান');
     await expect(page.locator('#studentLedgerList [data-action=quick-collect]')).toHaveCount(0);
 
-    await page.locator('.admin-bottom [data-admin-view=finance]').click();
-    await page.locator('#btnFinanceGoReport').click();
+    // The monitoring panels now live inside the Report Center.
+    await page.locator('.admin-bottom [data-admin-view=reports]').click();
     await expect(page.locator('.admin-view[data-view-panel=reports]')).toBeVisible();
     await page.locator('#reportMonth').selectOption('all');
     await expect(page.locator('#reportTrxCount')).toHaveText('৭ টি');
