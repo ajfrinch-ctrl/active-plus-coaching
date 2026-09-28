@@ -178,7 +178,7 @@ async function handleLogin(event, state, onAuthenticated) {
   // Hydrate before resolving the role so a newly-created Admin can sign in on a second device.
   if (navigator.onLine && typedId) {
     try {
-      const { hydrateStaffAccounts } = await import('./realtime-sync.js');
+      const { hydrateStaffAccounts } = await import('./realtime-sync.js?v=20260928-1731');
       await hydrateStaffAccounts();
     } catch (error) {
       console.warn('[Active Plus] staff account sync unavailable during login:', error);
