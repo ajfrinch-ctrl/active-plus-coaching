@@ -3,14 +3,12 @@
    light. No imports here on purpose; keep APPEARANCE_KEY identical to
    js/appearance.js — tests/appearance.test.mjs fails on drift. */
 (function applyAppearanceEarly() {
-  var APPEARANCE_KEY = 'active-plus-appearance-v1';
-  var theme = 'light';
+  var APPEARANCE_KEY = 'active-plus-appearance-v2';
+  var theme = 'dark';
   try {
     var stored = window.localStorage.getItem(APPEARANCE_KEY);
     if (stored === 'dark' || stored === 'light') {
       theme = stored;
-    } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      theme = 'dark';
     }
   } catch (error) {
     try {
