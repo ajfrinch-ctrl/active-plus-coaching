@@ -40,3 +40,8 @@
 
 .exam-workspace button[aria-pressed="true"] { background: var(--mint); border-color: var(--forest); }
 #studentExamsTitle { font-size: 25px; }
+
+
+/* 30-sample MCQ template picker */
+.mcq-template-picker{display:grid;gap:6px;margin:10px 0;font-size:13px;font-weight:800}
+.mcq-template-picker select{width:100%;min-height:46px;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font:inherit}
