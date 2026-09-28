@@ -1728,9 +1728,29 @@ window.addEventListener('storage', event => {
 
 // Every staff login starts at index.html. This page only restores an existing session.
 async function initAdminEntry() {
-  if (!(await hasStaffSession('admin'))) { goToLoginPage(); return; }
-  const account = await readStaffAccount('admin');
-  if (!account) { clearStaffSession('admin'); goToLoginPage(); return; }
-  await enterPanel();
+  try {
+    if (!(await hasStaffSession('admin'))) {
+      goToLoginPage();
+      return;
+    }
+    const account = await readStaffAccount('admin');
+    if (!account) {
+      clearStaffSession('admin');
+      goToLoginPage();
+      return;
+    }
+    await enterPanel();
+  } catch (error) {
+    /* Never leave admin.html blank when a stored session/account or optional
+       panel initializer is corrupted. Clear only the invalid Admin session;
+       application data is untouched. */
+    console.error('[Active Plus] Admin panel startup failed:', error);
+    clearStaffSession('admin');
+    goToLoginPage();
+  }
 }
-void initAdminEntry();
+void initAdminEntry().catch(error => {
+  console.error('[Active Plus] Admin entry failed:', error);
+  clearStaffSession('admin');
+  goToLoginPage();
+});
