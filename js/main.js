@@ -1,5 +1,6 @@
 /* Application composition root. Feature modules can be replaced independently.
    Updated: don't ask security check every time - auto-login for trusted devices. */
+import { runMigrations } from './storage/migration.js';
 import { APP_TAGLINE } from './config.js';
 import { loadStudent, loadAccount, hasSession, persistSession, saveStudent, clearSession, isSecurityCheckDisabled, loadAppConfig } from './storage.js';
 import { escapeHtml } from './sanitize.js';
@@ -26,6 +27,7 @@ import { initStudentDashboard } from './student-dashboard.js';
 import { mountReports, refreshReports } from './reports.js';
 
 initFixedShell();
+runMigrations();
 
 const appConfig = loadAppConfig();
 
@@ -230,7 +232,12 @@ $('#pendingLogout')?.addEventListener('click', leaveApp);
 // The entry decision is asynchronous: the stored session may be encrypted.
 // A #view shortcut in the URL is applied by enterApp once the screen opens.
 window.addEventListener('popstate', () => {
-  setView(viewRouteFromHash(), { history: 'keep' });
+  if (state.account && hasSession()) {
+    setView(viewRouteFromHash(), { history: 'keep' });
+  } else {
+    showAuthScreen();
+    switchAuthTab('login');
+  }
 });
 
 (async () => {

@@ -107,7 +107,7 @@ async function enterStaffPanel(role, remember) {
     return;
   }
   setAuthMessage(`${STAFF_LABEL[role]}ে নেওয়া হচ্ছে…`, 'success');
-  window.location.assign(staffPanelPath(role));
+  window.location.replace(staffPanelPath(role));
 }
 
 async function handleStaffLogin(role, typedId, pin) {

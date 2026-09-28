@@ -1,4 +1,4 @@
-import { examRepository as repo, EXAM_TYPES, TEACHER_ACTOR, ADMIN_ACTOR, MANAGER_ACTOR, examTemplate, parseQuestions, totalMarks, watchExams } from './exam-data.js';
+import { examRepository as repo, EXAM_TYPES, TEACHER_ACTOR, ADMIN_ACTOR, MANAGER_ACTOR, examTemplate, MCQ_30_SAMPLE, parseQuestions, totalMarks, watchExams } from './exam-data.js';
 import { examMeta, questionPreview, resultMarkup, downloadResults, esc, num } from './exam-ui.js';
 import { downloadExamPDF } from './exam-pdf.js';
 import { enabledClasses } from './config.js';
@@ -54,12 +54,20 @@ export function initExamManager(container, role) {
       ${type === 'mcq' ? field('negative', 'প্রতি ভুল উত্তরে কাটা নম্বর (০ হলে কাটবে না)', 'number', 'min="0" max="1000" step="0.01" required') : ''}
       ${field('passPercent', 'পাস নম্বরের হার (%)', 'number', 'min="1" max="100" required')}
       <label>নির্দেশনা<textarea name="instructions" maxlength="2000">${esc(data.instructions)}</textarea></label>
-      <details><summary>প্রশ্নের টেমপ্লেট দেখুন</summary><textarea data-copy-template readonly aria-label="কপি করার টেমপ্লেট">${esc(examTemplate(type))}</textarea><div class="exam-actions">${button('copy-template', 'টেমপ্লেট কপি করুন')}${button('sample', 'উদাহরণ বসান')}</div><p class="exam-note">প্রশ্ন আলাদা করতে --- দিন। প্রতিটি লেখা একটি লাইনে রাখুন। নম্বর আলাদা হতে পারে। সর্বোচ্চ ১০০ প্রশ্ন; শুধু লেখা।</p></details>
+      <details><summary>প্রশ্নের টেমপ্লেট দেখুন</summary><textarea data-copy-template readonly aria-label="কপি করার টেমপ্লেট">${esc(examTemplate(type))}</textarea><div class="exam-actions">${button('copy-template', 'টেমপ্লেট কপি করুন')}${button('sample', 'উদাহরণ বসান')}${type === 'mcq' ? `${button('sample-30', '৩০টি নমুনা বসান')}${button('copy-sample-30', '৩০টি নমুনা কপি করুন')}` : ''}</div><p class="exam-note">প্রশ্ন আলাদা করতে --- দিন। প্রতিটি লেখা একটি লাইনে রাখুন। নম্বর আলাদা হতে পারে। সর্বোচ্চ ১০০ প্রশ্ন; শুধু লেখা।${type === 'mcq' ? ' যতটি প্রশ্ন তত মিনিট পরীক্ষা।' : ''}</p></details>
       <label>টেমপ্লেট অনুযায়ী প্রশ্ন পেস্ট করুন *<textarea name="template" data-question-source rows="12" required maxlength="150000" placeholder="${type === 'mcq' ? 'প্রশ্ন: …\nA: …\nB: …\nC: …\nD: …\nউত্তর: A' : 'প্রশ্ন: …\nনম্বর: …'}">${esc(data.template)}</textarea><small class="exam-note">${type === 'mcq' ? 'MCQ-তে প্রতি প্রশ্নের নম্বর ১ নির্ধারিত — “নম্বর:” লাইন লিখতে হবে না। মোট নম্বর = প্রশ্ন সংখ্যা।' : 'প্রতি প্রশ্নের নম্বর আলাদা করে লিখুন।'}</small></label>
       <div class="exam-preview" data-parsed-preview aria-live="polite"></div>
       <button type="submit" class="primary">খসড়া সংরক্ষণ করুন</button>
     </form>`;
-    function preview() { try { const questions = parseQuestions($('[name=template]').value, type); $('[data-parsed-preview]').innerHTML = `<strong>${num(questions.length)}টি প্রশ্ন • মোট ${num(totalMarks({ questions }))} নম্বর</strong>${questionPreview({ questions }, true)}`; } catch (e) { $('[data-parsed-preview]').textContent = e.message; } }
+    function preview() {
+      try {
+        const questions = parseQuestions($('[name=template]').value, type);
+        const count = questions.length;
+        $('[data-parsed-preview]').innerHTML = `<strong>${num(count)}টি প্রশ্ন • মোট ${num(totalMarks({ questions }))} নম্বর${type === 'mcq' ? ` • ${num(count)} মিনিট পরীক্ষা` : ''}</strong>${questionPreview({ questions }, true)}`;
+      } catch (e) {
+        $('[data-parsed-preview]').textContent = e.message;
+      }
+    }
     $('[name=template]').addEventListener('input', preview); preview();
     $('[data-exam-form]').addEventListener('submit', event => {
       event.preventDefault(); const values = Object.fromEntries(new FormData(event.currentTarget));
@@ -98,6 +106,8 @@ export function initExamManager(container, role) {
     else if (action === 'paper' || action === 'solutions') run(() => downloadExamPDF(e, { authorPreview: true, solutions: action === 'solutions' }), 'PDF ডাউনলোড শুরু হয়েছে।', () => {});
     else if (action === 'copy-template') { try { await navigator.clipboard.writeText($('[data-copy-template]').value); message('টেমপ্লেট কপি হয়েছে।'); } catch { $('[data-copy-template]').select(); message('টেমপ্লেট নির্বাচন করা হয়েছে। মোবাইলের কপি অপশন চাপুন।'); } }
     else if (action === 'sample') { $('[name=template]').value = $('[data-copy-template]').value; $('[name=template]').dispatchEvent(new Event('input')); }
+    else if (action === 'copy-sample-30') { try { await navigator.clipboard.writeText(MCQ_30_SAMPLE); message('৩০টি MCQ নমুনা কপি হয়েছে।'); } catch { $('[name=template]').value = MCQ_30_SAMPLE; $('[name=template]').select(); message('৩০টি নমুনা নির্বাচন করা হয়েছে। মোবাইলের কপি অপশন চাপুন।'); } }
+    else if (action === 'sample-30') { $('[name=template]').value = MCQ_30_SAMPLE; $('[name=template]').dispatchEvent(new Event('input')); }
   });
   watchExams(() => { if (!busy) reload(); }); reload();
 }
