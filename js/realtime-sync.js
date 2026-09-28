@@ -69,6 +69,9 @@ async function syncStaffRole(role, { forcePush = false } = {}) {
   if (snap.exists() && !forcePush) {
     const remote = snap.val();
     if (remote && typeof remote === 'object' && remote.username && remote.password) {
+      // A valid remote staff account must contain both its identity and a
+      // password record. Never replace a working local account with an
+      // incomplete remote snapshot.
       await writeStaffLocal(role, remote);
       lastRemote.set('staff:' + role, JSON.stringify(remote));
       window.dispatchEvent(new CustomEvent('apc-sync-updated', { detail: { collection: 'staffAccounts', role } }));
