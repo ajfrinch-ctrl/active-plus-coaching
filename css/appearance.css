@@ -671,3 +671,23 @@ html[data-theme="dark"] :is(.primary,.auth-submit,.admin-dashboard-collect,.teac
 html[data-theme="dark"] :is(.admin-hero-icon,.tile-icon,.admin-hero-foot-icon,.admin-dashboard-collect-icon,.admin-more-icon,.admin-stat-icon,.home-hero-icon,.home-stat-icon,.home-hero-foot-icon,.home-row-icon,.settings-icon,.help-icon,.learning-home-icon,.staff-section-number,.student-avatar,.auto-id-preview,.topbar-icon) { color: #b8c9ff !important; background: #17213a !important; border-color: #34466f !important; }
 html[data-theme="dark"] :is(.admin-bottom,.admin-topbar,.auth-topbar,.pay-topbar,.topbar,.bottom-nav,.app-bottom-nav,.bottom-navigation) { background: #05070c !important; border-color: #2a3550 !important; color: #f7f9ff !important; }
 html[data-theme="dark"] .admin-app-link { display:none !important; }
+
+
+/* Topbar network-state border: online = green, offline = red.
+   Only the top and two side borders change; no layout/workflow changes. */
+:where(.auth-topbar,.admin-topbar,.topbar,.teacher-topbar,.manager-topbar,.pay-topbar,header[class*="topbar"]) {
+  border-top: 3px solid #e1e7ef !important;
+  border-left: 3px solid #e1e7ef !important;
+  border-right: 3px solid #e1e7ef !important;
+  transition: border-color .18s ease;
+}
+:where(.auth-topbar,.admin-topbar,.topbar,.teacher-topbar,.manager-topbar,.pay-topbar,header[class*="topbar"]).connection-online {
+  border-top-color: #22a06b !important;
+  border-left-color: #22a06b !important;
+  border-right-color: #22a06b !important;
+}
+:where(.auth-topbar,.admin-topbar,.topbar,.teacher-topbar,.manager-topbar,.pay-topbar,header[class*="topbar"]).connection-offline {
+  border-top-color: #dc4c4c !important;
+  border-left-color: #dc4c4c !important;
+  border-right-color: #dc4c4c !important;
+}
