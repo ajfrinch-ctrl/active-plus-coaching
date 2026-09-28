@@ -3,7 +3,7 @@
 async function bootRealtimeSync() {
   if (!navigator.onLine) return;
   try {
-    const { startRealtimeSync } = await import('./realtime-sync.js');
+    const { startRealtimeSync } = await import('./realtime-sync.js?v=20260928-1731');
     const result = await startRealtimeSync();
     if (result?.ok) {
       document.documentElement.dataset.realtimeSync = 'online';
