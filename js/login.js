@@ -188,10 +188,24 @@ function withinBudget(promise, what) {
 async function hydrateStaffAccountsOnline(what) {
   if (!navigator.onLine) return;
   try {
-    const bridge = await withinBudget(import('./realtime-sync.js?v=20260928-1731'), 'online bridge import');
+    const bridge = await withinBudget(import('./realtime-sync.js?v=20260929-1000'), 'online bridge import');
     await withinBudget(bridge.hydrateStaffAccounts(), 'online bridge hydrate');
   } catch (error) {
     console.warn(`[Active Plus] staff account sync unavailable during ${what}:`, error.message);
+  }
+}
+
+/* Login User IDs created on another device (Staff Directory, the claimed-id
+   registry and the student login) are pulled in here, so the same ID and
+   password sign in on this phone. Records this device already has are left
+   untouched — they stay the authoritative credentials on it. */
+async function hydrateUserIdentifiersOnline(what) {
+  if (!navigator.onLine) return;
+  try {
+    const bridge = await withinBudget(import('./realtime-sync.js?v=20260929-1000'), 'online identity import');
+    await withinBudget(bridge.hydrateUserIdentifiers(), 'online identity hydrate');
+  } catch (error) {
+    console.warn(`[Active Plus] user id sync unavailable during ${what}:`, error.message);
   }
 }
 
@@ -210,6 +224,9 @@ async function handleLogin(event, state, onAuthenticated) {
     // the device has no Admin record yet (the cross-device first-login case).
     const hasLocalAdmin = staffAccountRecordExists('admin');
     if (!hasLocalAdmin) await hydrateStaffAccountsOnline('login');
+    // Login IDs created on other devices: directory accounts, the claimed-id
+    // registry and the student login (missing records only — see above).
+    await hydrateUserIdentifiersOnline('login');
   }
   // Staff usernames are reserved, so a match here can only be that panel.
   const staffRole = await resolveStaffRoleByUsername(typedId);
@@ -349,6 +366,7 @@ async function initFirstAdminSetup() {
   // Hydrate staff accounts before deciding whether the one-time setup is
   // available, so a real Admin account is never shown as "Create Admin".
   await hydrateStaffAccountsOnline('first-use check');
+  await hydrateUserIdentifiersOnline('first-use check');
 
   if (await staffAccountRecordExists('admin')) {
     await lockFirstAdminSetup();             // Admin Count >= 1 → never offered

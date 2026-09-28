@@ -7,3 +7,5 @@ firestore-debug.log
 functions/.env*
 functions/service-account*.json
 emulator-data/
+
+.two-device-run/
