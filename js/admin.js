@@ -329,54 +329,73 @@ function visibleStudents() {
   });
 }
 
+function renderStudentOverviewStats() {
+  const host = $('#studentOverviewStats');
+  if (!host) return;
+  const total = state.students.length;
+  const approved = state.students.filter(s => s.status === 'approved').length;
+  const pending = state.students.filter(s => s.status === 'pending').length;
+  const rejected = state.students.filter(s => s.status === 'rejected').length;
+  const classes = new Set(state.students.map(s => s.className).filter(Boolean)).size;
+  host.innerHTML = [
+    ['মোট শিক্ষার্থী', total, 'users'],
+    ['অনুমোদিত', approved, 'check-circle'],
+    ['অপেক্ষমাণ', pending, 'clipboard'],
+    ['শ্রেণি', classes, 'book']
+  ].map(([label, value, iconName]) => `
+    <div class="student-summary-card">
+      <span class="student-summary-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-${iconName}"></use></svg></span>
+      <div><small>${label}</small><strong>${bn(value)}</strong></div>
+    </div>`).join('');
+}
+
 function renderStudents() {
+  renderStudentOverviewStats();
   const list = visibleStudents();
   const clearBtn = $('#studentSearchClear');
   const countBadge = $('#studentCountBadge');
 
-  if (clearBtn) {
-    clearBtn.hidden = !state.query.trim();
-  }
+  if (clearBtn) clearBtn.hidden = !state.query.trim();
 
   if (countBadge) {
     const count = list.length;
-    if (state.query.trim()) {
-      countBadge.textContent = count > 0
-        ? `${bn(count)} জন শিক্ষার্থী পাওয়া গেছে`
-        : 'কোনো ফলাফল মেলেনি';
-    } else {
-      countBadge.textContent = `${bn(count)} জন শিক্ষার্থী`;
-    }
+    countBadge.textContent = state.query.trim()
+      ? (count > 0 ? `${bn(count)} জন শিক্ষার্থী পাওয়া গেছে` : 'কোনো ফলাফল মেলেনি')
+      : `${bn(count)} জন শিক্ষার্থী`;
   }
 
   $('#studentList').innerHTML = list.length
-    ? list.map(student => `
-      <article class="student-row student-row-locked">
-        <span class="student-avatar locked" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-lock"></use></svg></span>
-        <div class="student-copy">
-          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-            <strong class="student-name-hidden">গোপন রাখা হয়েছে</strong>
-            <span class="audit-id-badge">ID: ${student.id}</span>
-          </div>
-          <small>ব্যক্তিগত তথ্য লুকানো — দেখতে "তথ্য দেখুন" চাপুন</small>
-        </div>
-        <div class="student-side">
-          <span class="badge ${statusMeta[student.status].className}">${statusMeta[student.status].label}</span>
-          <div class="student-actions">
-            <button class="mini-btn" type="button" data-action="view" data-id="${student.id}">তথ্য দেখুন</button>
-            <button class="mini-btn" type="button" data-action="edit" data-id="${student.id}">সম্পাদনা</button>
-            <button class="mini-btn" type="button" data-action="reset-pin" data-id="${student.id}">পাসওয়ার্ড রিসেট</button>
-          </div>
-        </div>
-      </article>`).join('')
+    ? list.map(student => {
+        const status = statusMeta[student.status] || statusMeta.pending;
+        const mobile = student.mobile ? bn(student.mobile) : 'মোবাইল নেই';
+        const group = student.group ? ` • ${escapeHtml(student.group)}` : '';
+        return `
+          <article class="student-row student-row-redesigned">
+            <div class="student-row-main">
+              <span class="student-avatar" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-users"></use></svg></span>
+              <div class="student-copy">
+                <div class="student-title-line">
+                  <strong>${escapeHtml(student.name || 'নাম নেই')}</strong>
+                  <span class="badge ${status.className}">${status.label}</span>
+                </div>
+                <div class="student-meta-line">
+                  <span class="audit-id-badge">ID: ${escapeHtml(student.id)}</span>
+                  <span>${escapeHtml(student.className || 'শ্রেণি নেই')}${group}</span>
+                </div>
+                <small><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-phone"></use></svg>${escapeHtml(mobile)}</small>
+              </div>
+            </div>
+            <div class="student-actions">
+              <button class="mini-btn primary" type="button" data-action="view" data-id="${escapeHtml(student.id)}">তথ্য দেখুন</button>
+              <button class="mini-btn" type="button" data-action="edit" data-id="${escapeHtml(student.id)}">সম্পাদনা</button>
+              <button class="mini-btn" type="button" data-action="reset-pin" data-id="${escapeHtml(student.id)}">পাসওয়ার্ড রিসেট</button>
+            </div>
+          </article>`;
+      }).join('')
     : state.query.trim()
-      ? `<div class="admin-empty-search">
-          <p>🔍 "<strong>${escapeHtml(state.query.trim())}</strong>" দিয়ে কোনো শিক্ষার্থী পাওয়া যায়নি</p>
-          <small>নামের বানান বা ১১ ডিজিটের মোবাইল নম্বর (যেমন: ০১৭... বা 017...) দিয়ে খুঁজুন। অমিল রেকর্ড স্বয়ংক্রিয়ভাবে লুকানো রয়েছে (অটো হাইড)।</small>
-        </div>`
+      ? `<div class="admin-empty-search"><p>🔍 "${escapeHtml(state.query.trim())}" দিয়ে কোনো শিক্ষার্থী পাওয়া যায়নি</p><small>Student ID, নাম, পিতার নাম, শ্রেণি বা মোবাইল নম্বর দিয়ে খুঁজে দেখুন।</small></div>`
       : '<p class="admin-empty">কোনো শিক্ষার্থী পাওয়া যায়নি।</p>';
 }
-
 function findStudent(id) {
   return state.students.find(student => student.id === id);
 }
