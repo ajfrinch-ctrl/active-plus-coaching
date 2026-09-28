@@ -629,3 +629,27 @@ html[data-theme="dark"] .primary-btn,
 html[data-theme="dark"] .forest-btn {
   border-color: rgba(255,255,255,.16) !important;
 }
+
+
+/* FINAL AMOLED LOCK: no green/mint/forest tint in dark mode */
+html[data-theme="dark"] {
+  --mint: #0a0a0a !important;
+  --mint-2: #0d0d0d !important;
+  --mint-strong: #111111 !important;
+  --forest: #000000 !important;
+  --forest-dark: #000000 !important;
+  --forest-text: #f5f5f5 !important;
+  --forest-dark-text: #f5f5f5 !important;
+  --g-accent: #f5f5f5 !important;
+  --g-accent-strong: #ffffff !important;
+}
+html[data-theme="dark"] .auth-tab.active,
+html[data-theme="dark"] .mode-button.active,
+html[data-theme="dark"] .theme-quick-toggle {
+  background: #0d0d0d !important;
+  color: #f5f5f5 !important;
+  border-color: rgba(255,255,255,.16) !important;
+}
+html[data-theme="dark"] a {
+  color: #f5f5f5 !important;
+}
