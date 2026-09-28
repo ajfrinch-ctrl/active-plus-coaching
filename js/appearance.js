@@ -5,8 +5,8 @@
    dark theme from flashing light lives in js/appearance-boot.js and must keep
    using the exact same storage key (guarded by tests/appearance.test.mjs). */
 
-export const APPEARANCE_KEY = 'active-plus-appearance-v1';
-export const THEME_COLOR = Object.freeze({ light: '#04795a', dark: '#0d1a17' });
+export const APPEARANCE_KEY = 'active-plus-appearance-v2';
+export const THEME_COLOR = Object.freeze({ light: '#04795a', dark: '#000000' });
 
 function normalize(theme) {
   return theme === 'dark' ? 'dark' : 'light';
@@ -28,7 +28,7 @@ export function systemPrefersDark() {
 }
 
 export function getTheme() {
-  return getStoredTheme() || (systemPrefersDark() ? 'dark' : 'light');
+  return getStoredTheme() || 'dark';
 }
 
 export function themeColorFor(theme) {
