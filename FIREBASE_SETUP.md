@@ -2,6 +2,66 @@
 
 This repository is local-first today: existing pages and repositories still use browser `localStorage`. The Firebase files here are a reviewed backend foundation for the later cross-device migration; they do not connect the current UI to Firebase until the project Web config and client adapter are added.
 
+## Realtime sync (`activePlusSync`) — required console settings
+
+The shipped cross-device login bridge (`js/realtime-sync.js`) talks to the
+**Realtime Database** instance `https://active-plus.firebaseio.com` under the
+path `activePlusSync/v1`, after `signInAnonymously()`. All four settings below
+must hold at once; if any one fails, the bridge is dead and a second device
+cannot see IDs created on the first.
+
+1. **Realtime Database instance** — the `databaseURL` in `js/firebase-config.js`
+   must match an existing instance (`active-plus.firebaseio.com` responds; the
+   `-default-rtdb` name does not exist for this project).
+2. **Anonymous sign-in enabled** — Firebase Console → *Authentication →
+   Sign-in method → Anonymous → Enable*. The deployed rules require
+   `auth != null`, so without anonymous auth every read/write is refused.
+3. **Rules deployed** — `firebase deploy --only database` publishes
+   `database.rules.json` (read/write on `activePlusSync` for signed-in users).
+   Default locked rules refuse everything with `Permission denied`.
+4. **App Check enforcement OFF for Realtime Database** (or App Check
+   initialized in the client — see below). When the console enforces App Check
+   and the client sends no token, every request fails with
+   `{"error": "Missing appcheck token"}`. Verify with:
+   `curl https://active-plus.firebaseio.com/.json` — the answer must NOT be
+   `Missing appcheck token` (an unauthenticated `Permission denied` is the
+   expected, healthy response).
+
+To keep App Check enforcement ON instead, register this web app under
+*Firebase Console → App Check* with a reCAPTCHA v3 site key and paste that key
+into `APP_CHECK_SITE_KEY` in `js/firebase-config.js` (debug-token instructions
+are in the same file).
+
+### Symptom checklist — "এই ডিভাইসে কোনো অ্যাকাউন্ট নেই। আগে রেজিস্ট্রেশন করুন।"
+
+An ID that works on the device where it was created but shows this message on a
+second device means the cloud bridge never carried it: device A could not push
+(sync is broken on A) or device B could not pull (sync is broken on B). Check
+settings 2–4 above, open the app once online on device A so it pushes the
+missing records, then try the second device again. The login page now also
+distinguishes this case: when the cloud lookup itself fails, it says so
+explicitly instead of asking the user to register.
+
+### Verifying that realtime sync actually runs
+
+1. **Topbar border colour** (all panels + the login page): red = no internet,
+   green = internet but the Firebase bridge has not connected yet, **blue =
+   realtime sync is live** (`<html data-realtime-sync="online">`).
+2. **Console check** (DevTools → Console on any page, a few seconds after
+   load while online):
+   `document.documentElement.dataset.realtimeSync` → `'online'` means the
+   bridge started; anything else/undefined means it did not.
+3. **Proof of data movement** — every mirrored write fires an event:
+   `window.addEventListener('apc-sync-updated', e => console.log('sync:', e.detail));`
+   then change a notice/student record and watch the event.
+4. **Firebase Console → Realtime Database → Data** — the `activePlusSync/v1`
+   node should contain `staffAccounts`, `staffDirectory`, `usernames`,
+   `studentAccount`, `examDb` (the exam mirror: `examDb/exams/<id>`,
+   `examDb/attempts/<id>`) and the mirrored collections. The console viewer
+   shows the data regardless of rules.
+5. **End-to-end**: create a login on device A (online), wait ~10 seconds,
+   sign in with the same ID + password on device B.
+
 ## Role boundary
 
 - The first Admin is claimed once through `createFirstAdmin`. A Firestore transaction lock allows only one successful bootstrap; the callable writes the `admin/active` role claim and a complete owner profile.

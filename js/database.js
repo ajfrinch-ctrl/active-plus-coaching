@@ -26,7 +26,10 @@ export const LOCAL_ONLY = Object.freeze([
   COLLECTIONS.studentProfile
 ]);
 
-/** Safe to mirror later. Staff passwords are not in this list. */
+/** Safe to mirror. Staff passwords are not in this list.
+    `exams` is listed but is NOT mirrored by the generic array path — its
+    document shape ({ exams: [], attempts: [] }) uses the dedicated id-keyed
+    examDb mirror in js/realtime-sync.js. */
 export const SYNCABLE = Object.freeze([
   COLLECTIONS.students,
   COLLECTIONS.transactions,

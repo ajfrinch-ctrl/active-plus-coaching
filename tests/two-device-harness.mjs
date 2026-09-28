@@ -187,7 +187,7 @@ export function onValue(node, callback) {
   ]);
   /* The version query would create a second module instance inside one
      process; the browser deduplicates by URL+query, so make Node match. */
-  swap('login.js', [['./realtime-sync.js?v=20260929-1000', './realtime-sync.js']]);
+  swap('login.js', [['./realtime-sync.js?v=20260929-1100', './realtime-sync.js']]);
 }
 
 function pathToFileUrl(p) {

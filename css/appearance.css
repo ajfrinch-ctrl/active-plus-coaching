@@ -691,3 +691,10 @@ html[data-theme="dark"] .admin-app-link { display:none !important; }
   border-left-color: #dc4c4c !important;
   border-right-color: #dc4c4c !important;
 }
+/* Online + Firebase realtime bridge confirmed (<html data-realtime-sync="online">):
+   blue = the cloud sync itself is live, not just the network. */
+:where(.auth-topbar,.admin-topbar,.topbar,.teacher-topbar,.manager-topbar,.pay-topbar,header[class*="topbar"]).connection-sync {
+  border-top-color: #2563eb !important;
+  border-left-color: #2563eb !important;
+  border-right-color: #2563eb !important;
+}
