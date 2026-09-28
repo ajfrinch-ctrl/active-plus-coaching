@@ -25,7 +25,7 @@ export const PAGE = Object.freeze({ width: 794, height: 1123, margin: 44 });
 export const CONTENT = Object.freeze({
   left: 44,
   right: PAGE.width - 44,
-  top: 118,
+  top: 174,
   bottom: 1052,
   width: PAGE.width - 88
 });
@@ -170,10 +170,8 @@ function drawHeader(page, doc, logo, total) {
     });
   }
 
-  if (page.index > 1) {
-    page.items.unshift({ kind: 'text', text: doc.title, x: center, y: 62, size: 10.5, weight: 700, color: COLORS.ink, align: 'center' });
-    if (doc.period) page.items.unshift({ kind: 'text', text: doc.period, x: center, y: 76, size: 9, weight: 500, color: COLORS.forest, align: 'center' });
-    if (total) page.items.unshift({ kind: 'text', text: `পৃষ্ঠা ${bengaliNumber(page.index)} / ${bengaliNumber(total)}`, x: PAGE.width - CONTENT.left, y: 1080, size: 9, weight: 600, color: COLORS.muted, align: 'right' });
+  if (page.index > 1 && total) {
+    page.items.unshift({ kind: 'text', text: `পৃষ্ঠা ${bengaliNumber(page.index)} / ${bengaliNumber(total)}`, x: PAGE.width - CONTENT.left, y: 1080, size: 9, weight: 600, color: COLORS.muted, align: 'right' });
   }
   void total;
 }
