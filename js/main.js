@@ -232,7 +232,12 @@ $('#pendingLogout')?.addEventListener('click', leaveApp);
 // The entry decision is asynchronous: the stored session may be encrypted.
 // A #view shortcut in the URL is applied by enterApp once the screen opens.
 window.addEventListener('popstate', () => {
-  setView(viewRouteFromHash(), { history: 'keep' });
+  if (state.account && hasSession()) {
+    setView(viewRouteFromHash(), { history: 'keep' });
+  } else {
+    showAuthScreen();
+    switchAuthTab('login');
+  }
 });
 
 (async () => {
