@@ -15,6 +15,8 @@
      • a Staff Management (directory) ID created on A logs in on B and its
        forced password change flows back to A live
      • records written on either device appear on the other without a reload
+     • an MCQ exam + attempt created on A reach B through the examDb mirror,
+       a submitted score flows A → B live, and a deletion propagates too
      • only password HASHES travel the bridge (no plaintext pin) */
 
 import test, { before, after } from 'node:test';
@@ -182,6 +184,30 @@ test('login IDs and data created on device A work on device B', async () => {
   const studentLogin = await deviceB.run('form-login', { username: 'dolon', pin: '4321' });
   assert.equal(studentLogin.studentSession, true, 'the student login synced from A works on B');
   assert.match(studentLogin.message, /স্বাগতম|নেওয়া হচ্ছে|/, 'no credential error');
+
+  /* ---- Exams + attempts mirror through the dedicated examDb path ---- */
+  assert.equal(SYNC_ROOT(cloud).exams, undefined, 'the broken generic exams node is never created');
+
+  const seeded = await deviceA.run('seed-exam', { examId: 'EXSYNC1', attemptId: 'ATSYNC1', studentId: 'STU-1' });
+  await waitForCloud(() => Boolean(SYNC_ROOT(cloud).examDb?.exams?.EXSYNC1), 'exam pushed to examDb');
+  await waitForCloud(() => Boolean(SYNC_ROOT(cloud).examDb?.attempts?.ATSYNC1), 'attempt pushed to examDb');
+
+  await deviceB.run('wait-attempt-status', { attemptId: 'ATSYNC1', status: 'active' });
+  assert.deepEqual(await deviceB.run('validate-exam-db', {}), { ok: true },
+    'the merged exam document on B passes the app strict reader');
+
+  /* A submits the attempt live → the score reaches B without a reload. */
+  await deviceA.run('submit-exam-attempt', { attemptId: 'ATSYNC1', answer: 'B' });
+  await deviceB.run('wait-attempt-status', { attemptId: 'ATSYNC1', status: 'submitted' });
+  const examSnap = await deviceB.run('snapshot', { keys: [KEYS.exams] });
+  const bAttempt = (examSnap.values[KEYS.exams]?.attempts || []).find(item => item.id === 'ATSYNC1');
+  assert.equal(bAttempt?.score, 1, 'the submitted MCQ score arrived on device B');
+
+  /* Deleting the exam on A removes it (and its attempts) on B too. */
+  await deviceA.run('delete-exam', { examId: 'EXSYNC1' });
+  await waitForCloud(() => !SYNC_ROOT(cloud).examDb?.exams?.EXSYNC1, 'exam removal pushed');
+  await waitForCloud(() => !SYNC_ROOT(cloud).examDb?.attempts?.ATSYNC1, 'attempt removal pushed');
+  await deviceB.run('wait-exam-absent', { examId: 'EXSYNC1' });
 });
 
 test('package still declares the realtime bridge', async () => {

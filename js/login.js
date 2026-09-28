@@ -194,7 +194,7 @@ function withinBudget(promise, what, budget = ONLINE_BRIDGE_BUDGET_MS) {
 async function hydrateStaffAccountsOnline(what) {
   if (!navigator.onLine) return;
   try {
-    const bridge = await withinBudget(import('./realtime-sync.js?v=20260929-1000'), 'online bridge import');
+    const bridge = await withinBudget(import('./realtime-sync.js?v=20260929-1100'), 'online bridge import');
     await withinBudget(bridge.hydrateStaffAccounts(), 'online bridge hydrate');
   } catch (error) {
     console.warn(`[Active Plus] staff account sync unavailable during ${what}:`, error.message);
@@ -210,7 +210,7 @@ async function hydrateStaffAccountsOnline(what) {
 async function hydrateUserIdentifiersOnline(what) {
   if (!navigator.onLine) return false;
   try {
-    const bridge = await withinBudget(import('./realtime-sync.js?v=20260929-1000'), 'online identity import', LOGIN_IDENTITY_BUDGET_MS);
+    const bridge = await withinBudget(import('./realtime-sync.js?v=20260929-1100'), 'online identity import', LOGIN_IDENTITY_BUDGET_MS);
     const result = await withinBudget(bridge.hydrateUserIdentifiers(), 'online identity hydrate', LOGIN_IDENTITY_BUDGET_MS);
     return Boolean(result?.ok);
   } catch (error) {

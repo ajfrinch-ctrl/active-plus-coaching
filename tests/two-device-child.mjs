@@ -149,6 +149,108 @@ const commands = {
     return { ok: true };
   },
 
+  /* Exam-database helpers: build documents with the REAL exam-data parser and
+     scorer so they pass the app's strict stored-document validation, then
+     write them through the storage bridge like the app itself does. */
+  async 'seed-exam'({ examId, attemptId, studentId = 'STU-1', name = 'দোলন আক্তার', className = 'নবম শ্রেণি' }) {
+    const examData = await mod('exam-data.js');
+    const template = 'প্রশ্ন: ২ + ২ = কত?\nA: ৩\nB: ৪\nC: ৫\nD: ৬\nউত্তর: B';
+    const now = Date.now();
+    const fields = examData.validateExam({
+      title: 'সিঙ্ক পরীক্ষা',
+      subject: 'গণিত',
+      className,
+      type: 'mcq',
+      startAt: now - 3600000,
+      endAt: now + 3600000,
+      lateMinutes: 5,
+      negative: 0,
+      passPercent: 33,
+      instructions: '',
+      template
+    });
+    const exam = {
+      id: examId,
+      status: 'published',
+      teacherId: 'T-SYNC',
+      participants: [{ id: studentId, name, className }],
+      ...fields
+    };
+    const attempt = {
+      id: attemptId,
+      examId,
+      studentId,
+      name,
+      className,
+      number: 1,
+      status: 'active',
+      startedAt: now,
+      answers: {},
+      order: fields.questions.map(question => ({ id: question.id, options: ['A', 'B', 'C', 'D'] }))
+    };
+    if (!db.writeJSON(db.KEYS.exams, { version: 1, exams: [exam], attempts: [attempt] })) {
+      throw new Error('exam db write failed');
+    }
+    return { ok: true, questionId: fields.questions[0].id };
+  },
+
+  async 'submit-exam-attempt'({ attemptId, answer }) {
+    const examData = await mod('exam-data.js');
+    const doc = readLocal(db.KEYS.exams);
+    if (!doc) throw new Error('no exam document on this device');
+    const attempt = doc.attempts.find(item => item.id === attemptId);
+    const exam = attempt && doc.exams.find(item => item.id === attempt.examId);
+    if (!exam) throw new Error('attempt or exam missing');
+    const questionId = exam.questions[0].id;
+    attempt.answers[questionId] = answer;
+    attempt.status = 'submitted';
+    attempt.finishedAt = Date.now();
+    Object.assign(attempt, examData.scoreAttempt(exam, attempt));
+    if (!db.writeJSON(db.KEYS.exams, doc)) throw new Error('exam db write failed');
+    return { ok: true, score: attempt.score };
+  },
+
+  async 'delete-exam'({ examId }) {
+    const doc = readLocal(db.KEYS.exams);
+    if (!doc) throw new Error('no exam document on this device');
+    doc.exams = doc.exams.filter(item => item.id !== examId);
+    doc.attempts = doc.attempts.filter(item => item.examId !== examId);
+    if (!db.writeJSON(db.KEYS.exams, doc)) throw new Error('exam db write failed');
+    return { ok: true };
+  },
+
+  async 'wait-attempt-status'({ attemptId, status }) {
+    await waitUntil(() => {
+      const doc = readLocal(db.KEYS.exams);
+      const attempt = doc && Array.isArray(doc.attempts) ? doc.attempts.find(item => item.id === attemptId) : null;
+      return Boolean(attempt && attempt.status === status);
+    });
+    return { ok: true };
+  },
+
+  async 'wait-exam-absent'({ examId }) {
+    await waitUntil(() => {
+      const doc = readLocal(db.KEYS.exams);
+      if (!doc) return true;
+      const examGone = !Array.isArray(doc.exams) || !doc.exams.some(item => item.id === examId);
+      const attemptsGone = !Array.isArray(doc.attempts) || !doc.attempts.some(item => item.examId === examId);
+      return examGone && attemptsGone;
+    });
+    return { ok: true };
+  },
+
+  /* Proves the merged document passes the app's own strict reader —
+     syncStudent runs the full stored-document validation internally. */
+  async 'validate-exam-db'() {
+    const { examRepository } = await mod('exam-data.js');
+    try {
+      await examRepository.syncStudent('STU-1');
+      return { ok: true };
+    } catch (error) {
+      throw new Error('exam document failed app validation: ' + error.message);
+    }
+  },
+
   async 'wait-keys'({ keys, missing = false }) {
     await waitUntil(() => keys.every(key => (ctx.window.localStorage.getItem(key) !== null) !== missing));
     return { ok: true };

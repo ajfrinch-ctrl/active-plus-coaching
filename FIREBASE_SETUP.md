@@ -56,8 +56,9 @@ explicitly instead of asking the user to register.
    then change a notice/student record and watch the event.
 4. **Firebase Console → Realtime Database → Data** — the `activePlusSync/v1`
    node should contain `staffAccounts`, `staffDirectory`, `usernames`,
-   `studentAccount` and the mirrored collections. The console viewer shows the
-   data regardless of rules.
+   `studentAccount`, `examDb` (the exam mirror: `examDb/exams/<id>`,
+   `examDb/attempts/<id>`) and the mirrored collections. The console viewer
+   shows the data regardless of rules.
 5. **End-to-end**: create a login on device A (online), wait ~10 seconds,
    sign in with the same ID + password on device B.
 

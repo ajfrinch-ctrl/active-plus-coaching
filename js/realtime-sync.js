@@ -2,10 +2,12 @@
    Offline-first: localStorage remains the source used by the UI.
    SYNCABLE application data plus every cross-device LOGIN IDENTITY is
    mirrored: the four staff role accounts, the Staff Directory records, the
-   claimed Login User ID registry and the local student login. Only records
-   that already hold PBKDF2 password HASHES travel the bridge — a plaintext
-   password or security answer never does, and sessions stay device-bound.
-   This is a cross-device TEST bridge, not the final auth architecture. */
+   claimed Login User ID registry, the local student login AND the exam
+   database (exams + attempts, through a dedicated id-keyed mirror).
+   Only records that already hold PBKDF2 password HASHES travel the bridge —
+   a plaintext password or security answer never does, and sessions stay
+   device-bound. This is a cross-device TEST bridge, not the final auth
+   architecture. */
 import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js';
 import { getDatabase, ref, get, set, onValue } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js';
 import { firebaseApp } from './firebase-config.js';
@@ -22,6 +24,8 @@ const STAFF_ROOT = DB_ROOT + '/staffAccounts';
 const DIRECTORY_ROOT = DB_ROOT + '/staffDirectory';
 const USERNAMES_ROOT = DB_ROOT + '/usernames';
 const STUDENT_ROOT = DB_ROOT + '/studentAccount';
+const EXAMDB_ROOT = DB_ROOT + '/examDb';
+const EXAMDB_SEEN = EXAMDB_ROOT + '/meta/seen';
 
 function localKey(collection) {
   return KEYS[collection];
@@ -249,6 +253,211 @@ async function pushStudentAccount() {
   lastRemote.set('studentAccount', serialized);
 }
 
+/* ---- Exam database (exams + attempts) ---------------------------------------
+   `activePlus.exams.v1` is ONE document: { version: 1, exams: [], attempts: [] }.
+   The generic collection bridge only mirrors id-lists, so the exam database
+   gets a dedicated id-keyed mirror: examDb/exams/<id> and examDb/attempts/<id>.
+
+   Merge rules per id — fill-missing, remote-wins on differing content, remote
+   deletions honoured — with one protection: an id this device has just changed
+   locally but has not pushed yet (offline write, slow network) is never
+   overwritten, filled or deleted by a stale remote copy. That pending local
+   write wins and reaches the cloud on the next successful push.
+
+   Orphan attempts (their exam has not arrived here yet) wait in memory and are
+   applied when the exam arrives, because the app's strict document validation
+   rejects an attempt whose exam is missing from the same document. */
+const EXAM_SYNC_SPACES = ['exams', 'attempts'];
+const examSync = {
+  lastRemote: { exams: new Map(), attempts: new Map() },
+  lastLocal: { exams: new Map(), attempts: new Map() },
+  pending: new Set(),   // `${space}/${id}` changed locally, not pushed yet
+  orphans: new Map()    // attemptId -> remote attempt awaiting its exam
+};
+
+const isPlainObject = value => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+
+/** Order-insensitive JSON — the database stores keys alphabetically. */
+function stableStringify(value) {
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
+  if (isPlainObject(value)) {
+    return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${stableStringify(value[key])}`).join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function readExamDbLocal() {
+  let raw = null;
+  try { raw = localStorage.getItem(KEYS.exams); } catch {}
+  if (raw === null) return { db: { version: 1, exams: [], attempts: [] }, readable: true };
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object' && parsed.version === 1 &&
+        Array.isArray(parsed.exams) && Array.isArray(parsed.attempts)) {
+      return { db: parsed, readable: true };
+    }
+  } catch {}
+  // Corrupt local document: the cloud copy may still repair it, but nothing
+  // from this device may overwrite the cloud until the app rebuilds the file.
+  return { db: { version: 1, exams: [], attempts: [] }, readable: false };
+}
+
+const examItemValid = item =>
+  isPlainObject(item) && typeof item.id === 'string' && item.id &&
+  typeof item.teacherId === 'string' && Array.isArray(item.participants) &&
+  ['draft', 'pending', 'rejected', 'published'].includes(item.status);
+
+const attemptItemValid = item =>
+  isPlainObject(item) && typeof item.id === 'string' && item.id &&
+  typeof item.examId === 'string' && typeof item.studentId === 'string' &&
+  ['active', 'queued', 'submitted'].includes(item.status) &&
+  (item.number === 1 || item.number === 2) && isPlainObject(item.answers) &&
+  Array.isArray(item.order) && Number.isFinite(item.startedAt);
+
+function markLocalExamChanges() {
+  const { db, readable } = readExamDbLocal();
+  if (!readable) return;
+  for (const space of EXAM_SYNC_SPACES) {
+    for (const item of db[space]) {
+      if (examSync.lastLocal[space].get(item.id) !== stableStringify(item)) {
+        examSync.pending.add(`${space}/${item.id}`);
+      }
+    }
+  }
+}
+
+async function pushExamDb() {
+  const { db, readable } = readExamDbLocal();
+  if (!readable) return;
+  const tasks = [];
+  for (const space of EXAM_SYNC_SPACES) {
+    const valid = space === 'exams' ? examItemValid : attemptItemValid;
+    const localIds = new Set();
+    for (const item of db[space]) {
+      if (!valid(item)) continue;
+      localIds.add(item.id);
+      const json = stableStringify(item);
+      const key = `${space}/${item.id}`;
+      if (examSync.lastRemote[space].get(item.id) === json) {
+        examSync.lastLocal[space].set(item.id, json);
+        examSync.pending.delete(key);
+        continue;
+      }
+      tasks.push(set(ref(getDatabase(firebaseApp), `${EXAMDB_ROOT}/${space}/${item.id}`), item).then(() => {
+        examSync.lastRemote[space].set(item.id, json);
+        examSync.lastLocal[space].set(item.id, json);
+        examSync.pending.delete(key);
+      }));
+    }
+    for (const id of [...examSync.lastRemote[space].keys()]) {
+      if (localIds.has(id) || examSync.pending.has(`${space}/${id}`)) continue;
+      tasks.push(set(ref(getDatabase(firebaseApp), `${EXAMDB_ROOT}/${space}/${id}`), null).then(() => {
+        examSync.lastRemote[space].delete(id);
+        examSync.lastLocal[space].delete(id);
+      }));
+    }
+  }
+  await Promise.all(tasks);
+}
+
+/** Merge one cloud snapshot of examDb into the local document (single write). */
+function applyExamDbRemote(remoteRoot) {
+  const remoteExams = isPlainObject(remoteRoot?.exams) ? remoteRoot.exams : {};
+  const remoteAttempts = isPlainObject(remoteRoot?.attempts) ? remoteRoot.attempts : {};
+  const { db } = readExamDbLocal();
+  let changed = false;
+
+  const upsert = (space, item) => {
+    const remoteJson = stableStringify(item);
+    const key = `${space}/${item.id}`;
+    if (examSync.pending.has(key)) return;
+    const items = db[space];
+    const index = items.findIndex(entry => entry.id === item.id);
+    if (index === -1) {
+      items.push(item);
+      examSync.lastLocal[space].set(item.id, remoteJson);
+      changed = true;
+    } else if (stableStringify(items[index]) !== remoteJson) {
+      items[index] = item;
+      examSync.lastLocal[space].set(item.id, remoteJson);
+      changed = true;
+    }
+  };
+
+  const remoteExamIds = new Set();
+  for (const item of Object.values(remoteExams)) {
+    if (!examItemValid(item)) continue;
+    remoteExamIds.add(item.id);
+    examSync.lastRemote.exams.set(item.id, stableStringify(item));
+    upsert('exams', item);
+  }
+  for (let i = db.exams.length - 1; i >= 0; i -= 1) {
+    const id = db.exams[i].id;
+    if (remoteExamIds.has(id) || examSync.pending.has(`exams/${id}`)) continue;
+    if (!examSync.lastRemote.exams.has(id)) continue;   // the cloud never had it
+    db.exams.splice(i, 1);
+    examSync.lastRemote.exams.delete(id);
+    examSync.lastLocal.exams.delete(id);
+    changed = true;
+  }
+
+  const liveExamIds = new Set(db.exams.map(item => item.id));
+  const remoteAttemptIds = new Set();
+  for (const item of Object.values(remoteAttempts)) {
+    if (!attemptItemValid(item)) continue;
+    remoteAttemptIds.add(item.id);
+    examSync.lastRemote.attempts.set(item.id, stableStringify(item));
+    if (!liveExamIds.has(item.examId)) { examSync.orphans.set(item.id, item); continue; }
+    examSync.orphans.delete(item.id);
+    upsert('attempts', item);
+  }
+  for (const [id, item] of [...examSync.orphans]) {
+    if (!liveExamIds.has(item.examId)) continue;
+    examSync.orphans.delete(id);
+    upsert('attempts', item);
+  }
+  for (let i = db.attempts.length - 1; i >= 0; i -= 1) {
+    const attempt = db.attempts[i];
+    if (examSync.pending.has(`attempts/${attempt.id}`)) continue;
+    const examGone = !liveExamIds.has(attempt.examId);
+    const deletedRemotely = !remoteAttemptIds.has(attempt.id) && examSync.lastRemote.attempts.has(attempt.id);
+    if (!examGone && !deletedRemotely) continue;
+    db.attempts.splice(i, 1);
+    examSync.lastRemote.attempts.delete(attempt.id);
+    examSync.lastLocal.attempts.delete(attempt.id);
+    changed = true;
+  }
+
+  if (!changed) return false;
+  applyingRemote = true;
+  try { localStorage.setItem(KEYS.exams, JSON.stringify(db)); } finally { applyingRemote = false; }
+  window.dispatchEvent(new CustomEvent('apc-sync-updated', { detail: { collection: 'exams' } }));
+  window.dispatchEvent(new Event('exam-data-updated'));
+  return true;
+}
+
+async function syncExamDb() {
+  const node = ref(getDatabase(firebaseApp), EXAMDB_ROOT);
+  const snap = await get(node);
+  if (!snap.exists()) {
+    // Fresh cloud space: this device seeds it and marks the space managed.
+    await pushExamDb();
+    try { await set(ref(getDatabase(firebaseApp), EXAMDB_SEEN), true); } catch {}
+    return;
+  }
+  applyExamDbRemote(snap.val());
+  await pushExamDb();
+}
+
+function listenExamDb() {
+  onValue(ref(getDatabase(firebaseApp), EXAMDB_ROOT), snap => {
+    if (!snap.exists()) return;
+    try { applyExamDbRemote(snap.val()); } catch (error) {
+      console.warn('[Active Plus] exam db listener failed', error);
+    }
+  });
+}
+
 function collectionPayload(collection, value) {
   if (collection === 'settings') return value;
   if (Array.isArray(value)) {
@@ -308,6 +517,7 @@ function installLocalWriteBridge() {
     if (key === STAFF_DIRECTORY_KEY) return pushDirectory();
     if (key === KEYS.usernames) return pushUsernames();
     if (key === KEYS.account) return pushStudentAccount();
+    if (key === KEYS.exams) { markLocalExamChanges(); return pushExamDb(); }
     return null;
   };
   const originalSetItem = Storage.prototype.setItem;
@@ -317,6 +527,7 @@ function installLocalWriteBridge() {
       const staffRole = staffRoleByAccountKey(key);
       if (staffRole) pushStaffRole(staffRole).catch(error => console.warn('[Active Plus] staff sync write failed', error));
       for (const collection of SYNCABLE) {
+        if (collection === 'exams') continue;   // mirrored by the dedicated examDb path
         if (localKey(collection) === key) {
           pushCollection(collection).catch(error => console.warn('[Active Plus] sync write failed', error));
         }
@@ -328,6 +539,7 @@ function installLocalWriteBridge() {
   window.addEventListener('storage', event => {
     if (event.storageArea !== window.localStorage || applyingRemote) return;
     for (const collection of SYNCABLE) {
+      if (collection === 'exams') continue;     // mirrored by the dedicated examDb path
       if (localKey(collection) === event.key) {
         pushCollection(collection).catch(error => console.warn('[Active Plus] sync storage event failed', error));
       }
@@ -391,16 +603,17 @@ export async function hydrateStaffAccounts() {
 
 /**
  * Cross-device Login IDs: Staff Directory records, the claimed Login User ID
- * registry and (on a device with no account yet) the local student login.
- * Called from the login path, so records that already exist on this device
- * are never replaced here — only missing ones are filled in from the cloud.
+ * registry, the student login (on a device with no account yet) and the exam
+ * database. Called from the login path, so records that already exist on this
+ * device are never replaced here — only missing/changed ones are filled in
+ * from the cloud (the exam merge rules live in applyExamDbRemote).
  */
 export async function hydrateUserIdentifiers() {
   if (!navigator.onLine) return { ok: false, reason: 'offline' };
   try {
     const auth = getAuth(firebaseApp);
     if (!auth.currentUser) await signInAnonymously(auth);
-    const tasks = [syncUsernames({ merge: true })];
+    const tasks = [syncUsernames({ merge: true }), syncExamDb()];
     try {
       if (localStorage.getItem(STAFF_DIRECTORY_KEY) === null) tasks.push(syncDirectory());
       if (localStorage.getItem(KEYS.account) === null) tasks.push(syncStudentAccount());
@@ -440,6 +653,7 @@ export async function startRealtimeSync() {
     installLocalWriteBridge();
 
     for (const collection of SYNCABLE) {
+      if (collection === 'exams') continue;     // mirrored by the dedicated examDb path
       await syncCollection(collection);
       listenCollection(collection);
     }
@@ -450,12 +664,15 @@ export async function startRealtimeSync() {
     await syncDirectory();
     await syncUsernames();
     await syncStudentAccount();
+    await syncExamDb();
     listenDirectory();
     listenUsernames();
     listenStudentAccount();
+    listenExamDb();
 
     window.addEventListener('online', () => {
       for (const collection of SYNCABLE) {
+        if (collection === 'exams') continue;   // mirrored by the dedicated examDb path
         syncCollection(collection).catch(error => console.warn('[Active Plus] reconnect sync failed', error));
       }
       for (const role of Object.keys(STAFF_ACCOUNTS)) {
@@ -464,6 +681,7 @@ export async function startRealtimeSync() {
       syncDirectory().catch(error => console.warn('[Active Plus] reconnect directory sync failed', error));
       syncUsernames().catch(error => console.warn('[Active Plus] reconnect usernames sync failed', error));
       syncStudentAccount().catch(error => console.warn('[Active Plus] reconnect student sync failed', error));
+      syncExamDb().catch(error => console.warn('[Active Plus] reconnect exam sync failed', error));
     });
 
     return { ok: true, mode: 'realtime-test-sync' };
