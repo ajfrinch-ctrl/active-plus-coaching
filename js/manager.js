@@ -1,4 +1,4 @@
-import { authenticateStaff, saveStaffSession, hasStaffSession, clearStaffSession, readStaffAccount } from './staff-auth.js';
+import { hasStaffSession, clearStaffSession, readStaffAccount, goToLoginPage } from './staff-auth.js';
 import { openStaffPasswordDialog } from './staff-password-dialog.js';
 import { loadRoster, saveRoster, syncAccountStatus, loadNotices, saveNotices, loadRoutine, saveRoutine, WEEK_DAYS } from './office-data.js';
 import { financeRepository, monthLabel, dateLabel, studentFeeSummary, newestTransactions, isFinalizedTransaction } from './finance-data.js';
@@ -376,25 +376,18 @@ $('#managerRoutineForm').addEventListener('submit', async event => {
 });
 $('#managerChangePassword').addEventListener('click', () => openStaffPasswordDialog({ role: 'manager', mode: 'change' }));
 $('#managerTogglePassword').addEventListener('click', () => { const input = $('#managerPassword'); input.type = input.type === 'password' ? 'text' : 'password'; });
-$('#managerLoginForm').addEventListener('submit', async event => {
-  event.preventDefault(); const result = await authenticateStaff('manager', $('#managerUsername').value, $('#managerPassword').value);
-  if (!result.ok) { $('#managerLoginError').textContent = 'Manager username অথবা password সঠিক নয়।'; $('#managerLoginError').hidden = false; return; }
-  $('#managerLoginError').hidden = true; const remember = $('#managerRemember').checked;
-  if (result.needsSetup) { $('#managerLoginError').textContent = 'Manager account setup হয়নি। Admin-এর কাছ থেকে account setup নিশ্চিত করুন।'; $('#managerLoginError').hidden = false; return; }
-  if (result.needsPasswordChange) { openStaffPasswordDialog({ role: 'manager', mode: 'change', onDone: () => void enterManager(remember) }); return; }
-  await enterManager(remember);
-});
-async function enterManager(remember = true) {
-  if (!(await saveStaffSession('manager', remember))) { $('#managerLoginError').textContent = 'সেশন সংরক্ষণ করা যায়নি।'; $('#managerLoginError').hidden = false; return; }
+async function enterManager() {
+  if (!(await hasStaffSession('manager'))) { goToLoginPage(); return; }
   managerAccount = await readStaffAccount('manager');
-  $('#managerLogin').hidden = true; $('#managerShell').hidden = false;
-  $('#managerNameShort').textContent = managerAccount?.fullName || 'Manager Profile';
+  if (!managerAccount) { clearStaffSession('manager'); goToLoginPage(); return; }
+  $('#managerShell').hidden = false;
+  $('#managerNameShort').textContent = managerAccount.fullName || 'Manager Profile';
   if (!examStarted) { initExamManager('#managerExamWorkspace', 'manager'); examStarted = true; }
   renderView('dashboard'); await loadOperationalData();
   mountReports($('#managerReports'), { panel: 'manager' });
 }
-$('#managerLogout').addEventListener('click', () => { clearStaffSession('manager'); $('#managerPassword').value = ''; $('#managerShell').hidden = true; $('#managerLogin').hidden = false; });
+$('#managerLogout').addEventListener('click', () => { clearStaffSession('manager'); goToLoginPage(); });
 window.addEventListener('storage', event => {
   if (!event.key || [ 'activePlus.admin.students.v1', 'activePlus.admin.transactions.v1', 'activePlus.admin.notices.v1', 'activePlus.admin.routine.v1', TEACHING_KEY, TEACHER_ASSIGNMENTS_KEY, 'activePlus.exams.v1' ].includes(event.key)) { void loadOperationalData(); refreshReports($('#managerReports')); }
 });
-(async () => { if (await hasStaffSession('manager')) await enterManager(true); })();
+void enterManager();

@@ -1,6 +1,6 @@
 /* Login feature: one door for everyone.
    A student signs in with username/mobile + password and lands in the student app.
-   Staff (admin, teacher, payment counter) sign in on the same form with their
+   Staff (admin, manager, teacher, payment counter) sign in on the same form with their
    reserved username + password; the session is written first, so the panel
    opens directly on arrival — no second credential prompt.
 
@@ -28,7 +28,7 @@ import { isPasswordRecord } from './password-hash.js';
 const STAFF_PANEL = Object.freeze({ admin: 'admin.html', manager: 'manager.html', teacher: 'teacher.html', payment: 'payment.html' });
 const STAFF_LABEL = Object.freeze({ admin: 'এডমিন প্যানেল', manager: 'ম্যানেজার প্যানেল', teacher: 'শিক্ষক প্যানেল', payment: 'পেমেন্ট রিসিভ প্যানেল' });
 const STAFF_ID_HINT = 'স্টাফ লগইন';
-const DEFAULT_ID_HINT = 'শিক্ষার্থী: ইউজারনেম বা মোবাইল নম্বর ও পাসওয়ার্ড। শিক্ষক, এডমিন ও পেমেন্ট কাউন্টার: নিজের ইউজারনেম ও পাসওয়ার্ড দিয়ে এখানেই লগইন করুন।';
+const DEFAULT_ID_HINT = 'শিক্ষার্থী: ইউজারনেম বা মোবাইল নম্বর ও পাসওয়ার্ড। এডমিন, ম্যানেজার, শিক্ষক ও পেমেন্ট কাউন্টার: নিজের ইউজারনেম ও পাসওয়ার্ড দিয়ে এখানেই লগইন করুন।';
 
 export function staffRoleFor(value) {
   const typed = normalizeStaffUsername(value);
@@ -107,7 +107,7 @@ async function enterStaffPanel(role, remember) {
     return;
   }
   setAuthMessage(`${STAFF_LABEL[role]}ে নেওয়া হচ্ছে…`, 'success');
-  window.location.assign(staffPanelPath(role));
+  window.location.replace(staffPanelPath(role));
 }
 
 async function handleStaffLogin(role, typedId, pin) {

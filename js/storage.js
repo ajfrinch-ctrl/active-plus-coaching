@@ -8,7 +8,7 @@
 import { protectAccountIdentity, normalizeUsername } from './account-policy.js';
 import { normalizeAnswer } from './ui.js';
 import { STORAGE_KEYS, defaultStudent, DEFAULT_APP_SETTINGS, DEFAULT_PIN } from './config.js';
-import { rememberAccount } from './database.js';
+import { rememberAccount, KEYS, nextSequence } from './database.js';
 import { hashPassword, verifyPassword, isPasswordRecord } from './password-hash.js';
 import { encryptValue, decryptValue, isEncryptedEnvelope } from './secure-store.js';
 import { buildSessionRecord, isSessionRecordValid, DAY_MS } from './session.js';
@@ -271,23 +271,33 @@ export function saveAppConfig(config) {
   return writeJSON(STORAGE_KEYS.appConfig, config);
 }
 
-export function generateStudentId(className) {
+export function generateStudentId() {
   const now = new Date();
-  const year = String(now.getFullYear()).slice(-2);
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const classCodes = {
-    'অষ্টম শ্রেণি': '8', 'নবম শ্রেণি': '9', 'দশম শ্রেণি': '0',
-    'একাদশ শ্রেণি': '1', 'দ্বাদশ শ্রেণি': '2', 'ডিগ্রি ১ম বর্ষ': '3',
-    'ডিগ্রি ২য় বর্ষ': '4', 'ডিগ্রি ৩য় বর্ষ': '5', 'অনার্স ১ম বর্ষ': '6',
-    'অনার্স ২য় বর্ষ': '7', 'অনার্স ৩য় বর্ষ': '8', 'অনার্স ৪র্থ বর্ষ': '9'
-  };
-  let sequence = 1;
-  try {
-    sequence = Number(getStorage()?.getItem(STORAGE_KEYS.idSequence) || '0') + 1;
-    getStorage()?.setItem(STORAGE_KEYS.idSequence, String(sequence));
-  } catch { /* first sequence is a safe fallback */ }
-  const salt = (globalThis.crypto?.randomUUID?.() || Math.random().toString(16).slice(2))
-    .replace(/-/g, '').slice(0, 4).toUpperCase();
-  return `${year}${month}${classCodes[className] || '0'}${salt}${String(sequence).padStart(3, '0')}`;
+  const date = `${String(now.getFullYear()).slice(-2)}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+  const sequence = nextSequence(`s:${date}`);
+  return `s${date}${String(sequence).padStart(3, '0')}`;
+}
+
+const CLASS_ID_CODES = Object.freeze({
+  'অষ্টম শ্রেণি': '08', 'নবম শ্রেণি': '09', 'দশম শ্রেণি': '10',
+  'একাদশ শ্রেণি': '11', 'দ্বাদশ শ্রেণি': '12', 'ডিগ্রি ১ম বর্ষ': '21',
+  'ডিগ্রি ২য় বর্ষ': '22', 'ডিগ্রি ৩য় বর্ষ': '23', 'অনার্স ১ম বর্ষ': '31',
+  'অনার্স ২য় বর্ষ': '32', 'অনার্স ৩য় বর্ষ': '33', 'অনার্স ৪র্থ বর্ষ': '34'
+});
+
+export function generateClassRoll(className) {
+  const code = CLASS_ID_CODES[className];
+  if (!code) throw new Error('শ্রেণির জন্য রোল তৈরি করা যায়নি।');
+  const year = String(new Date().getFullYear()).slice(-2);
+  const scope = `ROLL:${year}:${code}`;
+  let existingMax = 0;
+  const pattern = new RegExp(`^R${year}${code}(\\d{3,})$`);
+  const roster = readJSON(KEYS.students, []);
+  for (const student of Array.isArray(roster) ? roster : []) {
+    const match = String(student?.roll || '').match(pattern);
+    if (match) existingMax = Math.max(existingMax, Number(match[1]) || 0);
+  }
+  const sequence = nextSequence(scope, existingMax);
+  return `R${year}${code}${String(sequence).padStart(3, '0')}`;
 }
 

@@ -4,7 +4,7 @@ import { teachingRepository, DEMO_TEACHER } from './teaching-data.js';
 import { isTeacherAssigned } from './teacher-assignments.js';
 import { hasStaffSession, readStaffAccount } from './staff-auth.js';
 import { enabledClasses } from './config.js';
-import { KEYS, readRaw, writeRaw } from './database.js';
+import { KEYS, readRaw, writeRaw, newId } from './database.js';
 export const EXAM_KEY = KEYS.exams;
 export const EXAM_TYPES = Object.freeze({ mcq: 'MCQ', written: 'লিখিত', short: 'সংক্ষিপ্ত উত্তর' });
 export const EXAM_STATUSES = Object.freeze({ draft: 'খসড়া', pending: 'অনুমোদনের অপেক্ষায়', rejected: 'সংশোধনের জন্য ফেরত', published: 'প্রকাশিত' });
@@ -16,6 +16,216 @@ const number = text => Number(String(text).replace(/[০-৯]/g, d => '০১২
 const round = value => Math.round((value + Number.EPSILON) * 100) / 100;
 export const totalMarks = exam => round(exam.questions.reduce((sum, q) => sum + q.marks, 0));
 export const MCQ_MARKS = 1; // every MCQ question is worth exactly one mark
+export const MCQ_30_SAMPLE = `প্রশ্ন: বাংলাদেশের রাজধানী কোনটি?
+A: ঢাকা
+B: চট্টগ্রাম
+C: খুলনা
+D: রাজশাহী
+উত্তর: A
+---
+প্রশ্ন: বাংলাদেশের জাতীয় ফুল কোনটি?
+A: গোলাপ
+B: শাপলা
+C: বেলি
+D: জবা
+উত্তর: B
+---
+প্রশ্ন: বাংলাদেশের জাতীয় ফল কোনটি?
+A: আম
+B: কাঁঠাল
+C: কলা
+D: লিচু
+উত্তর: B
+---
+প্রশ্ন: বাংলাদেশের জাতীয় পশু কোনটি?
+A: হাতি
+B: সিংহ
+C: রয়েল বেঙ্গল টাইগার
+D: হরিণ
+উত্তর: C
+---
+প্রশ্ন: বাংলাদেশের জাতীয় পাখি কোনটি?
+A: কোকিল
+B: ময়না
+C: টিয়া
+D: দোয়েল
+উত্তর: D
+---
+প্রশ্ন: ৫ + ৭ = কত?
+A: ১১
+B: ১২
+C: ১৩
+D: ১৪
+উত্তর: B
+---
+প্রশ্ন: ১২ × ৮ = কত?
+A: ৮৪
+B: ৯২
+C: ৯৬
+D: ১০৪
+উত্তর: C
+---
+প্রশ্ন: ১০০ এর বর্গমূল কত?
+A: ৫
+B: ১০
+C: ২০
+D: ২৫
+উত্তর: B
+---
+প্রশ্ন: সমকোণী ত্রিভুজের একটি কোণ কত ডিগ্রি?
+A: ৪৫°
+B: ৬০°
+C: ৯০°
+D: ১২০°
+উত্তর: C
+---
+প্রশ্ন: বৃত্তের সম্পূর্ণ কোণের পরিমাপ কত?
+A: ৯০°
+B: ১৮০°
+C: ২৭০°
+D: ৩৬০°
+উত্তর: D
+---
+প্রশ্ন: পানির রাসায়নিক সংকেত কোনটি?
+A: CO2
+B: H2O
+C: NaCl
+D: O2
+উত্তর: B
+---
+প্রশ্ন: বাতাসের প্রধান উপাদান কোনটি?
+A: অক্সিজেন
+B: নাইট্রোজেন
+C: কার্বন ডাই-অক্সাইড
+D: হাইড্রোজেন
+উত্তর: B
+---
+প্রশ্ন: সৌরজগতের বৃহত্তম গ্রহ কোনটি?
+A: পৃথিবী
+B: মঙ্গল
+C: বৃহস্পতি
+D: শনি
+উত্তর: C
+---
+প্রশ্ন: সূর্যের সবচেয়ে নিকটতম গ্রহ কোনটি?
+A: বুধ
+B: শুক্র
+C: পৃথিবী
+D: মঙ্গল
+উত্তর: A
+---
+প্রশ্ন: মানবদেহের সবচেয়ে বড় অঙ্গ কোনটি?
+A: যকৃত
+B: ত্বক
+C: হৃৎপিণ্ড
+D: ফুসফুস
+উত্তর: B
+---
+প্রশ্ন: উদ্ভিদের খাদ্য তৈরির প্রক্রিয়ার নাম কী?
+A: শ্বসন
+B: প্রস্বেদন
+C: সালোকসংশ্লেষণ
+D: ব্যাপন
+উত্তর: C
+---
+প্রশ্ন: বলের একক কী?
+A: জুল
+B: ওয়াট
+C: নিউটন
+D: প্যাসকেল
+উত্তর: C
+---
+প্রশ্ন: আলোর গতিবেগ প্রতি সেকেন্ডে প্রায় কত কিমি?
+A: ১ লাখ
+B: ২ লাখ
+C: ৩ লাখ
+D: ৪ লাখ
+উত্তর: C
+---
+প্রশ্ন: কম্পিউটারের মস্তিষ্ক বলা হয় কোনটিকে?
+A: RAM
+B: CPU
+C: Hard Disk
+D: Monitor
+উত্তর: B
+---
+প্রশ্ন: WWW এর পূর্ণরূপ কী?
+A: World Wide Web
+B: World Wide War
+C: World Web Wide
+D: Web World Wide
+উত্তর: A
+---
+প্রশ্ন: বাংলা ভাষার মূল উৎস কোনটি?
+A: সংস্কৃত
+B: প্রাকৃত
+C: বৈদিক
+D: পালি
+উত্তর: B
+---
+প্রশ্ন: 'গীতাঞ্জলি' কাব্যের রচয়িতা কে?
+A: কাজী নজরুল ইসলাম
+B: রবীন্দ্রনাথ ঠাকুর
+C: মাইকেল মধুসূদন দত্ত
+D: জসীমউদ্দীন
+উত্তর: B
+---
+প্রশ্ন: বাংলাদেশের স্বাধীনতা দিবস কোনটি?
+A: ২১শে ফেব্রুয়ারি
+B: ২৬শে মার্চ
+C: ১৬ই ডিসেম্বর
+D: পহেলা বৈশাখ
+উত্তর: B
+---
+প্রশ্ন: বাংলাদেশের বিজয় দিবস কোনটি?
+A: ২৬শে মার্চ
+B: ২১শে ফেব্রুয়ারি
+C: ৭ই মার্চ
+D: ১৬ই ডিসেম্বর
+উত্তর: D
+---
+প্রশ্ন: আন্তর্জাতিক মাতৃভাষা দিবস কোনটি?
+A: ২১শে ফেব্রুয়ারি
+B: ২৬শে মার্চ
+C: ১৬ই ডিসেম্বর
+D: ৭ই মার্চ
+উত্তর: A
+---
+প্রশ্ন: মুজিবনগর সরকার কোন তারিখে শপথ গ্রহণ করে?
+A: ৭ মার্চ ১৯৭১
+B: ২৬ মার্চ ১৯৭১
+C: ১০ এপ্রিল ১৯৭১
+D: ১৭ এপ্রিল ১৯৭১
+উত্তর: D
+---
+প্রশ্ন: বাংলাদেশের সংবিধানের মূলনীতি কয়টি?
+A: ৩টি
+B: ৪টি
+C: ৫টি
+D: ৬টি
+উত্তর: B
+---
+প্রশ্ন: পৃথিবীর দীর্ঘতম নদী কোনটি?
+A: আমাজন
+B: নীল নদ
+C: ইয়াংসিকিয়াং
+D: মিসিসিপি
+উত্তর: B
+---
+প্রশ্ন: বিশ্বের সর্বোচ্চ পর্বতশৃঙ্গ কোনটি?
+A: কে-টু
+B: কাঞ্চনজঙ্ঘা
+C: মাউন্ট এভারেস্ট
+D: মাকালু
+উত্তর: C
+---
+প্রশ্ন: সুন্দরবনের প্রধান বৃক্ষ কোনটি?
+A: শাল
+B: সেগুন
+C: সুন্দরী
+D: গরান
+উত্তর: C`;
+
 export const MCQ_SAMPLE_TEMPLATES = Object.freeze([
   ['বাংলা — সাহিত্য', 'প্রশ্ন: রবীন্দ্রনাথ ঠাকুর কোন গ্রন্থের জন্য নোবেল পুরস্কার পান?\nA: গীতাঞ্জলি\nB: সোনার তরী\nC: বলাকা\nD: মানসী\nউত্তর: A'],
   ['বাংলা — ব্যাকরণ', 'প্রশ্ন: “বিদ্যালয়” শব্দের সন্ধিবিচ্ছেদ কোনটি?\nA: বিদ্যা + আলয়\nB: বিদ্য + আলয়\nC: বিদ্যা + লয়\nD: বিদ + আলয়\nউত্তর: A'],
@@ -51,6 +261,7 @@ export const MCQ_SAMPLE_TEMPLATES = Object.freeze([
 export const examTemplate = type => type === 'mcq'
   ? 'প্রশ্ন: বাংলাদেশের রাজধানী কোনটি?\nA: ঢাকা\nB: চট্টগ্রাম\nC: খুলনা\nD: রাজশাহী\nউত্তর: A\n---\nপ্রশ্ন: ৫ + ৩ = কত?\nA: ৬\nB: ৭\nC: ৮\nD: ৯\nউত্তর: C'
   : 'প্রশ্ন: পরিবেশ রক্ষায় গাছের গুরুত্ব লেখো।\nনম্বর: ৫\n---\nপ্রশ্ন: পানি দূষণ রোধের তিনটি উপায় লেখো।\nনম্বর: ৩';
+
 export function parseQuestions(text, type) {
   if (!Object.hasOwn(EXAM_TYPES, type)) fail('পরীক্ষার ধরন নির্বাচন করুন।');
   if (!String(text).trim() || String(text).length > 150000) fail('প্রশ্নের টেমপ্লেট পূরণ করুন (সর্বোচ্চ ১৫০,০০০ অক্ষর)।');
@@ -226,7 +437,7 @@ export const examRepository = {
     const db = await mutate(db => {
       const old = input.id ? examById(db, input.id) : null;
       if (old) { teacherOwns(old, actor); if (old.status === 'published' || db.attempts.some(a => a.examId === old.id)) fail('প্রকাশিত/চালু পরীক্ষার প্রশ্ন বদলানো যাবে না।'); }
-      const exam = { ...fields, id: old?.id || `EX-${crypto.randomUUID()}`, teacherId: actor.id, teacherName, status: 'draft', reviewNote: '', createdAt: old?.createdAt || Date.now(), updatedAt: Date.now(), participants: [] };
+      const exam = { ...fields, id: old?.id || newId('E'), teacherId: actor.id, teacherName, status: 'draft', reviewNote: '', createdAt: old?.createdAt || Date.now(), updatedAt: Date.now(), participants: [] };
       if (old) db.exams[db.exams.indexOf(old)] = exam; else db.exams.unshift(exam);
     });
     return teacherExamSnapshot(db, actor);
@@ -285,7 +496,7 @@ export const examRepository = {
       if (!own.length && now > e.startAt + e.lateMinutes * 60000) fail('দেরিতে প্রবেশের সময়সীমা শেষ।');
       if (own.length && !retryEligibility(db, e, person.id, now)) fail('দ্বিতীয় সুযোগের যোগ্যতা নেই বা সময় শেষ।');
       const order = shuffled(e.questions).map(q => ({ id: q.id, options: shuffled(q.options.map(o => o.id)) }));
-      db.attempts.push({ id: `AT-${crypto.randomUUID()}`, examId, studentId: person.id, name: person.name, className: person.className, number: own.length + 1, status: 'active', startedAt: now, savedAt: now, order, answers: {} });
+      db.attempts.push({ id: newId('A'), examId, studentId: person.id, name: person.name, className: person.className, number: own.length + 1, status: 'active', startedAt: now, savedAt: now, order, answers: {} });
       if (!e.participants.some(s => s.id === person.id)) e.participants.push(person);
     });
   },
@@ -339,7 +550,7 @@ export const examRepository = {
       if (e.questions.some(q => !Object.hasOwn(questionScores, q.id) || !['string', 'number'].includes(typeof questionScores[q.id]) || !String(questionScores[q.id]).trim() || !Number.isFinite(Number(questionScores[q.id])) || round(Number(questionScores[q.id])) !== Number(questionScores[q.id]) || Number(questionScores[q.id]) < 0 || Number(questionScores[q.id]) > q.marks)) fail('প্রতিটি প্রশ্নের নম্বর শূন্য থেকে পূর্ণমানের মধ্যে দিন।');
       const score = round(e.questions.reduce((sum, q) => sum + Number(questionScores[q.id]), 0));
       let a = db.attempts.find(a => a.examId === e.id && a.studentId === person.id);
-      if (!a) { a = { id: `AT-${crypto.randomUUID()}`, examId, studentId: person.id, name: person.name, className: person.className, number: 1, startedAt: Date.now(), order: [], answers: {} }; db.attempts.push(a); }
+      if (!a) { a = { id: newId('A'), examId, studentId: person.id, name: person.name, className: person.className, number: 1, startedAt: Date.now(), order: [], answers: {} }; db.attempts.push(a); }
       const cleanScores = Object.fromEntries(e.questions.map(q => [q.id, Number(questionScores[q.id])]));
       Object.assign(a, { score, questionScores: cleanScores, status: 'submitted', finishedAt: Date.now() });
       e.absentIds = (e.absentIds || []).filter(id => id !== person.id);

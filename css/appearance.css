@@ -506,3 +506,130 @@ button.exam-link{
 .quick-tile,.notice-strip,.detail-grid>div,.fee-balance-grid>div{
   background:rgba(255,255,255,.82)!important;
 }
+
+/* AMOLED pure-black theme and compact top-bar switch. */
+:root {
+  --amoled-black: #000;
+  --amoled-panel: #080808;
+  --amoled-raised: #101010;
+  --amoled-line: #252525;
+  --amoled-text: #f5f5f5;
+  --amoled-muted: #b7b7b7;
+  --amoled-accent: #8aa7ff;
+}
+html[data-theme="dark"] {
+  color-scheme: dark !important;
+  --apc-bg: #000 !important;
+  --apc-surface: #080808 !important;
+  --apc-surface-2: #101010 !important;
+  --apc-border: #252525 !important;
+  --apc-text: #f5f5f5 !important;
+  --apc-muted: #b7b7b7 !important;
+  --apc-dim: #999 !important;
+  --apc-primary: #8aa7ff !important;
+  --apc-primary-dark: #a9bdff !important;
+  --apc-primary-soft: #111a30 !important;
+  --apc-success: #6ee7b7 !important;
+  --apc-warning: #fbbf24 !important;
+  --apc-danger: #ff7b86 !important;
+  --apc-shadow: none !important;
+  --apc-shadow-lg: none !important;
+  --ink: #f5f5f5 !important; --muted: #b7b7b7 !important; --muted-2: #999 !important;
+  --cream: #000 !important; --surface: #080808 !important; --line: #252525 !important;
+  --mint: #111a30 !important; --mint-2: #17213a !important; --mint-strong: #253456 !important;
+  --forest-text: #f5f5f5 !important; --forest-dark-text: #f5f5f5 !important;
+  --forest: #8aa7ff !important; --forest-dark: #a9bdff !important; --forest-light: #a9bdff !important;
+  --glass: #080808 !important; --glass-strong: #080808 !important; --glass-soft: #101010 !important;
+  --glass-border: #252525 !important; --glass-shadow: none !important;
+  --admin-glass: #080808 !important; --admin-glass-border: #252525 !important;
+  --admin-shadow: none !important; --panel-card-solid: #080808 !important;
+}
+html[data-theme="dark"],
+html[data-theme="dark"] body,
+html[data-theme="dark"] body::before,
+html[data-theme="dark"] body::after,
+html[data-theme="dark"] .app-shell,
+html[data-theme="dark"] .admin-shell,
+html[data-theme="dark"] .teacher-shell,
+html[data-theme="dark"] .pay-shell,
+html[data-theme="dark"] .auth-screen,
+html[data-theme="dark"] .app-main,
+html[data-theme="dark"] .admin-main,
+html[data-theme="dark"] .pay-main,
+html[data-theme="dark"] .pending-screen {
+  color: var(--amoled-text) !important;
+  background: #000 !important;
+  background-image: none !important;
+}
+html[data-theme="dark"] :is(.auth-card,.home-hero,.home-list-card,.quick-wrap,.teaching-board,.admin-card,.teacher-summary,.teacher-record-card,.pay-card,.payment-card,.settings-list,.admin-more-menu,.modal,.admin-modal,.rp-card,.rp-report,.rp-choose,.rp-preview-bar,.rp-empty,.rp-page,.study-progress-card,.dashboard-routine-card,.dashboard-empty-card,.challenge-card,.dashboard-empty,.contact-card,.help-card,.pending-id,.welcome-card,.admin-hero,.home-stat,.admin-stat-tile,.admin-dashboard-collect,.course-item,.result-row,.result-stats>div,.pending-info,.maintenance-alert-card,.staff-form-section-block,.staff-assignment,.staff-activity-grid>div,.staff-history li,.bootstrap-credential-row,.student-row-redesigned,.manager-student-card,.detail-grid>div,.fee-balance-grid>div,.notice-strip,.quick-tile,.admin-more-item,.settings-list>button) {
+  color: var(--amoled-text) !important;
+  background: #080808 !important;
+  background-image: none !important;
+  border-color: #252525 !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+html[data-theme="dark"] :is(.topbar,.admin-topbar,.auth-topbar,.pay-topbar,.bottom-nav,.admin-bottom,.app-bottom-nav,.bottom-navigation) {
+  color: var(--amoled-text) !important;
+  background: #000 !important;
+  border-color: #252525 !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+html[data-theme="dark"] * {
+  color: #f5f5f5 !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+html[data-theme="dark"] :is(h1,h2,h3,h4,h5,strong,b,.auth-brand,.admin-brand,.auth-brand strong,.admin-brand strong,.page-intro h1,.section-heading h2,.admin-card-head h2,.admin-card-head h3,.tile-value,td,label) { color: #f5f5f5 !important; }
+html[data-theme="dark"] :is(p,small,.muted,.eyebrow,.auth-brand small,.admin-brand small,.page-intro>p,.section-heading p,.admin-card-head p,th) { color: #b7b7b7 !important; }
+html[data-theme="dark"] a, html[data-theme="dark"] .link-button, html[data-theme="dark"] .inline-link { color: #a9bdff !important; }
+html[data-theme="dark"] :is(input,select,textarea,.auth-panel input,.auth-panel select,.auth-panel textarea,.field input,.field select,.field textarea,.admin-card input) {
+  color: #f5f5f5 !important;
+  background: #080808 !important;
+  border-color: #333 !important;
+  box-shadow: none !important;
+  color-scheme: dark;
+}
+html[data-theme="dark"] :is(input::placeholder,textarea::placeholder) { color: #999 !important; }
+html[data-theme="dark"] :is(table,thead,tbody,tr,th,td) { background-color: #080808 !important; border-color: #252525 !important; color: #eee !important; }
+html[data-theme="dark"] :is(button,.admin-btn,.mini-btn,.icon-button) { color: #f5f5f5; }
+html[data-theme="dark"] :is(.primary,.auth-submit,.admin-dashboard-collect,.teacher-home-link,button.exam-link) { color: #000 !important; background: #a9bdff !important; border-color: #a9bdff !important; }
+html[data-theme="dark"] :is(.quick-tile-btn,.bottom-link .nav-chip,.admin-bottom-item .nav-chip,.admin-hero-icon,.tile-icon,.admin-hero-foot-icon,.admin-dashboard-collect-icon,.admin-more-icon,.admin-stat-icon,.home-hero-icon,.home-stat-icon,.home-hero-foot-icon,.home-row-icon,.settings-icon,.help-icon,.learning-home-icon,.staff-section-number,.student-avatar,.auto-id-preview) {
+  color: #a9bdff !important; background: #111a30 !important; border-color: #28375a !important; box-shadow: none !important;
+}
+html[data-theme="dark"] .bottom-link.active .nav-chip,
+html[data-theme="dark"] .admin-bottom-item.active .nav-chip { color: #000 !important; background: #a9bdff !important; border-color: #a9bdff !important; box-shadow: none !important; }
+html[data-theme="dark"] .bottom-link.active .nav-chip svg,
+html[data-theme="dark"] .admin-bottom-item.active .nav-chip svg { color: #000 !important; }
+html[data-theme="dark"] .auth-tabs,.auth-tabs { border-color: var(--apc-border); }
+
+.theme-quick-toggle {
+  display: grid !important;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px;
+  padding: 0 !important;
+  margin-left: auto;
+  order: 10;
+  color: var(--apc-text) !important;
+  background: var(--apc-surface) !important;
+  border: 1px solid var(--apc-border) !important;
+  border-radius: 50% !important;
+  box-shadow: none !important;
+  cursor: pointer;
+}
+.theme-quick-toggle svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.theme-quick-toggle .icon-sun { display: none; }
+.theme-quick-toggle .icon-moon { display: block; }
+html[data-theme="dark"] .theme-quick-toggle { color: #fff !important; background: #111 !important; border-color: #333 !important; }
+html[data-theme="dark"] .theme-quick-toggle .icon-sun { display: block; }
+html[data-theme="dark"] .theme-quick-toggle .icon-moon { display: none; }
+.student-header-tools > .theme-quick-toggle { margin-left: 0; order: 0; }
+.manager-top-actions { align-items: center; }
+@media (prefers-reduced-motion: reduce) { *,*::before,*::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; } }

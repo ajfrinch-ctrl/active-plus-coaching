@@ -2,7 +2,7 @@
    These async methods can be replaced with authenticated API calls later. */
 import { enabledClasses, STORAGE_KEYS } from './config.js';
 import { loadRoster } from './office-data.js';
-import { KEYS, readRaw, writeRaw } from './database.js';
+import { KEYS, readRaw, writeRaw, newId } from './database.js';
 import { isTeacherAssigned, assignedScopeForStudent } from './teacher-assignments.js';
 import { hasStaffSession, readStaffAccount } from './staff-auth.js';
 
@@ -154,7 +154,7 @@ export const teachingRepository = {
         if (conflict) fail('এই সময়ে আপনার আরেকটি ক্লাস/পরীক্ষা আছে। সময় বদলান।');
       }
       const now = new Date().toISOString();
-      const activity = { ...fields, id: old?.id || `ACT-${crypto.randomUUID()}`, teacherId: DEMO_TEACHER.id, teacherName, createdAt: old?.createdAt || now, updatedAt: now, progress: old?.progress || {} };
+      const activity = { ...fields, id: old?.id || newId('ACT'), teacherId: DEMO_TEACHER.id, teacherName, createdAt: old?.createdAt || now, updatedAt: now, progress: old?.progress || {} };
       if (old) db.activities[db.activities.indexOf(old)] = activity; else db.activities.unshift(activity);
     });
     return teacherSnapshot(db);

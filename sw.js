@@ -1,4 +1,4 @@
-const CACHE_NAME = 'active-plus-student-v75-cache-refresh';
+const CACHE_NAME = 'active-plus-student-v79-sequential-ids';
 const APP_SHELL = [
   './offline-roles.html',
   './css/offline-roles.css',
@@ -14,6 +14,7 @@ const APP_SHELL = [
   './styles.css',
   './css/admin.css',
   './css/mobile.css',
+  './js/pull-to-refresh.js',
   './css/exams.css',
   './css/teaching.css',
   './css/admin-icon-system.css',
@@ -88,6 +89,9 @@ const APP_SHELL = [
   './css/liquid-glass.css',
   './css/reports.css',
   './css/appearance.css',
+  './js/appearance.js',
+  './js/appearance-boot.js',
+  './js/theme-entry.js',
   './assets/fonts/NotoSansBengali-Variable.ttf',
   './js/config.js',
   './js/password-hash.js',
@@ -150,7 +154,14 @@ const APP_SHELL = [
   './js/staff-directory.js',
   './js/staff-management.js',
   './js/user-id.js',
-  './js/admin-panel-ui.js'
+  './js/admin-panel-ui.js',
+  './js/storage/index.js',
+  './js/storage/migration.js',
+  './js/storage/users.js',
+  './js/storage/students.js',
+  './js/storage/payments.js',
+  './js/storage/notices.js',
+  './js/storage/settings.js'
 ];
 
 self.addEventListener('install', event => {

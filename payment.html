@@ -7,7 +7,7 @@
   <script src="js/sanitize-url.js"></script>
   <script src="js/appearance-boot.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
-  <meta name="theme-color" content="#eef2f6">
+  <meta name="theme-color" content="#000000">
   <meta name="description" content="Active Plus Coaching পেমেন্ট রিসিভ প্যানেল — শিক্ষার্থী খুঁজে দ্রুত ফি গ্রহণ, রসিদ PDF ডাউনলোড ও হোয়াটসঅ্যাপে ছবি পাঠানো।">
   <meta name="robots" content="noindex">
   <title>Active Plus | পেমেন্ট রিসিভ প্যানেল</title>
@@ -31,66 +31,13 @@
 </head>
 <body class="pay-body">
   <!-- Entry screen: the login page can also sign in here, so this is a fallback, not a wall. -->
-  <section class="auth-screen pay-auth-screen" id="payEntry" hidden aria-label="Active Plus পেমেন্ট রিসিভ প্যানেল">
-    <div class="auth-topbar">
-      <button class="theme-quick-toggle" type="button" data-theme-toggle aria-label="ডার্ক মোড চালু করুন"><svg class="icon-sun" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-sun"></use></svg><svg class="icon-moon" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-moon"></use></svg></button>
-      <div class="auth-brand">
-        <img src="assets/icons/logo-128.png" alt="Active Plus Coaching logo" width="38" height="38">
-        <span><strong>Active Plus Coaching</strong><small data-fixed-tagline aria-label="শিখতে থাকো, এগিয়ে যাও">শিখতে থাকো, এগিয়ে যাও</small></span>
-      </div>
-    </div>
-    <div class="auth-card">
-      <div class="auth-tabs" role="tablist" aria-label="অ্যাকাউন্ট অপশন">
-        <button class="auth-tab active" type="button" role="tab" aria-selected="true">পেমেন্ট রিসিভ</button>
-      </div>
-      <div class="auth-panel active">
-        <div class="auth-panel-heading">
-          <div>
-            <h2>পেমেন্ট রিসিভ প্রবেশ</h2>
-          </div>
-        </div>
-        <p class="pay-entry-note">ইউজারনেম ও পাসওয়ার্ড দিয়ে প্রবেশ করুন। প্রবেশের পর শিক্ষার্থীর নাম, মোবাইল নম্বর, Student ID বা অভিভাবকের মোবাইল দিয়ে খুঁজে দ্রুত ফি গ্রহণ করা যাবে — রসিদ ডাউনলোড ও হোয়াটসঅ্যাপে ছবি পাঠানোর ব্যবস্থাসহ।</p>
-        <form id="payLoginForm" novalidate>
-          <label for="payLoginUser">ইউজারনেম</label>
-          <div class="input-wrap">
-            <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-user"></use></svg>
-            <input id="payLoginUser" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="payment.apc" required>
-          </div>
-          <label for="payLoginPin">পাসওয়ার্ড</label>
-          <div class="input-wrap">
-            <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg>
-            <input id="payLoginPin" name="password" type="password" minlength="6" maxlength="32" autocomplete="current-password" placeholder="পাসওয়ার্ড" required>
-            <button class="show-pin" type="button" data-toggle-pin="payLoginPin" aria-label="পাসওয়ার্ড দেখুন">
-              <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg>
-            </button>
-          </div>
-          <div class="form-row">
-            <label class="remember-label">
-              <input type="checkbox" id="rememberPay" checked>
-              <span class="fake-check"></span>এই ডিভাইসে মনে রাখুন
-            </label>
-          </div>
-          <p id="payLoginError" class="finance-error" role="alert" hidden></p>
-          <button class="auth-submit" type="submit">
-            প্রবেশ করুন <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg>
-          </button>
-        </form>
-        <p class="pay-entry-note" style="margin-top: 12px;">প্যানেলে ঢুকে উপরের লক আইকন থেকে পাসওয়ার্ড বদলানো যায়।</p>
-        <p class="auth-footnote">
-          <a class="inline-link" href="admin.html">← এডমিন প্যানেল</a>
-          <a class="inline-link" href="index.html">← লগইন পেইজ</a>
-        </p>
-      </div>
-    </div>
-  </section>
-
-  <!-- Payment desk: search → short profile → payment → receipt, plus a today summary. -->
   <div class="pay-shell" id="payShell" hidden>
     <header class="pay-topbar">
       <a class="admin-brand" href="payment.html" aria-label="পেমেন্ট রিসিভ প্যানেল">
         <img src="assets/icons/logo-128.png" alt="" width="38" height="38">
         <span><strong>পেমেন্ট রিসিভ</strong><small>Active Plus Coaching • কাউন্টার</small></span>
       </a>
+      <button class="theme-quick-toggle" type="button" data-theme-toggle aria-label="ডার্ক মোড চালু করুন" aria-pressed="true" title="থিম বদলান"><svg class="icon-sun" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-sun"></use></svg><svg class="icon-moon" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-moon"></use></svg></button>
       <time class="pay-current-date" id="payCurrentDate" aria-label="আজকের দিন ও তারিখ"></time>
 
     </header>
@@ -348,6 +295,8 @@
     </defs>
   </svg>
 
+  <script type="module" src="js/theme-entry.js"></script>
+  <script type="module" src="js/pull-to-refresh.js"></script>
   <script type="module" src="js/payment.js"></script>
 </body>
 </html>
