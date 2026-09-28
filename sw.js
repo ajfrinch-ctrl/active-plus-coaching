@@ -1,4 +1,4 @@
-const CACHE_NAME = 'active-plus-student-v74-cache-refresh';
+const CACHE_NAME = 'active-plus-student-v75-cache-refresh';
 const APP_SHELL = [
   './offline-roles.html',
   './css/offline-roles.css',
@@ -87,6 +87,7 @@ const APP_SHELL = [
   './css/scroll-header.css',
   './css/liquid-glass.css',
   './css/reports.css',
+  './css/appearance.css',
   './assets/fonts/NotoSansBengali-Variable.ttf',
   './js/config.js',
   './js/password-hash.js',
