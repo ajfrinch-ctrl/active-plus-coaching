@@ -1,4 +1,5 @@
 const { test, expect } = require('./fixtures.cjs');
+const { enterPortal } = require('./portal-session.cjs');
 const KEY = 'activePlus.teaching.v1';
 test.use({ viewport: { width: 390, height: 844 } });
 async function enter(page) {
@@ -6,7 +7,7 @@ async function enter(page) {
     const names = ['অষ্টম শ্রেণি', 'নবম শ্রেণি', 'দশম শ্রেণি', 'একাদশ শ্রেণি', 'দ্বাদশ শ্রেণি', 'ডিগ্রি ১ম বর্ষ', 'ডিগ্রি ২য় বর্ষ', 'ডিগ্রি ৩য় বর্ষ', 'অনার্স ১ম বর্ষ', 'অনার্স ২য় বর্ষ', 'অনার্স ৩য় বর্ষ', 'অনার্স ৪র্থ বর্ষ'];
     localStorage.setItem('activePlus.manager.teacherAssignments.v1', JSON.stringify(names.map((className, index) => ({ id: `TAS-${index}`, teacherUsername: 'teacher.apc', teacherName: 'Test Teacher', className, group: '', subject: 'Test' }))));
   });
-  await page.goto('/teacher.html'); await page.locator('#teacherEnter').click(); await expect(page.locator('#teacherShell')).toBeVisible();
+  await enterPortal(page, 'teacher'); await expect(page.locator('#teacherShell')).toBeVisible();
 }
 async function create(page, type, title, overrides = {}) {
   const nav = type;

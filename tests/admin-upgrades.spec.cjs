@@ -2,13 +2,13 @@
    summary, the dedicated Report Center downloads and teacher registration control.
    Routine/notices entry is Manager territory, so it is tested in manager.html. */
 const { test, expect } = require('./fixtures.cjs');
+const { enterPortal } = require('./portal-session.cjs');
 const fs = require('node:fs/promises');
 
 test.use({ viewport: { width: 390, height: 844 } });
 
 async function enter(page) {
-  await page.goto('/admin.html');
-  await page.locator('#adminLoginForm button[type=submit]').click();
+  await enterPortal(page, 'admin');
   await expect(page.locator('#adminShell')).toBeVisible();
 }
 async function bottom(page, view) {

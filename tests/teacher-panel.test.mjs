@@ -10,7 +10,7 @@ import { ROSTER_KEY } from '../js/office-data.js';
 import { enabledClasses } from '../js/config.js';
 import { TEACHER_ASSIGNMENTS_KEY } from '../js/teacher-assignments.js';
 import { STAFF_ACCOUNTS } from '../js/staff-auth.js';
-import { STAFF_TEST_PASSWORD, provisionStaff, completeStaffPasswordDialog } from './staff-harness.mjs';
+import { openStaffPanel } from './staff-harness.mjs';
 
 const shift = days => {
   const d = new Date(`${todayISO()}T12:00:00`);
@@ -29,15 +29,14 @@ before(async () => {
   ctx = await loadPage('teacher.html', {
     seed: { 'activePlus.demo.autofill.v1': 'off', [ROSTER_KEY]: JSON.stringify(adminStudents), [TEACHER_ASSIGNMENTS_KEY]: JSON.stringify(enabledClasses.map((className, index) => ({ id: `TAS-${index}`, teacherUsername: 'teacher.apc', teacherName: 'Test Teacher', className, group: '', subject: 'Test' }))) }
   });
-  await import('../js/teacher.js');
-  await provisionStaff('teacher');
-  ctx.type($('#teacherLoginUser'), STAFF_ACCOUNTS.teacher.username);
-  ctx.type($('#teacherLoginPin'), STAFF_TEST_PASSWORD);
-  ctx.click($('#teacherEnter'));
-  // A role with no password yet is asked to set one before the panel opens.
-  await ctx.waitFor(() => Boolean($('.staff-pw-backdrop')) || $('#teacherShell').hidden === false);
-  if ($('.staff-pw-backdrop')) await completeStaffPasswordDialog(ctx);
-  await ctx.waitFor(() => $('#teacherShell').hidden === false);
+  await openStaffPanel(ctx, 'teacher', {
+    importPanel: () => import('../js/teacher.js'),
+    shellId: 'teacherShell',
+    /* The shell unhides before reload() has read the roster and assignments, so
+       wait for the class pickers reload() rewrites — that is the first frame
+       that carries real data, and every assertion below reads from it. */
+    ready: () => [...$('#teacherHomeClass').options].some(option => option.textContent === 'সব assigned class')
+  });
   assert.equal($('#teacherShell').hidden, false, 'the panel must open');
 });
 

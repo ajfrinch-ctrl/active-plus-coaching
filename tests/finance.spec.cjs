@@ -1,13 +1,14 @@
 /* Admin finance is intentionally read-only. Cash entry is covered by the
    Payment Counter specs (payment-entry.spec.cjs and payment-panel.spec.cjs). */
 const { test, expect } = require('./fixtures.cjs');
+const { enterPortal } = require('./portal-session.cjs');
 const fs = require('node:fs/promises');
 
 async function enterFinance(page, width = 390) {
   await page.setViewportSize({ width, height: 844 });
   await page.clock.setFixedTime(new Date('2026-09-22T12:00:00Z'));
-  await page.goto('/admin.html');
-  await page.locator('#adminLoginForm button[type=submit]').click();
+  await enterPortal(page, 'admin');
+  await expect(page.locator('#adminShell')).toBeVisible();
   await page.locator('.admin-bottom [data-admin-view=reports]').click();
 }
 

@@ -1,11 +1,12 @@
 const { test, expect } = require('./fixtures.cjs');
+const { enterStudentApp } = require('./portal-session.cjs');
 const READ_KEY = 'activePlus.notices.read.v1:AP-1024';
 const CONFIG_KEY = 'active-plus-app-config-v1';
 test.use({ viewport: { width: 390, height: 844 } });
 async function enter(page) {
-  await page.goto('/index.html');
-  await page.locator('#demoLoginButton').click();
-  await expect(page.locator('#appShell')).toBeVisible();
+  // The demo button is gone on purpose, so the student signs in for real on
+  // the one shared login card.
+  await enterStudentApp(page);
 }
 
 test('only bell opens notices; read state survives closing, reload and offline', async ({ page, context }) => {

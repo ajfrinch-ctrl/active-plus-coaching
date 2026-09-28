@@ -114,12 +114,20 @@ test('the bottom bar renders one icon + label per permitted tab', () => {
   assert.equal(ctx.$$('.admin-bottom [aria-current="page"]').length, 1);
   assert.equal(ctx.$('.admin-bottom [aria-current="page"]').dataset.adminView, 'dashboard');
   // Header actions: icon + label, one icon each, never an emoji or a stray PNG.
-  for (const selector of ['.admin-exit', '.admin-app-link']) {
-    const action = ctx.$(selector);
-    assert.ok(action, `${selector} is missing`);
-    assert.equal(action.querySelectorAll('svg.topbar-icon').length, 1, `${selector} paints more than one icon`);
-    assert.ok(action.textContent.trim().length > 1, `${selector} lost its label`);
-  }
+  // The student-app shortcut was dropped from the topbar, so sign-out is the
+  // only labelled header action left.
+  const exit = ctx.$('.admin-exit');
+  assert.ok(exit, '.admin-exit is missing');
+  assert.equal(exit.querySelectorAll('svg.topbar-icon').length, 1, '.admin-exit paints more than one icon');
+  assert.ok(exit.textContent.trim().length > 1, '.admin-exit lost its label');
+  // The theme toggle is icon-only, but it is still on the Admin topbar like on
+  // every other portal: a sun for light mode, a moon for dark.
+  const themeToggle = ctx.$('.theme-quick-toggle[data-theme-toggle]');
+  assert.ok(themeToggle, 'the Admin topbar has no theme toggle');
+  assert.equal(themeToggle.querySelectorAll('svg').length, 2);
+  assert.ok(themeToggle.querySelector('use[href="#icon-sun"]'));
+  assert.ok(themeToggle.querySelector('use[href="#icon-moon"]'));
+  assert.equal(themeToggle.getAttribute('aria-pressed'), 'true');
 });
 
 test('the dashboard grid is generated from the permission model', () => {

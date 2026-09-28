@@ -21,10 +21,11 @@ test('an existing counter session opens the desk directly and it is usable', asy
   await import('../js/payment.js');
   const { $, $$, click, type, waitFor } = ctx;
 
-  // The check is asynchronous (the record may be encrypted); the entry screen
-  // is hidden as soon as the session validates.
+  // The check is asynchronous (the record may be encrypted); the desk opens as
+  // soon as the session validates, with no credential prompt of its own — the
+  // one shared login card on index.html is the only way in.
   await waitFor(() => $('#payShell').hidden === false);
-  assert.equal($('#payEntry').hidden, true);
+  assert.equal($('#payLoginForm'), null, 'the desk carries no login form of its own');
 
   // The desk rewrites the session on entry; once the months are populated the
   // store has settled and the token is a valid, device-bound session again.
@@ -50,7 +51,6 @@ test('a session from another device does not open the desk', async () => {
   ctx.window.localStorage.setItem(PAYMENT_SESSION_KEY, JSON.stringify(foreign));
   await import('../js/payment.js?foreign=1');
   await ctx.flush();
-  assert.equal(ctx.$('#payEntry').hidden, false, 'the entry form stays up');
-  assert.equal(ctx.$('#payShell').hidden, true);
+  assert.equal(ctx.$('#payShell').hidden, true, 'the desk stays closed');
   assert.equal(ctx.window.localStorage.getItem(PAYMENT_SESSION_KEY), null, 'the foreign record is dropped');
 });

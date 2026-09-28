@@ -10,7 +10,7 @@ import { adminStudents, initialTransactions, paymentMethods } from '../js/admin-
 import { studentFeeSummary, dateLabel, TRANSACTIONS_KEY } from '../js/finance-data.js';
 import { toBanglaNumber } from '../js/ui.js';
 import { PAYMENT_ACCOUNT_KEY, PAYMENT_SESSION_KEY, PAYMENT_USER_ID, hasPaymentSession, loadPaymentAccount } from '../js/payment-auth.js';
-import { STAFF_TEST_PASSWORD, provisionStaff } from './staff-harness.mjs';
+import { STAFF_TEST_PASSWORD, provisionStaff, seedStaffSession } from './staff-harness.mjs';
 import { ROSTER_KEY } from '../js/office-data.js';
 
 const DEMO_OFF = {
@@ -23,56 +23,35 @@ const money = value => `৳${toBanglaNumber(Number(value).toLocaleString('en-US'
 let ctx;
 
 before(async () => {
+  /* The counter signs in on the one shared login card in index.html, so the
+     desk page carries no entry form any more: it opens from the device-bound
+     session that sign-in wrote, and that session has to exist before the
+     module is imported. */
   ctx = await loadPage('payment.html', { seed: DEMO_OFF });
-  await import('../js/payment.js');
-});
-
-test('entry screen starts blank; a fresh device asks for a password first', async () => {
-  const { $, submit, waitFor } = ctx;
-  assert.equal($('#payEntry').hidden, false);
-  assert.equal($('#payShell').hidden, true);
-  assert.equal($('#payLoginUser').value, '');
-  assert.equal($('#payLoginPin').value, '');
-  assert.equal($('#payLoginPin').maxLength, 32);
-
-  // No built-in default password: the first sign-in opens the setup dialog.
-  $('#payLoginUser').value = PAYMENT_USER_ID;
-  $('#payLoginPin').value = 'anything-at-all';
-  submit($('#payLoginForm'));
-  await waitFor(() => Boolean($('.staff-pw-backdrop')));
-  assert.equal($('#payShell').hidden, true);
-  assert.equal($('#payLoginError').hidden, true);
-
-  // Cancel keeps the desk closed; the stored account stays absent.
-  $('[data-staff-pw-cancel]').dispatchEvent(new window.Event('click', { bubbles: true }));
-  await waitFor(() => !$('.staff-pw-backdrop'));
-  assert.equal(await loadPaymentAccount().then(a => a.hasPassword), false);
-
   await provisionStaff('payment');
-  $('#payLoginUser').value = PAYMENT_USER_ID;
-  $('#payLoginPin').value = 'wrong-pass';
-  submit($('#payLoginForm'));
-  await waitFor(() => $('#payLoginError').hidden === false);
-  assert.match($('#payLoginError').textContent, /ইউজারনেম বা পাসওয়ার্ড সঠিক নয়/);
-  assert.equal($('#payShell').hidden, true);
+  seedStaffSession(ctx.window, 'payment');
+  await import('../js/payment.js');
+  await ctx.waitFor(() => ctx.$('#payShell').hidden === false);
+  // The session token is written after the desk opens; wait for the store.
+  await ctx.waitFor(() => ctx.window.localStorage.getItem(PAYMENT_SESSION_KEY) !== null);
 });
 
-test('the counter username + password opens the desk, stores a session and focuses search', async () => {
-  const { $, submit, window, waitFor } = ctx;
-  $('#payLoginUser').value = 'Payment.APC'; // case tolerant
-  $('#payLoginPin').value = STAFF_TEST_PASSWORD;
-  submit($('#payLoginForm'));
-  await waitFor(() => $('#payShell').hidden === false);
-  // The session token is written after the desk opens; wait for the store.
-  await waitFor(() => window.localStorage.getItem(PAYMENT_SESSION_KEY) !== null);
+test('the desk has no entry form of its own — the shared login card is the only door', () => {
+  const { $ } = ctx;
+  assert.equal($('#payLoginForm'), null, 'the counter page carries no login form');
+  assert.equal($('#payLoginUser'), null);
+  assert.equal($('#payLoginPin'), null);
+  assert.equal($('#payShell').hidden, false, 'the desk is already open');
+});
 
-  assert.equal($('#payEntry').hidden, true);
+test('a device-bound session opens the desk, stores the session and focuses search', async () => {
+  const { $, $$, window } = ctx;
   // The session is a device-bound token (encrypted when the platform allows).
   assert.equal(window.localStorage.getItem(PAYMENT_SESSION_KEY) !== null, true);
   assert.equal(await hasPaymentSession(), true);
   assert.equal(window.document.activeElement, $('#payStudentSearch'));
   // Method pills come from the shared payment method list.
-  const pills = ctx.$$('#payFeeMethodGroup [data-pay-method]');
+  const pills = $$('#payFeeMethodGroup [data-pay-method]');
   assert.deepEqual(pills.map(pill => pill.dataset.payMethod), [...paymentMethods]);
   assert.equal($('#payFeeMethod').value, paymentMethods[0]);
 });
@@ -132,9 +111,10 @@ test('keypad + method pill collect in a few taps and the save is durable', async
   assert.equal(added.method, 'বিকাশ (bKash)');
   assert.equal(added.collectedBy, 'পেমেন্ট কাউন্টার');
   assert.equal(added.note, 'কাউন্টার টেস্ট');
-  assert.match(added.receiptNo, /^REC-/);
+  // Sequential receipt numbers: prefix + YYMMDD (6 digits) + a 3-digit daily sequence.
+  assert.match(added.receiptNo, /^R\d{6}\d{3}$/);
 
-  assert.match($('#payReceiptSub').textContent, /রসিদ নং: REC-/);
+  assert.match($('#payReceiptSub').textContent, /রসিদ নং: R\d{9}/);
   assert.match($('#payReceiptBody').textContent, /৳৮০০/);
   assert.match($('#payToast').textContent, /Manager অনুমোদনের অপেক্ষায়/);
   assert.equal(added.status, 'pending');
@@ -163,7 +143,7 @@ test('today summary and activity list refresh after the collection', async () =>
   // Reopening a receipt from today's list uses the stored transaction.
   click(rows[0]);
   await waitFor(() => $('#payReceiptBackdrop').hidden === false);
-  assert.match($('#payReceiptSub').textContent, /রসিদ নং: REC-/);
+  assert.match($('#payReceiptSub').textContent, /রসিদ নং: R\d{9}/);
   click($('#payReceiptClose'));
 });
 
@@ -180,7 +160,7 @@ test('receipt text can be copied for a quick WhatsApp paste', async () => {
   click($('#payReceiptCopy'));
   await waitFor(() => copied !== null);
   assert.match(copied, /রাইসা ইসলাম \(AP-1024\)/);
-  assert.match(copied, /রসিদ নং: REC-/);
+  assert.match(copied, /রসিদ নং: R\d{9}/);
   assert.match($('#payToast').textContent, /কপি হয়েছে/);
   click($('#payReceiptClose'));
 });

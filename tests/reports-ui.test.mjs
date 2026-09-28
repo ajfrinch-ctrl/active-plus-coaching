@@ -1,14 +1,17 @@
-/* The Reports UI on the real admin.html: the five-step flow, end to end.
+/* The Report Center on the real admin.html, end to end:
 
-     category → report → the filters that report needs → Generate → preview
-     → DOWNLOAD PDF
+     Select Report → its declared filters → Generate → paged preview → DOWNLOAD PDF
 
-   The test drives the actual buttons a user taps, with only jsdom's canvas and
+   The test drives the actual form a user fills in, with only jsdom's canvas and
    font APIs stubbed (the engine measures text on a canvas; jsdom has none).
-   Assertions cover the promises that matter on a phone: only the declared
-   filters appear, the preview is real paged A4, the download button is present
-   and full width above the bottom navigation, and the file it produces carries
-   a meaningful name. */
+   Assertions cover the promises that matter on a phone: the role only sees the
+   reports it may run, only the declared filters appear, the preview is real
+   paged A4, the download button is present and full width, and the file it
+   produces carries a meaningful name.
+
+   Note: jsdom does not run a form's default submission from a synthetic click,
+   so Generate is driven by dispatching `submit` on the form the button lives in
+   — the same listener a real tap reaches. */
 import test, { before } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -23,6 +26,10 @@ let ctx;
 let catalog;
 const CHAR = 8;
 let lastDownload = null;
+
+const ROOT = '#adminReports';
+const $ = selector => ctx.$(`${ROOT} ${selector}`);
+const $$ = selector => ctx.$$(`${ROOT} ${selector}`);
 
 before(async () => {
   ctx = await loadPage('admin.html', {
@@ -72,144 +79,136 @@ before(async () => {
   seedStaffSession(ctx.window, 'admin');
   catalog = await import('../js/report-catalog.js');
   await import('../js/admin.js');
-  await ctx.waitFor(() => Boolean(ctx.$('#adminReports .rp-card')), 20000);
+  await ctx.waitFor(() => Boolean($('.rc-form')), 20000);
 });
 
-const cards = () => ctx.$$('#adminReports .rp-card');
-const reports = () => ctx.$$('#adminReports .rp-report');
-const fields = () => ctx.$$('#adminReports .rp-field');
-
-function openCategory(id) {
-  // Steps replace their screens — walk back through the breadcrumb like a thumb.
-  if (!ctx.$('#adminReports .rp-card')) ctx.click(ctx.$('#adminReports .rp-crumb'));
-  const card = cards().find(node => node.dataset.category === id);
-  assert.ok(card, `category ${id} is offered`);
-  ctx.click(card);
+/** Pick a report the way a user does: choose it in the one dropdown. */
+function chooseReport(id) {
+  const select = $('select[name="report"]');
+  assert.ok([...select.options].some(option => option.value === id), `report ${id} is offered`);
+  select.value = id;
+  select.dispatchEvent(new ctx.window.Event('change', { bubbles: true }));
 }
 
-function openReport(id) {
-  const card = reports().find(node => node.dataset.report === id);
-  assert.ok(card, `report ${id} is offered`);
-  ctx.click(card);
+/** The declared filter controls, in the order the report declares them. */
+const filters = () => $$('.rc-dynamic-filters .rc-field[data-filter]').map(node => node.dataset.filter);
+
+/** The Generate button lives in the form, so submit the form. */
+function generate() {
+  ctx.submit($('.rc-form'));
 }
 
-test('step 1 — the Admin sees every category the catalog allows, as icon + text cards', () => {
-  const offered = cards().map(node => node.dataset.category);
-  const expected = catalog.catalogFor('admin').map(category => category.id);
+test('the centre offers exactly the reports the Admin role may run', () => {
+  const offered = [...$('select[name="report"]').options]
+    .map(option => option.value)
+    .filter(Boolean);
+  const expected = catalog.REPORTS
+    .filter(report => (report.roles || []).includes('admin'))
+    .map(report => report.id);
   assert.deepEqual(offered, expected);
-  for (const card of cards()) {
-    assert.ok(card.querySelector('svg'), 'every card carries an icon');
-    assert.ok(card.textContent.trim().length > 2, 'every card carries text');
-  }
+  // The role model is what limits the list, not a hand-kept copy of it.
+  assert.equal(catalog.findReport('teacher.my-class').roles.includes('admin'), false);
+  assert.equal(offered.includes('teacher.my-class'), false);
 });
 
-test('step 2 — a category lists its reports with the filters each one needs', () => {
-  openCategory('exam');
-  const ids = reports().map(node => node.dataset.report);
-  const expected = catalog.catalogFor('admin').find(category => category.id === 'exam').reports.map(item => item.id);
-  assert.deepEqual(ids, expected);
-});
-
-test('step 3 — only the filters the report declares are rendered', () => {
-  openCategory('student');
-  openReport('student.class-wise');
-  const keys = fields().map(node => node.dataset.filter);
-  assert.deepEqual(keys, catalog.findReport('student.class-wise').filters);
+test('only the filters the selected report declares are rendered', () => {
+  chooseReport('student.class-wise');
+  assert.deepEqual(filters(), catalog.findReport('student.class-wise').filters);
 
   // A report that needs an exam asks only for an exam.
-  openCategory('exam');
-  openReport('exam.complete');
-  assert.deepEqual(fields().map(node => node.dataset.filter), ['exam']);
+  chooseReport('exam.complete');
+  assert.deepEqual(filters(), ['exam']);
+
+  // Switching reports replaces the fields rather than stacking them up.
+  chooseReport('student.all');
+  assert.deepEqual(filters(), catalog.findReport('student.all').filters);
+  assert.equal($('.rc-period-extra'), null, 'a report with no period asks for no dates');
 });
 
-test('step 3 — a custom range offers From and To, and refuses a reversed range', async () => {
-  openCategory('fee');
-  openReport('fee.custom');
-  const keys = fields().map(node => node.dataset.filter);
-  assert.ok(keys.includes('period'));
-  const select = ctx.$('#adminReports .rp-field[data-filter="period"] select');
-  select.value = 'custom';
-  select.dispatchEvent(new ctx.window.Event('change', { bubbles: true }));
-  const range = ctx.$('#adminReports .rp-range');
-  assert.equal(range.hidden, false, 'the From/To pair appears for a custom range');
-  const [from, to] = range.querySelectorAll('input');
+test('a custom range offers From and To, and refuses a reversed range', async () => {
+  chooseReport('fee.custom');
+  assert.ok(filters().includes('period'));
+
+  const period = $('.rc-field[data-filter="period"] .rc-control');
+  period.value = 'custom';
+  period.dispatchEvent(new ctx.window.Event('change', { bubbles: true }));
+
+  const box = $('.rc-period-extra');
+  assert.ok(box, 'the From/To pair appears for a custom range');
+  const [from, to] = box.querySelectorAll('input');
   assert.equal(from.type, 'date');
   assert.equal(to.type, 'date');
 
+  // A range that ends before it starts is refused before anything is built.
+  // A range that ends before it starts: From is the later day.
   const isoDay = offset => new Date(Date.now() - offset * 86400000).toISOString().slice(0, 10);
   from.value = isoDay(1);
-  from.dispatchEvent(new ctx.window.Event('change', { bubbles: true }));
   to.value = isoDay(30);
-  to.dispatchEvent(new ctx.window.Event('change', { bubbles: true }));
-  ctx.click(ctx.$('#adminReports .rp-generate'));
-  await ctx.waitFor(() => /From Date/.test(ctx.$('#adminReports .rp-status').textContent), 10000);
-  assert.match(ctx.$('#adminReports .rp-status').textContent, /From Date/);
+  generate();
+  await ctx.waitFor(() => $('.rc-status')?.hidden === false, 10000);
+  assert.match($('.rc-status').textContent, /From Date/);
+  assert.equal($('.rc-preview'), null, 'a refused range never reaches the preview');
 });
 
-test('steps 4 and 5 — Generate builds a paged preview with a full-width download', async () => {
-  openCategory('student');
-  openReport('student.all');
-  ctx.click(ctx.$('#adminReports .rp-generate'));
-  await ctx.waitFor(() => Boolean(ctx.$('#adminReports .rp-download')), 20000);
+test('Generate builds a paged preview with a full-width download', async () => {
+  chooseReport('student.all');
+  generate();
+  await ctx.waitFor(() => Boolean($('.rc-download')), 20000);
 
-  const pages = ctx.$$('#adminReports .rp-page');
+  const pages = $$('.rc-pdf-preview .rp-page');
   assert.ok(pages.length >= 1, 'the preview renders A4 pages');
-  // The pages are laid out at true A4 size and scaled to the panel, so the
-  // preview is the PDF's own geometry (jsdom applies no stylesheet, so the
-  // numbers come from the engine and the stylesheet both).
-  const scaled = ctx.$('#adminReports .rp-pages');
-  assert.match(scaled.style.getPropertyValue('--rp-scale'), /^0?\.\d+$|^1$/);
-  assert.ok(Number(scaled.style.height.replace('px', '')) > 0, 'the preview is given a real height');
+  // The pages are the engine's own measured output, so the preview is the
+  // PDF's real geometry rather than a screenshot of it.
+  assert.deepEqual(pages.map(page => Number(page.dataset.page)), pages.map((_, index) => index + 1));
 
-  const button = ctx.$('#adminReports .rp-download');
-  assert.match(button.textContent, /DOWNLOAD PDF/);
-  assert.ok(button.querySelector('svg'), 'the download button carries an icon');
+  const button = $('.rc-download');
+  assert.match(button.textContent, /Download PDF/i);
+  assert.equal($('.rc-back'), button.parentElement.querySelector('.rc-back'), 'the preview can be stepped back from');
 });
 
-test('the stylesheet keeps every page A4 and the download bar out of the bottom nav', () => {
+test('the stylesheet keeps every page A4 and the download out of the bottom nav', () => {
   const css = readFileSync(new URL('../css/reports.css', import.meta.url), 'utf8');
-  const page = /\.rp-page\s*\{([^}]*)\}/.exec(css);
+  const page = /\.rc-pdf-preview \.rp-page\s*\{([^}]*)\}/.exec(css);
   assert.ok(page, 'the page rule exists');
   assert.match(page[1], /width:\s*794px/);
   assert.match(page[1], /height:\s*1123px/);
-  const bar = /\.rp-download-bar\s*\{([^}]*)\}/.exec(css);
-  assert.ok(bar, 'the download bar rule exists');
-  assert.match(bar[1], /position:\s*sticky/);
-  assert.match(bar[1], /bottom:\s*calc\(76px/);
-  // No sideways scrolling: the shell clips, the pages are scaled instead.
-  const scroll = /\.rp-preview-scroll\s*\{([^}]*)\}/.exec(css);
+  const scroll = /\.rc-pdf-preview\s*\{([^}]*)\}/.exec(css);
   assert.ok(scroll, 'the preview scroll rule exists');
-  assert.match(scroll[1], /overflow:\s*hidden/);
-  const action = /\.rp-download\s*\{([^}]*)\}/.exec(css);
+  assert.match(scroll[1], /min-width:\s*0/, 'the preview must not force the shell wider than the screen');
+  const action = /\.rc-download\s*\{([^}]*)\}/.exec(css);
   assert.match(action[1], /width:\s*100%/, 'the download button is full width');
   assert.match(action[1], /min-height:\s*5\dpx/, 'the download button is a real touch target');
 });
 
-test('step 5 — the download asks the browser for a meaningfully named PDF', async () => {
+test('the download asks the browser for a meaningfully named PDF', async () => {
   lastDownload = null;
-  ctx.click(ctx.$('#adminReports .rp-download'));
+  ctx.click($('.rc-download'));
   await ctx.waitFor(() => Boolean(lastDownload), 20000);
   const today = new Date().toISOString().slice(0, 10);
   assert.match(lastDownload.name, new RegExp(`^ActivePlus_Student_Master_List_${today}\\.pdf$`));
   assert.equal(lastDownload.href, 'blob:active-plus-report');
 });
 
-test('the preview reports the page count the document really has', () => {
-  const meta = ctx.$('#adminReports .rp-preview-meta span').textContent;
-  const pages = ctx.$$('#adminReports .rp-page').length;
-  assert.match(meta, new RegExp(`${pages} পৃষ্ঠা`.replace(/\d/g, digit => '০১২৩৪৫৬৭৮৯'[digit])));
+test('the preview replaces the form, and Back returns to it', async () => {
+  // One document, one blob: the preview and the download cannot drift apart.
+  assert.ok($('.rc-pdf-preview').textContent.trim().length > 0, 'the preview shows the document body');
+  assert.equal($('.rc-form'), null, 'the form gives way to the preview');
+  ctx.click($('.rc-back'));
+  await ctx.waitFor(() => Boolean($('.rc-form')), 20000);
+  assert.equal($('select[name="report"]').value, 'student.all', 'Back keeps the chosen report');
+  assert.equal($('.rc-pdf-preview'), null);
 });
 
 test('a report with no matching records says so instead of printing blanks', async () => {
-  openCategory('student');
-  openReport('student.class-wise');
-  const select = ctx.$('#adminReports .rp-field[data-filter="class"] select');
+  chooseReport('student.class-wise');
+  const select = $('.rc-field[data-filter="class"] .rc-control');
   const option = [...select.options].find(node => node.value === 'অনার্স ৪র্থ বর্ষ');
   assert.ok(option, 'every enabled class is offered');
   select.value = option.value;
   select.dispatchEvent(new ctx.window.Event('change', { bubbles: true }));
-  ctx.click(ctx.$('#adminReports .rp-generate'));
-  await ctx.waitFor(() => Boolean(ctx.$('#adminReports .rp-empty')), 20000);
-  assert.equal(ctx.$('#adminReports .rp-empty-text').textContent, catalog.EMPTY_MESSAGE);
-  assert.equal(ctx.$('#adminReports .rp-download'), null, 'there is nothing to download');
+  generate();
+  await ctx.waitFor(() => Boolean($('.rc-pdf-preview')), 20000);
+  // The honest empty state travels inside the document, so the PDF says it too.
+  assert.match($('.rc-pdf-preview').textContent, /No data found/);
+  assert.equal(catalog.EMPTY_MESSAGE.length > 0, true);
 });

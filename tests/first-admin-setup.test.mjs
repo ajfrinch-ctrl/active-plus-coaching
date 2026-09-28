@@ -25,8 +25,15 @@ async function openLoginPage() {
   ctx = await loadPage('index.html', { seed: { ...DEMO_OFF } });
   const { initLogin } = await import('../js/login.js');
   initLogin({ state: { student: null, account: null }, onAuthenticated: () => {} });
-  // The gate is async (it reads the stored Admin record), so let it settle.
-  await ctx.waitFor(() => Boolean(ctx.$('#firstAdminFootnote')) || ctx.$('#firstAdminPanel') === null);
+  // The gate is async (it settles the stored Admin record, and may consult the
+  // optional online bridge first), so wait for it to actually decide rather
+  // than for the element to merely exist in the markup: it ships hidden and is
+  // either unhidden or removed once the answer is known.
+  await ctx.waitFor(() => {
+    const footnote = ctx.$('#firstAdminFootnote');
+    if (!footnote) return true;
+    return footnote.hidden === false;
+  });
   await ctx.flush();
   return ctx;
 }
@@ -162,14 +169,13 @@ test('duplicate names walk rasal2 → rasal3 on the first name', async () => {
 test('the Admin portal also refuses to offer the workflow', async () => {
   const panel = await loadPage('admin.html', { seed: { ...DEMO_OFF } });
   await import('../js/admin.js?no-admin');
-  await panel.waitFor(() => panel.$('#adminEntry').hidden === false, 20000);
-  // No creation form anywhere in the page…
+  // No creation form anywhere in the page.
   assert.equal(panel.$('#initialAdminSetup'), null);
   assert.equal(panel.$('#initialAdminForm'), null);
   assert.equal(panel.$('form input[name="username"][id*="initial"]'), null);
-  // …and with no Admin stored it simply points to the login page.
-  assert.equal(panel.$('#adminNoAccount').hidden, false);
-  assert.match(panel.$('#adminNoAccount').textContent, /লগইন পেজ/);
-  assert.equal(panel.$('#adminLoginForm').hidden, true);
+  /* With no Admin session stored the panel never opens: it sends the visitor
+     to the shared login page, the only place first use is handled. */
+  await panel.waitFor(() => panel.jsdomErrors.some(error => /navigation/i.test(error)));
+  assert.equal(panel.$('#adminShell').hidden, true, 'the Admin panel must stay closed');
   panel.window.close();
 });

@@ -5,8 +5,7 @@ import assert from 'node:assert/strict';
 import { loadPage } from './jsdom-harness.mjs';
 import { adminStudents } from '../js/admin-data.js';
 import { ROSTER_KEY } from '../js/office-data.js';
-import { PAYMENT_USER_ID } from '../js/payment-auth.js';
-import { STAFF_TEST_PASSWORD, provisionStaff } from './staff-harness.mjs';
+import { provisionStaff, seedStaffSession } from './staff-harness.mjs';
 import { toBanglaNumber as bn } from '../js/ui.js';
 
 const raisa = adminStudents.find(s => s.id === 'AP-1024');
@@ -35,12 +34,12 @@ before(async () => {
   ctx.window.HTMLAnchorElement.prototype.click = function click() { downloads.push(this.download); };
   Object.defineProperty(ctx.window, 'open', { value: url => { opened.push(url); return null; }, configurable: true, writable: true });
 
+  /* The counter signs in on the one shared login card, so the desk opens from
+     the device-bound session that sign-in wrote rather than a local form. */
+  await provisionStaff('payment');
+  seedStaffSession(ctx.window, 'payment');
   await import('../js/payment.js');
   const { $, $$, submit, click, waitFor } = ctx;
-  await provisionStaff('payment');
-  ctx.type($('#payLoginUser'), PAYMENT_USER_ID);
-  ctx.type($('#payLoginPin'), STAFF_TEST_PASSWORD);
-  submit($('#payLoginForm'));
   await waitFor(() => $('#payShell').hidden === false);
   ctx.type($('#payStudentSearch'), 'রাইসা');
   await waitFor(() => $$('#paySearchResults .fee-search-result').length > 0);
@@ -72,7 +71,10 @@ test('pressing it opens that student\'s WhatsApp chat with the receipt details',
 
   const text = decodeURIComponent(url.searchParams.get('text'));
   assert.match(text, /রাইসা ইসলাম/);
-  assert.match(text, new RegExp($('#payReceiptSub').textContent.match(/REC-[\w-]+/)[0]));
+  // The shared message must carry the same sequential receipt number the modal shows.
+  const receiptNo = $('#payReceiptSub').textContent.match(/R\d{9}/);
+  assert.ok(receiptNo, 'the modal shows a sequential receipt number');
+  assert.match(text, new RegExp(receiptNo[0]));
   assert.match(text, /পরিশোধ হয়েছে/);
   assert.match(text, /Active Plus Coaching/);
 });
@@ -81,7 +83,7 @@ test('the receipt image is saved alongside so it can be attached to that chat', 
   const { $, waitFor } = ctx;
   await waitFor(() => downloads.length > 0);
   assert.equal(downloads.length, 1);
-  assert.match(downloads[0], /^REC-[\w-]+\.png$/);
+  assert.match(downloads[0], /^R\d{9}\.png$/);
   assert.match($('#payToast').textContent, new RegExp(bn(raisa.mobile)));
   assert.equal($('#payReceiptWhatsApp').disabled, false, 'the button is usable again');
 });

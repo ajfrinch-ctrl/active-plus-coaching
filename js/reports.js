@@ -27,7 +27,7 @@ const today = () => {
 };
 
 const slug = value => String(value || 'Report')
-  .replace(/[^\\p{L}\\p{N}]+/gu, '_')
+  .replace(/[^\p{L}\p{N}]+/gu, '_')
   .replace(/^_+|_+$/g, '')
   .slice(0, 70) || 'Report';
 
@@ -77,13 +77,18 @@ function filterSummary(definition, filters, options) {
   return parts;
 }
 
-function setSelectOptions(select, items, includeAll = true) {
+/* Filters that name exactly one record rather than a slice of them. */
+const SINGLE_FILTERS = new Set(['student', 'exam']);
+
+function setSelectOptions(select, items, { single = false } = {}) {
+  // A single-record filter leads with an empty choice, so the dropdown opens
+  // asking the question instead of quietly reporting on everybody.
   select.replaceChildren();
-  if (includeAll) select.append(new Option('সব', 'all'));
+  select.append(new Option(single ? 'নির্বাচন করুন' : 'সব', single ? '' : 'all'));
   for (const item of items || []) select.append(new Option(item.label, item.value));
 }
 
-function addField(form, key, options, filters) {
+function addField(form, key, options, filters, defaultPeriod) {
   const meta = FILTER_META[key];
   if (!meta) return;
   const wrap = el('label', 'rc-field');
@@ -99,7 +104,10 @@ function addField(form, key, options, filters) {
       ['all','সব সময়'],['daily','Daily (একদিন)'],['weekly','Weekly (সপ্তাহ)'],
       ['monthly','Monthly (মাস)'],['custom','Custom Date Range']
     ]) select.append(new Option(item[1], item[0]));
-    select.value = filters[key] || 'all';
+    /* A report that is defined as daily/weekly/monthly/custom opens on that
+       period, not on "all time" — otherwise "Daily Fee Collection" would
+       quietly generate a different report than its name promises. */
+    select.value = filters[key] || defaultPeriod || 'all';
     wrap.append(select);
     form.append(wrap);
     return;
@@ -109,8 +117,12 @@ function addField(form, key, options, filters) {
   select.dataset.filter = key;
   select.name = key;
   const optionKey = meta.options;
-  setSelectOptions(select, options?.[optionKey] || [], true);
-  select.value = filters[key] || 'all';
+  /* A report that requires one specific student (or one specific exam) must not
+     offer "all": the user asked to pick a person, and silently reporting on
+     everybody instead is worse than asking again. */
+  const single = SINGLE_FILTERS.has(key);
+  setSelectOptions(select, options?.[optionKey] || [], { single });
+  select.value = filters[key] || (single ? '' : 'all');
   wrap.append(select);
   form.append(wrap);
 }
@@ -166,7 +178,7 @@ class ReportCenter {
     return this;
   }
 
-  render() {
+  render(restore='') {
     this.revokePdf();
     this.root.className='report-center-new';
     this.root.replaceChildren();
@@ -188,6 +200,9 @@ class ReportCenter {
     for (const report of this.catalog) {
       reportSelect.append(new Option(report.title,report.id));
     }
+    // Coming back from a preview reopens the report the user had chosen.
+    const chosen = restore || this.lastReportId || '';
+    if ([...reportSelect.options].some(option => option.value === chosen)) reportSelect.value = chosen;
     reportField.append(reportSelect); form.append(reportField);
 
     this.dynamic=el('div','rc-dynamic-filters');
@@ -206,23 +221,28 @@ class ReportCenter {
     reportSelect.addEventListener('change',()=>this.selectReport(reportSelect.value));
     form.addEventListener('submit',event=>{event.preventDefault();this.generate();});
 
-    this.selectReport('');
+    this.selectReport(reportSelect.value);
   }
 
   selectReport(id) {
     this.definition=this.catalog.find(item=>item.id===id) || null;
+    this.lastReportId=this.definition?.id || '';
     this.filters={};
     this.dynamic.replaceChildren();
     if (!this.definition) return;
 
-    for (const key of this.definition.filters || []) addField(this.dynamic,key,this.options,this.filters);
-    const period=this.dynamic.querySelector('[data-filter="period"]');
-    if (period) {
-      period.addEventListener('change',()=>{
-        addPeriodExtra(this.dynamic,period.value);
+    for (const key of this.definition.filters || []) addField(this.dynamic, key, this.options, this.filters, this.definition.defaultPeriod);
+    /* `[data-filter="period"]` is the <label> wrapping the select, so the value
+       has to be read off the control inside it — reading it off the label
+       yields undefined and the date inputs would never appear. */
+    const periodField=this.dynamic.querySelector('[data-filter="period"]');
+    const periodSelect=periodField?.querySelector('.rc-control') || null;
+    if (periodSelect) {
+      periodSelect.addEventListener('change',()=>{
+        addPeriodExtra(this.dynamic,periodSelect.value);
       });
+      addPeriodExtra(this.dynamic,periodSelect.value);
     }
-    if (period) addPeriodExtra(this.dynamic,period.value);
   }
 
   async generate() {
@@ -300,7 +320,7 @@ class ReportCenter {
   closePreview() {
     this.revokePdf();
     this.pdfBlob=null;
-    this.render();
+    this.render(this.definition?.id || '');
   }
 
   revokePdf() {
