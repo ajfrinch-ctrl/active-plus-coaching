@@ -25,8 +25,15 @@ async function openLoginPage() {
   ctx = await loadPage('index.html', { seed: { ...DEMO_OFF } });
   const { initLogin } = await import('../js/login.js');
   initLogin({ state: { student: null, account: null }, onAuthenticated: () => {} });
-  // The gate is async (it reads the stored Admin record), so let it settle.
-  await ctx.waitFor(() => Boolean(ctx.$('#firstAdminFootnote')) || ctx.$('#firstAdminPanel') === null);
+  // The gate is async (it settles the stored Admin record, and may consult the
+  // optional online bridge first), so wait for it to actually decide rather
+  // than for the element to merely exist in the markup: it ships hidden and is
+  // either unhidden or removed once the answer is known.
+  await ctx.waitFor(() => {
+    const footnote = ctx.$('#firstAdminFootnote');
+    if (!footnote) return true;
+    return footnote.hidden === false;
+  });
   await ctx.flush();
   return ctx;
 }

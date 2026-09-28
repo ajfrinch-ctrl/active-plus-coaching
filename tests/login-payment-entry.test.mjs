@@ -10,9 +10,9 @@ import test, { before } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadPage } from './jsdom-harness.mjs';
 import { STAFF_ACCOUNTS } from '../js/staff-auth.js';
-import { hasStaffSession, createInitialAdmin } from '../js/staff-auth.js';
+import { hasStaffSession, createInitialAdmin, staffAccountRecordExists } from '../js/staff-auth.js';
 import { STORAGE_KEYS } from '../js/config.js';
-import { STAFF_TEST_PASSWORD, provisionStaff, seedStaffSession, signInOnLoginPage, completeStaffPasswordDialog } from './staff-harness.mjs';
+import { STAFF_TEST_PASSWORD, provisionStaff, seedStaffSession, signInOnLoginPage, completeStaffPasswordDialog, cancelStaffPasswordDialog } from './staff-harness.mjs';
 
 const DEMO_OFF = { 'activePlus.demo.autofill.v1': 'off' };
 const ACCOUNT_KEY = 'active-plus-account-v1';
@@ -84,11 +84,16 @@ test('a student still signs in here and opens the student app', async () => {
 
 test('admin credentials hand over to the admin panel, wrong ones change nothing', async () => {
   await open();
-  // Admin access is not self-provisioned at shared login: the first Admin
-  // must be created through the dedicated initial setup flow.
-  await signIn(STAFF_ACCOUNTS.admin.username, STAFF_TEST_PASSWORD, () => Boolean(ctx.$('#authMessage').textContent));
+  // Admin access is not self-provisioned by a plain credential sign-in. A device
+  // that has no Admin record is a first-use device: the login page offers the
+  // dedicated Admin setup, and knowing the reserved username plus the right
+  // password must not, on its own, create the Admin or a session.
+  await signIn(STAFF_ACCOUNTS.admin.username, STAFF_TEST_PASSWORD,
+    () => Boolean(ctx.$('#authMessage').textContent) || Boolean(ctx.$('.staff-pw-backdrop')));
   assert.equal(session('admin'), null, 'no Admin session before initial setup');
-  assert.equal(ctx.$('.staff-pw-backdrop'), null, 'shared login cannot create the first Admin');
+  assert.equal(await staffAccountRecordExists('admin'), false, 'shared login cannot create the first Admin');
+  await cancelStaffPasswordDialog(ctx);
+  assert.match(ctx.$('#authMessage').textContent, /পাসওয়ার্ড নির্ধারণ করুন/);
 
   await provisionStaff('admin');
   await signIn('admin.apc', 'ভুল-পাসওয়ার্ড', () => /সঠিক ন(য়|য়)/.test(ctx.$('#authMessage').textContent));

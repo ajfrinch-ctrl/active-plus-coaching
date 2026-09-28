@@ -54,6 +54,15 @@ export async function completeStaffPasswordDialog(ctx, password = STAFF_TEST_PAS
   await ctx.flush();
 }
 
+/** Dismiss the staff password dialog without choosing a password. */
+export async function cancelStaffPasswordDialog(ctx) {
+  const { $, click, waitFor } = ctx;
+  await waitFor(() => Boolean($('.staff-pw-backdrop')));
+  click($('[data-staff-pw-cancel]'));
+  await waitFor(() => !$('.staff-pw-backdrop'));
+  await ctx.flush();
+}
+
 /** Open a staff panel page for tests that drive the panel itself.
     Signing in happens on the one shared login card in index.html, so a panel
     no longer carries a login form of its own — it opens from a device-bound

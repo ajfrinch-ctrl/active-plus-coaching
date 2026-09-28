@@ -168,6 +168,33 @@ async function handleDirectoryStaffLogin(directory, remember) {
   await enterStaffPanel(role, remember);
 }
 
+/* The online bridge is an optional convenience, never a gate. localStorage is
+   the source of truth on this device, so a CDN that is slow, blocked or simply
+   unreachable (school network, ad blocker, captive portal) must never hold the
+   login button hostage: the import and the hydrate each get a short budget and
+   the device's own records are used either way. */
+const ONLINE_BRIDGE_BUDGET_MS = 2500;
+
+function withinBudget(promise, what) {
+  let timer;
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`${what} timed out`)), ONLINE_BRIDGE_BUDGET_MS);
+    })
+  ]).finally(() => clearTimeout(timer));
+}
+
+async function hydrateStaffAccountsOnline(what) {
+  if (!navigator.onLine) return;
+  try {
+    const bridge = await withinBudget(import('./realtime-sync.js?v=20260928-1731'), 'online bridge import');
+    await withinBudget(bridge.hydrateStaffAccounts(), 'online bridge hydrate');
+  } catch (error) {
+    console.warn(`[Active Plus] staff account sync unavailable during ${what}:`, error.message);
+  }
+}
+
 async function handleLogin(event, state, onAuthenticated) {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
@@ -182,14 +209,7 @@ async function handleLogin(event, state, onAuthenticated) {
     // remains the authoritative credential on this device. Hydrate only when
     // the device has no Admin record yet (the cross-device first-login case).
     const hasLocalAdmin = staffAccountRecordExists('admin');
-    if (!hasLocalAdmin) {
-      try {
-        const { hydrateStaffAccounts } = await import('./realtime-sync.js?v=20260928-1731');
-        await hydrateStaffAccounts();
-      } catch (error) {
-        console.warn('[Active Plus] staff account sync unavailable during login:', error);
-      }
-    }
+    if (!hasLocalAdmin) await hydrateStaffAccountsOnline('login');
   }
   // Staff usernames are reserved, so a match here can only be that panel.
   const staffRole = await resolveStaffRoleByUsername(typedId);
@@ -328,14 +348,7 @@ async function initFirstAdminSetup() {
   // On a new device the Admin record may exist only in Firebase at first.
   // Hydrate staff accounts before deciding whether the one-time setup is
   // available, so a real Admin account is never shown as "Create Admin".
-  if (navigator.onLine) {
-    try {
-      const { hydrateStaffAccounts } = await import('./realtime-sync.js?v=20260928-1731');
-      await hydrateStaffAccounts();
-    } catch (error) {
-      console.warn('[Active Plus] staff account sync unavailable during first-use check:', error);
-    }
-  }
+  await hydrateStaffAccountsOnline('first-use check');
 
   if (await staffAccountRecordExists('admin')) {
     await lockFirstAdminSetup();             // Admin Count >= 1 → never offered
