@@ -1,330 +1,83 @@
-/* Active Plus Coaching — NEW AMOLED / LIQUID-GLASS DESIGN
-   Presentation layer only. No markup, data, login, role, storage or workflow changes.
+/* Active Plus Coaching — iPhone-style transparent glass redesign
+   Presentation only. No login, role, data, storage, routing or workflow changes.
+   Dark/AMOLED presentation is intentionally removed; all screens use one
+   readable light transparent-glass surface.
 */
+
 :root{
-  --apc-bg:#000;
-  --apc-surface:#0b0b0d;
-  --apc-surface-2:#111114;
-  --apc-surface-3:#17171b;
-  --apc-line:rgba(255,255,255,.10);
-  --apc-line-strong:rgba(255,255,255,.18);
-  --apc-text:#f7f7f8;
-  --apc-muted:#a1a1a8;
-  --apc-dim:#707078;
-  --apc-accent:#f2f2f4;
-  --apc-accent-2:#c8c8cf;
-  --apc-danger:#ff5d68;
-  --apc-shadow:0 18px 60px rgba(0,0,0,.72);
-  --apc-radius-xl:26px;
-  --apc-radius-lg:21px;
-  --apc-radius-md:17px;
-  --apc-radius-sm:13px;
+  --apc-bg:#eef2f6;
+  --apc-glass:rgba(255,255,255,.62);
+  --apc-glass-strong:rgba(255,255,255,.78);
+  --apc-glass-soft:rgba(255,255,255,.42);
+  --apc-line:rgba(255,255,255,.78);
+  --apc-text:#18202a;
+  --apc-muted:#65707d;
+  --apc-dim:#8a949f;
+  --apc-shadow:0 18px 50px rgba(42,55,72,.13);
+  --apc-radius-lg:22px;
 }
-html[data-theme="dark"]{
-  color-scheme:dark;
-  --ink:var(--apc-text)!important;
-  --muted:var(--apc-muted)!important;
-  --muted-2:var(--apc-dim)!important;
-  --cream:#000!important;
-  --surface:var(--apc-surface)!important;
-  --line:var(--apc-line)!important;
-  --mint:var(--apc-surface-2)!important;
-  --mint-2:var(--apc-surface-3)!important;
-  --mint-strong:#222228!important;
-  --forest-text:var(--apc-text)!important;
-  --forest-dark-text:var(--apc-text)!important;
-  --forest:var(--apc-text)!important;
-  --forest-dark:var(--apc-text)!important;
-  --forest-light:var(--apc-accent-2)!important;
-  --glass:rgba(10,10,12,.86)!important;
-  --glass-strong:rgba(18,18,21,.94)!important;
-  --glass-soft:rgba(255,255,255,.045)!important;
-  --glass-border:var(--apc-line)!important;
-  --glass-shadow:var(--apc-shadow)!important;
-  --admin-glass:rgba(10,10,12,.90)!important;
-  --admin-glass-border:var(--apc-line)!important;
-  --admin-shadow:var(--apc-shadow)!important;
-  --panel-card-solid:#0b0b0d!important;
+html,html[data-theme="dark"],html[data-theme="light"]{
+  color-scheme:light!important;
+  --ink:var(--apc-text)!important;--muted:var(--apc-muted)!important;--muted-2:var(--apc-dim)!important;
+  --cream:#eef2f6!important;--surface:var(--apc-glass)!important;--line:rgba(40,55,70,.10)!important;
+  --mint:rgba(255,255,255,.48)!important;--mint-2:rgba(255,255,255,.60)!important;--mint-strong:rgba(255,255,255,.78)!important;
+  --forest-text:var(--apc-text)!important;--forest-dark-text:var(--apc-text)!important;--forest:#27313d!important;--forest-dark:#18202a!important;--forest-light:#566270!important;
+  --glass:var(--apc-glass)!important;--glass-strong:var(--apc-glass-strong)!important;--glass-soft:var(--apc-glass-soft)!important;
+  --glass-border:var(--apc-line)!important;--glass-shadow:var(--apc-shadow)!important;--admin-glass:var(--apc-glass)!important;
+  --admin-glass-border:var(--apc-line)!important;--admin-shadow:var(--apc-shadow)!important;--panel-card-solid:rgba(255,255,255,.88)!important;
 }
-html[data-theme="dark"],html[data-theme="dark"] body{
-  background:#000!important;color:var(--apc-text)!important;
-  font-family:"Noto Sans Bengali","Noto Sans","Nirmala UI","Segoe UI",system-ui,-apple-system,sans-serif;
-  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+html,body,html[data-theme="dark"],html[data-theme="light"],html[data-theme="dark"] body,html[data-theme="light"] body{
+  background:radial-gradient(circle at 12% 8%,rgba(255,255,255,.95),transparent 30%),radial-gradient(circle at 90% 18%,rgba(213,229,247,.72),transparent 34%),radial-gradient(circle at 55% 100%,rgba(255,255,255,.88),transparent 42%),linear-gradient(145deg,#edf2f7,#e7edf3)!important;
+  color:var(--apc-text)!important;font-family:"Noto Sans Bengali","Noto Sans","Nirmala UI","Segoe UI",system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
 }
-html[data-theme="dark"] body::before{
-  content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;
-  background:radial-gradient(circle at 50% -10%,rgba(255,255,255,.055),transparent 32%),
-             radial-gradient(circle at 100% 100%,rgba(255,255,255,.025),transparent 34%);
-}
-html[data-theme="dark"] .app-shell,
-html[data-theme="dark"] .auth-screen,
-html[data-theme="dark"] .admin-shell,
-html[data-theme="dark"] .teacher-shell,
-html[data-theme="dark"] .manager-shell,
-html[data-theme="dark"] .pay-shell,
-html[data-theme="dark"] .app-main,
-html[data-theme="dark"] .admin-main{background:#000!important;color:var(--apc-text)!important}
+body::before,body::after,.app-shell::before,.admin-shell::before,.auth-screen::before{background:none!important;box-shadow:none!important;animation:none!important}
+h1,h2,h3,h4,strong,b{color:#18202a!important;letter-spacing:-.02em}p,small,label,.muted,.eyebrow{color:#65707d!important}a{color:#25313d!important}
 
-/* Typography */
-html[data-theme="dark"] h1,html[data-theme="dark"] h2,html[data-theme="dark"] h3,
-html[data-theme="dark"] h4,html[data-theme="dark"] strong,html[data-theme="dark"] b{
-  color:#fafafd!important;letter-spacing:-.02em;
+.auth-card,.home-hero,.home-list-card,.quick-wrap,.teaching-board,.admin-card,.teacher-summary,.teacher-record-card,.pay-card,.payment-card,.settings-list,.admin-more-menu,.modal,.admin-modal,.rp-card,.rp-report,.rp-choose,.rp-preview-bar,.rp-empty,.rp-page,.study-progress-card,.dashboard-routine-card,.dashboard-empty-card,.challenge-card,.dashboard-empty,.contact-card,.help-card,.pending-id,.welcome-card,.admin-hero,.home-stat,.admin-stat-tile,.admin-dashboard-collect,.course-item,.result-row,.result-stats>div,.pending-info,.maintenance-alert-card{
+  background:var(--apc-glass)!important;border:1px solid var(--apc-line)!important;border-radius:var(--apc-radius-lg)!important;
+  box-shadow:var(--apc-shadow),inset 0 1px 0 rgba(255,255,255,.86)!important;backdrop-filter:blur(24px) saturate(135%)!important;-webkit-backdrop-filter:blur(24px) saturate(135%)!important;
 }
-html[data-theme="dark"] p,html[data-theme="dark"] small,html[data-theme="dark"] label,
-html[data-theme="dark"] .muted{color:var(--apc-muted)}
-html[data-theme="dark"] a{color:#ededf0}
-html[data-theme="dark"] .eyebrow{color:#a9a9b0!important}
+.topbar,.admin-topbar,.auth-topbar,.pay-topbar,.bottom-nav,.admin-bottom,.app-bottom-nav,.bottom-navigation{
+  background:rgba(255,255,255,.54)!important;border-color:rgba(255,255,255,.78)!important;box-shadow:0 12px 36px rgba(44,57,72,.10)!important;
+  backdrop-filter:blur(28px) saturate(145%)!important;-webkit-backdrop-filter:blur(28px) saturate(145%)!important;
+}
+.theme-quick-toggle,[data-theme-toggle]{display:none!important}
 
-/* Unified glass surfaces */
-html[data-theme="dark"] .auth-card,
-html[data-theme="dark"] .home-hero,
-html[data-theme="dark"] .home-list-card,
-html[data-theme="dark"] .quick-wrap,
-html[data-theme="dark"] .teaching-board,
-html[data-theme="dark"] .admin-card,
-html[data-theme="dark"] .teacher-summary,
-html[data-theme="dark"] .teacher-record-card,
-html[data-theme="dark"] .pay-card,
-html[data-theme="dark"] .payment-card,
-html[data-theme="dark"] .settings-list,
-html[data-theme="dark"] .admin-more-menu,
-html[data-theme="dark"] .modal,
-html[data-theme="dark"] .admin-modal,
-html[data-theme="dark"] .rp-card,
-html[data-theme="dark"] .rp-report,
-html[data-theme="dark"] .rp-choose,
-html[data-theme="dark"] .rp-preview-bar,
-html[data-theme="dark"] .rp-empty,
-html[data-theme="dark"] .rp-page,
-html[data-theme="dark"] .study-progress-card,
-html[data-theme="dark"] .dashboard-routine-card,
-html[data-theme="dark"] .dashboard-empty-card,
-html[data-theme="dark"] .challenge-card,
-html[data-theme="dark"] .dashboard-empty,
-html[data-theme="dark"] .contact-card,
-html[data-theme="dark"] .help-card,
-html[data-theme="dark"] .pending-id{
-  background:linear-gradient(145deg,rgba(18,18,21,.94),rgba(7,7,9,.96))!important;
-  border:1px solid var(--apc-line)!important;
-  border-radius:var(--apc-radius-lg)!important;
-  box-shadow:var(--apc-shadow)!important;
-  backdrop-filter:blur(24px) saturate(115%)!important;
-  -webkit-backdrop-filter:blur(24px) saturate(115%)!important;
+/* Remove all generated water-drop/image icons; keep only the existing simple SVG line icons. */
+.quick-tile-btn,.bottom-link .nav-chip,.admin-bottom-item .nav-chip,.admin-hero-icon,.tile-icon,.admin-hero-foot-icon,.admin-dashboard-collect-icon,.admin-more-icon,.admin-stat-icon,.home-hero-icon,.home-stat-icon,.home-hero-foot-icon,.home-row-icon,.settings-icon,.help-icon,.learning-home-icon{
+  background-image:none!important;background-color:rgba(255,255,255,.38)!important;border:1px solid rgba(255,255,255,.72)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.90)!important;filter:none!important;animation:none!important;
 }
-html[data-theme="dark"] .home-stat,
-html[data-theme="dark"] .admin-stat-tile,
-html[data-theme="dark"] .admin-dashboard-collect,
-html[data-theme="dark"] .teacher-home-link,
-html[data-theme="dark"] .finance-nav-pills,
-html[data-theme="dark"] .course-item,
-html[data-theme="dark"] .result-row,
-html[data-theme="dark"] .result-stats>div{
-  background:#0d0d10!important;border-color:var(--apc-line)!important;color:var(--apc-text)!important;
+.quick-tile-btn svg,.bottom-link .nav-chip svg,.admin-bottom-item .nav-chip svg,.admin-hero-icon svg,.tile-icon svg,.admin-hero-foot-icon svg,.admin-dashboard-collect-icon svg,.admin-more-icon svg,.admin-stat-icon svg,.home-hero-icon svg,.home-stat-icon svg,.home-hero-foot-icon svg,.home-row-icon svg,.settings-icon svg,.help-icon svg,.learning-home-icon svg{
+  display:block!important;opacity:1!important;visibility:visible!important;width:24px!important;height:24px!important;background:none!important;color:#26323e!important;
 }
-html[data-theme="dark"] .home-stat:hover,
-html[data-theme="dark"] .admin-stat-tile:hover,
-html[data-theme="dark"] .home-row:active,
-html[data-theme="dark"] .settings-list>button:active,
-html[data-theme="dark"] .admin-more-item:active{
-  background:#17171b!important;transform:translateY(-1px);
-}
+svg{color:#26323e}svg *{stroke:currentColor}
+.bottom-link .nav-chip,.admin-bottom-item .nav-chip{width:42px!important;height:38px!important;background-image:none!important}
+.bottom-link.active .nav-chip,.admin-bottom-item.active .nav-chip{background:rgba(255,255,255,.82)!important;border-color:rgba(255,255,255,.95)!important;transform:scale(1.06)!important;box-shadow:0 8px 20px rgba(42,55,72,.12),inset 0 1px 0 #fff!important}
+.bottom-link.active span:last-child,.admin-bottom-item.active span:last-child{color:#18202a!important;font-weight:800}
+svg:has(> use){background-image:none!important}svg:has(> use)::before{display:none!important}
+button.exam-link::before,.teacher-home-link .learning-home-icon,.finance-nav-pills [data-finance-tab]::before{background-image:none!important}
+button.exam-link::before{background-color:rgba(255,255,255,.45)!important;box-shadow:none!important}
 
-/* Top bars + navigation */
-html[data-theme="dark"] .topbar,
-html[data-theme="dark"] .admin-topbar,
-html[data-theme="dark"] .auth-topbar,
-html[data-theme="dark"] .pay-topbar,
-html[data-theme="dark"] .bottom-nav,
-html[data-theme="dark"] .admin-bottom,
-html[data-theme="dark"] .app-bottom-nav,
-html[data-theme="dark"] .bottom-navigation{
-  background:rgba(4,4,5,.86)!important;
-  border-color:var(--apc-line)!important;
-  box-shadow:0 -8px 35px rgba(0,0,0,.45),0 8px 35px rgba(0,0,0,.38)!important;
-  backdrop-filter:blur(26px) saturate(120%)!important;
-  -webkit-backdrop-filter:blur(26px) saturate(120%)!important;
+input,select,textarea,.auth-panel input,.auth-panel select,.auth-panel textarea,.field input,.field select,.field textarea,.admin-card input{
+  color:#18202a!important;background:rgba(255,255,255,.56)!important;border:1px solid rgba(255,255,255,.86)!important;border-radius:16px!important;box-shadow:inset 0 1px 2px rgba(44,57,72,.05)!important;
 }
-html[data-theme="dark"] .bottom-link .nav-chip,
-html[data-theme="dark"] .admin-bottom-item .nav-chip{
-  background:#111114!important;border:1px solid rgba(255,255,255,.08)!important;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.06)!important;
-  filter:grayscale(1) brightness(1.35)!important;
-  transition:transform .2s ease,background .2s ease,filter .2s ease!important;
-}
-html[data-theme="dark"] .bottom-link.active .nav-chip,
-html[data-theme="dark"] .admin-bottom-item.active .nav-chip{
-  background:#f2f2f4!important;color:#050505!important;
-  transform:scale(1.10)!important;filter:grayscale(1) brightness(.95)!important;
-  box-shadow:0 8px 25px rgba(255,255,255,.10)!important;
-}
-html[data-theme="dark"] .bottom-link.active span:last-child,
-html[data-theme="dark"] .admin-bottom-item.active span:last-child{color:#fff!important}
-html[data-theme="dark"] .brand-mark img,html[data-theme="dark"] .auth-brand img{
-  filter:grayscale(1) contrast(1.08);box-shadow:0 8px 25px rgba(255,255,255,.08)!important;
-}
+input::placeholder,textarea::placeholder{color:#87919d!important}input:focus,select:focus,textarea:focus{border-color:rgba(74,91,110,.35)!important;box-shadow:0 0 0 3px rgba(70,88,108,.10),inset 0 1px 2px rgba(44,57,72,.04)!important;outline:none!important}.input-wrap{background:transparent!important}
+.auth-tabs,.registration-mode,.day-tabs{background:rgba(255,255,255,.38)!important;border:1px solid rgba(255,255,255,.70)!important;backdrop-filter:blur(18px)!important;-webkit-backdrop-filter:blur(18px)!important}
+.auth-tab.active,.mode-button.active,.chip.active{background:rgba(255,255,255,.82)!important;color:#18202a!important;border-color:rgba(255,255,255,.95)!important;box-shadow:0 5px 16px rgba(42,55,72,.08)!important}
 
-/* Icons: monochrome glass language */
-html[data-theme="dark"] .home-hero-icon,html[data-theme="dark"] .home-stat-icon,
-html[data-theme="dark"] .home-hero-foot-icon,html[data-theme="dark"] .home-row-icon,
-html[data-theme="dark"] .settings-icon,html[data-theme="dark"] .help-icon,
-html[data-theme="dark"] .admin-hero-icon,html[data-theme="dark"] .tile-icon,
-html[data-theme="dark"] .admin-hero-foot-icon,html[data-theme="dark"] .admin-dashboard-collect-icon,
-html[data-theme="dark"] .admin-more-icon,html[data-theme="dark"] .admin-stat-icon,
-html[data-theme="dark"] .learning-home-icon{
-  background-color:#111114!important;border:1px solid rgba(255,255,255,.10)!important;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 8px 22px rgba(0,0,0,.45)!important;
-  filter:grayscale(1) brightness(1.28)!important;
-}
-html[data-theme="dark"] svg{color:#e9e9ec}
-html[data-theme="dark"] svg *{stroke:currentColor}
-html[data-theme="dark"] .admin-more-item .admin-more-icon,
-html[data-theme="dark"] .finance-nav-pills [data-finance-tab]::before,
-html[data-theme="dark"] button.exam-link::before{
-  filter:grayscale(1) brightness(1.25)!important;
-}
-html[data-theme="dark"] .admin-more-item .admin-more-icon{background-color:#111114!important}
-
-/* Hero areas */
-html[data-theme="dark"] .welcome-card,
-html[data-theme="dark"] .admin-hero,
-html[data-theme="dark"] .home-hero{
-  background:linear-gradient(135deg,#151519 0%,#09090b 58%,#030304 100%)!important;
-  border-color:rgba(255,255,255,.12)!important;
-  box-shadow:0 20px 65px rgba(0,0,0,.75),inset 0 1px 0 rgba(255,255,255,.08)!important;
-}
-html[data-theme="dark"] .welcome-card::after,
-html[data-theme="dark"] .admin-hero::after{
-  border-color:rgba(255,255,255,.07)!important;
-  box-shadow:0 0 0 24px rgba(255,255,255,.018),0 0 0 50px rgba(255,255,255,.012)!important;
-}
-html[data-theme="dark"] .welcome-card *,
-html[data-theme="dark"] .admin-hero *{color:inherit}
-html[data-theme="dark"] .home-hero-foot,
-html[data-theme="dark"] .admin-hero-foot{background:rgba(255,255,255,.045)!important;border-color:var(--apc-line)!important}
-
-/* Forms */
-html[data-theme="dark"] input,
-html[data-theme="dark"] select,
-html[data-theme="dark"] textarea,
-html[data-theme="dark"] .auth-panel input,
-html[data-theme="dark"] .auth-panel select,
-html[data-theme="dark"] .auth-panel textarea{
-  color:#f7f7f8!important;background:#08080a!important;
-  border:1px solid rgba(255,255,255,.11)!important;border-radius:14px!important;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.025)!important;
-}
-html[data-theme="dark"] input::placeholder,
-html[data-theme="dark"] textarea::placeholder{color:#626269!important}
-html[data-theme="dark"] input:focus,
-html[data-theme="dark"] select:focus,
-html[data-theme="dark"] textarea:focus{
-  border-color:rgba(255,255,255,.34)!important;
-  box-shadow:0 0 0 3px rgba(255,255,255,.055),inset 0 1px 0 rgba(255,255,255,.04)!important;
-  outline:none!important;
-}
-html[data-theme="dark"] .auth-tabs,
-html[data-theme="dark"] .registration-mode,
-html[data-theme="dark"] .day-tabs{
-  background:#0b0b0e!important;border:1px solid var(--apc-line)!important;
-}
-html[data-theme="dark"] .auth-tab.active,
-html[data-theme="dark"] .mode-button.active,
-html[data-theme="dark"] .chip.active{
-  background:#f2f2f4!important;color:#050505!important;border-color:transparent!important;
-}
-
-/* Buttons */
-html[data-theme="dark"] button.primary,
-html[data-theme="dark"] .auth-submit,
-html[data-theme="dark"] .logout-confirm,
-html[data-theme="dark"] .admin-btn.primary,
-html[data-theme="dark"] .mini-btn.approve{
-  background:#f2f2f4!important;color:#050505!important;border:1px solid #fff!important;
-  box-shadow:0 10px 28px rgba(255,255,255,.08)!important;border-radius:15px!important;
-  font-weight:800;
-}
-html[data-theme="dark"] button.exam-link{
-  background:linear-gradient(135deg,#f0f0f2,#bdbdc3)!important;color:#050505!important;
-  border:0!important;box-shadow:0 14px 35px rgba(255,255,255,.09)!important;
-}
-html[data-theme="dark"] .step-back,
-html[data-theme="dark"] .filter-button,
-html[data-theme="dark"] .modal-close,
-html[data-theme="dark"] .rp-back,
-html[data-theme="dark"] .rp-mini-btn,
-html[data-theme="dark"] .theme-quick-toggle{
-  background:#111114!important;color:#f4f4f6!important;border:1px solid var(--apc-line)!important;
-}
-html[data-theme="dark"] .danger,
-html[data-theme="dark"] .logout-button{color:var(--apc-danger)!important}
-
-/* Status, chips, progress */
-html[data-theme="dark"] .chip,
-html[data-theme="dark"] .home-count-pill,
-html[data-theme="dark"] .home-date-pill,
-html[data-theme="dark"] .saved-tag,
-html[data-theme="dark"] .dashboard-time-pill,
-html[data-theme="dark"] .pending-kicker{
-  background:#151519!important;color:#e9e9ed!important;border:1px solid var(--apc-line)!important;
-}
-html[data-theme="dark"] .progress-ring{background:conic-gradient(#eee 0deg var(--progress),#29292e var(--progress) 360deg)!important}
-html[data-theme="dark"] .progress-ring::before{background:#0b0b0d!important}
-html[data-theme="dark"] .challenge-progress-track,
-html[data-theme="dark"] .mini-progress,
-html[data-theme="dark"] .toggle-switch i{background:#28282d!important}
-
-/* Reports / finance */
-html[data-theme="dark"] .rp-head,
-html[data-theme="dark"] .rp-report-icon,
-html[data-theme="dark"] .rp-report-action,
-html[data-theme="dark"] .rp-csv-download{
-  background:#111114!important;color:#f2f2f4!important;border-color:var(--apc-line)!important;
-}
-html[data-theme="dark"] .rp-download-bar,
-html[data-theme="dark"] .install-toast,
-html[data-theme="dark"] .resource-modal-body,
-html[data-theme="dark"] .exam-timer{
-  background:rgba(5,5,7,.96)!important;border-color:var(--apc-line)!important;
-}
-
-/* Remove green/colored decorative paint in dark mode */
-html[data-theme="dark"] [class*="green"],
-html[data-theme="dark"] [class*="mint"],
-html[data-theme="dark"] [class*="forest"]{--local-color:#eee!important}
-html[data-theme="dark"] .tone-blue,
-html[data-theme="dark"] .tone-amber,
-html[data-theme="dark"] .settings-icon.purple,
-html[data-theme="dark"] .settings-icon.danger{
-  background:#111114!important;color:#eee!important;border-color:var(--apc-line)!important;
-}
-html[data-theme="dark"] .notice-strip,
-html[data-theme="dark"] .notice-detail-icon.light,
-html[data-theme="dark"] .maintenance-alert-card,
-html[data-theme="dark"] .pending-info,
-html[data-theme="dark"] .learning-summary .learning-summary-pending{
-  background:#171216!important;border-color:rgba(255,93,104,.20)!important;
-}
-
-/* Dividers + scrollbars */
-html[data-theme="dark"] hr,
-html[data-theme="dark"] .admin-more-item,
-html[data-theme="dark"] .study-progress-stats>div+div{border-color:var(--apc-line)!important}
-html[data-theme="dark"] ::selection{background:#eee;color:#000}
-html[data-theme="dark"] ::-webkit-scrollbar{width:4px;height:4px}
-html[data-theme="dark"] ::-webkit-scrollbar-track{background:#000}
-html[data-theme="dark"] ::-webkit-scrollbar-thumb{background:#303035;border-radius:10px}
-html[data-theme="dark"] ::-webkit-scrollbar-thumb:hover{background:#55555c}
-
-/* Motion: premium, subtle, low-end friendly */
-html[data-theme="dark"] .home-hero-icon,
-html[data-theme="dark"] .home-stat-icon,
-html[data-theme="dark"] .home-row-icon,
-html[data-theme="dark"] .settings-icon,
-html[data-theme="dark"] .help-icon,
-html[data-theme="dark"] .admin-hero-icon,
-html[data-theme="dark"] .tile-icon,
-html[data-theme="dark"] .admin-more-icon{animation:apcFloat 6s ease-in-out infinite}
-@keyframes apcFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
-@media(prefers-reduced-motion:reduce){
- html[data-theme="dark"] *{animation:none!important;transition-duration:.01ms!important}
-}
+button.primary,.auth-submit,.logout-confirm,.admin-btn.primary,.mini-btn.approve{background:rgba(28,37,48,.92)!important;color:#fff!important;border:1px solid rgba(255,255,255,.38)!important;box-shadow:0 10px 25px rgba(28,37,48,.18)!important;border-radius:16px!important;font-weight:800}
+.step-back,.filter-button,.modal-close,.rp-back,.rp-mini-btn{background:rgba(255,255,255,.52)!important;color:#26323e!important;border:1px solid rgba(255,255,255,.78)!important}.danger,.logout-button{color:#c73743!important}
+.chip,.home-count-pill,.home-date-pill,.saved-tag,.dashboard-time-pill,.pending-kicker{background:rgba(255,255,255,.48)!important;color:#394654!important;border:1px solid rgba(255,255,255,.70)!important}
+.progress-ring{background:conic-gradient(#4d5a67 0deg var(--progress),rgba(80,95,110,.16) var(--progress) 360deg)!important}.progress-ring::before{background:rgba(255,255,255,.78)!important}
+[class*="green"],[class*="mint"],[class*="forest"],.tone-blue,.tone-amber,.settings-icon.purple,.settings-icon.danger{filter:none!important}
+html[data-theme="dark"] [class*="green"],html[data-theme="dark"] [class*="mint"],html[data-theme="dark"] [class*="forest"]{color:inherit!important;background-color:transparent!important}
+.modal-backdrop{background:rgba(20,28,36,.22)!important;backdrop-filter:blur(8px)!important;-webkit-backdrop-filter:blur(8px)!important}
+.install-toast,.resource-modal-body,.exam-timer,.rp-download-bar{background:rgba(255,255,255,.76)!important;color:#18202a!important;border-color:rgba(255,255,255,.82)!important;backdrop-filter:blur(24px)!important;-webkit-backdrop-filter:blur(24px)!important}
+html[data-theme="dark"] .auth-card,html[data-theme="dark"] .modal,html[data-theme="dark"] input,html[data-theme="dark"] select,html[data-theme="dark"] textarea{color:#18202a!important}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,[tabindex]:focus-visible{outline:3px solid rgba(52,70,88,.32)!important;outline-offset:2px}
+.app-main,.admin-main,.pay-main{overflow-x:hidden}
+@media(max-width:400px){.bottom-nav,.admin-bottom{width:min(calc(100% - 16px),452px)!important;padding-left:4px!important;padding-right:4px!important}.bottom-link span:last-child,.admin-bottom-item span{font-size:9.5px}}
+@media(max-width:360px){.bottom-link span:last-child,.admin-bottom-item span{font-size:9px}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition-duration:.01ms!important}}
+@media print{*{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}}
