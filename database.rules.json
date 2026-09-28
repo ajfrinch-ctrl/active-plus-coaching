@@ -1,0 +1,8 @@
+{
+  "rules": {
+    "activePlusSync": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    }
+  }
+}
