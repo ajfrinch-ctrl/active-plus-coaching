@@ -174,6 +174,16 @@ async function handleLogin(event, state, onAuthenticated) {
   const typedId = String(form.get('mobile') || '').trim();
   const pin = String(form.get('pin') || '');
 
+  // Staff credentials are shared across devices through the optional online bridge.
+  // Hydrate before resolving the role so a newly-created Admin can sign in on a second device.
+  if (navigator.onLine && typedId) {
+    try {
+      const { hydrateStaffAccounts } = await import('./realtime-sync.js');
+      await hydrateStaffAccounts();
+    } catch (error) {
+      console.warn('[Active Plus] staff account sync unavailable during login:', error);
+    }
+  }
   // Staff usernames are reserved, so a match here can only be that panel.
   const staffRole = await resolveStaffRoleByUsername(typedId);
   if (staffRole) {
