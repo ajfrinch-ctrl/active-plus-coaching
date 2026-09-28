@@ -149,7 +149,14 @@ const APP_SHELL = [
   './js/staff-directory.js',
   './js/staff-management.js',
   './js/user-id.js',
-  './js/admin-panel-ui.js'
+  './js/admin-panel-ui.js',
+  './js/storage/index.js',
+  './js/storage/migration.js',
+  './js/storage/users.js',
+  './js/storage/students.js',
+  './js/storage/payments.js',
+  './js/storage/notices.js',
+  './js/storage/settings.js'
 ];
 
 self.addEventListener('install', event => {

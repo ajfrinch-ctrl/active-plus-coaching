@@ -1,5 +1,6 @@
 /* Application composition root. Feature modules can be replaced independently.
    Updated: don't ask security check every time - auto-login for trusted devices. */
+import { runMigrations } from './storage/migration.js';
 import { APP_TAGLINE } from './config.js';
 import { loadStudent, loadAccount, hasSession, persistSession, saveStudent, clearSession, isSecurityCheckDisabled, loadAppConfig } from './storage.js';
 import { escapeHtml } from './sanitize.js';
@@ -26,6 +27,7 @@ import { initStudentDashboard } from './student-dashboard.js';
 import { mountReports, refreshReports } from './reports.js';
 
 initFixedShell();
+runMigrations();
 
 const appConfig = loadAppConfig();
 

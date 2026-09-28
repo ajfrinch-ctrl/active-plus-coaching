@@ -26,6 +26,7 @@ import { escapeHtml } from './sanitize.js';
 import { createAccess, CAPABILITIES, routeFromHash } from './admin-permissions.js';
 import { initAdminPanelShell } from './admin-panel-ui.js';
 import { paintIcon } from './admin-icons.js';
+import { TEACHER_ASSIGNMENTS_KEY } from './teacher-assignments.js';
 import {
   BACKUP_STAMP_KEY,
   STAFF_DIRECTORY_KEY,
@@ -38,9 +39,11 @@ import {
 } from './staff-directory.js';
 import { initStaffManagement, renderStaff } from './staff-management.js';
 import { ROLE_CAPABILITIES } from './admin-permissions.js';
+import { runMigrations } from './storage/migration.js';
 
 initFixedShell();
 registerServiceWorker();
+runMigrations();
 
 const bn = toBanglaNumber;
 const $ = selector => document.querySelector(selector);
@@ -1242,6 +1245,40 @@ function clearSelectedCollection() {
   });
 }
 
+function resetAllLocalData() {
+  if (!access.has(CAPABILITIES.DATA_MANAGE)) {
+    toast('এই কাজটি শুধু Admin করতে পারবেন।');
+    return;
+  }
+  openModal('Reset Application', 'সব লোকাল ডেটা মুছে ফেলবেন?', `
+    <div class="staff-confirm-copy">
+      <p style="color:var(--danger,#e11d48);font-weight:700;margin-bottom:8px;">⚠️ WARNING: This will permanently remove all locally stored application data.</p>
+      <p>এই ডিভাইসে সংরক্ষিত সকল শিক্ষার্থী, লেনদেন, স্টাফ, রুটিন ও সেটিংস স্থায়ীভাবে মুছে যাবে। এই কাজটি আর ফেরানো যাবে না।</p>
+    </div>
+    <div class="modal-actions">
+      <button class="admin-btn ghost" type="button" data-modal-action="close">Cancel</button>
+      <button class="admin-btn danger" type="button" data-modal-action="confirm-reset-all">Reset All Local Data</button>
+    </div>`);
+  const button = $('#adminModalBody [data-modal-action="confirm-reset-all"]');
+  button?.addEventListener('click', () => {
+    closeModal();
+    try {
+      for (const key of BACKUP_KEYS) {
+        window.localStorage.removeItem(key);
+      }
+      try { window.localStorage.clear(); } catch {}
+      try { window.sessionStorage.clear(); } catch {}
+    } catch {
+      toast('ডেটা রিসেট করা যায়নি।');
+      return;
+    }
+    toast('সকল লোকাল ডেটা মুছে ফেলা হয়েছে। অ্যাপ রিলোড হচ্ছে...');
+    window.setTimeout(() => {
+      window.location.assign('index.html');
+    }, 1200);
+  });
+}
+
 /* ---------- Backup & Restore ---------- */
 
 const BACKUP_KEYS = Object.freeze([
@@ -1249,6 +1286,7 @@ const BACKUP_KEYS = Object.freeze([
     ...Object.values(KEYS),
     ...STAFF_KEYS_LIST,
     STAFF_DIRECTORY_KEY,
+    TEACHER_ASSIGNMENTS_KEY,
     'activePlus.initialAdminUsername.v1'
   ])
 ]);
@@ -1683,6 +1721,8 @@ $('#backupExportButton')?.addEventListener('click', exportBackup);
 $('#backupFileInput')?.addEventListener('change', event => {
   restoreBackup(event.target.files?.[0]);
 });
+
+$('#resetAllLocalDataButton')?.addEventListener('click', resetAllLocalData);
 
 $('#adminMoreLogout')?.addEventListener('click', exitPanel);
 
