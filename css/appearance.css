@@ -238,3 +238,18 @@ input,select,textarea,.auth-panel input,.auth-panel select,.auth-panel textarea,
   background:#f5f7fa!important;background-image:none!important;
 }
 .modal-backdrop{background:rgba(15,23,42,.34)!important}
+
+
+/* === PAYMENT COUNTER FINAL THEME OVERRIDE === */
+.pay-body,.pay-shell:not([hidden]),.pay-main{background:#fff!important;background-image:none!important;color:#172033!important}
+.pay-topbar,.pay-stickybar{background:#fff!important;background-image:none!important;border-color:#e1e6ed!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.pay-search-card,#payProfileCard,.pay-activity-card{background:#fff!important;border:1px solid #dfe5ec!important;box-shadow:0 5px 18px rgba(31,45,68,.05)!important}
+.pay-search-input,.pay-amount-field{background:#f8fafc!important;border-color:#d8e0ea!important}
+.pay-search-input input[type=search],.pay-amount-field input#payFeeAmount{color:#172033!important}
+.pay-search-card .admin-card-head h2,#payProfileCard .admin-card-head h2,.pay-activity-card .admin-card-head h2,.pay-quick-profile .fee-profile-heading h3{color:#14213a!important}
+.pay-search-card .admin-card-head .eyebrow,#payProfileCard .admin-card-head .eyebrow{color:#315efb!important}
+.pay-current-date{background:#f4f7fb!important;color:#315efb!important;border-color:#dce4ee!important}
+.pay-keypad button,.pay-method,.pay-form .form-grid-2 input{background:#fff!important;color:#253550!important;border-color:#dfe5ec!important}
+.pay-method[aria-checked=true]{background:#eef3ff!important;color:#315efb!important;border-color:#315efb!important}
+.pay-quick-profile .fee-profile-details>div{background:#f9fafb!important}
+.pay-stickybar .admin-btn,.pay-quick-profile .fee-profile-collect,.pay-form-actions #paySaveButton{background:#315efb!important;color:#fff!important;border-color:#315efb!important}
