@@ -1,17 +1,28 @@
-import { startRealtimeSync } from './realtime-sync.js';
-
+/* Active Plus — deferred Realtime Database test sync.
+   Firebase must never block the login/app startup path. */
 async function bootRealtimeSync() {
   if (!navigator.onLine) return;
-  const result = await startRealtimeSync();
-  if (result?.ok) {
-    document.documentElement.dataset.realtimeSync = 'online';
+  try {
+    const { startRealtimeSync } = await import('./realtime-sync.js');
+    const result = await startRealtimeSync();
+    if (result?.ok) {
+      document.documentElement.dataset.realtimeSync = 'online';
+    }
+  } catch (error) {
+    console.warn('[Active Plus] Realtime sync unavailable:', error);
   }
 }
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', bootRealtimeSync, { once: true });
-} else {
-  bootRealtimeSync();
+function scheduleRealtimeSync() {
+  window.setTimeout(bootRealtimeSync, 1200);
 }
 
-window.addEventListener('online', bootRealtimeSync);
+if (document.readyState === 'complete') {
+  scheduleRealtimeSync();
+} else {
+  window.addEventListener('load', scheduleRealtimeSync, { once: true });
+}
+
+window.addEventListener('online', () => {
+  window.setTimeout(bootRealtimeSync, 500);
+});
