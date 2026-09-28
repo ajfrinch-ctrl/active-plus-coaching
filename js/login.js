@@ -317,6 +317,19 @@ async function lockFirstAdminSetup(reason = '') {
 async function initFirstAdminSetup() {
   const panel = $('#firstAdminPanel');
   if (!panel) return;                       // page carries no first-use form
+
+  // On a new device the Admin record may exist only in Firebase at first.
+  // Hydrate staff accounts before deciding whether the one-time setup is
+  // available, so a real Admin account is never shown as "Create Admin".
+  if (navigator.onLine) {
+    try {
+      const { hydrateStaffAccounts } = await import('./realtime-sync.js?v=20260928-1731');
+      await hydrateStaffAccounts();
+    } catch (error) {
+      console.warn('[Active Plus] staff account sync unavailable during first-use check:', error);
+    }
+  }
+
   if (await staffAccountRecordExists('admin')) {
     await lockFirstAdminSetup();             // Admin Count >= 1 → never offered
     return;
