@@ -253,3 +253,256 @@ input,select,textarea,.auth-panel input,.auth-panel select,.auth-panel textarea,
 .pay-method[aria-checked=true]{background:#eef3ff!important;color:#315efb!important;border-color:#315efb!important}
 .pay-quick-profile .fee-profile-details>div{background:#f9fafb!important}
 .pay-stickybar .admin-btn,.pay-quick-profile .fee-profile-collect,.pay-form-actions #paySaveButton{background:#315efb!important;color:#fff!important;border-color:#315efb!important}
+
+
+/* ==========================================================================
+   ACTIVE PLUS — FINAL GLOBAL EDUCATION THEME
+   White Minimal + Dark Royal Blue + Soft Glass + Water-drop Icons
+   This block is visual-only. No workflow/data behavior is changed.
+   ========================================================================== */
+:root{
+  --apc-bg:#ffffff;
+  --apc-surface:rgba(255,255,255,.82);
+  --apc-surface-solid:#ffffff;
+  --apc-border:rgba(30,58,95,.12);
+  --apc-border-strong:rgba(30,58,95,.20);
+  --apc-text:#14213d;
+  --apc-muted:#667085;
+  --apc-primary:#173b8f;
+  --apc-primary-strong:#102d70;
+  --apc-primary-soft:#eef3ff;
+  --apc-shadow:0 10px 30px rgba(20,42,78,.08);
+  --apc-shadow-soft:0 5px 18px rgba(20,42,78,.055);
+  --forest:#173b8f;
+  --forest-dark:#102d70;
+  --forest-text:#14213d;
+  --mint:#eef3ff;
+  --surface:#fff;
+  --ink:#14213d;
+  --muted:#667085;
+  --line:rgba(30,58,95,.12);
+}
+
+html,body{
+  background:#fff!important;
+  color:#14213d!important;
+  background-image:none!important;
+}
+body::before,body::after,
+.app-shell::before,.admin-shell::before,.pay-shell::before,
+.auth-screen::before,.auth-screen::after{
+  display:none!important;
+}
+
+/* Glass language: white, very subtle, readable—not dark/translucent. */
+.topbar,.auth-topbar,.admin-topbar,.pay-topbar,
+.bottom-nav,.admin-bottom,.app-bottom-nav,.bottom-navigation{
+  background:rgba(255,255,255,.90)!important;
+  border-color:rgba(23,59,143,.12)!important;
+  box-shadow:0 5px 22px rgba(20,42,78,.055)!important;
+  backdrop-filter:blur(16px)!important;
+  -webkit-backdrop-filter:blur(16px)!important;
+}
+.auth-topbar,.admin-topbar,.pay-topbar{color:#14213d!important}
+
+/* All primary surfaces share one education-app visual system. */
+.auth-card,.home-hero,.home-list-card,.quick-wrap,.teaching-board,
+.admin-card,.teacher-summary,.teacher-record-card,.pay-card,.payment-card,
+.settings-list,.welcome-card,.admin-hero,.home-stat,.admin-stat-tile,
+.course-item,.result-row,.result-stats>div,.pending-info,.dash-finance-card,
+.dash-finance-tile,.manager-student-card,.staff-card,.student-row-redesigned,
+.pay-search-card,#payProfileCard,.pay-activity-card{
+  background:rgba(255,255,255,.82)!important;
+  border:1px solid rgba(23,59,143,.11)!important;
+  box-shadow:var(--apc-shadow-soft)!important;
+  backdrop-filter:blur(14px)!important;
+  -webkit-backdrop-filter:blur(14px)!important;
+}
+.auth-card{box-shadow:0 14px 38px rgba(20,42,78,.09)!important}
+
+/* Royal-blue typography and accents. */
+h1,h2,h3,h4,strong,.admin-card-head h2,.page-intro h1,
+.auth-brand strong,.admin-brand strong{
+  color:#14213d!important;
+}
+.eyebrow,.section-eyebrow,.admin-card-head .eyebrow{
+  color:#173b8f!important;
+}
+
+/* Pill buttons. */
+button,.admin-btn,.mini-btn,.auth-submit,.logout-confirm,
+.chip,.home-count-pill,.home-date-pill,.saved-tag{
+  border-radius:999px!important;
+}
+.admin-btn.primary,.admin-btn.primary:hover,
+.auth-submit,.logout-confirm,.mini-btn.approve,
+.exam-workspace button.primary,.exam-link,
+.pay-stickybar .admin-btn,.pay-form-actions #paySaveButton{
+  background:#173b8f!important;
+  border-color:#173b8f!important;
+  color:#fff!important;
+  box-shadow:0 7px 17px rgba(23,59,143,.18)!important;
+}
+.admin-btn.secondary,.mini-btn,
+.exam-workspace button:not(.primary),
+.pay-keypad button,.pay-method{
+  background:#fff!important;
+  color:#173b8f!important;
+  border-color:rgba(23,59,143,.18)!important;
+}
+
+/* Inputs: clean white, royal-blue focus. */
+input,select,textarea,
+.auth-panel input,.auth-panel select,.auth-panel textarea,
+.field input,.field select,.field textarea,.admin-card input{
+  background:#fff!important;
+  color:#14213d!important;
+  border-color:rgba(30,58,95,.16)!important;
+}
+input:focus,select:focus,textarea:focus,
+input:focus-visible,select:focus-visible,textarea:focus-visible{
+  border-color:#173b8f!important;
+  box-shadow:0 0 0 3px rgba(23,59,143,.10)!important;
+  outline:none!important;
+}
+
+/* Water-drop / soft-square icon language. */
+.home-hero-icon,.home-stat-icon,.home-row-icon,.settings-icon,.help-icon,
+.admin-hero-icon,.tile-icon,.admin-stat-icon,.admin-more-icon,
+.learning-home-icon,.admin-bottom-item .nav-chip,.bottom-link .nav-chip,
+.quick-tile-btn>span:first-child,.pay-pulse-icon{
+  background:linear-gradient(145deg,#f8fbff,#eaf0ff)!important;
+  border:1px solid rgba(23,59,143,.13)!important;
+  color:#173b8f!important;
+  border-radius:16px!important;
+  box-shadow:inset 0 1px 0 #fff,0 5px 12px rgba(23,59,143,.08)!important;
+}
+
+/* Keep image-based water-drop icons visible and coherent. */
+button.exam-link::before,
+.teacher-home-link .learning-home-icon{
+  background-color:#f4f7ff!important;
+  border:1px solid rgba(23,59,143,.12)!important;
+  box-shadow:inset 0 1px 0 #fff,0 5px 12px rgba(23,59,143,.08)!important;
+}
+
+/* Flat bottom navigation with blue active state. */
+.bottom-link,.admin-bottom-item{
+  background:transparent!important;
+  color:#667085!important;
+}
+.bottom-link.active,.admin-bottom-item.active{
+  color:#173b8f!important;
+}
+.bottom-link.active .nav-chip,.admin-bottom-item.active .nav-chip{
+  background:#eef3ff!important;
+  color:#173b8f!important;
+  box-shadow:none!important;
+  transform:none!important;
+}
+.bottom-link .nav-chip,.admin-bottom-item .nav-chip{
+  box-shadow:none!important;
+}
+
+/* Tabs/chips. */
+.auth-tabs,.registration-mode,.day-tabs,.finance-nav-pills,
+[class*="nav-pills"],.filter-tabs,.filter-bar{
+  background:#f7f9fc!important;
+  border-color:rgba(23,59,143,.10)!important;
+}
+.chip,.finance-nav-pills .chip{
+  color:#52627a!important;
+}
+.chip.active,.chip[aria-selected="true"],
+.finance-nav-pills .chip.active{
+  background:#173b8f!important;
+  color:#fff!important;
+  border-color:#173b8f!important;
+}
+
+/* Soft/pastel status colors. */
+.badge.success,.status-success,.is-success,.success{
+  background:#eaf7ef!important;color:#287a4b!important;border-color:#cfe9d8!important;
+}
+.badge.pending,.status-pending,.is-pending,.pending{
+  background:#fff5df!important;color:#946514!important;border-color:#f1dfb7!important;
+}
+.badge.error,.status-error,.is-error,.error{
+  background:#fff0f0!important;color:#a94343!important;border-color:#f0d0d0!important;
+}
+.badge.info,.status-info,.is-info,.info{
+  background:#edf4ff!important;color:#315f9f!important;border-color:#d5e4fb!important;
+}
+
+/* Modals retain glass feel while staying bright/readable. */
+.modal,.admin-modal{
+  background:rgba(255,255,255,.94)!important;
+  border:1px solid rgba(23,59,143,.13)!important;
+  box-shadow:0 24px 65px rgba(20,42,78,.18)!important;
+  backdrop-filter:blur(18px)!important;
+  -webkit-backdrop-filter:blur(18px)!important;
+}
+.modal-backdrop,.admin-modal-backdrop{
+  background:rgba(20,33,61,.22)!important;
+  backdrop-filter:blur(5px)!important;
+  -webkit-backdrop-filter:blur(5px)!important;
+}
+
+/* Education/exam elements. */
+.exam-workspace button,.exam-link{
+  border-color:rgba(23,59,143,.14)!important;
+  color:#173b8f!important;
+  background:#fff!important;
+}
+.exam-workspace button.primary,.exam-link{
+  background:#173b8f!important;color:#fff!important;border-color:#173b8f!important;
+}
+.exam-option:has(input:checked){
+  background:#eef3ff!important;
+  border-color:#173b8f!important;
+}
+.exam-option input{accent-color:#173b8f!important}
+.exam-timer{
+  background:#eef3ff!important;
+  color:#173b8f!important;
+  border-color:#d7e2fb!important;
+}
+.exam-message{
+  background:#eaf7ef!important;color:#287a4b!important;
+}
+.exam-error{
+  background:#fff0f0!important;color:#a94343!important;
+}
+.exam-tag{
+  background:#eef3ff!important;color:#173b8f!important;
+}
+
+/* Staff/student/finance special surfaces follow the same system. */
+.staff-form-section-block,.staff-assignment,
+.staff-activity-grid>div,.staff-history li,
+.bootstrap-credential-row,.student-row-redesigned,
+.manager-student-card{
+  background:rgba(255,255,255,.82)!important;
+  border-color:rgba(23,59,143,.11)!important;
+}
+.staff-section-number,.student-avatar{
+  background:#eef3ff!important;color:#173b8f!important;
+}
+.auto-id-preview{
+  background:#f3f6ff!important;
+  color:#173b8f!important;
+  border-color:#cfdcf8!important;
+}
+
+/* Remove legacy green gradients/shadows from previously layered styles. */
+.admin-dashboard-collect,.teacher-home-link,
+button.exam-link{
+  background:#173b8f!important;
+  border-color:#173b8f!important;
+}
+.admin-more-item:hover,.settings-list>button:hover{
+  background:#f7f9fc!important;
+}
+.quick-tile,.notice-strip,.detail-grid>div,.fee-balance-grid>div{
+  background:rgba(255,255,255,.82)!important;
+}
