@@ -2,9 +2,11 @@
 <html lang="bn">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https:; manifest-src 'self'; worker-src 'self'; base-uri 'self'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https:; manifest-src 'self'; worker-src 'self'; base-uri 'self'; object-src 'none'">
   <meta name="referrer" content="no-referrer">
   <script src="js/sanitize-url.js"></script>
+  <script src="js/topbar-connectivity.js?v=20260928-1740"></script>
+  <script type="module" src="js/realtime-sync-entry.js"></script>
   <script src="js/appearance-boot.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
   <meta name="theme-color" content="#000000">
@@ -36,6 +38,13 @@
   <link rel="stylesheet" href="css/appearance.css?v=20260928-1549">
 </head>
 <body>
+  <script>
+    /* Safety fallback: admin.js must never leave this protected entry blank. */
+    window.setTimeout(() => {
+      const shell = document.getElementById('adminShell');
+      if (shell && shell.hidden) window.location.replace('./index.html');
+    }, 4000);
+  </script>
   <!-- First use lives on the login page only (index.html → "প্রথমবার ব্যবহার
        করছেন? Admin Account তৈরি করুন"). This panel never offers it again, and
        js/staff-auth.js refuses createInitialAdmin() once one Admin exists. -->
@@ -672,6 +681,6 @@
   </svg>
   <script type="module" src="js/theme-entry.js"></script>
   <script type="module" src="js/pull-to-refresh.js"></script>
-  <script type="module" src="js/admin.js?v=20260928-1549"></script>
+  <script type="module" src="js/admin.js?v=20260928-1712"></script>
 </body>
 </html>

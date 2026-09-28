@@ -174,6 +174,23 @@ async function handleLogin(event, state, onAuthenticated) {
   const typedId = String(form.get('mobile') || '').trim();
   const pin = String(form.get('pin') || '');
 
+  // Staff credentials are shared across devices through the optional online bridge.
+  // Hydrate before resolving the role so a newly-created Admin can sign in on a second device.
+  if (navigator.onLine && typedId) {
+    // Never re-hydrate an existing local Admin record during a normal
+    // logout/login cycle. Logout removes only the session; the local account
+    // remains the authoritative credential on this device. Hydrate only when
+    // the device has no Admin record yet (the cross-device first-login case).
+    const hasLocalAdmin = staffAccountRecordExists('admin');
+    if (!hasLocalAdmin) {
+      try {
+        const { hydrateStaffAccounts } = await import('./realtime-sync.js?v=20260928-1731');
+        await hydrateStaffAccounts();
+      } catch (error) {
+        console.warn('[Active Plus] staff account sync unavailable during login:', error);
+      }
+    }
+  }
   // Staff usernames are reserved, so a match here can only be that panel.
   const staffRole = await resolveStaffRoleByUsername(typedId);
   if (staffRole) {
@@ -307,6 +324,19 @@ async function lockFirstAdminSetup(reason = '') {
 async function initFirstAdminSetup() {
   const panel = $('#firstAdminPanel');
   if (!panel) return;                       // page carries no first-use form
+
+  // On a new device the Admin record may exist only in Firebase at first.
+  // Hydrate staff accounts before deciding whether the one-time setup is
+  // available, so a real Admin account is never shown as "Create Admin".
+  if (navigator.onLine) {
+    try {
+      const { hydrateStaffAccounts } = await import('./realtime-sync.js?v=20260928-1731');
+      await hydrateStaffAccounts();
+    } catch (error) {
+      console.warn('[Active Plus] staff account sync unavailable during first-use check:', error);
+    }
+  }
+
   if (await staffAccountRecordExists('admin')) {
     await lockFirstAdminSetup();             // Admin Count >= 1 → never offered
     return;
