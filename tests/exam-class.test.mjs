@@ -9,7 +9,7 @@ import { adminStudents } from '../js/admin-data.js';
 import { ROSTER_KEY } from '../js/office-data.js';
 import { TEACHER_ASSIGNMENTS_KEY } from '../js/teacher-assignments.js';
 import { STAFF_ACCOUNTS } from '../js/staff-auth.js';
-import { STAFF_TEST_PASSWORD, provisionStaff, completeStaffPasswordDialog } from './staff-harness.mjs';
+import { provisionStaff, openStaffPanel } from './staff-harness.mjs';
 
 let ctx, repo;
 const $ = sel => ctx.$(sel);
@@ -25,16 +25,12 @@ before(async () => {
     seed: { 'activePlus.demo.autofill.v1': 'off', [ROSTER_KEY]: JSON.stringify(adminStudents), [TEACHER_ASSIGNMENTS_KEY]: JSON.stringify(enabledClasses.map((className, index) => ({ id: `TAS-${index}`, teacherUsername: 'teacher.apc', teacherName: 'Test Teacher', className, group: '', subject: 'Test' }))) }
   });
   repo = (await import('../js/exam-data.js')).examRepository;
-  await import('../js/teacher.js');
-  await provisionStaff('teacher');
   await provisionStaff('manager');
-  ctx.type($('#teacherLoginUser'), STAFF_ACCOUNTS.teacher.username);
-  ctx.type($('#teacherLoginPin'), STAFF_TEST_PASSWORD);
-  ctx.click($('#teacherEnter'));
-  // A role with no password yet is asked to set one before the panel opens.
-  await ctx.waitFor(() => Boolean($('.staff-pw-backdrop')) || $('#teacherShell').hidden === false);
-  if ($('.staff-pw-backdrop')) await completeStaffPasswordDialog(ctx);
-  await ctx.waitFor(() => $('#teacherShell').hidden === false);
+  await openStaffPanel(ctx, 'teacher', {
+    importPanel: () => import('../js/teacher.js'),
+    shellId: 'teacherShell',
+    ready: () => [...$('#teacherHomeClass').options].some(option => option.textContent === 'সব assigned class')
+  });
   ctx.window.sessionStorage.setItem(STAFF_ACCOUNTS.manager.sessionKey, '1');
   ctx.click($('[data-teacher-view="online-exams"]'));
   ctx.click($('#teacherExamWorkspace [data-exam-action="new-mcq"]'));

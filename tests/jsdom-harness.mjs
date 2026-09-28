@@ -10,7 +10,11 @@ const GLOBAL_KEYS = [
   'Event', 'CustomEvent', 'FormData', 'Node', 'Element', 'HTMLElement',
   'HTMLInputElement', 'HTMLSelectElement', 'HTMLFormElement', 'File', 'Blob',
   'Image', 'getComputedStyle', 'requestAnimationFrame', 'cancelAnimationFrame',
-  'MutationObserver', 'DOMParser'
+  'MutationObserver', 'DOMParser',
+  // Core DOM constructors the app reaches for as bare globals. A browser
+  // exposes them on window; the report centre builds its selects with
+  // `new Option(...)`, so the harness has to carry them across too.
+  'Option', 'Text', 'Comment', 'DocumentFragment'
 ];
 
 export async function loadPage(file, { seed = {} } = {}) {

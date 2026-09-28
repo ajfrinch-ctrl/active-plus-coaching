@@ -53,3 +53,22 @@ export async function completeStaffPasswordDialog(ctx, password = STAFF_TEST_PAS
   await waitFor(() => !$('.staff-pw-backdrop'));
   await ctx.flush();
 }
+
+/** Open a staff panel page for tests that drive the panel itself.
+    Signing in happens on the one shared login card in index.html, so a panel
+    no longer carries a login form of its own — it opens from a device-bound
+    session. That session has to exist *before* the panel module is imported,
+    because the module checks it once at load and redirects otherwise.
+
+    `ready` is an optional extra predicate for panels that unhide their shell
+    before their first data load has painted. */
+export async function openStaffPanel(ctx, role, { importPanel, shellId, ready } = {}) {
+  const { $, waitFor } = ctx;
+  await provisionStaff(role);
+  seedStaffSession(ctx.window, role);
+  if (importPanel) await importPanel();
+  const shell = shellId ? $(`#${shellId}`) : null;
+  if (shell) await waitFor(() => shell.hidden === false);
+  if (ready) await waitFor(ready);
+  return shell;
+}

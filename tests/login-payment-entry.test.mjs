@@ -61,7 +61,11 @@ test('the login card is the single door: no staff tabs, no shortcut links, no de
     assert.equal($(`#authScreen a[href="${href}"]`), null);
   }
   // The hint tells everyone in, but nothing is prefilled.
-  assert.match($('#loginHint').textContent, /শিক্ষক, এডমিন ও পেমেন্ট কাউন্টার/);
+  // Every staff portal is named here, so the one card is the only way in.
+  const hint = $('#loginHint').textContent;
+  for (const role of ['এডমিন', 'ম্যানেজার', 'শিক্ষক', 'পেমেন্ট কাউন্টার']) {
+    assert.match(hint, new RegExp(role), `the hint must name the ${role} portal`);
+  }
   assert.equal($('#loginMobile').value, '');
   assert.equal($('#loginPin').value, '');
   assert.equal(/১২৩১২৩|APC-PAY|এক ক্লিক/.test(ctx.window.document.body.textContent), false);
@@ -147,12 +151,13 @@ test('the admin switch that closes teacher access also closes it from this page'
 test('a fresh Admin portal offers no Admin creation of its own', async () => {
   const panel = await loadPage('admin.html', { seed: DEMO_OFF });
   await import('../js/admin.js?initial-setup');
-  await panel.waitFor(() => panel.$('#adminEntry').hidden === false, 20000);
   assert.equal(panel.$('#initialAdminSetup'), null, 'the old setup block is gone');
   assert.equal(panel.$('#initialAdminForm'), null);
-  assert.equal(panel.$('#adminShell').hidden, true);
-  assert.equal(panel.$('#adminNoAccount').hidden, false, 'it sends the owner to the login page');
-  assert.equal(panel.$('#adminLoginForm').hidden, true);
+  // The panel stays shut and hands the visitor over to the shared login page.
+  await panel.waitFor(() => panel.jsdomErrors.some(error => /navigation/i.test(error)));
+  assert.equal(panel.$('#adminShell').hidden, true, 'the Admin panel must stay closed');
+  assert.equal(panel.$('#adminNoAccount'), null, 'it sends the owner to the login page');
+  assert.equal(panel.$('#adminLoginForm'), null);
 });
 
 /* Logout is not a step back to a panel's own form: every panel drops the
@@ -187,8 +192,8 @@ for (const [panel, script, exitButton, role] of [
     assert.equal(page.window.localStorage.getItem(STAFF_ACCOUNTS[role].sessionKey), null);
     assert.equal(page.window.sessionStorage.getItem(STAFF_ACCOUNTS[role].sessionKey), null);
     assert.equal(page.jsdomErrors.some(error => /navigation/i.test(error)), true, 'the panel must hand over to the login page');
-    // The panel never falls back to showing its own entry form.
-    assert.equal(page.$('#adminEntry, #teacherEntry, #payEntry')?.hidden, true);
+    // The panel never falls back to an entry form of its own: none exists.
+    assert.equal(page.$('#adminEntry, #teacherEntry, #payEntry'), null);
   });
 }
 

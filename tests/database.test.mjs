@@ -69,15 +69,21 @@ test('new ids do not collide and student ids are not a shared counter alone', ()
   const first = newId('NOT');
   const second = newId('NOT');
   assert.notEqual(first, second);
-  assert.match(first, /^NOT-/);
+  // newId() is prefix + YYMMDD (6 digits) + a 3-digit daily sequence, so two
+  // calls on the same day can never collide and the date stays readable.
+  assert.match(first, /^NOT\d{9}$/);
   setup();
   const now = new Date();
-  const prefix = `${String(now.getFullYear()).slice(-2)}${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const a = generateStudentId('দশম শ্রেণি');
-  const b = generateStudentId('দশম শ্রেণি');
+  const stamp = `${String(now.getFullYear()).slice(-2)}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+  // A student id is 's' + YYMMDD + a 3-digit daily sequence. Every student
+  // shares that one sequence, so the ids are unique and carry their date.
+  const a = generateStudentId();
+  const b = generateStudentId();
   assert.notEqual(a, b);
-  assert.match(a, new RegExp(`^${prefix}0`));
-  assert.notEqual(a, `${prefix}0001`);
+  assert.match(a, new RegExp(`^s${stamp}\\d{3}$`));
+  // The sequence is shared by every student, so the second id must be exactly
+  // one step on from the first — not a per-class counter restarting at 1.
+  assert.equal(Number(b.slice(-3)), Number(a.slice(-3)) + 1);
 });
 
 test('stamped payments keep the exact saved fields plus a sortable time', () => {

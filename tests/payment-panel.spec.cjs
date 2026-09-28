@@ -2,12 +2,12 @@
    payment save through the shared financeRepository, receipt PDF and the
    one-click WhatsApp hand-off straight to the student's own number. */
 const { test, expect } = require('./fixtures.cjs');
+const { enterPortal } = require('./portal-session.cjs');
 
 test.use({ viewport: { width: 390, height: 844 } });
 
 async function enter(page) {
-  await page.goto('/payment.html');
-  await page.locator('#payLoginForm button[type=submit]').click();
+  await enterPortal(page, 'payment');
   await expect(page.locator('#payShell')).toBeVisible();
 }
 

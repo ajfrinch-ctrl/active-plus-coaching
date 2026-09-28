@@ -375,7 +375,6 @@ $('#managerRoutineForm').addEventListener('submit', async event => {
   event.currentTarget.reset(); routineDay = routineDay; renderRoutine(); toast('Routine প্রকাশিত হয়েছে।');
 });
 $('#managerChangePassword').addEventListener('click', () => openStaffPasswordDialog({ role: 'manager', mode: 'change' }));
-$('#managerTogglePassword').addEventListener('click', () => { const input = $('#managerPassword'); input.type = input.type === 'password' ? 'text' : 'password'; });
 async function enterManager() {
   if (!(await hasStaffSession('manager'))) { goToLoginPage(); return; }
   managerAccount = await readStaffAccount('manager');

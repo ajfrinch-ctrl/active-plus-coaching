@@ -1,12 +1,13 @@
 const { test, expect } = require('./fixtures.cjs');
+const { enterPortal } = require('./portal-session.cjs');
 // System Control + Staff Management + Permissions + Security + Data + Reports
 // + Settings. Daily operations (cash entry, routine, notices, exam publish)
 // belong to the Cash Counter, Manager and Teacher panels and are not here.
 const mobileViews = ['dashboard', 'staff', 'students', 'reports', 'more'];
 const moreViews = ['roles', 'data', 'backup', 'security', 'settings', 'profile'];
 async function enter(page) {
-  await page.goto('/admin.html');
-  await page.locator('#adminLoginForm button[type=submit]').click();
+  await enterPortal(page, 'admin');
+  await expect(page.locator('#adminShell')).toBeVisible();
 }
 async function bottom(page, view) {
   await page.locator(`.admin-bottom [data-admin-view="${view}"]`).click();

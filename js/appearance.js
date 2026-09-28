@@ -28,7 +28,9 @@ export function systemPrefersDark() {
 }
 
 export function getTheme() {
-  return getStoredTheme() || 'dark';
+  // No stored choice yet: follow the device's own setting, the same way the
+  // pre-paint boot script does, so the two never disagree.
+  return getStoredTheme() || (systemPrefersDark() ? 'dark' : 'light');
 }
 
 export function themeColorFor(theme) {
