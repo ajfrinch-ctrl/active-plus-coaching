@@ -5,12 +5,15 @@
 import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js';
 import { getDatabase, ref, get, set, onValue } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js';
 import { firebaseApp } from './firebase-config.js';
-import { SYNCABLE, KEYS } from './database.js';
+import { SYNCABLE, KEYS, STAFF_KEYS } from './database.js';
+import { STAFF_ACCOUNTS } from './staff-auth.js';
+import { isEncryptedEnvelope, decryptValue } from './secure-store.js';
 
 const DB_ROOT = 'activePlusSync/v1';
 let started = false;
 let applyingRemote = false;
 const lastRemote = new Map();
+const STAFF_ROOT = DB_ROOT + '/staffAccounts';
 
 function localKey(collection) {
   return KEYS[collection];
@@ -28,6 +31,63 @@ function writeLocal(key, value) {
     localStorage.setItem(key, JSON.stringify(value));
     return true;
   } catch { return false; }
+}
+
+function staffRoleByAccountKey(key) {
+  return Object.keys(STAFF_ACCOUNTS).find(role => STAFF_ACCOUNTS[role].accountKey === key) || null;
+}
+
+async function readStaffLocal(role) {
+  const spec = STAFF_ACCOUNTS[role];
+  if (!spec) return null;
+  try {
+    const raw = localStorage.getItem(spec.accountKey);
+    if (raw === null) return null;
+    const parsed = JSON.parse(raw);
+    if (isEncryptedEnvelope(parsed)) {
+      const plaintext = await decryptValue(parsed);
+      if (!plaintext) return null;
+      return JSON.parse(plaintext);
+    }
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch { return null; }
+}
+
+async function writeStaffLocal(role, account) {
+  const spec = STAFF_ACCOUNTS[role];
+  if (!spec || !account || typeof account !== 'object') return false;
+  try {
+    localStorage.setItem(spec.accountKey, JSON.stringify(account));
+    return true;
+  } catch { return false; }
+}
+
+async function syncStaffRole(role, { forcePush = false } = {}) {
+  const local = await readStaffLocal(role);
+  const node = ref(getDatabase(firebaseApp), STAFF_ROOT + '/' + role);
+  const snap = await get(node);
+  if (snap.exists() && !forcePush) {
+    const remote = snap.val();
+    if (remote && typeof remote === 'object' && remote.username && remote.password) {
+      await writeStaffLocal(role, remote);
+      lastRemote.set('staff:' + role, JSON.stringify(remote));
+      window.dispatchEvent(new CustomEvent('apc-sync-updated', { detail: { collection: 'staffAccounts', role } }));
+      return;
+    }
+  }
+  if (local) {
+    await set(node, local);
+    lastRemote.set('staff:' + role, JSON.stringify(local));
+  }
+}
+
+async function pushStaffRole(role) {
+  const local = await readStaffLocal(role);
+  if (!local) return;
+  const serialized = JSON.stringify(local);
+  if (lastRemote.get('staff:' + role) === serialized) return;
+  await set(ref(getDatabase(firebaseApp), STAFF_ROOT + '/' + role), local);
+  lastRemote.set('staff:' + role, serialized);
 }
 
 function collectionPayload(collection, value) {
@@ -89,6 +149,8 @@ function installLocalWriteBridge() {
   Storage.prototype.setItem = function(key, value) {
     const result = originalSetItem.call(this, key, value);
     if (this === window.localStorage && !applyingRemote) {
+      const staffRole = staffRoleByAccountKey(key);
+      if (staffRole) pushStaffRole(staffRole).catch(error => console.warn('[Active Plus] staff sync write failed', error));
       for (const collection of SYNCABLE) {
         if (localKey(collection) === key) {
           pushCollection(collection).catch(error => console.warn('[Active Plus] sync write failed', error));
@@ -104,8 +166,38 @@ function installLocalWriteBridge() {
         pushCollection(collection).catch(error => console.warn('[Active Plus] sync storage event failed', error));
       }
     }
+    const role = staffRoleByAccountKey(event.key);
+    if (role) pushStaffRole(role).catch(error => console.warn('[Active Plus] staff sync storage event failed', error));
   });
   window.__apcRealtimeSyncBridge = true;
+}
+
+function listenStaffRole(role) {
+  const node = ref(getDatabase(firebaseApp), STAFF_ROOT + '/' + role);
+  onValue(node, snap => {
+    if (!snap.exists()) return;
+    const remote = snap.val();
+    if (!remote || typeof remote !== 'object' || !remote.username || !remote.password) return;
+    const serialized = JSON.stringify(remote);
+    if (lastRemote.get('staff:' + role) === serialized) return;
+    lastRemote.set('staff:' + role, serialized);
+    writeStaffLocal(role, remote).then(() => {
+      window.dispatchEvent(new CustomEvent('apc-sync-updated', { detail: { collection: 'staffAccounts', role } }));
+    }).catch(error => console.warn('[Active Plus] staff listener failed', error));
+  });
+}
+
+export async function hydrateStaffAccounts() {
+  if (!navigator.onLine) return { ok: false, reason: 'offline' };
+  try {
+    const auth = getAuth(firebaseApp);
+    if (!auth.currentUser) await signInAnonymously(auth);
+    for (const role of Object.keys(STAFF_ACCOUNTS)) await syncStaffRole(role);
+    return { ok: true };
+  } catch (error) {
+    console.warn('[Active Plus] staff account hydration failed:', error);
+    return { ok: false, reason: 'staff-sync-failed', error };
+  }
 }
 
 function listenCollection(collection) {
@@ -138,10 +230,17 @@ export async function startRealtimeSync() {
       await syncCollection(collection);
       listenCollection(collection);
     }
+    for (const role of Object.keys(STAFF_ACCOUNTS)) {
+      await syncStaffRole(role);
+      listenStaffRole(role);
+    }
 
     window.addEventListener('online', () => {
       for (const collection of SYNCABLE) {
         syncCollection(collection).catch(error => console.warn('[Active Plus] reconnect sync failed', error));
+      }
+      for (const role of Object.keys(STAFF_ACCOUNTS)) {
+        syncStaffRole(role).catch(error => console.warn('[Active Plus] reconnect staff sync failed', error));
       }
     });
 
