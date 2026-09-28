@@ -946,3 +946,269 @@
   font-weight: 700;
   line-height: 1.6;
 }
+
+/* === STAFF MANAGEMENT — FRIENDLY WHITE UI === */
+.admin-shell [data-view-panel="staff"]{
+  max-width:760px;
+  margin:0 auto;
+  padding-bottom:24px;
+}
+.admin-shell [data-view-panel="staff"] .page-intro{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:8px;
+}
+.admin-shell [data-view-panel="staff"] .page-intro h1{
+  margin:0;
+  color:#14213a;
+  font-size:22px;
+  font-weight:900;
+  line-height:1.25;
+}
+.admin-shell [data-view-panel="staff"] .eyebrow{
+  margin:0 0 3px;
+  color:#315efb;
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:.7px;
+  text-transform:uppercase;
+}
+.admin-shell [data-view-panel="staff"] > .finance-hint{
+  margin:0 0 14px;
+  padding:11px 12px;
+  border:1px solid #e4e9f0;
+  border-radius:14px;
+  background:#fff;
+  color:#526176;
+  font-size:12px;
+  line-height:1.6;
+}
+.admin-shell .staff-create-btn{
+  min-height:46px;
+  padding:0 15px;
+  border-radius:13px;
+  background:#315efb!important;
+  border:1px solid #315efb!important;
+  color:#fff!important;
+  box-shadow:0 5px 14px rgba(49,94,251,.16);
+  white-space:nowrap;
+}
+.admin-shell .staff-stats{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:8px;
+  margin:0 0 14px;
+}
+.admin-shell .staff-stat{
+  min-width:0;
+  padding:12px 10px;
+  border:1px solid #e1e6ed;
+  border-radius:14px;
+  background:#fff!important;
+  box-shadow:0 3px 12px rgba(31,45,68,.045);
+}
+.admin-shell .staff-stat strong{
+  display:block;
+  color:#14213a;
+  font-size:20px;
+  font-weight:900;
+  line-height:1.1;
+}
+.admin-shell .staff-stat span{
+  display:block;
+  margin-top:4px;
+  color:#66758a;
+  font-size:10.5px;
+  font-weight:700;
+}
+.admin-shell .staff-toolbar{
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  gap:10px;
+  padding:12px;
+  margin-bottom:12px;
+  border:1px solid #e1e6ed;
+  border-radius:16px;
+  background:#fff!important;
+  box-shadow:0 4px 14px rgba(31,45,68,.045);
+}
+.admin-shell .staff-search{
+  min-height:50px;
+  border-color:#dce3ec;
+  border-radius:13px;
+  background:#fff!important;
+}
+.admin-shell .staff-search:focus-within{
+  border-color:#315efb;
+  box-shadow:0 0 0 3px rgba(49,94,251,.1);
+}
+.admin-shell .staff-search-icon{color:#315efb}
+.admin-shell .staff-filter-block{
+  padding-top:1px;
+}
+.admin-shell .staff-filter-label{
+  margin:0 0 6px;
+  color:#526176;
+  font-size:10px;
+  font-weight:900;
+}
+.admin-shell .staff-toolbar .chip-row{
+  gap:6px;
+}
+.admin-shell .staff-toolbar .chip{
+  min-height:36px;
+  padding:0 11px;
+  border:1px solid #dce3ec;
+  border-radius:10px;
+  background:#fff;
+  color:#42526a;
+  font-size:11px;
+  font-weight:800;
+}
+.admin-shell .staff-toolbar .chip.active{
+  border-color:#315efb;
+  background:#315efb;
+  color:#fff;
+}
+.admin-shell .staff-count-badge{
+  padding-top:2px;
+  color:#315efb;
+  font-size:11px;
+  font-weight:800;
+}
+.admin-shell .staff-list{
+  gap:10px;
+}
+.admin-shell .staff-card{
+  padding:14px;
+  border:1px solid #e1e6ed;
+  border-radius:16px;
+  background:#fff!important;
+  box-shadow:0 5px 16px rgba(31,45,68,.05);
+}
+.admin-shell .staff-card-head{
+  align-items:center;
+  gap:12px;
+}
+.admin-shell .staff-avatar{
+  width:48px;
+  height:48px;
+  flex-basis:48px;
+  border-radius:14px;
+  background:#f1f4f8!important;
+  color:#315efb;
+  box-shadow:none;
+  border:1px solid #e1e6ed;
+}
+.admin-shell .staff-card-name{
+  color:#14213a;
+  font-size:15px;
+}
+.admin-shell .staff-id-badge{
+  background:#f1f4f8;
+  border-color:#dce3ec;
+  color:#526176;
+}
+.admin-shell .staff-tag.role-admin,
+.admin-shell .staff-tag.role-manager,
+.admin-shell .staff-tag.role-teacher,
+.admin-shell .staff-tag.role-cash-counter{
+  background:#f1f4f8;
+  color:#315efb;
+}
+.admin-shell .staff-meta{
+  color:#66758a;
+}
+.admin-shell .staff-card-actions{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:7px;
+  padding-top:2px;
+}
+.admin-shell .staff-card-actions .mini-btn{
+  min-width:0;
+  min-height:42px;
+  border:1px solid #dce3ec;
+  border-radius:11px;
+  background:#fff;
+  color:#31425c;
+  font-size:11.5px;
+  font-weight:800;
+}
+.admin-shell .staff-card-actions .mini-btn.primary{
+  background:#315efb;
+  border-color:#315efb;
+  color:#fff;
+}
+.admin-shell .staff-more-menu{
+  background:#fff!important;
+  border-color:#e1e6ed;
+}
+.admin-shell .staff-more-item:active{
+  background:#f3f6fa;
+}
+.admin-shell .staff-protected-note,
+.admin-shell .staff-password-note,
+.admin-shell .staff-id-lock{
+  background:#f6f8fa!important;
+  border-color:#e1e6ed;
+  color:#526176;
+}
+.admin-shell .staff-assignment,
+.admin-shell .staff-activity-grid>div{
+  background:#f7f9fb!important;
+  border-color:#e1e6ed;
+}
+.staff-modal-backdrop .staff-modal{
+  background:#fff!important;
+  border:1px solid #dfe5ec;
+  border-radius:18px;
+  box-shadow:0 18px 50px rgba(20,33,58,.16);
+}
+.staff-modal-backdrop .admin-modal-header h2{
+  color:#14213a;
+  font-size:17px;
+}
+.staff-modal-backdrop .admin-modal-close{
+  background:#f4f6f8;
+  border-color:#e0e5eb;
+}
+.admin-shell .staff-field input,
+.admin-shell .staff-field select,
+.admin-shell .staff-field textarea{
+  background:#fff!important;
+  border-color:#dce3ec;
+  border-radius:12px;
+}
+.admin-shell .staff-field input:focus,
+.admin-shell .staff-field select:focus,
+.admin-shell .staff-field textarea:focus{
+  outline:3px solid rgba(49,94,251,.12);
+  border-color:#315efb;
+}
+.admin-shell .auto-id-preview,
+.staff-modal-backdrop .auto-id-preview{
+  background:#f6f8fa!important;
+  border-color:#d9e0e8;
+  color:#315efb;
+}
+@media(max-width:560px){
+  .admin-shell [data-view-panel="staff"] .page-intro{
+    align-items:flex-start;
+  }
+  .admin-shell [data-view-panel="staff"] .page-intro h1{font-size:19px}
+  .admin-shell .staff-create-btn{
+    padding:0 12px;
+  }
+  .admin-shell .staff-stats{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}
+@media(max-width:360px){
+  .admin-shell [data-view-panel="staff"] .page-intro{
+    flex-direction:column;
+  }
+  .admin-shell .staff-create-btn{width:100%}
+}
