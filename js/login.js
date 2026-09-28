@@ -174,13 +174,19 @@ async function handleDirectoryStaffLogin(directory, remember) {
    login button hostage: the import and the hydrate each get a short budget and
    the device's own records are used either way. */
 const ONLINE_BRIDGE_BUDGET_MS = 2500;
+/* The identity hydrate pays for the CDN import, anonymous sign-in and the cloud
+   reads in one go, so on a slow mobile network 2.5s cuts the first cross-device
+   login short — the account that exists on the other phone would then be
+   reported as "not on this device". A wider budget only extends this one wait;
+   login still proceeds either way. */
+const LOGIN_IDENTITY_BUDGET_MS = 8000;
 
-function withinBudget(promise, what) {
+function withinBudget(promise, what, budget = ONLINE_BRIDGE_BUDGET_MS) {
   let timer;
   return Promise.race([
     promise,
     new Promise((_, reject) => {
-      timer = setTimeout(() => reject(new Error(`${what} timed out`)), ONLINE_BRIDGE_BUDGET_MS);
+      timer = setTimeout(() => reject(new Error(`${what} timed out`)), budget);
     })
   ]).finally(() => clearTimeout(timer));
 }
@@ -198,14 +204,18 @@ async function hydrateStaffAccountsOnline(what) {
 /* Login User IDs created on another device (Staff Directory, the claimed-id
    registry and the student login) are pulled in here, so the same ID and
    password sign in on this phone. Records this device already has are left
-   untouched — they stay the authoritative credentials on it. */
+   untouched — they stay the authoritative credentials on it.
+   Returns true only when the cloud lookup ran and finished; false when the
+   device is offline, the budget ran out, or the cloud refused the request. */
 async function hydrateUserIdentifiersOnline(what) {
-  if (!navigator.onLine) return;
+  if (!navigator.onLine) return false;
   try {
-    const bridge = await withinBudget(import('./realtime-sync.js?v=20260929-1000'), 'online identity import');
-    await withinBudget(bridge.hydrateUserIdentifiers(), 'online identity hydrate');
+    const bridge = await withinBudget(import('./realtime-sync.js?v=20260929-1000'), 'online identity import', LOGIN_IDENTITY_BUDGET_MS);
+    const result = await withinBudget(bridge.hydrateUserIdentifiers(), 'online identity hydrate', LOGIN_IDENTITY_BUDGET_MS);
+    return Boolean(result?.ok);
   } catch (error) {
     console.warn(`[Active Plus] user id sync unavailable during ${what}:`, error.message);
+    return false;
   }
 }
 
@@ -217,7 +227,11 @@ async function handleLogin(event, state, onAuthenticated) {
 
   // Staff credentials are shared across devices through the optional online bridge.
   // Hydrate before resolving the role so a newly-created Admin can sign in on a second device.
+  // `onlineIdentities` remembers whether that cloud lookup actually finished,
+  // so a missing account later reports the real cause instead of blaming the device.
+  const onlineIdentities = { attempted: false, synced: true };
   if (navigator.onLine && typedId) {
+    onlineIdentities.attempted = true;
     // Never re-hydrate an existing local Admin record during a normal
     // logout/login cycle. Logout removes only the session; the local account
     // remains the authoritative credential on this device. Hydrate only when
@@ -226,7 +240,7 @@ async function handleLogin(event, state, onAuthenticated) {
     if (!hasLocalAdmin) await hydrateStaffAccountsOnline('login');
     // Login IDs created on other devices: directory accounts, the claimed-id
     // registry and the student login (missing records only — see above).
-    await hydrateUserIdentifiersOnline('login');
+    onlineIdentities.synced = await hydrateUserIdentifiersOnline('login');
   }
   // Staff usernames are reserved, so a match here can only be that panel.
   const staffRole = await resolveStaffRoleByUsername(typedId);
@@ -259,7 +273,14 @@ async function handleLogin(event, state, onAuthenticated) {
     return;
   }
   if (!state.account) {
-    setAuthMessage('এই ডিভাইসে কোনো অ্যাকাউন্ট নেই। আগে রেজিস্ট্রেশন করুন।');
+    if (onlineIdentities.attempted && !onlineIdentities.synced) {
+      // The cloud lookup itself failed (offline, timed out or refused — e.g.
+      // App Check enforcement blocking the Realtime Database). An account that
+      // lives on another phone would make "register first" a false message.
+      setAuthMessage('অন্য ডিভাইসে তৈরি অ্যাকাউন্ট এই ডিভাইসে আনা যায়নি। ইন্টারনেট সংযোগ পরীক্ষা করে আবার লগইন করুন — তবুও না হলে রেজিস্ট্রেশন করুন।');
+    } else {
+      setAuthMessage('এই ডিভাইসে কোনো অ্যাকাউন্ট নেই। আগে রেজিস্ট্রেশন করুন।');
+    }
     return;
   }
   const knownUsername = normalizeUsername(state.account.username || state.account.student?.username || '');
