@@ -1,4 +1,4 @@
-const CACHE_NAME = 'active-plus-student-v81-appcheck-sync-fix';
+const CACHE_NAME = 'active-plus-student-v82-sync-indicator';
 const APP_SHELL = [
   './offline-roles.html',
   './css/offline-roles.css',

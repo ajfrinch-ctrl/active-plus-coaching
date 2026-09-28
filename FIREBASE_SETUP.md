@@ -42,6 +42,25 @@ missing records, then try the second device again. The login page now also
 distinguishes this case: when the cloud lookup itself fails, it says so
 explicitly instead of asking the user to register.
 
+### Verifying that realtime sync actually runs
+
+1. **Topbar border colour** (all panels + the login page): red = no internet,
+   green = internet but the Firebase bridge has not connected yet, **blue =
+   realtime sync is live** (`<html data-realtime-sync="online">`).
+2. **Console check** (DevTools → Console on any page, a few seconds after
+   load while online):
+   `document.documentElement.dataset.realtimeSync` → `'online'` means the
+   bridge started; anything else/undefined means it did not.
+3. **Proof of data movement** — every mirrored write fires an event:
+   `window.addEventListener('apc-sync-updated', e => console.log('sync:', e.detail));`
+   then change a notice/student record and watch the event.
+4. **Firebase Console → Realtime Database → Data** — the `activePlusSync/v1`
+   node should contain `staffAccounts`, `staffDirectory`, `usernames`,
+   `studentAccount` and the mirrored collections. The console viewer shows the
+   data regardless of rules.
+5. **End-to-end**: create a login on device A (online), wait ~10 seconds,
+   sign in with the same ID + password on device B.
+
 ## Role boundary
 
 - The first Admin is claimed once through `createFirstAdmin`. A Firestore transaction lock allows only one successful bootstrap; the callable writes the `admin/active` role claim and a complete owner profile.
