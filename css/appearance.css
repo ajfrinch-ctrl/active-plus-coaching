@@ -64,3 +64,104 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 @media(max-width:360px){.bottom-link span:last-child,.admin-bottom-item span{font-size:9px}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition-duration:.01ms!important}}
 @media print{*{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}}
+
+/* === FINAL VISUAL OVERRIDES: remove legacy green/glass appearance === */
+.app-shell,.admin-shell,.teacher-shell,.pay-shell,.auth-screen{
+  background:var(--apc-bg)!important;
+}
+.welcome-card,.admin-hero,.home-hero{
+  color:var(--apc-text)!important;
+  background:var(--apc-surface)!important;
+  border:1px solid var(--apc-border)!important;
+  box-shadow:var(--apc-shadow)!important;
+}
+.welcome-card *,.admin-hero *,.home-hero *{
+  color:inherit;
+}
+.welcome-card .hero-icon,.admin-hero .hero-icon,.home-hero .hero-icon,
+.welcome-card svg,.admin-hero svg,.home-hero svg{
+  color:var(--apc-primary)!important;
+}
+.notice-strip{
+  background:#fffaf0!important;
+  color:#7c4a03!important;
+  border:1px solid #f0dfb6!important;
+}
+.finance-nav-pills,[class*="nav-pills"],.filter-tabs,.filter-bar{
+  background:#eef2f7!important;
+  border-color:#dbe3ed!important;
+}
+.finance-nav-pills [data-finance-tab],.filter-tabs button,.filter-bar button{
+  color:#526176!important;
+  background:transparent!important;
+}
+.finance-nav-pills [data-finance-tab].active,.filter-tabs button.active,.filter-bar button.active{
+  color:var(--apc-primary-dark)!important;
+  background:#fff!important;
+  box-shadow:0 3px 10px rgba(31,45,68,.08)!important;
+}
+.status-success,.success,.approved,.paid{
+  color:var(--apc-success)!important;
+}
+.status-warning,.warning,.pending{
+  color:var(--apc-warning)!important;
+}
+.status-danger,.error,.rejected,.overdue{
+  color:var(--apc-danger)!important;
+}
+.quick-wrap{
+  background:var(--apc-surface)!important;
+  border:1px solid var(--apc-border)!important;
+}
+.quick-tile{
+  background:transparent!important;
+}
+.quick-tile-btn{
+  width:52px!important;height:52px!important;
+  border-radius:15px!important;
+  background:var(--apc-primary-soft)!important;
+  border:1px solid #d9e2ff!important;
+}
+.auth-screen{
+  padding-top:calc(86px + env(safe-area-inset-top,0px))!important;
+}
+.auth-topbar{
+  background:#fff!important;
+  border-bottom:1px solid var(--apc-border)!important;
+}
+.auth-card{
+  padding:18px!important;
+  border-radius:22px!important;
+}
+.auth-panel-heading h2{font-size:22px!important}
+.auth-panel-heading p,.fixed-field-note{color:var(--apc-muted)!important}
+.auth-submit{min-height:50px!important;font-size:15px!important}
+.admin-card-head,.section-heading,.page-intro{
+  color:var(--apc-text)!important;
+}
+.admin-card-head h2,.admin-card-head h3,.section-heading h2,.page-intro h1{
+  color:var(--apc-text)!important;
+}
+.admin-card-head p,.section-heading p,.page-intro>p{
+  color:var(--apc-muted)!important;
+}
+.admin-btn:not(.primary),.mini-btn:not(.approve){
+  background:#fff!important;
+  color:#334155!important;
+  border:1px solid #cfd9e6!important;
+}
+table{background:#fff!important;border-color:var(--apc-border)!important}
+th{background:#f1f4f8!important;color:#405069!important}
+td{color:var(--apc-text)!important;border-color:#e3e8ef!important}
+.badge,.tag,.pill{
+  border-radius:999px!important;
+  font-weight:750!important;
+}
+@media(max-width:480px){
+  .auth-card,.admin-card,.home-hero,.welcome-card,.admin-hero,.teacher-summary,.pay-card,.payment-card{
+    border-radius:18px!important;
+  }
+  .app-main,.admin-main,.pay-main{
+    padding-left:14px!important;padding-right:14px!important;
+  }
+}
