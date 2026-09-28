@@ -821,3 +821,89 @@ body.admin-modal-open { overflow: hidden; }
 .receipt-actions .admin-btn { flex: 1 1 auto; }
 
 .pay-main .finance-search-input input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; display: none; }
+
+
+/* =====================================================================
+   STUDENT MANAGEMENT — clean, compact, mobile-first redesign
+   ===================================================================== */
+[data-view-panel="students"] .page-intro{margin-bottom:12px}
+[data-view-panel="students"] .page-intro h1{font-size:21px}
+[data-view-panel="students"] .student-overview-stats{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-bottom:12px
+}
+[data-view-panel="students"] .student-summary-card{
+  display:flex;align-items:center;gap:9px;min-width:0;padding:11px;
+  border:1px solid #e3e8ee;border-radius:15px;background:#fff;
+  box-shadow:0 3px 12px rgba(24,42,66,.05)
+}
+[data-view-panel="students"] .student-summary-icon{
+  display:grid;place-items:center;flex:0 0 36px;width:36px;height:36px;
+  border-radius:11px;background:#f0f4f8;color:#315efb
+}
+[data-view-panel="students"] .student-summary-icon svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+[data-view-panel="students"] .student-summary-card small{display:block;color:#66758a;font-size:10.5px;font-weight:700;line-height:1.3}
+[data-view-panel="students"] .student-summary-card strong{display:block;margin-top:2px;color:#172033;font-size:18px;font-weight:900;line-height:1.1}
+[data-view-panel="students"] .student-toolbar{
+  display:grid;gap:9px;margin-bottom:12px;padding:11px;
+  border:1px solid #e3e8ee;border-radius:16px;background:#fff;
+  box-shadow:0 3px 12px rgba(24,42,66,.04)
+}
+[data-view-panel="students"] .student-search-box{min-width:0}
+[data-view-panel="students"] .student-search{
+  display:flex;align-items:center;gap:8px;min-height:48px;padding:0 10px;
+  border:1px solid #dbe3ec;border-radius:13px;background:#fff
+}
+[data-view-panel="students"] .student-search:focus-within{border-color:#315efb;box-shadow:0 0 0 3px rgba(49,94,251,.10)}
+[data-view-panel="students"] .student-search svg{width:19px;height:19px;flex:0 0 19px;fill:none;stroke:#315efb;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+[data-view-panel="students"] .student-search input{
+  width:100%;min-width:0;min-height:46px;border:0;outline:0;background:transparent;
+  color:#172033;font:inherit;font-size:16px
+}
+[data-view-panel="students"] .student-search-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:7px}
+[data-view-panel="students"] .auto-hide-badge{
+  display:inline-flex;align-items:center;gap:5px;padding:4px 8px;border:1px solid #e0e6ed;
+  border-radius:99px;background:#f7f9fb;color:#66758a;font-size:10px;font-weight:800
+}
+[data-view-panel="students"] .auto-hide-dot{width:6px;height:6px;border-radius:50%;background:#315efb}
+[data-view-panel="students"] .auto-hide-badge.privacy{display:none}
+[data-view-panel="students"] .student-count-badge{margin-left:auto;color:#315efb;font-size:11px;font-weight:850}
+[data-view-panel="students"] .student-class-filter select{min-height:46px;font-size:16px}
+[data-view-panel="students"] #studentFilterChips{display:flex;gap:6px;flex-wrap:wrap}
+[data-view-panel="students"] #studentFilterChips .chip{flex:1 1 0;min-width:70px;min-height:42px}
+[data-view-panel="students"] .student-list{display:grid;gap:9px}
+[data-view-panel="students"] .student-row-redesigned{
+  display:block;min-width:0;padding:13px;border:1px solid #e0e6ed;border-radius:16px;
+  background:#fff;box-shadow:0 3px 12px rgba(24,42,66,.045)
+}
+[data-view-panel="students"] .student-row-main{display:flex;align-items:flex-start;gap:10px;min-width:0}
+[data-view-panel="students"] .student-avatar{
+  display:grid;place-items:center;flex:0 0 44px;width:44px;height:44px;border-radius:13px;
+  background:#eef3ff;color:#315efb
+}
+[data-view-panel="students"] .student-avatar svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+[data-view-panel="students"] .student-copy{flex:1;min-width:0}
+[data-view-panel="students"] .student-title-line{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+[data-view-panel="students"] .student-title-line strong{min-width:0;color:#172033;font-size:14px;font-weight:900;line-height:1.35;overflow-wrap:anywhere}
+[data-view-panel="students"] .student-title-line .badge{font-size:10px}
+[data-view-panel="students"] .student-meta-line{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:5px;color:#526176;font-size:11px;font-weight:700}
+[data-view-panel="students"] .student-copy>small{
+  display:flex;align-items:center;gap:5px;margin-top:6px;color:#66758a;font-size:10.5px;font-weight:650
+}
+[data-view-panel="students"] .student-copy>small svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8}
+[data-view-panel="students"] .student-actions{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:11px
+}
+[data-view-panel="students"] .student-actions .mini-btn{
+  min-width:0;min-height:42px;padding:0 7px;font-size:10.5px;font-weight:850
+}
+[data-view-panel="students"] .student-actions .mini-btn.primary{color:#fff;background:#315efb;border-color:#315efb}
+[data-view-panel="students"] .admin-empty-search{
+  padding:24px 14px;border:1px dashed #d6dee8;border-radius:15px;background:#fff;text-align:center
+}
+[data-view-panel="students"] .admin-empty-search p{color:#172033;font-size:12px;font-weight:800}
+[data-view-panel="students"] .admin-empty-search small{display:block;margin-top:5px;color:#66758a;font-size:10.5px;line-height:1.55}
+@media(min-width:600px){
+  [data-view-panel="students"] .student-overview-stats{grid-template-columns:repeat(4,minmax(0,1fr))}
+  [data-view-panel="students"] .student-toolbar{grid-template-columns:minmax(0,1fr) minmax(180px,.45fr);align-items:end}
+  [data-view-panel="students"] #studentFilterChips{grid-column:1/-1}
+}

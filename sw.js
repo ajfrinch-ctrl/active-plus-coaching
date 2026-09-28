@@ -1,4 +1,4 @@
-const CACHE_NAME = 'active-plus-student-v73-reports-module';
+const CACHE_NAME = 'active-plus-student-v75-cache-refresh';
 const APP_SHELL = [
   './offline-roles.html',
   './css/offline-roles.css',
@@ -87,6 +87,7 @@ const APP_SHELL = [
   './css/scroll-header.css',
   './css/liquid-glass.css',
   './css/reports.css',
+  './css/appearance.css',
   './assets/fonts/NotoSansBengali-Variable.ttf',
   './js/config.js',
   './js/password-hash.js',
@@ -177,22 +178,23 @@ self.addEventListener('activate', event => {
   );
 });
 
-// Cache-first keeps the installed app usable in airplane mode. A successful
-// network response is saved as well, so future screens can be opened offline.
+// Network-first keeps installed users on the latest deployed theme/code when online,
+// while retaining the cached app shell for reliable offline use.
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
 
   event.respondWith(
-    caches.match(event.request).then(cached => {
-      if (cached) return cached;
-
-      return fetch(event.request).then(response => {
-        if (response && response.status === 200 && response.type === 'basic') {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
-        }
-        return response;
-      }).catch(() => {
+    fetch(event.request).then(response => {
+      if (response && response.status === 200 && response.type === 'basic') {
+        const copy = response.clone();
+        event.waitUntil(
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy))
+        );
+      }
+      return response;
+    }).catch(() => {
+      return caches.match(event.request).then(cached => {
+        if (cached) return cached;
         if (event.request.mode === 'navigate') return caches.match('./index.html');
         return new Response('', { status: 503, statusText: 'Offline' });
       });

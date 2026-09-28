@@ -7,7 +7,7 @@
   <script src="js/sanitize-url.js"></script>
   <script src="js/appearance-boot.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
-  <meta name="theme-color" content="#04795a">
+  <meta name="theme-color" content="#eef2f6">
   <meta name="description" content="Active Plus Coaching পেমেন্ট রিসিভ প্যানেল — শিক্ষার্থী খুঁজে দ্রুত ফি গ্রহণ, রসিদ PDF ডাউনলোড ও হোয়াটসঅ্যাপে ছবি পাঠানো।">
   <meta name="robots" content="noindex">
   <title>Active Plus | পেমেন্ট রিসিভ প্যানেল</title>
@@ -18,7 +18,7 @@
   <link rel="stylesheet" href="css/admin.css">
   <link rel="stylesheet" href="css/mobile.css">
   <link rel="stylesheet" href="css/receipt.css">
-  <link rel="stylesheet" href="css/payment.css">
+  <link rel="stylesheet" href="css/payment.css?v=20260928-2019">
   <!-- Global glass design system. Presentation layer only; loaded last. -->
   <link rel="stylesheet" href="css/liquid-glass.css">
   <link rel="stylesheet" href="css/icon-experience.css">
@@ -27,11 +27,11 @@
   <link rel="stylesheet" href="css/portal-polish.css">
   <link rel="stylesheet" href="css/reports.css">
   <!-- Appearance (light/dark). Loaded last so its dark patches win the cascade. -->
-  <link rel="stylesheet" href="css/appearance.css">
+  <link rel="stylesheet" href="css/appearance.css?v=20260928-2019">
 </head>
 <body class="pay-body">
   <!-- Entry screen: the login page can also sign in here, so this is a fallback, not a wall. -->
-  <section class="auth-screen pay-auth-screen" id="payEntry" aria-label="Active Plus পেমেন্ট রিসিভ প্যানেল">
+  <section class="auth-screen pay-auth-screen" id="payEntry" hidden aria-label="Active Plus পেমেন্ট রিসিভ প্যানেল">
     <div class="auth-topbar">
       <button class="theme-quick-toggle" type="button" data-theme-toggle aria-label="ডার্ক মোড চালু করুন"><svg class="icon-sun" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-sun"></use></svg><svg class="icon-moon" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-moon"></use></svg></button>
       <div class="auth-brand">
@@ -91,17 +91,8 @@
         <img src="assets/icons/logo-128.png" alt="" width="38" height="38">
         <span><strong>পেমেন্ট রিসিভ</strong><small>Active Plus Coaching • কাউন্টার</small></span>
       </a>
-      <div class="admin-topbar-actions">
-        <button class="admin-app-link" id="payPinButton" type="button" title="পাসওয়ার্ড পরিবর্তন" aria-label="পাসওয়ার্ড পরিবর্তন করুন">
-          <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg>
-        </button>
-        <a class="admin-app-link" href="admin.html" title="এডমিন প্যানেল" aria-label="এডমিন প্যানেল খুলুন">
-          <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-grid"></use></svg>
-        </a>
-        <button class="admin-exit" id="payExitButton" type="button" title="লগআউট" aria-label="লগআউট">
-          <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-logout"></use></svg>
-        </button>
-      </div>
+      <time class="pay-current-date" id="payCurrentDate" aria-label="আজকের দিন ও তারিখ"></time>
+
     </header>
 
     <main class="pay-main">

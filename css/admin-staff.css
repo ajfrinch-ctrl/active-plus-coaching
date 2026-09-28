@@ -946,3 +946,478 @@
   font-weight: 700;
   line-height: 1.6;
 }
+
+/* === STAFF MANAGEMENT — COMPLETE WHITE/BLUE REDESIGN === */
+.admin-shell [data-view-panel="staff"]{
+  width:100%;
+  max-width:820px;
+  margin:0 auto;
+  padding:4px 0 28px;
+  color:#172033;
+}
+.admin-shell [data-view-panel="staff"] .page-intro{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  margin:0 0 6px;
+}
+.admin-shell [data-view-panel="staff"] .page-intro>div{min-width:0}
+.admin-shell [data-view-panel="staff"] .eyebrow{
+  margin:0 0 4px;
+  color:#315efb;
+  font-size:10px;
+  line-height:1;
+  font-weight:900;
+  letter-spacing:.7px;
+  text-transform:uppercase;
+}
+.admin-shell [data-view-panel="staff"] .page-intro h1{
+  margin:0;
+  color:#14213a;
+  font-size:22px;
+  line-height:1.25;
+  font-weight:900;
+  letter-spacing:-.3px;
+}
+.admin-shell [data-view-panel="staff"]>.finance-hint{
+  margin:0 0 16px;
+  padding:12px 14px;
+  border:1px solid #e1e6ed;
+  border-radius:14px;
+  background:#f8fafc!important;
+  color:#526176;
+  font-size:12px;
+  line-height:1.6;
+}
+.admin-shell [data-view-panel="staff"]>.finance-error{
+  margin-bottom:12px;
+  border-radius:12px;
+}
+
+/* Primary action */
+.admin-shell .staff-create-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  min-height:46px;
+  padding:0 15px;
+  border:1px solid #315efb!important;
+  border-radius:13px!important;
+  background:#315efb!important;
+  color:#fff!important;
+  box-shadow:0 7px 18px rgba(49,94,251,.18);
+  font-size:12px;
+  font-weight:850;
+  white-space:nowrap;
+}
+.admin-shell .staff-create-btn:hover{background:#254ed8!important}
+.admin-shell .staff-create-btn .apc-icon{width:19px;height:19px}
+
+/* Overview tiles */
+.admin-shell .staff-stats{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:9px;
+  margin:0 0 14px;
+}
+.admin-shell .staff-stat-tile,
+.admin-shell .staff-stat{
+  min-width:0;
+  padding:12px 11px;
+  border:1px solid #e1e6ed!important;
+  border-radius:15px!important;
+  background:#fff!important;
+  box-shadow:0 4px 14px rgba(31,45,68,.045)!important;
+}
+.admin-shell .staff-stat-icon{
+  width:34px;height:34px;margin-bottom:8px;
+  border:1px solid #e0e6ee;
+  border-radius:11px;
+  background:#f3f6fb!important;
+  color:#315efb!important;
+  box-shadow:none!important;
+}
+.admin-shell .staff-stat-icon>svg{width:18px;height:18px}
+.admin-shell .staff-stat-label,.admin-shell .staff-stat span{
+  display:block;
+  color:#66758a!important;
+  font-size:10.5px;
+  font-weight:750;
+}
+.admin-shell .staff-stat-value,.admin-shell .staff-stat strong{
+  display:block;
+  margin-top:2px;
+  color:#14213a!important;
+  font-size:19px;
+  line-height:1.1;
+  font-weight:900;
+}
+
+/* Search and filters */
+.admin-shell .staff-toolbar{
+  display:grid;
+  gap:10px;
+  padding:12px;
+  margin-bottom:13px;
+  border:1px solid #e1e6ed!important;
+  border-radius:16px!important;
+  background:#fff!important;
+  box-shadow:0 4px 15px rgba(31,45,68,.045)!important;
+}
+.admin-shell .staff-search{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  min-height:50px;
+  padding:0 10px;
+  border:1px solid #d8e0ea!important;
+  border-radius:13px!important;
+  background:#f9fbfd!important;
+}
+.admin-shell .staff-search:focus-within{
+  border-color:#315efb!important;
+  background:#fff!important;
+  box-shadow:0 0 0 3px rgba(49,94,251,.10)!important;
+}
+.admin-shell .staff-search-icon{
+  width:25px;height:25px;flex:0 0 25px;color:#315efb!important;
+}
+.admin-shell .staff-search-icon>svg{width:18px;height:18px}
+.admin-shell .staff-search input{
+  min-width:0;min-height:46px;flex:1;
+  border:0!important;outline:0!important;
+  background:transparent!important;
+  color:#172033!important;
+  font-size:16px;
+}
+.admin-shell .staff-search input::placeholder{color:#8793a5}
+.admin-shell .staff-search-clear{
+  flex:0 0 32px;width:32px;height:32px;
+  border:0;border-radius:9px;
+  background:#edf1f6;color:#526176;
+}
+.admin-shell .staff-filter-block{
+  padding-top:1px;
+  min-width:0;
+}
+.admin-shell .staff-filter-label{
+  margin:0 0 6px;
+  color:#526176!important;
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:.25px;
+}
+.admin-shell .staff-toolbar .chip-row{
+  display:flex;flex-wrap:wrap;gap:6px;
+}
+.admin-shell .staff-toolbar .chip{
+  min-height:35px;
+  padding:0 11px;
+  border:1px solid #dce3ec!important;
+  border-radius:10px!important;
+  background:#fff!important;
+  color:#42526a!important;
+  font-size:10.5px;
+  font-weight:800;
+}
+.admin-shell .staff-toolbar .chip:hover{border-color:#b9c7da!important}
+.admin-shell .staff-toolbar .chip.active{
+  border-color:#315efb!important;
+  background:#315efb!important;
+  color:#fff!important;
+  box-shadow:0 4px 10px rgba(49,94,251,.14);
+}
+.admin-shell .staff-count-badge{
+  display:block;
+  padding-top:1px;
+  color:#315efb!important;
+  font-size:11px;
+  font-weight:850;
+}
+
+/* Staff list/card */
+.admin-shell .staff-list{display:grid;gap:10px}
+.admin-shell .staff-card{
+  min-width:0;
+  padding:14px;
+  border:1px solid #e0e6ee!important;
+  border-radius:17px!important;
+  background:#fff!important;
+  box-shadow:0 5px 17px rgba(31,45,68,.055)!important;
+}
+.admin-shell .staff-card:hover{border-color:#cfd9e6!important}
+.admin-shell .staff-card.is-inactive{
+  background:#fafbfc!important;
+  border-style:solid!important;
+  opacity:.88;
+}
+.admin-shell .staff-card.is-protected{border-color:#cdd9ff!important}
+.admin-shell .staff-card-head{align-items:center;gap:12px}
+.admin-shell .staff-avatar{
+  width:48px;height:48px;flex:0 0 48px;
+  border:1px solid #dfe6f0!important;
+  border-radius:14px!important;
+  background:#f1f4f8!important;
+  color:#315efb!important;
+  box-shadow:none!important;
+}
+.admin-shell .staff-card-identity{min-width:0}
+.admin-shell .staff-card-name{
+  color:#14213a!important;
+  font-size:15px;
+  font-weight:850;
+}
+.admin-shell .staff-card-line{gap:6px;margin-top:5px}
+.admin-shell .staff-id-badge{
+  padding:3px 8px;
+  border:1px solid #dce3ec!important;
+  border-radius:8px;
+  background:#f1f4f8!important;
+  color:#526176!important;
+  font-size:10px;
+}
+.admin-shell .staff-tag{
+  padding:3px 8px;
+  background:#eef3ff!important;
+  color:#315efb!important;
+  font-size:10px;
+}
+.admin-shell .staff-tag.role-admin,
+.admin-shell .staff-tag.role-manager,
+.admin-shell .staff-tag.role-teacher,
+.admin-shell .staff-tag.role-cash-counter{
+  background:#eef3ff!important;
+  color:#315efb!important;
+}
+.admin-shell .staff-meta{
+  color:#66758a!important;
+  font-size:11px;
+}
+.admin-shell .staff-card-actions{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:7px;
+  margin-top:12px;
+}
+.admin-shell .staff-card-actions .mini-btn{
+  min-width:0;
+  min-height:42px;
+  padding:0 9px;
+  border:1px solid #d9e1eb!important;
+  border-radius:11px!important;
+  background:#fff!important;
+  color:#34445c!important;
+  font-size:11px;
+  font-weight:800;
+}
+.admin-shell .staff-card-actions .mini-btn.primary{
+  background:#315efb!important;
+  border-color:#315efb!important;
+  color:#fff!important;
+}
+.admin-shell .staff-more-menu{
+  margin-top:9px;
+  padding:7px;
+  border:1px solid #e0e6ee!important;
+  border-radius:13px!important;
+  background:#fff!important;
+}
+.admin-shell .staff-more-item{
+  min-height:43px;
+  border-radius:10px;
+  color:#34445c;
+}
+.admin-shell .staff-more-item:active{background:#f3f6fa}
+.admin-shell .staff-more-item.danger{color:#c04436}
+
+/* Notices inside cards */
+.admin-shell .staff-protected-note,
+.admin-shell .staff-password-note,
+.admin-shell .staff-id-lock{
+  margin-top:9px;
+  padding:8px 10px;
+  border:1px solid #e1e6ed!important;
+  border-radius:11px;
+  background:#f6f8fa!important;
+  color:#526176!important;
+  font-size:10.5px;
+}
+.admin-shell .staff-protected-note{border-color:#d8e1ff!important;color:#3152b9!important}
+.admin-shell .staff-password-note{border-color:#eadfbd!important;color:#8a651b!important}
+
+/* Create/Edit modal — structured sections */
+.staff-modal-backdrop .staff-modal{
+  width:min(calc(100% - 24px),500px)!important;
+  max-height:min(90vh,760px)!important;
+  overflow-y:auto;
+  padding:0!important;
+  border:1px solid #dce3ec!important;
+  border-radius:20px!important;
+  background:#fff!important;
+  box-shadow:0 22px 60px rgba(20,33,58,.18)!important;
+}
+.staff-modal-backdrop .admin-modal-header{
+  position:sticky;
+  top:0;
+  z-index:2;
+  padding:16px;
+  border-bottom:1px solid #e6ebf1;
+  background:#fff!important;
+}
+.staff-modal-backdrop .admin-modal-header h2{
+  margin:0;
+  color:#14213a!important;
+  font-size:17px;
+  font-weight:900;
+}
+.staff-modal-backdrop .admin-modal-header .eyebrow{color:#315efb}
+.staff-modal-backdrop .admin-modal-close{
+  width:36px;height:36px;
+  border:1px solid #dfe5ec!important;
+  border-radius:11px;
+  background:#f4f6f8!important;
+  color:#526176;
+}
+.staff-modal-backdrop .admin-modal-body{padding:16px}
+.staff-create-form{
+  display:grid;
+  gap:14px;
+}
+.staff-form-notice{
+  padding:10px 12px;
+  border:1px solid #dce5ff;
+  border-radius:12px;
+  background:#f4f7ff;
+  color:#4c5f86;
+  font-size:11px;
+  line-height:1.55;
+}
+.staff-form-section-block{
+  padding:13px;
+  border:1px solid #e1e6ed;
+  border-radius:15px;
+  background:#fff;
+}
+.staff-form-section-title{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin:0 0 11px;
+  color:#14213a;
+  font-size:12.5px;
+  font-weight:900;
+}
+.staff-section-number{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:25px;height:25px;
+  flex:0 0 25px;
+  border-radius:8px;
+  background:#eef3ff;
+  color:#315efb;
+  font-size:11px;
+  font-weight:900;
+}
+.staff-form-section-title small{
+  display:block;
+  margin:2px 0 0;
+  color:#718096;
+  font-size:10px;
+  font-weight:600;
+}
+.staff-form-grid{gap:11px}
+.admin-shell .staff-field{gap:5px}
+.admin-shell .staff-field>label,
+.admin-shell .staff-field>.auto-id-label{
+  color:#253550!important;
+  font-size:11.5px;
+  font-weight:850;
+}
+.admin-shell .staff-field input,
+.admin-shell .staff-field select,
+.admin-shell .staff-field textarea{
+  min-height:46px;
+  padding:0 11px;
+  border:1px solid #d8e0ea!important;
+  border-radius:11px!important;
+  background:#fff!important;
+  color:#172033!important;
+  font-size:15px;
+  box-sizing:border-box;
+}
+.admin-shell .staff-field textarea{padding:10px 11px}
+.admin-shell .staff-field input:focus,
+.admin-shell .staff-field select:focus,
+.admin-shell .staff-field textarea:focus{
+  outline:3px solid rgba(49,94,251,.11)!important;
+  border-color:#315efb!important;
+}
+.admin-shell .staff-field small{color:#718096!important;font-size:10px}
+.admin-shell .staff-assignment{
+  padding:12px;
+  border:1px solid #dfe6ef!important;
+  border-radius:13px;
+  background:#f8fafc!important;
+}
+.staff-form-footer{
+  display:flex;
+  gap:8px;
+  justify-content:flex-end;
+  padding-top:2px;
+}
+.staff-form-footer .admin-btn{
+  min-height:46px;
+  flex:1 1 0;
+}
+.admin-shell .auto-id-preview,
+.staff-modal-backdrop .auto-id-preview{
+  min-height:46px;
+  padding:10px 11px;
+  border:1px dashed #cbd7f5!important;
+  border-radius:11px!important;
+  background:#f4f7ff!important;
+  color:#315efb!important;
+  font-size:12.5px;
+}
+
+/* Profile/detail modal */
+.admin-shell .staff-profile-head{
+  padding-bottom:13px;
+  margin-bottom:13px;
+  border-bottom:1px solid #e6ebf1;
+}
+.admin-shell .staff-activity-grid>div{
+  border:1px solid #e1e6ed!important;
+  border-radius:12px;
+  background:#f8fafc!important;
+}
+.admin-shell .staff-history li{
+  background:#f6f8fa!important;
+  color:#34445c;
+}
+
+/* Responsive */
+@media(max-width:700px){
+  .admin-shell .staff-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:560px){
+  .admin-shell [data-view-panel="staff"] .page-intro{align-items:flex-start}
+  .admin-shell [data-view-panel="staff"] .page-intro h1{font-size:19px}
+  .staff-modal-backdrop .admin-modal-header{padding:14px}
+  .staff-modal-backdrop .admin-modal-body{padding:14px}
+  .staff-form-grid{grid-template-columns:1fr}
+}
+@media(max-width:420px){
+  .admin-shell [data-view-panel="staff"] .page-intro{flex-direction:column}
+  .admin-shell .staff-create-btn{width:100%}
+  .admin-shell .staff-card{padding:12px}
+  .admin-shell .staff-card-actions .mini-btn{min-height:44px}
+}
+@media(max-width:360px){
+  .admin-shell .staff-stats{grid-template-columns:1fr}
+  .admin-shell .staff-card-actions{grid-template-columns:1fr}
+}
+
