@@ -1,644 +1,334 @@
-/* Reports UI — the same six steps on every panel.
+/* Active Plus Coaching — Report Center
+   Fresh implementation. The previous category/card/report-selection UI is removed.
+   Data builders, permissions and the existing PDF engine are reused only as
+   data/calculation services; this file owns the new Report Center workflow.
 
-   Reports → category → report type → the filters that report needs
-   → Generate → full preview → DOWNLOAD PDF / CSV
-
-   The panel only provides a container; everything inside it is built here, so
-   Admin, Manager, Teacher, Cash Counter and Student all get the same flow with
-   the same engine. Two rules shape the module:
-
-   • Only the filters a report declares are rendered. No report ever shows a
-     control it does not use.
-   • Whatever is previewed is what gets downloaded. The preview and the PDF are
-     produced from one laid-out document, so they cannot disagree.
-
-   Access is decided twice: the catalog hides what a role may not see, and
-   report-access.js#enforceAccess decides again before any record is read.
+   Workflow:
+   Select Report → Select Filter → Generate Report → Final PDF → Preview → Download PDF
 */
-import { iconMarkup } from './admin-icons.js';
 import {
-  PERIODS, FILTER_META, OPTION_VALUES, EMPTY_MESSAGE,
-  catalogFor, filterOptions, validateFilters, buildReportDocument
+  REPORTS, FILTER_META, filterOptions, validateFilters, buildReportDocument
 } from './report-catalog.js';
-import { resolveActor, actorScope, canAccess, enforceAccess, ROLE_LABEL } from './report-access.js';
+import { resolveActor, actorScope, enforceAccess } from './report-access.js';
 import { loadSnapshot } from './report-sources.js';
-import { toBanglaNumber as bn } from './ui.js';
-import { buildReport, buildReportPDF, loadReportAssets, PAGE } from './report-layout.js';
+import { buildReportPDF } from './report-layout.js';
 import { downloadBlob } from './exam-pdf.js';
 
-/* A filter is named after its control; the builders read the record field it
-   filters on. Both are written, so a report always receives what it asks for. */
-const FILTER_FIELD = Object.freeze({
-  class: 'className',
-  student: 'studentId',
-  exam: 'examId'
-});
-
-const MONTH_NAME = ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'];
-
-const el = (tag, className = '', text = '') => {
+const el = (tag, cls = '', text = '') => {
   const node = document.createElement(tag);
-  if (className) node.className = className;
+  if (cls) node.className = cls;
   if (text) node.textContent = text;
   return node;
 };
 
-const isoDay = (time = Date.now()) => {
-  const date = new Date(time);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+const today = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 };
 
-/** ActivePlus_Student_Master_List_2026-09-27.pdf */
-function fileNameFor(definition, extension = 'pdf') {
-  const slug = String(definition.title || 'Report')
-    .replace(/[^\p{L}\p{N}]+/gu, '_')
-    .replace(/^_+|_+$/g, '')
-    .slice(0, 60) || 'Report';
-  return `ActivePlus_${slug}_${isoDay()}.${extension}`;
+const slug = value => String(value || 'Report')
+  .replace(/[^\\p{L}\\p{N}]+/gu, '_')
+  .replace(/^_+|_+$/g, '')
+  .slice(0, 70) || 'Report';
+
+const reportFileName = definition => `ActivePlus_${slug(definition.title)}_${today()}.pdf`;
+
+const optionLabel = (definition, key, value, options) => {
+  if (!value || value === 'all') return '';
+  if (key === 'period') {
+    const labels = { all:'সব সময়', daily:'Daily', weekly:'Weekly', monthly:'Monthly', custom:'Custom Date Range' };
+    return labels[value] || value;
+  }
+  return (options?.[FILTER_META[key]?.options] || []).find(item => String(item.value) === String(value))?.label || String(value);
+};
+
+function collectFilters(form) {
+  const filters = {};
+  for (const field of form.querySelectorAll('[data-filter]')) {
+    const key = field.dataset.filter;
+    if (field.value !== '') filters[key] = field.value;
+  }
+  if (filters.period === 'daily') filters.date = form.querySelector('[name="date"]')?.value || '';
+  if (filters.period === 'weekly') filters.week = form.querySelector('[name="week"]')?.value || '';
+  if (filters.period === 'monthly') filters.month = form.querySelector('[name="month"]')?.value || '';
+  if (filters.period === 'custom') {
+    filters.from = form.querySelector('[name="from"]')?.value || '';
+    filters.to = form.querySelector('[name="to"]')?.value || '';
+  }
+  if (filters.class) filters.className = filters.class;
+  if (filters.student) filters.studentId = filters.student;
+  if (filters.exam) filters.examId = filters.exam;
+  return filters;
 }
 
-/* The CSV is a second rendering of the SAME document blocks the preview and
-   the PDF show: same rows, same totals, same order. One walker, three views. */
-export function csvRowsFor(doc) {
-  const rows = [];
-  if (doc?.title) rows.push([doc.title]);
-  if (doc?.period) rows.push([doc.period]);
-  for (const item of doc?.blocks || []) {
-    if (!item) continue;
-    if (item.type === 'heading' || item.type === 'paragraph' || item.type === 'note') {
-      if (item.text) rows.push([item.text]);
-    } else if (item.type === 'keyValues') {
-      for (const pair of item.pairs || []) rows.push([pair[0], pair[1]]);
-    } else if (item.type === 'tiles') {
-      for (const tile of item.tiles || []) rows.push([tile.label, tile.value]);
-    } else if (item.type === 'table') {
-      if (item.title) rows.push([item.title]);
-      rows.push((item.columns || []).map(column => column.label));
-      for (const row of item.rows || []) rows.push(row);
-    } else if (item.type === 'questions') {
-      for (const question of item.questions || []) {
-        rows.push([`${question.no ? `${question.no}. ` : ''}${question.text || ''}`, question.marks !== undefined ? `${question.marks} মার্কস` : '']);
-        for (const option of question.options || []) rows.push(['', option.text ?? option]);
-        if (question.answerText || question.answer) rows.push(['উত্তর', question.answerText || question.answer]);
-      }
+function filterSummary(definition, filters, options) {
+  const parts = [];
+  for (const key of definition.filters || []) {
+    const value = filters[key];
+    if (value && value !== 'all') {
+      const label = optionLabel(definition, key, value, options);
+      if (label) parts.push(`${FILTER_META[key]?.label || key}: ${label}`);
     }
   }
-  return rows;
+  if (filters.period === 'daily' && filters.date) parts.push(`তারিখ: ${filters.date}`);
+  if (filters.period === 'weekly' && filters.week) parts.push(`সপ্তাহ: ${filters.week}`);
+  if (filters.period === 'monthly' && filters.month) parts.push(`মাস: ${filters.month}`);
+  if (filters.period === 'custom' && (filters.from || filters.to)) parts.push(`তারিখ: ${filters.from || '—'} → ${filters.to || '—'}`);
+  return parts;
 }
 
-/** UTF-8 BOM + quoted cells + CRLF — the app's CSV convention (Excel-friendly). */
-function csvBlobFor(rows) {
-  const cell = value => `"${String(value ?? '').replace(/"/g, '""')}"`;
-  const lines = rows.map(row => row.map(cell).join(','));
-  return new Blob([`\uFEFF${lines.join('\r\n')}`], { type: 'text/csv;charset=utf-8' });
+function setSelectOptions(select, items, includeAll = true) {
+  select.replaceChildren();
+  if (includeAll) select.append(new Option('সব', 'all'));
+  for (const item of items || []) select.append(new Option(item.label, item.value));
 }
 
-function periodText(definition, filters) {
-  const period = filters.period || 'all';
-  const meta = PERIODS.find(item => item.id === period);
-  if (period === 'daily' && filters.date) return filters.date;
-  if (period === 'weekly' && filters.week) return `সপ্তাহ: ${filters.week}`;
-  if (period === 'monthly' && filters.month) {
-    const [year, index] = String(filters.month).split('-').map(Number);
-    return `${MONTH_NAME[Math.max(0, Math.min(11, (index || 1) - 1))]} ${year}`;
+function addField(form, key, options, filters) {
+  const meta = FILTER_META[key];
+  if (!meta) return;
+  const wrap = el('label', 'rc-field');
+  wrap.dataset.filter = key;
+  const title = el('span', 'rc-label', meta.label);
+  wrap.append(title);
+
+  if (meta.type === 'period') {
+    const select = el('select', 'rc-control');
+    select.dataset.filter = key;
+    select.name = key;
+    for (const item of [
+      ['all','সব সময়'],['daily','Daily (একদিন)'],['weekly','Weekly (সপ্তাহ)'],
+      ['monthly','Monthly (মাস)'],['custom','Custom Date Range']
+    ]) select.append(new Option(item[1], item[0]));
+    select.value = filters[key] || 'all';
+    wrap.append(select);
+    form.append(wrap);
+    return;
   }
-  if (period === 'custom' && (filters.from || filters.to)) return `${filters.from || 'শুরু'} → ${filters.to || 'আজ'}`;
-  return meta ? meta.label : 'সব সময়';
+
+  const select = el('select', 'rc-control');
+  select.dataset.filter = key;
+  select.name = key;
+  const optionKey = meta.options;
+  setSelectOptions(select, options?.[optionKey] || [], true);
+  select.value = filters[key] || 'all';
+  wrap.append(select);
+  form.append(wrap);
 }
 
-/* -------------------------------------------------------------------------
-   One mounted instance
-   ---------------------------------------------------------------------- */
+function addPeriodExtra(form, period) {
+  form.querySelector('.rc-period-extra')?.remove();
+  if (!['daily','weekly','monthly','custom'].includes(period)) return;
+  const box = el('div', 'rc-period-extra');
+
+  if (period === 'daily') {
+    box.append(el('label','rc-field', ''));
+    const field = box.lastChild;
+    field.dataset.extra = 'date';
+    field.append(el('span','rc-label','তারিখ'));
+    const input = el('input','rc-control');
+    input.type='date'; input.name='date'; input.value=today();
+    field.append(input);
+  } else if (period === 'weekly') {
+    const field = el('label','rc-field','');
+    field.append(el('span','rc-label','সপ্তাহ শুরু'));
+    const input=el('input','rc-control'); input.type='date'; input.name='week'; field.append(input); box.append(field);
+  } else if (period === 'monthly') {
+    const field = el('label','rc-field','');
+    field.append(el('span','rc-label','মাস'));
+    const input=el('input','rc-control'); input.type='month'; input.name='month'; field.append(input); box.append(field);
+  } else {
+    for (const [name,label] of [['from','From Date'],['to','To Date']]) {
+      const field=el('label','rc-field',''); field.append(el('span','rc-label',label));
+      const input=el('input','rc-control'); input.type='date'; input.name=name; field.append(input); box.append(field);
+    }
+  }
+  form.append(box);
+}
 
 class ReportCenter {
-  constructor(root, options = {}) {
-    this.root = root;
-    this.panel = options.panel || '';
-    this.actor = null;
-    this.scope = null;
-    this.catalog = [];
-    this.options = null;
-    this.definition = null;
-    this.category = null;
-    this.filters = {};
-    this.doc = null;
-    this.busy = false;
-    this.built = { doc: null, total: 0 };
+  constructor(root, options={}) {
+    this.root=root; this.panel=options.panel || '';
+    this.actor=null; this.scope=null; this.catalog=[]; this.options=null;
+    this.definition=null; this.filters={}; this.pdfBlob=null; this.pdfUrl=null;
   }
 
-  /**
-   * Read who is signed in and render. A soft refresh (a data change behind the
-   * panel) only reloads the filter options, so a half-filled flow is kept.
-   */
-  async start({ soft = false } = {}) {
-    const actor = await resolveActor();
-    const sameActor = this.actor && actor
-      && this.actor.role === actor.role
-      && this.actor.username === actor.username
-      && this.actor.studentId === actor.studentId;
-    if (soft && sameActor) {
-      this.actor = actor;
-      this.scope = actorScope(actor);
-      this.refreshOptions();
+  async start({soft=false}={}) {
+    const actor=await resolveActor();
+    this.actor=actor;
+    if (!actor) {
+      this.root.replaceChildren(el('p','rc-note','রিপোর্ট দেখতে হলে লগইন করতে হবে।'));
       return this;
     }
-    this.actor = actor;
-    if (!this.actor) {
-      this.root.replaceChildren(el('p', 'rp-note', 'রিপোর্ট দেখতে হলে লগইন করতে হবে।'));
-      return this;
-    }
-    this.scope = actorScope(this.actor);
-    this.catalog = catalogFor(this.actor.role);
-    this.root.classList.add('rp-root');
-    this.root.dataset.role = this.actor.role;
-    if (this.panel) this.root.dataset.panel = this.panel;
+    this.scope=actorScope(actor);
+    this.catalog=REPORTS.filter(report => (report.roles || []).includes(actor.role));
+    this.options=filterOptions(loadSnapshot(), actor, this.scope);
     this.render();
-    this.refreshOptions();
-    this.watchResize();
     return this;
   }
 
-  /** Keep the A4 pages fitted when the phone rotates or the panel resizes. */
-  watchResize() {
-    if (this.resizeBound) return;
-    this.resizeBound = true;
-    let frame = 0;
-    const fit = () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => this.fitPages());
-    };
-    window.addEventListener('resize', fit);
-    window.addEventListener('orientationchange', fit);
-    // A panel can also change width by becoming visible — no resize fires then.
-    if (typeof ResizeObserver === 'function') new ResizeObserver(fit).observe(this.root);
-  }
-
-  /* ---------- shell ---------- */
-
   render() {
-    const roleLabel = ROLE_LABEL[this.actor.role] || this.actor.role;
-    const head = el('header', 'rp-head');
-    head.append(el('p', 'eyebrow', 'Reports'));
-    const title = el('h2', 'rp-title', 'রিপোর্ট');
-    head.append(title);
-    head.append(el('p', 'rp-hint', 'ক্যাটাগরি → রিপোর্ট → প্রয়োজনীয় filter → Generate → Preview → PDF / CSV ডাউনলোড'));
-    const who = el('p', 'rp-who');
-    who.append(el('span', 'rp-who-role', roleLabel));
-    who.append(el('span', 'rp-who-name', this.actor.name || this.actor.username || ''));
-    head.append(who);
+    this.revokePdf();
+    this.root.className='report-center-new';
+    this.root.replaceChildren();
 
-    this.crumbs = el('nav', 'rp-crumbs');
-    this.crumbs.setAttribute('aria-label', 'রিপোর্টের ধাপ');
+    const head=el('header','rc-head');
+    head.append(el('p','rc-eyebrow','REPORT CENTER'));
+    head.append(el('h2','rc-title','Report Center'));
+    this.root.append(head);
 
-    this.screens = el('div', 'rp-screens');
-    this.categoryScreen = el('section', 'rp-screen');
-    this.reportScreen = el('section', 'rp-screen');
-    this.filterScreen = el('section', 'rp-screen');
-    this.previewScreen = el('section', 'rp-screen');
-    this.screens.append(this.categoryScreen, this.reportScreen, this.filterScreen, this.previewScreen);
+    const form=el('form','rc-form');
+    form.noValidate=true;
+    this.form=form;
 
-    this.status = el('p', 'rp-status');
-    this.status.setAttribute('role', 'status');
-    this.status.setAttribute('aria-live', 'polite');
-
-    this.root.replaceChildren(head, this.crumbs, this.status, this.screens);
-    this.showCategories();
-  }
-
-  setCrumbs(trail) {
-    this.crumbs.replaceChildren();
-    trail.forEach((item, index) => {
-      if (index) this.crumbs.append(el('span', 'rp-crumb-sep', '›'));
-      const node = el('button', 'rp-crumb', item.label);
-      node.type = 'button';
-      if (item.onOpen) node.addEventListener('click', item.onOpen);
-      else node.disabled = true;
-      this.crumbs.append(node);
-    });
-  }
-
-  showScreen(node) {
-    for (const screen of [this.categoryScreen, this.reportScreen, this.filterScreen, this.previewScreen]) {
-      const active = screen === node;
-      screen.hidden = !active;
-      // Inactive screens are emptied: every step rebuilds from state, and a
-      // stale hidden node must never linger behind the visible flow.
-      if (!active) screen.replaceChildren();
+    const reportField=el('label','rc-field rc-report-field');
+    reportField.append(el('span','rc-label','Select Report'));
+    const reportSelect=el('select','rc-control');
+    reportSelect.name='report'; reportSelect.required=true;
+    reportSelect.append(new Option('Select Report',''));
+    for (const report of this.catalog) {
+      reportSelect.append(new Option(report.title,report.id));
     }
+    reportField.append(reportSelect); form.append(reportField);
+
+    this.dynamic=el('div','rc-dynamic-filters');
+    form.append(this.dynamic);
+
+    const actions=el('div','rc-actions');
+    const generate=el('button','rc-generate','Generate Report');
+    generate.type='submit';
+    actions.append(generate); form.append(actions);
+
+    const status=el('p','rc-status'); status.hidden=true;
+    form.append(status);
+    this.status=status;
+    this.root.append(form);
+
+    reportSelect.addEventListener('change',()=>this.selectReport(reportSelect.value));
+    form.addEventListener('submit',event=>{event.preventDefault();this.generate();});
+
+    this.selectReport('');
   }
 
-  setStatus(message = '', tone = '') {
-    this.status.textContent = message || '';
-    this.status.dataset.tone = tone;
-    this.status.hidden = !message;
-  }
+  selectReport(id) {
+    this.definition=this.catalog.find(item=>item.id===id) || null;
+    this.filters={};
+    this.dynamic.replaceChildren();
+    if (!this.definition) return;
 
-  /* ---------- step 1: categories ---------- */
-
-  showCategories() {
-    this.setCrumbs([{ label: 'রিপোর্ট' }]);
-    this.showScreen(this.categoryScreen);
-    this.categoryScreen.replaceChildren();
-    const grid = el('div', 'rp-grid');
-    for (const category of this.catalog) {
-      const card = el('button', 'rp-card');
-      card.type = 'button';
-      card.dataset.category = category.id;
-      const icon = el('span', 'rp-card-icon');
-      icon.innerHTML = iconMarkup(category.icon, 'rp-icon-svg');
-      card.append(icon);
-      const copy = el('span', 'rp-card-copy');
-      copy.append(el('strong', '', category.labelBn));
-      const description = category.descriptionBn || category.description;
-      if (description) copy.append(el('small', 'rp-card-desc', description));
-      copy.append(el('small', '', `${bn(category.reports.length)} টি রিপোর্ট`));
-      card.append(copy);
-      card.append(el('span', 'rp-card-go', '›'));
-      card.addEventListener('click', () => this.showReports(category));
-      grid.append(card);
+    for (const key of this.definition.filters || []) addField(this.dynamic,key,this.options,this.filters);
+    const period=this.dynamic.querySelector('[data-filter="period"]');
+    if (period) {
+      period.addEventListener('change',()=>{
+        addPeriodExtra(this.dynamic,period.value);
+      });
     }
-    this.categoryScreen.append(grid);
-    this.setStatus('');
+    if (period) addPeriodExtra(this.dynamic,period.value);
   }
-
-  /* ---------- step 2: reports in the category ---------- */
-
-  showReports(category) {
-    this.category = category;
-    this.setCrumbs([
-      { label: 'রিপোর্ট', onOpen: () => this.showCategories() },
-      { label: category.labelBn }
-    ]);
-    this.showScreen(this.reportScreen);
-    this.reportScreen.replaceChildren();
-
-    const list = el('div', 'rp-list');
-    for (const definition of category.reports) {
-      const card = el('button', 'rp-report');
-      card.type = 'button';
-      card.dataset.report = definition.id;
-      const icon = el('span', 'rp-report-icon');
-      icon.innerHTML = iconMarkup(category.icon, 'rp-icon-svg');
-      card.append(icon);
-      const copy = el('span', 'rp-report-copy');
-      copy.append(el('strong', '', definition.title));
-      copy.append(el('small', '', definition.subtitle || ''));
-      const filters = (definition.filters || []).map(key => FILTER_META[key]?.label).filter(Boolean);
-      if (filters.length) copy.append(el('span', 'rp-report-filters', filters.join(' • ')));
-      card.append(copy);
-      card.append(el('span', 'rp-report-action', 'শুরু করুন'));
-      card.addEventListener('click', () => this.showFilters(definition));
-      list.append(card);
-    }
-    this.reportScreen.append(list);
-    this.setStatus('');
-  }
-
-  /* ---------- step 3: only the filters this report needs ---------- */
-
-  refreshOptions() {
-    try {
-      this.options = filterOptions(loadSnapshot(), this.actor, this.scope);
-    } catch {
-      this.options = filterOptions({ students: [], transactions: [], notices: [], teaching: { activities: [] }, exams: { exams: [], attempts: [] } }, this.actor, this.scope);
-    }
-    return this.options;
-  }
-
-  showFilters(definition) {
-    if (!canAccess(definition, this.actor)) {
-      this.setStatus('আপনার এই রিপোর্ট দেখার অনুমতি নেই।', 'error');
-      return;
-    }
-    // "Change Filters" keeps what the user already picked for this report;
-    // opening a different report starts from its own defaults.
-    const returning = this.definition === definition && this.filters && Object.keys(this.filters).length > 0;
-    this.definition = definition;
-    if (!returning) {
-      this.filters = {
-        period: definition.defaultPeriod && (definition.filters || []).includes('period') ? definition.defaultPeriod : 'all',
-        date: isoDay(),
-        week: isoDay(),
-        month: isoDay().slice(0, 7),
-        from: '',
-        to: ''
-      };
-    }
-    this.setCrumbs([
-      { label: 'রিপোর্ট', onOpen: () => this.showCategories() },
-      { label: this.category ? this.category.labelBn : 'রিপোর্ট', onOpen: () => this.category && this.showReports(this.category) },
-      { label: definition.title, onOpen: () => this.showFilters(definition) },
-      { label: 'Filter' }
-    ]);
-    this.showScreen(this.filterScreen);
-    this.filterScreen.replaceChildren();
-
-    const intro = el('div', 'rp-choose');
-    intro.append(el('h3', '', definition.title));
-    if (definition.subtitle) intro.append(el('p', 'rp-choose-sub', definition.subtitle));
-    this.filterScreen.append(intro);
-
-    this.form = el('form', 'rp-filters');
-    this.form.noValidate = true;
-    const keys = definition.filters || [];
-    if (!keys.length) {
-      this.form.append(el('p', 'rp-note', 'এই রিপোর্টে কোনো filter নেই — সরাসরি তৈরি করুন।'));
-    }
-    for (const key of keys) this.form.append(this.filterField(key));
-    this.filterScreen.append(this.form);
-
-    const actions = el('div', 'rp-filter-actions');
-    this.generateButton = el('button', 'rp-generate', 'রিপোর্ট তৈরি করুন');
-    this.generateButton.type = 'submit';
-    this.generateButton.innerHTML = `${iconMarkup('summary', 'rp-icon-svg')}<span>রিপোর্ট তৈরি করুন</span>`;
-    actions.append(this.generateButton);
-    const cancel = el('button', 'rp-back', 'ফিরে যান');
-    cancel.type = 'button';
-    cancel.addEventListener('click', () => (this.category ? this.showReports(this.category) : this.showCategories()));
-    actions.append(cancel);
-    this.filterScreen.append(actions);
-    // Both paths lead to the same build: the button click (what a thumb does)
-    // and the form's submit (what the keyboard does).
-    this.generateButton.addEventListener('click', event => {
-      event.preventDefault();
-      this.generate();
-    });
-    this.form.addEventListener('submit', event => {
-      event.preventDefault();
-      this.generate();
-    });
-    this.syncPeriodExtras();
-    this.setStatus('');
-  }
-
-  filterField(key) {
-    const meta = FILTER_META[key] || { label: key, type: 'select' };
-    const field = el('div', 'rp-field');
-    field.dataset.filter = key;
-    const id = `rp-filter-${key}-${Math.random().toString(36).slice(2, 7)}`;
-
-    if (meta.type === 'period') {
-      field.append(this.selectField(id, 'সময়কাল', PERIODS.map(item => ({ value: item.id, label: item.label })), 'period'));
-      field.append(this.periodExtras());
-      return field;
-    }
-
-    const source = this.options?.[meta.options] || OPTION_VALUES[meta.options] || [];
-    const options = [{ value: 'all', label: 'সব' }, ...source.filter(item => item.value !== 'all')];
-    field.append(this.selectField(id, meta.label, options, key));
-    return field;
-  }
-
-  /** Write a filter value under both its control name and its record field. */
-  setFilter(key, value) {
-    this.filters[key] = value;
-    const field = FILTER_FIELD[key];
-    if (field) this.filters[field] = value;
-  }
-
-  selectField(id, label, options, key) {
-    const wrap = el('label', 'rp-select');
-    wrap.htmlFor = id;
-    wrap.append(el('span', 'rp-select-label', label));
-    const select = el('select');
-    select.id = id;
-    select.name = key;
-    for (const option of options) {
-      const node = el('option', '', option.label);
-      node.value = option.value;
-      select.append(node);
-    }
-    if (this.filters[key] !== undefined) select.value = String(this.filters[key]);
-    select.addEventListener('change', () => {
-      this.setFilter(key, select.value);
-      if (key === 'period') this.syncPeriodExtras();
-    });
-    wrap.append(select);
-    return wrap;
-  }
-
-  /** Daily / weekly / monthly / custom each ask for the one date they need. */
-  periodExtras() {
-    const wrap = el('div', 'rp-period-extras');
-    const make = (name, type, label) => {
-      const field = el('label', 'rp-date');
-      field.append(el('span', 'rp-select-label', label));
-      const input = el('input');
-      input.type = type;
-      input.name = name;
-      input.value = this.filters[name] || '';
-      input.addEventListener('change', () => { this.filters[name] = input.value; });
-      field.append(input);
-      field.dataset.period = name;
-      return field;
-    };
-    wrap.append(make('date', 'date', 'তারিখ'));
-    wrap.append(make('week', 'week', 'সপ্তাহ'));
-    wrap.append(make('month', 'month', 'মাস'));
-    const range = el('div', 'rp-range');
-    range.dataset.period = 'custom';
-    range.append(make('from', 'date', 'From Date'));
-    range.append(make('to', 'date', 'To Date'));
-    wrap.append(range);
-    this.periodExtrasNode = wrap;
-    return wrap;
-  }
-
-  syncPeriodExtras() {
-    if (!this.periodExtrasNode) return;
-    // The period modes name their one control: daily→date, weekly→week …
-    const wanted = ({ daily: 'date', weekly: 'week', monthly: 'month', custom: 'custom' })[this.filters.period || 'all'] || '';
-    for (const node of this.periodExtrasNode.children) {
-      node.hidden = node.dataset.period !== wanted;
-    }
-  }
-
-  /* ---------- step 4 + 5: generate, preview, download ---------- */
 
   async generate() {
-    if (this.busy || !this.definition) return;
-    const definition = this.definition;
-    const invalid = validateFilters(definition, this.filters);
-    if (invalid) {
-      this.setStatus(invalid, 'error');
-      return;
+    if (!this.definition) {
+      this.showStatus('একটি Report নির্বাচন করুন।','error'); return;
     }
-    let gate;
+    this.clearStatus();
+    this.setBusy(true);
     try {
-      gate = enforceAccess(definition, this.actor, this.filters);
-    } catch (error) {
-      this.setStatus(error?.message || 'আপনার এই রিপোর্ট দেখার অনুমতি নেই।', 'error');
-      return;
-    }
+      const filters=collectFilters(this.form);
+      const validation=validateFilters(this.definition,filters);
+      if (validation) throw new Error(validation);
 
-    this.busy = true;
-    this.setStatus('রিপোর্ট তৈরি হচ্ছে…');
-    if (this.generateButton) this.generateButton.disabled = true;
-    try {
-      this.refreshOptions();
-      await loadReportAssets();
-      const snapshot = loadSnapshot();
-      const { doc, empty } = await buildReportDocument(definition, {
-        filters: gate.filters, actor: this.actor, scope: gate.scope, snapshot
+      const gate=enforceAccess(this.definition,this.actor,filters);
+      const result=await buildReportDocument(this.definition,{
+        filters:gate.filters, actor:this.actor, scope:gate.scope, snapshot:loadSnapshot()
       });
-      if (empty) {
-        this.showEmpty(definition, gate.filters);
-        return;
+
+      const summary=filterSummary(this.definition,gate.filters,this.options);
+      if (summary.length) result.doc.scopeLines=[...(result.doc.scopeLines||[]),...summary];
+
+      if (result.empty) {
+        result.doc.blocks.push({
+          type:'note',
+          text:'No data found for the selected filters.'
+        });
       }
-      this.doc = doc;
-      this.built = await buildReport(doc);
-      this.showPreview(definition, gate.filters);
-    } catch (error) {
-      this.setStatus(error?.message || 'রিপোর্ট তৈরি করা যায়নি।', 'error');
+
+      /* One final document becomes one PDF Blob. The exact same Blob is used
+         for both the Preview iframe and Download PDF. */
+      const blob=await buildReportPDF(result.doc);
+      this.openPreview(blob);
+    } catch(error) {
+      if (error?.code==='FORBIDDEN') this.showStatus(error.message || 'এই রিপোর্ট দেখার অনুমতি নেই।','error');
+      else this.showStatus(error?.message || 'Report তৈরি করা যায়নি।','error');
     } finally {
-      this.busy = false;
-      if (this.generateButton) this.generateButton.disabled = false;
+      this.setBusy(false);
     }
   }
 
-  showEmpty(definition, filters) {
-    this.setCrumbs([
-      { label: 'রিপোর্ট', onOpen: () => this.showCategories() },
-      { label: this.category ? this.category.labelBn : 'রিপোর্ট', onOpen: () => this.category && this.showReports(this.category) },
-      { label: definition.title, onOpen: () => this.showFilters(definition) },
-      { label: 'Preview' }
-    ]);
-    this.showScreen(this.previewScreen);
-    this.previewScreen.replaceChildren();
-    const card = el('div', 'rp-empty');
-    card.append(el('h3', '', definition.title));
-    card.append(el('p', 'rp-empty-text', EMPTY_MESSAGE));
-    card.append(el('p', 'rp-empty-meta', `Filter: ${periodText(definition, filters)}`));
-    const change = el('button', 'rp-back', 'Filter বদলান');
-    change.type = 'button';
-    change.addEventListener('click', () => this.showFilters(definition));
-    card.append(change);
-    this.previewScreen.append(card);
-    this.setStatus(EMPTY_MESSAGE);
+  openPreview(blob) {
+    this.revokePdf();
+    this.pdfBlob=blob;
+    this.pdfUrl=URL.createObjectURL(blob);
+
+    const preview=el('section','rc-preview');
+    const bar=el('div','rc-preview-head');
+    const back=el('button','rc-back','Back');
+    back.type='button';
+    back.addEventListener('click',()=>this.closePreview());
+    const title=el('strong','rc-preview-title',this.definition?.title || 'PDF Preview');
+    bar.append(back,title);
+    preview.append(bar);
+
+    const frame=el('iframe','rc-pdf-frame');
+    frame.title='PDF Preview';
+    frame.src=this.pdfUrl;
+    preview.append(frame);
+
+    const download=el('button','rc-download','Download PDF');
+    download.type='button';
+    download.addEventListener('click',()=>downloadBlob(this.pdfBlob,reportFileName(this.definition)));
+    preview.append(download);
+
+    this.root.replaceChildren(preview);
+    requestAnimationFrame(()=>frame.focus?.());
   }
 
-  showPreview(definition, filters) {
-    this.setCrumbs([
-      { label: 'রিপোর্ট', onOpen: () => this.showCategories() },
-      { label: this.category ? this.category.labelBn : 'রিপোর্ট', onOpen: () => this.category && this.showReports(this.category) },
-      { label: definition.title, onOpen: () => this.showFilters(definition) },
-      { label: 'Preview' }
-    ]);
-    this.showScreen(this.previewScreen);
-    this.previewScreen.replaceChildren();
-
-    const bar = el('div', 'rp-preview-bar');
-    const meta = el('div', 'rp-preview-meta');
-    meta.append(el('strong', '', definition.title));
-    meta.append(el('span', '', `${periodText(definition, filters)} • ${bn(this.built.total)} পৃষ্ঠা`));
-    bar.append(meta);
-    const edit = el('button', 'rp-mini-btn', 'Filter বদলান');
-    edit.type = 'button';
-    edit.addEventListener('click', () => this.showFilters(definition));
-    bar.append(edit);
-    this.previewScreen.append(bar);
-
-    const scroll = el('div', 'rp-preview-scroll');
-    this.pagesNode = el('div', 'rp-pages');
-    this.pagesNode.innerHTML = this.built.html;
-    scroll.append(this.pagesNode);
-    this.previewScreen.append(scroll);
-
-    // Bottom actions: Back, Change Filters, Download PDF / CSV — PDF and CSV
-    // come from the same document the preview shows.
-    const actions = el('div', 'rp-download-bar');
-    const secondary = el('div', 'rp-bar-secondary');
-    const back = el('button', 'rp-back', '← পেছনে');
-    back.type = 'button';
-    back.addEventListener('click', () => (this.category ? this.showReports(this.category) : this.showCategories()));
-    secondary.append(back);
-    const change = el('button', 'rp-back', 'Filter বদলান');
-    change.type = 'button';
-    change.addEventListener('click', () => this.showFilters(definition));
-    secondary.append(change);
-    actions.append(secondary);
-
-    const primary = el('div', 'rp-bar-primary');
-    this.downloadButton = el('button', 'rp-download');
-    this.downloadButton.type = 'button';
-    this.downloadButton.innerHTML = `${iconMarkup('download', 'rp-icon-svg')}<span>DOWNLOAD PDF</span>`;
-    this.downloadButton.addEventListener('click', () => this.download(definition));
-    primary.append(this.downloadButton);
-    this.csvButton = el('button', 'rp-csv-download');
-    this.csvButton.type = 'button';
-    this.csvButton.innerHTML = `${iconMarkup('download', 'rp-icon-svg')}<span>DOWNLOAD CSV</span>`;
-    this.csvButton.addEventListener('click', () => this.downloadCsv(definition));
-    primary.append(this.csvButton);
-    actions.append(primary);
-    this.previewScreen.append(actions);
-
-    this.fitPages();
-    this.setStatus(`${definition.title} • ${bn(this.built.total)} পৃষ্ঠা প্রস্তুত।`, 'ok');
+  closePreview() {
+    this.revokePdf();
+    this.pdfBlob=null;
+    this.render();
   }
 
-  /** Scale the A4 pages to the panel width — no horizontal scrolling, no clipping. */
-  fitPages() {
-    if (!this.pagesNode) return;
-    const available = this.pagesNode.parentElement?.clientWidth || this.root.clientWidth || PAGE.width;
-    const scale = Math.min(1, available / PAGE.width);
-    this.pagesNode.style.setProperty('--rp-scale', String(scale));
-    this.pagesNode.style.height = `${Math.round(this.built.total * PAGE.height * scale)}px`;
+  revokePdf() {
+    if (this.pdfUrl) URL.revokeObjectURL(this.pdfUrl);
+    this.pdfUrl=null;
   }
 
-  async download(definition) {
-    if (!this.doc || !this.downloadButton) return;
-    this.downloadButton.disabled = true;
-    this.setStatus('PDF তৈরি হচ্ছে…');
-    try {
-      const blob = await buildReportPDF(this.doc);
-      downloadBlob(blob, fileNameFor(definition));
-      this.setStatus('PDF ডাউনলোড শুরু হয়েছে — Preview ও PDF একই রিপোর্ট।', 'ok');
-    } catch (error) {
-      this.setStatus(error?.message || 'PDF তৈরি করা যায়নি।', 'error');
-    } finally {
-      this.downloadButton.disabled = false;
-    }
+  showStatus(message,tone='error') {
+    this.status.hidden=false; this.status.dataset.tone=tone; this.status.textContent=message;
+  }
+  clearStatus() { if(this.status){this.status.hidden=true;this.status.textContent='';} }
+  setBusy(busy) {
+    const button=this.form?.querySelector('.rc-generate');
+    if(button){button.disabled=busy;button.textContent=busy?'Generating Report…':'Generate Report';}
   }
 
-  /** The CSV is a second rendering of the same document — same rows, same order. */
-  downloadCsv(definition) {
-    if (!this.doc || !this.csvButton) return;
-    this.csvButton.disabled = true;
-    try {
-      downloadBlob(csvBlobFor(csvRowsFor(this.doc)), fileNameFor(definition, 'csv'));
-      this.setStatus('CSV ডাউনলোড শুরু হয়েছে — PDF ও CSV একই রিপোর্ট।', 'ok');
-    } catch (error) {
-      this.setStatus(error?.message || 'CSV তৈরি করা যায়নি।', 'error');
-    } finally {
-      this.csvButton.disabled = false;
-    }
+  refreshOptions() {
+    if (!this.actor) return;
+    this.options=filterOptions(loadSnapshot(),this.actor,this.scope);
+    if (this.definition) this.selectReport(this.definition.id);
   }
 }
 
-/* -------------------------------------------------------------------------
-   Public API
-   ---------------------------------------------------------------------- */
+const instances=new WeakMap();
 
-const centers = new WeakMap();
-
-/** Mount the report centre into a container; call again to refresh the actor. */
-export async function mountReports(root, options = {}) {
+export async function mountReports(root,options={}) {
   if (!root) return null;
-  const center = new ReportCenter(root, options);
-  centers.set(root, center);
-  await center.start();
-  return center;
+  const instance=new ReportCenter(root,options);
+  instances.set(root,instance);
+  return instance.start();
 }
 
-/**
- * Re-read the data and the signed-in actor — after a login or a data change.
- * The panel keeps whatever report the user had open.
- */
 export async function refreshReports(root) {
-  const center = centers.get(root);
-  if (!center) return null;
-  await center.start({ soft: true });
-  return center;
+  const instance=instances.get(root);
+  if (!instance) return mountReports(root,{});
+  return instance.start({soft:true});
 }
-
-export { ReportCenter };
