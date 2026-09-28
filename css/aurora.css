@@ -83,3 +83,31 @@
     min-height:46px;
   }
 }
+
+
+/* Temporary icon treatment until the AI-generated icon set is ready. */
+:where(.aurora-icon-tile,.admin-hero-icon,.tile-icon,.nav-chip,.pay-pulse-icon,.input-wrap svg,.admin-bottom-item svg) svg,
+:where(.aurora-icon-tile,.admin-hero-icon,.tile-icon,.nav-chip,.pay-pulse-icon,.input-wrap) > svg{
+  fill:none;
+  stroke:currentColor;
+  stroke-width:2;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  vector-effect:non-scaling-stroke;
+}
+
+:where(.admin-hero-icon,.tile-icon,.nav-chip,.pay-pulse-icon){
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:46px;
+  min-height:46px;
+  border-radius:18px;
+  background:var(--au-hero);
+  color:var(--glass-bg);
+}
+
+:where(.admin-hero-icon,.tile-icon,.nav-chip,.pay-pulse-icon) svg{
+  width:22px;
+  height:22px;
+}
