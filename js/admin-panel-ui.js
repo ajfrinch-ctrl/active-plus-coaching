@@ -134,7 +134,6 @@ function renderFeatureGrid(container, entries, onNavigate) {
 
 /** Header actions: link to the student app, then logout (icon + label). */
 function renderTopBar() {
-  paintIcon(document.querySelector('.admin-app-link .topbar-icon'), 'app', 'topbar-icon apc-icon-svg');
   paintIcon(document.querySelector('.admin-exit .topbar-icon'), 'logout', 'topbar-icon apc-icon-svg');
 }
 
