@@ -48,6 +48,18 @@ const statusMeta = {
 const money = value => `৳${bn(Number(value || 0).toLocaleString('en-US'))}`;
 const todayText = () => dateLabel(new Date());
 
+function renderCurrentDate() {
+  const el = $('#payCurrentDate');
+  if (!el) return;
+  const now = new Date();
+  el.textContent = new Intl.DateTimeFormat('bn-BD', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  }).format(now);
+}
+
 function toast(message, tone = 'info') {
   const el = $('#payToast');
   el.textContent = message;
@@ -74,6 +86,7 @@ async function enterPanel(remember) {
   state.students = loadRoster();
   $('#payEntry').hidden = true;
   $('#payShell').hidden = false;
+  renderCurrentDate();
   await savePaymentSession(remember);
   renderMethodPills();
   populateMonths();
