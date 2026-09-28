@@ -633,3 +633,41 @@ html[data-theme="dark"] .theme-quick-toggle .icon-moon { display: none; }
 .student-header-tools > .theme-quick-toggle { margin-left: 0; order: 0; }
 .manager-top-actions { align-items: center; }
 @media (prefers-reduced-motion: reduce) { *,*::before,*::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; } }
+
+
+/* =====================================================================
+   FINAL DARK-THEME VISIBILITY FIX — Active Plus
+   Keep AMOLED black, but restore readable surfaces, borders and controls.
+   ===================================================================== */
+html[data-theme="dark"] {
+  --amoled-bg: #000000 !important;
+  --amoled-surface: #0d1220 !important;
+  --amoled-surface-2: #111827 !important;
+  --amoled-border: #2a3550 !important;
+  --amoled-text: #f7f9ff !important;
+  --amoled-muted: #b9c2d6 !important;
+  --amoled-primary: #9db5ff !important;
+}
+html[data-theme="dark"] :is(.auth-card,.admin-card,.admin-hero,.admin-stat-tile,.admin-more-menu,.admin-more-item,.admin-modal,.modal,.teacher-summary,.teacher-record-card,.pay-card,.payment-card,.settings-list,.rp-card,.rp-report,.rp-choose,.rp-preview-bar,.rp-empty,.rp-page,.home-hero,.home-list-card,.quick-wrap,.teaching-board,.student-row-redesigned,.manager-student-card,.notice-strip,.quick-tile,.contact-card,.help-card,.welcome-card,.course-item,.result-row,.result-stats>div,.study-progress-card,.challenge-card,.dashboard-routine-card,.dashboard-empty-card,.dashboard-empty,.staff-form-section-block,.staff-assignment,.staff-activity-grid>div,.staff-history li,.bootstrap-credential-row) {
+  color: var(--amoled-text) !important;
+  background: var(--amoled-surface) !important;
+  background-image: none !important;
+  border-color: var(--amoled-border) !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,.28) !important;
+}
+html[data-theme="dark"] :is(.auth-screen,.admin-main,.app-main,.pay-main,.teacher-main) { color: var(--amoled-text) !important; }
+html[data-theme="dark"] :is(h1,h2,h3,h4,h5,h6,strong,b,label,.tile-value,.admin-card-head h2,.admin-card-head h3,.page-intro h1,.section-heading h2,.auth-brand strong,.admin-brand strong,.admin-more-copy strong,.admin-bottom-item .nav-label) { color: #f7f9ff !important; }
+html[data-theme="dark"] :is(p,small,.muted,.eyebrow,.page-intro>p,.section-heading p,.admin-card-head p,.admin-more-copy small,th) { color: #b9c2d6 !important; }
+html[data-theme="dark"] :is(input,select,textarea,.auth-panel input,.auth-panel select,.auth-panel textarea,.field input,.field select,.field textarea,.admin-card input,.admin-card select,.admin-card textarea) {
+  color: #f7f9ff !important;
+  background: #111827 !important;
+  border-color: #34415f !important;
+  color-scheme: dark;
+}
+html[data-theme="dark"] :is(input::placeholder,textarea::placeholder) { color: #9aa6bd !important; }
+html[data-theme="dark"] :is(table,thead,tbody,tr,th,td) { background: #0d1220 !important; color: #eef2ff !important; border-color: #2a3550 !important; }
+html[data-theme="dark"] :is(.admin-btn,.mini-btn,.icon-button,.chip,.auth-tab) { color: #eef2ff !important; border-color: #34415f !important; background: #111827 !important; }
+html[data-theme="dark"] :is(.primary,.auth-submit,.admin-dashboard-collect,.teacher-home-link,button.exam-link) { color: #071027 !important; background: #9db5ff !important; border-color: #9db5ff !important; }
+html[data-theme="dark"] :is(.admin-hero-icon,.tile-icon,.admin-hero-foot-icon,.admin-dashboard-collect-icon,.admin-more-icon,.admin-stat-icon,.home-hero-icon,.home-stat-icon,.home-hero-foot-icon,.home-row-icon,.settings-icon,.help-icon,.learning-home-icon,.staff-section-number,.student-avatar,.auto-id-preview,.topbar-icon) { color: #b8c9ff !important; background: #17213a !important; border-color: #34466f !important; }
+html[data-theme="dark"] :is(.admin-bottom,.admin-topbar,.auth-topbar,.pay-topbar,.topbar,.bottom-nav,.app-bottom-nav,.bottom-navigation) { background: #05070c !important; border-color: #2a3550 !important; color: #f7f9ff !important; }
+html[data-theme="dark"] .admin-app-link { display:none !important; }
