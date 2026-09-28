@@ -1462,7 +1462,9 @@ function onStaffChanged() {
 
 /* ---------- Wiring ---------- */
 
-$('#btnSaveAppSettings')?.addEventListener('click', saveAppSettingsFromForm);\n\n$('#bootstrapCredentialsDone')?.addEventListener('click', () => { $('#bootstrapCredentialsBackdrop').hidden = true; });
+$('#btnSaveAppSettings')?.addEventListener('click', saveAppSettingsFromForm);
+
+$('#bootstrapCredentialsDone')?.addEventListener('click', () => { $('#bootstrapCredentialsBackdrop').hidden = true; });
 $('#bootstrapCopyCredentials')?.addEventListener('click', async () => {
   const text = [...($('#bootstrapCredentialsList')?.querySelectorAll('.bootstrap-credential-row') || [])]
     .map(row => `${row.querySelector('strong')?.textContent}\n${row.querySelector('p')?.textContent}\nTemporary password: ${row.querySelector('code')?.textContent}`).join('\n\n');
