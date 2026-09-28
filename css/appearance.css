@@ -422,54 +422,61 @@ html[data-theme="dark"] .fake-check { background: rgba(255, 255, 255, .08); }
 
 
 /* --- Dark Premium Glass theme -------------------------------------------- */
-/* Theme-only override: preserves all existing data, logic, login and storage. */
 html[data-theme="dark"] {
-  --ink: #f2f7f5;
-  --muted: #a7b8b2;
-  --muted-2: #7f928a;
-  --cream: #070b0a;
-  --surface: rgba(18, 27, 24, .72);
+  color-scheme: dark;
+  --ink: #f5f7f7;
+  --muted: #aab3b3;
+  --muted-2: #788383;
+  --cream: #000000;
+  --surface: rgba(15,15,15,.82);
   --line: rgba(255,255,255,.12);
-  --mint: rgba(10, 48, 37, .62);
-  --mint-2: rgba(13, 67, 51, .58);
-  --mint-strong: rgba(16, 92, 68, .66);
-  --forest-text: #5ee7b7;
-  --forest-dark-text: #5ee7b7;
-  --shadow: 0 18px 50px rgba(0,0,0,.48);
-  --soft-shadow: 0 10px 30px rgba(0,0,0,.35);
-  --glass: rgba(18,27,24,.62);
-  --glass-strong: rgba(22,34,30,.78);
-  --glass-soft: rgba(255,255,255,.055);
-  --glass-border: rgba(255,255,255,.14);
-  --glass-shadow: 0 18px 50px rgba(0,0,0,.42);
-  --admin-glass: rgba(18,27,24,.70);
-  --admin-glass-border: rgba(255,255,255,.14);
-  --admin-shadow: 0 18px 50px rgba(0,0,0,.42);
-  --panel-card-solid: #101a17;
+  --mint: rgba(0,42,31,.70);
+  --mint-2: rgba(0,63,45,.64);
+  --mint-strong: rgba(0,95,67,.72);
+  --forest-text: #59e6b2;
+  --forest-dark-text: #59e6b2;
+  --shadow: 0 18px 50px rgba(0,0,0,.72);
+  --soft-shadow: 0 10px 30px rgba(0,0,0,.58);
+  --glass: rgba(15,15,15,.72);
+  --glass-strong: rgba(20,20,20,.86);
+  --glass-soft: rgba(255,255,255,.045);
+  --glass-border: rgba(255,255,255,.13);
+  --glass-shadow: 0 18px 50px rgba(0,0,0,.62);
+  --admin-glass: rgba(15,15,15,.78);
+  --admin-glass-border: rgba(255,255,255,.13);
+  --admin-shadow: 0 18px 50px rgba(0,0,0,.62);
+  --panel-card-solid: #0f0f0f;
 }
+
 html[data-theme="dark"],
 html[data-theme="dark"] body {
-  background:
-    radial-gradient(900px 500px at 10% -5%, rgba(16,185,129,.16), transparent 60%),
-    radial-gradient(800px 500px at 100% 15%, rgba(34,211,238,.10), transparent 58%),
-    linear-gradient(145deg,#050807 0%,#09110f 48%,#071116 100%);
+  background: #000000 !important;
+  color: var(--ink) !important;
 }
+
 html[data-theme="dark"] .app-shell,
 html[data-theme="dark"] .auth-screen,
 html[data-theme="dark"] .admin-shell,
 html[data-theme="dark"] .teacher-shell,
 html[data-theme="dark"] .pay-shell,
-html[data-theme="dark"] .app-shell .app-main {
-  background: transparent !important;
+html[data-theme="dark"] .app-main {
+  background: #000000 !important;
 }
+
 html[data-theme="dark"] .app-shell .topbar,
 html[data-theme="dark"] .auth-topbar,
-html[data-theme="dark"] .pay-topbar {
-  background: rgba(8,14,12,.68) !important;
-  border-color: rgba(255,255,255,.10) !important;
-  backdrop-filter: blur(22px) saturate(145%);
-  -webkit-backdrop-filter: blur(22px) saturate(145%);
+html[data-theme="dark"] .pay-topbar,
+html[data-theme="dark"] .bottom-nav,
+html[data-theme="dark"] .app-bottom-nav,
+html[data-theme="dark"] .bottom-navigation,
+html[data-theme="dark"] nav[aria-label*="Bottom"] {
+  background: rgba(0,0,0,.88) !important;
+  color: #f5f7f7 !important;
+  border-color: rgba(255,255,255,.12) !important;
+  backdrop-filter: blur(22px) saturate(140%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
 }
+
 html[data-theme="dark"] .auth-card,
 html[data-theme="dark"] .home-hero,
 html[data-theme="dark"] .home-list-card,
@@ -492,74 +499,67 @@ html[data-theme="dark"] .rp-preview-bar,
 html[data-theme="dark"] .rp-empty,
 html[data-theme="dark"] .settings-list,
 html[data-theme="dark"] .contact-card,
-html[data-theme="dark"] .help-card {
-  background: rgba(18,27,24,.58) !important;
-  border: 1px solid rgba(255,255,255,.13) !important;
-  box-shadow: 0 18px 50px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.055);
-  backdrop-filter: blur(24px) saturate(140%);
-  -webkit-backdrop-filter: blur(24px) saturate(140%);
-}
-html[data-theme="dark"] .home-stat,
-html[data-theme="dark"] .admin-stat-tile,
-html[data-theme="dark"] .dashboard-exam-card,
-html[data-theme="dark"] .dashboard-fee-card,
+html[data-theme="dark"] .help-card,
 html[data-theme="dark"] .course-item,
-html[data-theme="dark"] .result-row {
-  background: rgba(16,27,23,.62) !important;
-  border-color: rgba(255,255,255,.10) !important;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.045);
-}
-html[data-theme="dark"] .bottom-nav,
-html[data-theme="dark"] .app-bottom-nav,
-html[data-theme="dark"] nav[aria-label*="Bottom"],
-html[data-theme="dark"] .bottom-navigation {
-  background: rgba(7,12,10,.78) !important;
+html[data-theme="dark"] .result-row,
+html[data-theme="dark"] .admin-stat-tile,
+html[data-theme="dark"] .home-stat {
+  background: rgba(15,15,15,.82) !important;
+  color: #f5f7f7 !important;
   border-color: rgba(255,255,255,.12) !important;
-  box-shadow: 0 -12px 40px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.05);
-  backdrop-filter: blur(24px) saturate(145%);
-  -webkit-backdrop-filter: blur(24px) saturate(145%);
+  box-shadow: 0 16px 44px rgba(0,0,0,.62), inset 0 1px 0 rgba(255,255,255,.045);
+  backdrop-filter: blur(20px) saturate(135%);
+  -webkit-backdrop-filter: blur(20px) saturate(135%);
 }
-html[data-theme="dark"] button,
-html[data-theme="dark"] .btn,
-html[data-theme="dark"] .primary-btn {
-  -webkit-tap-highlight-color: transparent;
-}
+
+/* AMOLED-safe form controls and readable text */
 html[data-theme="dark"] input,
 html[data-theme="dark"] select,
 html[data-theme="dark"] textarea {
-  background: rgba(7,14,12,.58) !important;
-  color: var(--ink) !important;
-  border-color: rgba(255,255,255,.13) !important;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.035);
+  background: #080808 !important;
+  color: #f5f7f7 !important;
+  border-color: rgba(255,255,255,.16) !important;
 }
-html[data-theme="dark"] .auth-tab.active,
-html[data-theme="dark"] .mode-button.active {
-  background: linear-gradient(135deg,rgba(16,185,129,.24),rgba(34,211,238,.10)) !important;
-  border-color: rgba(94,231,183,.28) !important;
-  color: #eafff7 !important;
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] textarea::placeholder {
+  color: #7f8b8b !important;
 }
-html[data-theme="dark"] .theme-quick-toggle {
-  background: rgba(10,18,15,.68) !important;
-  border-color: rgba(255,255,255,.14) !important;
-  color: #5ee7b7 !important;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-}
-html[data-theme="dark"] .forest-btn,
-html[data-theme="dark"] .primary-action,
-html[data-theme="dark"] .primary-btn {
-  box-shadow: 0 10px 28px rgba(16,185,129,.18);
+html[data-theme="dark"] label,
+html[data-theme="dark"] p,
+html[data-theme="dark"] li,
+html[data-theme="dark"] td,
+html[data-theme="dark"] th,
+html[data-theme="dark"] span,
+html[data-theme="dark"] div {
+  color: inherit;
 }
 html[data-theme="dark"] h1,
 html[data-theme="dark"] h2,
 html[data-theme="dark"] h3,
 html[data-theme="dark"] h4,
+html[data-theme="dark"] h5,
+html[data-theme="dark"] h6,
 html[data-theme="dark"] strong,
 html[data-theme="dark"] .section-title {
-  color: #f2f7f5;
+  color: #f5f7f7 !important;
 }
-html[data-theme="dark"] .muted,
 html[data-theme="dark"] small,
+html[data-theme="dark"] .muted,
 html[data-theme="dark"] .secondary-text {
-  color: var(--muted);
+  color: #aab3b3 !important;
+}
+html[data-theme="dark"] a {
+  color: #59e6b2;
+}
+html[data-theme="dark"] .auth-tab.active,
+html[data-theme="dark"] .mode-button.active,
+html[data-theme="dark"] .theme-quick-toggle {
+  color: #59e6b2 !important;
+  border-color: rgba(89,230,178,.32) !important;
+  background: rgba(0,55,40,.70) !important;
+}
+html[data-theme="dark"] .forest-btn,
+html[data-theme="dark"] .primary-action,
+html[data-theme="dark"] .primary-btn {
+  box-shadow: 0 10px 28px rgba(0,0,0,.55);
 }
