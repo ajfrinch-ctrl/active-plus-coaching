@@ -1868,7 +1868,11 @@ async function initAdminEntry() {
     if (box) { box.textContent = 'Admin Account-এর সংরক্ষিত তথ্য পড়া যাচ্ছে না। নিরাপত্তার জন্য নতুন Initial Setup দেখানো হয়নি।'; box.hidden = false; }
     return;
   }
-  // Existing device-bound session opens the panel without asking again.
-  if (await hasStaffSession('admin')) await enterPanel();
+  // Existing device-bound session opens the panel immediately after refresh.
+  // Keep the login screen hidden while the stored session is being restored.
+  if (await hasStaffSession('admin')) {
+    if (login) login.hidden = true;
+    await enterPanel();
+  }
 }
 initAdminEntry();
