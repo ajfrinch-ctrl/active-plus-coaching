@@ -949,125 +949,28 @@ function routineTeacherNames() {
   return [...new Set(Object.values(state.routine).flatMap(info => info.classes.map(cls => cls.teacher).filter(Boolean)))];
 }
 
-function renderTeacherRegistrationControl(cfg = state.appConfig || loadAppConfig()) {
-  const allowed = cfg.allowTeacherRegistration !== false;
-  if ($('#cfgTeacherRegistration')) $('#cfgTeacherRegistration').checked = allowed;
-  if ($('#teacherRegBadge')) {
-    $('#teacherRegBadge').textContent = allowed ? 'খোলা আছে' : 'বন্ধ আছে';
-    $('#teacherRegBadge').className = `badge ${allowed ? 'badge-approved' : 'badge-rejected'}`;
-  }
-  if ($('#teacherRegList')) {
-    const teachers = routineTeacherNames();
-    $('#teacherRegList').innerHTML = teachers.length
-      ? teachers.map(teacher => `<span class="teacher-chip">${escapeHtml(teacher)}</span>`).join('')
-      : '<span class="finance-hint">রুটিনে এখনও কোনো শিক্ষক যোগ করা হয়নি।</span>';
-  }
-}
-
 function renderAppManagement() {
   const cfg = state.appConfig || loadAppConfig();
-
-  // Status & Access
-  if ($('#cfgMaintenanceMode')) $('#cfgMaintenanceMode').checked = !!cfg.maintenanceMode;
-  if ($('#cfgMaintenanceMsg')) $('#cfgMaintenanceMsg').value = cfg.maintenanceMessage || '';
-  if ($('#cfgAllowRegistration')) $('#cfgAllowRegistration').checked = cfg.allowRegistration !== false;
-  if ($('#cfgSkipSecurity')) $('#cfgSkipSecurity').checked = cfg.skipSecurityCheck !== false;
-  renderTeacherRegistrationControl(cfg);
-  if ($('#appStatusLiveBadge')) {
-    $('#appStatusLiveBadge').textContent = cfg.maintenanceMode ? 'রক্ষণাবেক্ষণ মোড' : 'অ্যাপ লাইভ';
-    $('#appStatusLiveBadge').className = `badge ${cfg.maintenanceMode ? 'badge-rejected' : 'badge-approved'}`;
-  }
-
-  // Broadcast
-  if ($('#cfgBroadcastAlert')) $('#cfgBroadcastAlert').checked = cfg.broadcastAlert !== false;
-  if ($('#cfgBroadcastMsg')) $('#cfgBroadcastMsg').value = cfg.broadcastMessage || '';
-  if ($('#cfgBroadcastTone')) $('#cfgBroadcastTone').value = cfg.broadcastTone || 'green';
-  if ($('#cfgBroadcastBadge')) {
-    $('#cfgBroadcastBadge').textContent = cfg.broadcastAlert !== false ? 'সক্রিয়' : 'নিষ্ক্রিয়';
-    $('#cfgBroadcastBadge').className = `badge ${cfg.broadcastAlert !== false ? 'badge-approved' : 'badge-pending'}`;
-  }
-
-  // Modules
-  if ($('#cfgModRoutine')) $('#cfgModRoutine').checked = cfg.modules?.routine !== false;
-  if ($('#cfgModCourses')) $('#cfgModCourses').checked = cfg.modules?.courses !== false;
-  if ($('#cfgModResults')) $('#cfgModResults').checked = cfg.modules?.results !== false;
-  if ($('#cfgModInstall')) $('#cfgModInstall').checked = cfg.modules?.installPrompt !== false;
-
-  // Branding & Contacts
   if ($('#cfgTagline')) $('#cfgTagline').value = cfg.tagline || 'শিখতে থাকো, এগিয়ে যাও';
   if ($('#cfgHelpline')) $('#cfgHelpline').value = cfg.helplineMobile || ADMIN_ID || '01819486966';
   if ($('#cfgWhatsapp')) $('#cfgWhatsapp').value = cfg.whatsappNumber || ADMIN_ID || '01819486966';
   if ($('#cfgEmail')) $('#cfgEmail').value = cfg.officialEmail || 'activeplus.coaching@gmail.com';
   if ($('#cfgAddress')) $('#cfgAddress').value = cfg.campusAddress || 'দিনাজপুর সদর, দিনাজপুর';
-
-  // Theme Mode
-  if ($('#cfgThemeMode')) $('#cfgThemeMode').value = cfg.themeMode || 'auto';
 }
 
 function saveAppSettingsFromForm() {
-  const maintenanceMode = $('#cfgMaintenanceMode')?.checked || false;
-  const maintenanceMessage = $('#cfgMaintenanceMsg')?.value.trim() || DEFAULT_APP_SETTINGS.maintenanceMessage;
-  const allowRegistration = $('#cfgAllowRegistration')?.checked !== false;
-  const allowTeacherRegistration = $('#cfgTeacherRegistration')?.checked !== false;
-  const skipSecurityCheck = $('#cfgSkipSecurity')?.checked !== false;
-
-  const broadcastAlert = $('#cfgBroadcastAlert')?.checked !== false;
-  const broadcastMessage = $('#cfgBroadcastMsg')?.value.trim() || DEFAULT_APP_SETTINGS.broadcastMessage;
-  const broadcastTone = $('#cfgBroadcastTone')?.value || 'green';
-
-  const routine = $('#cfgModRoutine')?.checked !== false;
-  const courses = $('#cfgModCourses')?.checked !== false;
-  const results = $('#cfgModResults')?.checked !== false;
-  const installPrompt = $('#cfgModInstall')?.checked !== false;
-
-  const tagline = $('#cfgTagline')?.value.trim() || DEFAULT_APP_SETTINGS.tagline;
-  const helplineMobile = $('#cfgHelpline')?.value.trim() || DEFAULT_APP_SETTINGS.helplineMobile;
-  const whatsappNumber = $('#cfgWhatsapp')?.value.trim() || DEFAULT_APP_SETTINGS.whatsappNumber;
-  const officialEmail = $('#cfgEmail')?.value.trim() || DEFAULT_APP_SETTINGS.officialEmail;
-  const campusAddress = $('#cfgAddress')?.value.trim() || DEFAULT_APP_SETTINGS.campusAddress;
-
-  const themeMode = $('#cfgThemeMode')?.value || 'auto';
-
+  const current = state.appConfig || loadAppConfig();
   state.appConfig = {
-    maintenanceMode,
-    maintenanceMessage,
-    allowRegistration,
-    allowTeacherRegistration,
-    skipSecurityCheck,
-    broadcastAlert,
-    broadcastMessage,
-    broadcastTone,
-    tagline,
-    helplineMobile,
-    whatsappNumber,
-    officialEmail,
-    campusAddress,
-    themeMode,
-    modules: {
-      routine,
-      courses,
-      results,
-      installPrompt
-    }
-  };
-
-  saveAppConfig(state.appConfig);
-  renderAppManagement();
-  renderDashboard();
-  toast(allowTeacherRegistration
-    ? 'সেটিংস সংরক্ষিত — শিক্ষক রেজিস্ট্রেশন ও প্যানেল প্রবেশ খোলা আছে'
-    : 'সেটিংস সংরক্ষিত — শিক্ষক রেজিস্ট্রেশন ও প্যানেল প্রবেশ বন্ধ করা হয়েছে');
-}
-
-function resetAppSettingsToDefault() {
-  state.appConfig = {
-    ...DEFAULT_APP_SETTINGS,
-    modules: { ...DEFAULT_APP_SETTINGS.modules }
+    ...current,
+    tagline: $('#cfgTagline')?.value.trim() || current.tagline || DEFAULT_APP_SETTINGS.tagline,
+    helplineMobile: $('#cfgHelpline')?.value.trim() || current.helplineMobile || DEFAULT_APP_SETTINGS.helplineMobile,
+    whatsappNumber: $('#cfgWhatsapp')?.value.trim() || current.whatsappNumber || DEFAULT_APP_SETTINGS.whatsappNumber,
+    officialEmail: $('#cfgEmail')?.value.trim() || current.officialEmail || DEFAULT_APP_SETTINGS.officialEmail,
+    campusAddress: $('#cfgAddress')?.value.trim() || current.campusAddress || DEFAULT_APP_SETTINGS.campusAddress
   };
   saveAppConfig(state.appConfig);
   renderAppManagement();
-  renderDashboard();
-  toast('শিক্ষার্থী অ্যাপের ডিফল্ট সেটিংস সফলভাবে প্রয়োগ করা হয়েছে');
+  toast('ব্র্যান্ডিং ও যোগাযোগের তথ্য সংরক্ষিত হয়েছে');
 }
 
 /* ---------- Roles & Permissions ----------
@@ -1559,31 +1462,7 @@ function onStaffChanged() {
 
 /* ---------- Wiring ---------- */
 
-$('#btnSaveAppSettings')?.addEventListener('click', saveAppSettingsFromForm);
-$('#btnSaveTopAppSettings')?.addEventListener('click', saveAppSettingsFromForm);
-$('#btnResetAppSettings')?.addEventListener('click', resetAppSettingsToDefault);
-
-$('#cfgMaintenanceMode')?.addEventListener('change', event => {
-  const isMaint = event.target.checked;
-  if ($('#appStatusLiveBadge')) {
-    $('#appStatusLiveBadge').textContent = isMaint ? 'রক্ষণাবেক্ষণ মোড' : 'অ্যাপ লাইভ';
-    $('#appStatusLiveBadge').className = `badge ${isMaint ? 'badge-rejected' : 'badge-approved'}`;
-  }
-});
-
-$('#cfgBroadcastAlert')?.addEventListener('change', event => {
-  const isAlert = event.target.checked;
-  if ($('#cfgBroadcastBadge')) {
-    $('#cfgBroadcastBadge').textContent = isAlert ? 'সক্রিয়' : 'নিষ্ক্রিয়';
-    $('#cfgBroadcastBadge').className = `badge ${isAlert ? 'badge-approved' : 'badge-pending'}`;
-  }
-});
-
-$('#cfgTeacherRegistration')?.addEventListener('change', event => {
-  renderTeacherRegistrationControl({ ...loadAppConfig(), allowTeacherRegistration: event.target.checked });
-});
-
-$('#bootstrapCredentialsDone')?.addEventListener('click', () => { $('#bootstrapCredentialsBackdrop').hidden = true; });
+$('#btnSaveAppSettings')?.addEventListener('click', saveAppSettingsFromForm);\n\n$('#bootstrapCredentialsDone')?.addEventListener('click', () => { $('#bootstrapCredentialsBackdrop').hidden = true; });
 $('#bootstrapCopyCredentials')?.addEventListener('click', async () => {
   const text = [...($('#bootstrapCredentialsList')?.querySelectorAll('.bootstrap-credential-row') || [])]
     .map(row => `${row.querySelector('strong')?.textContent}\n${row.querySelector('p')?.textContent}\nTemporary password: ${row.querySelector('code')?.textContent}`).join('\n\n');
