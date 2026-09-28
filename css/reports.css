@@ -195,3 +195,10 @@
     transform:scale(var(--rp-scale,1));
   }
 }
+
+
+/* Responsive A4 preview: fit each measured page to the available mobile width. */
+@media (max-width:820px){
+  .rc-pdf-preview{overflow-x:hidden;padding-left:0;padding-right:0;}
+  .rc-pdf-preview .rp-page{width:794px;height:1123px;margin-left:0;margin-right:0;transform-origin:top left;transform:scale(min(1, calc((100vw - 8px) / 794)));}
+}
