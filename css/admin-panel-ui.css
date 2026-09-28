@@ -316,6 +316,24 @@
   color: var(--panel-text);
 }
 
+/* The shared redesign stylesheet also defines white type for the green
+   Manager hero. The Admin dashboard intentionally uses a white card instead;
+   keep its heading, date and snapshot values dark even if that shared rule is
+   changed or loaded in a different order later. */
+#adminShell .admin-hero .admin-hero-title h1,
+#adminShell .admin-hero .admin-date-pill,
+#adminShell .admin-hero .tile-label,
+#adminShell .admin-hero .tile-value,
+#adminShell .admin-hero .tile-sub {
+  color: var(--panel-text);
+}
+
+#adminShell .admin-hero .admin-date-pill,
+#adminShell .admin-hero .tile-label,
+#adminShell .admin-hero .tile-sub {
+  color: var(--panel-muted);
+}
+
 .admin-shell .admin-hero-head {
   padding: 15px 16px 12px;
 }
