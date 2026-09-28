@@ -208,6 +208,8 @@ initProfile({
 });
 initRoutine();
 initConnectivity();
+// Firebase is optional during online testing; offline startup remains independent.
+if (navigator.onLine) import('./firebase-online-test.js').then(({ testFirebaseOnlineConnection }) => testFirebaseOnlineConnection());
 initDynamicTheme();
 initAppearance();
 initCopyChips();
