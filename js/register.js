@@ -6,7 +6,7 @@ import { $, $$, normalizeMobile, normalizeAnswer, setAuthMessage, showFeedback }
 import { enabledClasses } from './config.js';
 import { contactNumber, isContactNumber, normalizeUsername, usernameError, suggestUsername } from './account-policy.js';
 import {
-  saveAccount, saveStudent, generateStudentId, persistSession, setTrustedDevice, usernameTaken, reserveUsername, releaseUsername, loadAccount
+  saveAccount, saveStudent, generateStudentId, generateClassRoll, persistSession, setTrustedDevice, usernameTaken, reserveUsername, releaseUsername, loadAccount
 } from './storage.js';
 import { upsertLocalAccount } from './office-data.js';
 import { switchAuthTab } from './login.js';
@@ -99,7 +99,7 @@ async function handleRegistration(event, state, onRegistered) {
   if (state.account) return setAuthMessage('এই ডিভাইসে ইতিমধ্যে একটি অ্যাকাউন্ট আছে। লগইন করুন অথবা এডমিনের সাহায্য নিন।');
 
   const className = String(form.get('className') || '');
-  const studentId = generateStudentId(className);
+  const studentId = generateStudentId();
   const studentData = {
     name: String(form.get('nameBn') || '').trim(),
     nameBn: String(form.get('nameBn') || '').trim(),
@@ -118,7 +118,7 @@ async function handleRegistration(event, state, onRegistered) {
     address: String(form.get('address') || '').trim(),
     major: String(form.get('major') || '').trim(),
     institution: String(form.get('institution') || '').trim(),
-    roll: String(form.get('roll') || '').trim(),
+    roll: generateClassRoll(className),
     registrationNo: String(form.get('registrationNo') || '').trim()
   };
 
@@ -158,7 +158,7 @@ async function handleRegistration(event, state, onRegistered) {
   } else {
     switchAuthTab('login');
     $('#loginMobile').value = username;
-    setAuthMessage(`রেজিস্ট্রেশন সফল। ইউনিক Student ID: ${studentId} • লগইনে ইউজারনেম “${username}” ব্যবহার করো — এটি আর বদলানো যাবে না।`, true);
+    setAuthMessage(`রেজিস্ট্রেশন সফল। Student ID: ${studentId} • ক্লাস রোল: ${studentData.roll} • ID স্থায়ী থাকবে; লগইনে “${username}” ব্যবহার করো।`, true);
   }
 }
 

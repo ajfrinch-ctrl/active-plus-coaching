@@ -7,7 +7,7 @@
   <script src="js/sanitize-url.js"></script>
   <script src="js/appearance-boot.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
-  <meta name="theme-color" content="#eef2f6">
+  <meta name="theme-color" content="#000000">
   <meta name="description" content="Active Plus Coaching শিক্ষার্থী অ্যাপ — অফলাইনে রুটিন, ক্লাস, ফলাফল ও নোটিশ দেখুন।">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -53,7 +53,7 @@
         <form id="loginForm" novalidate>
           <label for="loginMobile">ইউজারনেম অথবা মোবাইল নম্বর</label>
           <div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-user"></use></svg><input id="loginMobile" name="mobile" type="text" autocomplete="username" placeholder="ইউজারনেম বা ০১XXXXXXXXX" required></div>
-          <p class="fixed-field-note" id="loginHint">শিক্ষার্থী: ইউজারনেম বা মোবাইল নম্বর ও পাসওয়ার্ড। শিক্ষক, এডমিন ও পেমেন্ট কাউন্টার: নিজের ইউজারনেম ও পাসওয়ার্ড দিয়ে এখানেই লগইন করুন।</p><label for="loginPin">পাসওয়ার্ড</label>
+          <p class="fixed-field-note" id="loginHint">শিক্ষার্থী: ইউজারনেম বা মোবাইল নম্বর ও পাসওয়ার্ড। এডমিন, ম্যানেজার, শিক্ষক ও পেমেন্ট কাউন্টার: নিজের ইউজারনেম ও পাসওয়ার্ড দিয়ে এখানেই লগইন করুন।</p><label for="loginPin">পাসওয়ার্ড</label>
           <div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg><input id="loginPin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="32" autocomplete="current-password" placeholder="৪–৬ সংখ্যার পাসওয়ার্ড" required><button class="show-pin" type="button" data-toggle-pin="loginPin" aria-label="পাসওয়ার্ড দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg></button></div>
           <div class="form-row"><label class="remember-label"><input type="checkbox" id="rememberMe" checked><span class="fake-check"></span>এই ডিভাইসে মনে রাখুন</label><button type="button" class="link-button" id="forgotPinButton">পাসওয়ার্ড ভুলে গেছেন?</button></div>
           <button class="auth-submit" type="submit">লগইন করুন <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg></button>
@@ -175,7 +175,7 @@
               <div class="field"><label for="regGroup">বিভাগ / গ্রুপ <i>*</i></label><select id="regGroup" name="group" required><option value="">নির্বাচন করুন</option><option>বিজ্ঞান</option><option>মানবিক</option><option>ব্যবসায় শিক্ষা</option><option>সাধারণ</option><option>প্রযোজ্য নয়</option></select></div>
               <div class="field full" id="majorField" hidden><label for="major">বিষয় / বিভাগ <span>(অনার্স হলে)</span></label><input id="major" name="major" type="text" placeholder="যেমন: বাংলা, ইংরেজি, হিসাববিজ্ঞান"></div>
               <div class="field"><label for="institution">স্কুল / কলেজ / বিশ্ববিদ্যালয় <span>(ঐচ্ছিক)</span></label><input id="institution" name="institution" type="text" placeholder="প্রতিষ্ঠানের নাম"></div>
-              <div class="field"><label for="roll">রোল নম্বর <span>(ঐচ্ছিক)</span></label><input id="roll" name="roll" type="text" inputmode="numeric" placeholder="রোল নম্বর"></div>
+              <div class="field"><label>ক্লাস রোল</label><p class="fixed-field-note">শ্রেণি অনুযায়ী ইউনিক রোল স্বয়ংক্রিয়ভাবে তৈরি হবে।</p></div>
               <div class="field full"><label for="registrationNo">রেজিস্ট্রেশন নম্বর <span>(ঐচ্ছিক)</span></label><input id="registrationNo" name="registrationNo" type="text" inputmode="numeric" placeholder="বোর্ড / বিশ্ববিদ্যালয় রেজিস্ট্রেশন নম্বর"></div>
             </div>
             <div class="step-actions"><button type="button" class="step-back" data-previous-step>← আগের অংশ</button><button type="button" class="step-next" data-next-step>পরের অংশ <span>→</span></button></div>
@@ -214,6 +214,7 @@
         <span><strong id="studentName">শিক্ষার্থী</strong><small id="studentHeaderMeta" data-fixed-tagline>শ্রেণি ও ব্যাচ</small></span>
       </div>
       <div class="student-header-tools">
+        <button class="theme-quick-toggle" type="button" data-theme-toggle aria-label="ডার্ক মোড চালু করুন" aria-pressed="true" title="থিম বদলান"><svg class="icon-sun" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-sun"></use></svg><svg class="icon-moon" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-moon"></use></svg></button>
         <div class="student-date" aria-label="আজকের তারিখ"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-calendar"></use></svg><span><strong id="todayDay">আজ</strong><small id="todayDate">—</small></span></div>
         <button class="icon-button notification-button" id="notificationButton" type="button" aria-label="নোটিশ দেখুন" aria-haspopup="dialog">
           <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-bell"></use></svg><span class="notification-dot" hidden aria-hidden="true"></span>
@@ -373,7 +374,7 @@
         <div class="field"><label for="editGroup">বিভাগ / গ্রুপ</label><input id="editGroup" name="group" type="text" required></div>
         <div class="field full"><label for="editMajor">বিষয় / বিভাগ</label><input id="editMajor" name="major" type="text"></div>
         <div class="field"><label for="editInstitution">শিক্ষা প্রতিষ্ঠান</label><input id="editInstitution" name="institution" type="text"></div>
-        <div class="field"><label for="editRoll">রোল নম্বর</label><input id="editRoll" name="roll" type="text"></div>
+        <div class="field"><label for="editRoll">ক্লাস রোল (স্বয়ংক্রিয়)</label><input id="editRoll" name="roll" type="text" readonly><small class="fixed-field-note">শ্রেণি বদলালে ক্লাস রোল নতুন করে তৈরি হবে।</small></div>
         <div class="field full"><label for="editRegistrationNo">রেজিস্ট্রেশন নম্বর</label><div class="locked-input"><input id="editRegistrationNo" name="registrationNo" type="text" readonly><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg></div></div>
       </div>
       <button class="modal-action" type="submit">তথ্য সংরক্ষণ করুন</button>
@@ -417,6 +418,7 @@
     <symbol id="icon-logout" viewBox="0 0 24 24"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></symbol>
     <symbol id="icon-shield" viewBox="0 0 24 24"><path d="M12 3 5 6v5.2c0 4.8 3 8 7 9.8 4-1.8 7-5 7-9.8V6l-7-3Z"/><path d="m9 12 2 2 4-4.5"/></symbol>
   </svg>
+  <script type="module" src="js/pull-to-refresh.js"></script>
   <script type="module" src="js/main.js"></script>
 </body>
 </html>

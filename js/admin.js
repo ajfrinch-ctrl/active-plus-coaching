@@ -14,7 +14,7 @@ import { toBanglaNumber } from './ui.js';
 import { classCodes, feeCategories, paymentMethods } from './admin-data.js';
 import { loadAppConfig, saveAppConfig, loadAccount, saveAccount } from './storage.js';
 import { loadRoster, saveRoster, syncAccountStatus, loadNotices, loadRoutine } from './office-data.js';
-import { authenticateStaff, changeStaffPassword, updateStaffProfile, ensureBootstrapStaffAccounts, readStaffAccount, staffAccountRecordExists, saveStaffSession, hasStaffSession, clearStaffSession, goToLoginPage, STAFF_SESSION_RULES, STAFF_KEYS_LIST } from './staff-auth.js';
+import { changeStaffPassword, updateStaffProfile, ensureBootstrapStaffAccounts, readStaffAccount, hasStaffSession, clearStaffSession, goToLoginPage, STAFF_SESSION_RULES, STAFF_KEYS_LIST } from './staff-auth.js';
 import { openStaffPasswordDialog } from './staff-password-dialog.js';
 import { financeRepository, monthLabel, dateLabel, searchStudents, studentFeeSummary, newestTransactions, stampTransaction, isFinalizedTransaction, TRANSACTIONS_KEY } from './finance-data.js';
 import { newId, KEYS, readJSON, writeJSON } from './database.js';
@@ -116,8 +116,7 @@ function showBootstrapCredentials(accounts) {
   $('#bootstrapCredentialsBackdrop').hidden = false;
 }
 
-async function enterPanel({ bootstrapCredentials = [] } = {}) {
-  $('#adminEntry').hidden = true;
+async function enterPanel() {
   $('#adminShell').hidden = false;
   // The capability set follows the role stored in the account record — the
   // existing role system is never modified, only read.
@@ -138,8 +137,7 @@ async function enterPanel({ bootstrapCredentials = [] } = {}) {
   const route = routeFromHash(window.location.hash);
   setView(route && access.allowsView(route) ? route : state.activeView);
   toast('এডমিন প্যানেলে সফলভাবে প্রবেশ করা হয়েছে');
-  if (bootstrapCredentials.length) showBootstrapCredentials(bootstrapCredentials);
-  else readStaffAccount('admin')
+  readStaffAccount('admin')
     .then(account => ensureBootstrapStaffAccounts(account?.username || 'admin.apc'))
     .then(result => { if (result.ok && result.accounts.length) showBootstrapCredentials(result.accounts); });
 }
@@ -148,8 +146,6 @@ function exitPanel() {
   clearStaffSession('admin');
   // Logout always returns to the shared login page, never to a panel entry form.
   $('#adminShell').hidden = true;
-  const pin = $('#adminLoginPin');
-  if (pin) pin.value = '';
   goToLoginPage();
 }
 
@@ -168,6 +164,7 @@ function setView(view) {
   if (!access.allowsView(target)) return false;
   if (!$$('.admin-view').some(panel => panel.dataset.viewPanel === target)) return false;
   state.activeView = target;
+  $('#adminMain')?.classList.toggle('is-staff-view', target === 'staff');
   $$('.admin-view').forEach(panel => panel.classList.toggle('active', panel.dataset.viewPanel === target));
   $$('.admin-bottom-item').forEach(item => {
     const isMore = item.dataset.adminView === 'more' && moreViews.has(target);
@@ -865,11 +862,9 @@ async function collectFee(event) {
     return;
   }
   const now = new Date();
-  const token = crypto.randomUUID();
-  const prefix = `${String(now.getFullYear()).slice(-2)}${String(now.getMonth() + 1).padStart(2, '0')}`;
   const tx = stampTransaction({
-    id: `TRX-${token}`,
-    receiptNo: `REC-${prefix}-${now.getTime().toString(36).toUpperCase()}-${token.slice(0, 8).toUpperCase()}`,
+    id: newId('T'),
+    receiptNo: newId('R'),
     studentId: student.id,
     studentName: student.name,
     className: student.className,
@@ -1588,23 +1583,6 @@ $('#cfgTeacherRegistration')?.addEventListener('change', event => {
   renderTeacherRegistrationControl({ ...loadAppConfig(), allowTeacherRegistration: event.target.checked });
 });
 
-async function enterAdminPanel(remember, bootstrapCredentials = []) {
-  if (!(await saveStaffSession('admin', remember))) {
-    const box = $('#adminLoginError');
-    if (box) {
-      box.textContent = 'সেশন সংরক্ষণ করা যায়নি — ব্রাউজারের স্টোরেজ পরীক্ষা করে আবার চেষ্টা করুন।';
-      box.hidden = false;
-    }
-    return;
-  }
-  await enterPanel({ bootstrapCredentials });
-}
-
-/* The first Admin Account is created once, from the login page (index.html).
-   This panel never shows a creation form, and js/staff-auth.js refuses
-   createInitialAdmin() while an Admin record exists — so a direct call, a copied
-   URL or a hidden route cannot start the workflow a second time. */
-
 $('#bootstrapCredentialsDone')?.addEventListener('click', () => { $('#bootstrapCredentialsBackdrop').hidden = true; });
 $('#bootstrapCopyCredentials')?.addEventListener('click', async () => {
   const text = [...($('#bootstrapCredentialsList')?.querySelectorAll('.bootstrap-credential-row') || [])]
@@ -1613,41 +1591,7 @@ $('#bootstrapCopyCredentials')?.addEventListener('click', async () => {
   catch { toast('কপি করা যায়নি — তথ্যগুলো হাতে সংরক্ষণ করুন'); }
 });
 
-$('#adminLoginForm')?.addEventListener('submit', async event => {
-  event.preventDefault();
-  const username = $('#adminLoginUser')?.value || '';
-  const password = $('#adminLoginPin')?.value || '';
-  const result = await authenticateStaff('admin', username, password);
-  if (!result.ok) {
-    const box = $('#adminLoginError');
-    if (box) {
-      box.textContent = 'ইউজারনেম বা পাসওয়ার্ড সঠিক নয়।';
-      box.hidden = false;
-    }
-    return;
-  }
-  const box = $('#adminLoginError');
-  if (box) box.hidden = true;
-  const remember = $('#rememberAdmin')?.checked !== false;
-  if (result.needsSetup || result.needsPasswordChange) {
-    openStaffPasswordDialog({
-      role: 'admin',
-      mode: result.needsSetup ? 'setup' : 'change',
-      onDone: () => enterAdminPanel(remember)
-    });
-    return;
-  }
-  await enterAdminPanel(remember);
-});
 $('#adminExitButton')?.addEventListener('click', exitPanel);
-$$('[data-toggle-pin]').forEach(button => {
-  button.addEventListener('click', () => {
-    const input = $(`#${button.dataset.togglePin}`);
-    if (!input) return;
-    input.type = input.type === 'password' ? 'text' : 'password';
-  });
-});
-
 /* Bottom-bar tabs and "More" menu rows are rebuilt by the permission model
    (js/admin-panel-ui.js) and call `navigate` themselves; the markup-driven
    shortcuts below are wired once. */
@@ -1903,35 +1847,11 @@ window.addEventListener('storage', event => {
   if (!state.savingFee && (event.key === TRANSACTIONS_KEY || event.key === null)) loadFinanceTransactions();
 });
 
-// The full-profile first-run form appears only if no Admin record has ever been stored.
-// A corrupt existing record is never silently replaced by a new first owner.
+// Every staff login starts at index.html. This page only restores an existing session.
 async function initAdminEntry() {
-  const exists = await staffAccountRecordExists('admin');
-  const login = $('#adminEntry');
-  const notice = $('#adminNoAccount');
-  const form = $('#adminLoginForm');
-  if (!exists) {
-    // No Admin on this device: the one-time creation form is on the login page.
-    if (login) login.hidden = false;
-    if (notice) notice.hidden = false;
-    if (form) form.hidden = true;
-    notice?.querySelector('a')?.focus({ preventScroll: true });
-    return;
-  }
-  if (notice) notice.hidden = true;
-  if (form) form.hidden = false;
-  if (login) login.hidden = false;
+  if (!(await hasStaffSession('admin'))) { goToLoginPage(); return; }
   const account = await readStaffAccount('admin');
-  if (!account) {
-    const box = $('#adminLoginError');
-    if (box) { box.textContent = 'Admin Account-এর সংরক্ষিত তথ্য পড়া যাচ্ছে না। নিরাপত্তার জন্য নতুন Initial Setup দেখানো হয়নি।'; box.hidden = false; }
-    return;
-  }
-  // Existing device-bound session opens the panel immediately after refresh.
-  // Keep the login screen hidden while the stored session is being restored.
-  if (await hasStaffSession('admin')) {
-    if (login) login.hidden = true;
-    await enterPanel();
-  }
+  if (!account) { clearStaffSession('admin'); goToLoginPage(); return; }
+  await enterPanel();
 }
-initAdminEntry();
+void initAdminEntry();

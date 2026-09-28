@@ -3,7 +3,7 @@
 import { $, openModal, closeModal, showFeedback, normalizeMobile } from './ui.js';
 import { enabledClasses } from './config.js';
 import { appendAccountMobile } from './account-policy.js';
-import { loadAccount, saveStudent, persistAccount, isSecurityCheckDisabled, setSecurityCheckDisabled, isTrustedDevice, setTrustedDevice, persistSession } from './storage.js';
+import { loadAccount, saveStudent, persistAccount, isSecurityCheckDisabled, setSecurityCheckDisabled, isTrustedDevice, setTrustedDevice, persistSession, generateClassRoll } from './storage.js';
 
 export function populateProfileClassOptions() {
   const select = $('#classInput');
@@ -70,7 +70,7 @@ function readEditableStudent(form, current) {
     group: String(form.get('group') || '').trim(),
     major: String(form.get('major') || '').trim(),
     institution: String(form.get('institution') || '').trim(),
-    roll: String(form.get('roll') || '').trim(),
+    roll: String(form.get('className') || '') === current.className ? current.roll : generateClassRoll(String(form.get('className') || '')),
     registrationNo: current.registrationNo
   };
 }

@@ -7,7 +7,7 @@
   <script src="js/sanitize-url.js"></script>
   <script src="js/appearance-boot.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
-  <meta name="theme-color" content="#eef2f6">
+  <meta name="theme-color" content="#000000">
   <meta name="description" content="Active Plus Coaching এডমিন প্যানেল — ইউজারনেম ও পাসওয়ার্ড দিয়ে প্রবেশ।">
   <meta name="robots" content="noindex">
   <title>Active Plus | এডমিন প্যানেল</title>
@@ -40,65 +40,6 @@
        করছেন? Admin Account তৈরি করুন"). This panel never offers it again, and
        js/staff-auth.js refuses createInitialAdmin() once one Admin exists. -->
   <!-- Admin Login Screen -->
-  <section class="auth-screen admin-auth-screen" id="adminEntry" hidden aria-label="Active Plus এডমিন লগইন">
-    <div class="auth-topbar">
-      <button class="theme-quick-toggle" type="button" data-theme-toggle aria-label="ডার্ক মোড চালু করুন"><svg class="icon-sun" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-sun"></use></svg><svg class="icon-moon" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-moon"></use></svg></button>
-      <div class="auth-brand">
-        <img src="assets/icons/logo-128.png" alt="Active Plus Coaching logo" width="38" height="38">
-        <span><strong>Active Plus Coaching</strong><small data-fixed-tagline aria-label="শিখতে থাকো, এগিয়ে যাও">শিখতে থাকো, এগিয়ে যাও</small></span>
-      </div>
-    </div>
-    <div class="auth-card">
-      <div class="auth-tabs" role="tablist" aria-label="অ্যাকাউন্ট অপশন">
-        <button class="auth-tab active" type="button" data-auth-tab="login" role="tab" aria-selected="true">এডমিন লগইন</button>
-      </div>
-
-      <div class="auth-panel active" id="adminLoginPanel" data-auth-panel="login">
-        <div class="auth-panel-heading">
-          <div>
-            <h2>এডমিন লগইন</h2>
-          </div>
-        </div>
-        <div class="admin-no-account" id="adminNoAccount" hidden>
-          <p>এই ডিভাইসে এখনো কোনো Admin Account তৈরি হয়নি। প্রথম Admin Account শুধু লগইন পেজ থেকে একবারই তৈরি করা যায়।</p>
-          <a class="admin-btn primary" href="index.html">লগইন পেজে যান</a>
-        </div>
-        <form id="adminLoginForm" novalidate>
-          <label for="adminLoginUser">ইউজারনেম</label>
-          <div class="input-wrap">
-            <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-user"></use></svg>
-            <input id="adminLoginUser" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="admin.apc" required>
-          </div>
-          <label for="adminLoginPin">পাসওয়ার্ড</label>
-          <div class="input-wrap">
-            <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg>
-            <input id="adminLoginPin" name="password" type="password" minlength="6" maxlength="32" autocomplete="current-password" placeholder="পাসওয়ার্ড" required>
-            <button class="show-pin" type="button" data-toggle-pin="adminLoginPin" aria-label="পাসওয়ার্ড দেখুন">
-              <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg>
-            </button>
-          </div>
-          <div class="form-row">
-            <label class="remember-label">
-              <input type="checkbox" id="rememberAdmin" checked>
-              <span class="fake-check"></span>এই ডিভাইসে মনে রাখুন
-            </label>
-          </div>
-          <p id="adminLoginError" class="finance-error" role="alert" hidden></p>
-          <button class="auth-submit" type="submit">
-            লগইন করুন <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg>
-          </button>
-        </form>
-        <p class="auth-footnote">
-          <a class="inline-link" href="index.html">← লগইন পেইজে ফিরে যান</a>
-        </p>
-      </div>
-    </div>
-  </section>
-
-  <!-- Admin panel shell: hidden until username and password are accepted.
-       The panel is System Control + Staff Management + Permissions + Security
-       + Data + Reports + Settings. Daily operations live in the Manager,
-       Teacher and Cash Counter panels, never here. -->
   <div class="admin-shell" id="adminShell" hidden>
     <header class="admin-topbar">
       <div class="admin-topbar-inner">
@@ -107,6 +48,7 @@
           <span><strong>এডমিন প্যানেল</strong><small>Active Plus Coaching</small></span>
         </a>
         <div class="admin-topbar-actions">
+          <button class="theme-quick-toggle" type="button" data-theme-toggle aria-label="ডার্ক মোড চালু করুন" aria-pressed="true" title="থিম বদলান"><svg class="icon-sun" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-sun"></use></svg><svg class="icon-moon" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-moon"></use></svg></button>
           <a class="admin-app-link" href="index.html" title="লগইন পেইজ" aria-label="লগইন পেইজ খুলুন">
             <span class="topbar-icon" aria-hidden="true"></span>
             <span>লগইন পেইজ</span>
@@ -199,7 +141,7 @@
             <span>নতুন স্টাফ</span>
           </button>
         </div>
-        <p class="finance-hint">Admin / Manager / Teacher / Cash Counter / অন্যান্য স্টাফ — সব অ্যাকাউন্ট এখান থেকে তৈরি, সম্পাদনা, নিষ্ক্রিয় ও মুছে ফেলা হয়। Student কখনো স্টাফ ম্যানেজমেন্টের অংশ নয় এবং Student ID-এর সঙ্গে Staff ID মেশানো হয় না।</p>
+        <p class="finance-hint">স্টাফ অ্যাকাউন্ট, ভূমিকা ও অ্যাক্সেস পরিচালনা করুন।</p>
         <p class="finance-error" id="staffReadonlyNote" role="status" hidden>শুধুমাত্র Admin স্টাফ অ্যাকাউন্ট তৈরি, সম্পাদনা বা মুছতে পারবেন।</p>
         <div class="staff-stats" id="staffStats"></div>
         <div class="staff-toolbar">
@@ -961,6 +903,8 @@
     <symbol id="icon-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 6.5 12 6.5 21.5 12 21.5 12 18 17.5 12 17.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="2.5"/></symbol>
     <symbol id="icon-check-circle" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></symbol>
   </svg>
+  <script type="module" src="js/theme-entry.js"></script>
+  <script type="module" src="js/pull-to-refresh.js"></script>
   <script type="module" src="js/admin.js"></script>
 </body>
 </html>

@@ -4,7 +4,7 @@ import { teachingRepository, DEMO_TEACHER } from './teaching-data.js';
 import { isTeacherAssigned } from './teacher-assignments.js';
 import { hasStaffSession, readStaffAccount } from './staff-auth.js';
 import { enabledClasses } from './config.js';
-import { KEYS, readRaw, writeRaw } from './database.js';
+import { KEYS, readRaw, writeRaw, newId } from './database.js';
 export const EXAM_KEY = KEYS.exams;
 export const EXAM_TYPES = Object.freeze({ mcq: 'MCQ', written: 'লিখিত', short: 'সংক্ষিপ্ত উত্তর' });
 export const EXAM_STATUSES = Object.freeze({ draft: 'খসড়া', pending: 'অনুমোদনের অপেক্ষায়', rejected: 'সংশোধনের জন্য ফেরত', published: 'প্রকাশিত' });
@@ -437,7 +437,7 @@ export const examRepository = {
     const db = await mutate(db => {
       const old = input.id ? examById(db, input.id) : null;
       if (old) { teacherOwns(old, actor); if (old.status === 'published' || db.attempts.some(a => a.examId === old.id)) fail('প্রকাশিত/চালু পরীক্ষার প্রশ্ন বদলানো যাবে না।'); }
-      const exam = { ...fields, id: old?.id || `EX-${crypto.randomUUID()}`, teacherId: actor.id, teacherName, status: 'draft', reviewNote: '', createdAt: old?.createdAt || Date.now(), updatedAt: Date.now(), participants: [] };
+      const exam = { ...fields, id: old?.id || newId('E'), teacherId: actor.id, teacherName, status: 'draft', reviewNote: '', createdAt: old?.createdAt || Date.now(), updatedAt: Date.now(), participants: [] };
       if (old) db.exams[db.exams.indexOf(old)] = exam; else db.exams.unshift(exam);
     });
     return teacherExamSnapshot(db, actor);
@@ -496,7 +496,7 @@ export const examRepository = {
       if (!own.length && now > e.startAt + e.lateMinutes * 60000) fail('দেরিতে প্রবেশের সময়সীমা শেষ।');
       if (own.length && !retryEligibility(db, e, person.id, now)) fail('দ্বিতীয় সুযোগের যোগ্যতা নেই বা সময় শেষ।');
       const order = shuffled(e.questions).map(q => ({ id: q.id, options: shuffled(q.options.map(o => o.id)) }));
-      db.attempts.push({ id: `AT-${crypto.randomUUID()}`, examId, studentId: person.id, name: person.name, className: person.className, number: own.length + 1, status: 'active', startedAt: now, savedAt: now, order, answers: {} });
+      db.attempts.push({ id: newId('A'), examId, studentId: person.id, name: person.name, className: person.className, number: own.length + 1, status: 'active', startedAt: now, savedAt: now, order, answers: {} });
       if (!e.participants.some(s => s.id === person.id)) e.participants.push(person);
     });
   },
@@ -550,7 +550,7 @@ export const examRepository = {
       if (e.questions.some(q => !Object.hasOwn(questionScores, q.id) || !['string', 'number'].includes(typeof questionScores[q.id]) || !String(questionScores[q.id]).trim() || !Number.isFinite(Number(questionScores[q.id])) || round(Number(questionScores[q.id])) !== Number(questionScores[q.id]) || Number(questionScores[q.id]) < 0 || Number(questionScores[q.id]) > q.marks)) fail('প্রতিটি প্রশ্নের নম্বর শূন্য থেকে পূর্ণমানের মধ্যে দিন।');
       const score = round(e.questions.reduce((sum, q) => sum + Number(questionScores[q.id]), 0));
       let a = db.attempts.find(a => a.examId === e.id && a.studentId === person.id);
-      if (!a) { a = { id: `AT-${crypto.randomUUID()}`, examId, studentId: person.id, name: person.name, className: person.className, number: 1, startedAt: Date.now(), order: [], answers: {} }; db.attempts.push(a); }
+      if (!a) { a = { id: newId('A'), examId, studentId: person.id, name: person.name, className: person.className, number: 1, startedAt: Date.now(), order: [], answers: {} }; db.attempts.push(a); }
       const cleanScores = Object.fromEntries(e.questions.map(q => [q.id, Number(questionScores[q.id])]));
       Object.assign(a, { score, questionScores: cleanScores, status: 'submitted', finishedAt: Date.now() });
       e.absentIds = (e.absentIds || []).filter(id => id !== person.id);

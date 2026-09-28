@@ -1,7 +1,7 @@
 import { loadRoutine, WEEK_DAYS } from './office-data.js';
 import { readStaffAccount } from './staff-auth.js';
 import { listTeacherAssignments } from './teacher-assignments.js';
-import { authenticateStaff, saveStaffSession, hasStaffSession, clearStaffSession, goToLoginPage } from './staff-auth.js';
+import { hasStaffSession, clearStaffSession, goToLoginPage } from './staff-auth.js';
 import { openStaffPasswordDialog } from './staff-password-dialog.js';
 import { loadAppConfig } from './storage.js';
 import { toBanglaNumber as bn } from './ui.js';
@@ -418,79 +418,19 @@ function showStudent(id) {
 }
 
 ['teacherHomeClass', 'teacherClassFilter', 'teacherStudentClass'].forEach(id => { $('#' + id).insertAdjacentHTML('beforeend', classOptions()); });
-/* Admin-controlled teacher registration/entry gate (Admin Panel → শিক্ষক রেজিস্ট্রেশন নিয়ন্ত্রণ). */
-const teacherRegistrationOpen = () => loadAppConfig().allowTeacherRegistration !== false;
-function syncTeacherRegistrationNotice() {
-  const open = teacherRegistrationOpen();
-  const notice = $('#teacherRegNotice');
-  if (notice) notice.hidden = open;
-  const button = $('#teacherEnter');
-  if (button) button.disabled = !open;
-}
-syncTeacherRegistrationNotice();
-window.addEventListener('storage', event => {
-  if (event.key === 'active-plus-app-config-v1' || event.key === null) syncTeacherRegistrationNotice();
-});
 async function showTeacherShell() {
-  if (!teacherRegistrationOpen()) {
-    $('#teacherEntryError').textContent = 'শিক্ষক রেজিস্ট্রেশন ও প্রবেশ এই মুহূর্তে এডমিন কর্তৃক বন্ধ রাখা হয়েছে।';
-    $('#teacherEntryError').hidden = false;
-    return false;
-  }
-  const button = $('#teacherEnter');
-  if (button) button.disabled = true;
-  $('#teacherEntryError').hidden = true;
-  if (await reload()) {
-    $('#teacherEntry').hidden = true;
-    $('#teacherShell').hidden = false;
-    setView('home');
-    mountReports($('#teacherReports'), { panel: 'teacher' });
-    if (button) button.disabled = !teacherRegistrationOpen();
-    return true;
-  }
-  $('#teacherEntryError').textContent = 'ডেটা পড়া যায়নি। ব্রাউজারের স্টোরেজ চালু করে আবার চেষ্টা করুন।';
-  $('#teacherEntryError').hidden = false;
-  if (button) button.disabled = !teacherRegistrationOpen();
-  return false;
+  if (loadAppConfig().allowTeacherRegistration === false) { goToLoginPage(); return false; }
+  $('#teacherShell').hidden = false;
+  setView('home');
+  const loaded = await reload();
+  mountReports($('#teacherReports'), { panel: 'teacher' });
+  return loaded;
 }
-async function enterTeacherPanel(remember) {
-  if (!(await saveStaffSession('teacher', remember))) {
-    $('#teacherEntryError').textContent = 'সেশন সংরক্ষণ করা যায়নি।'; $('#teacherEntryError').hidden = false; return;
-  }
-  if (!(await showTeacherShell())) clearStaffSession('teacher');
-}
-
-async function openTeacherPanel() {
-  const username = $('#teacherLoginUser')?.value || '';
-  const password = $('#teacherLoginPin')?.value || '';
-  const result = await authenticateStaff('teacher', username, password);
-  if (!result.ok) {
-    $('#teacherEntryError').textContent = 'ইউজারনেম বা পাসওয়ার্ড সঠিক নয়।';
-    $('#teacherEntryError').hidden = false;
-    return;
-  }
-  $('#teacherEntryError').hidden = true;
-  const remember = $('#rememberTeacher')?.checked !== false;
-  if (result.needsSetup || result.needsPasswordChange) {
-    openStaffPasswordDialog({
-      role: 'teacher',
-      mode: result.needsSetup ? 'setup' : 'change',
-      onDone: () => enterTeacherPanel(remember)
-    });
-    return;
-  }
-  await enterTeacherPanel(remember);
-}
-$('#teacherEnter').addEventListener('click', openTeacherPanel);
-$('#teacherLoginForm')?.addEventListener('submit', event => { event.preventDefault(); openTeacherPanel(); });
 $('#teacherChangePassword')?.addEventListener('click', () => openStaffPasswordDialog({ role: 'teacher', mode: 'change' }));
 $('#teacherExit').addEventListener('click', () => {
   clearStaffSession('teacher');
   // Logout always returns to the shared login page, never to a panel entry form.
   $('#teacherShell').hidden = true;
-  $('#teacherEntry').hidden = true;
-  const pin = $('#teacherLoginPin');
-  if (pin) pin.value = '';
   goToLoginPage();
 });
 $('#teacherRetry').addEventListener('click', reload);
@@ -540,4 +480,4 @@ watchTeachingData(() => {
 });
 
 // An existing device-bound session opens the panel without asking again.
-hasStaffSession('teacher').then(valid => { if (valid) showTeacherShell(); });
+hasStaffSession('teacher').then(valid => { if (valid) showTeacherShell(); else goToLoginPage(); });

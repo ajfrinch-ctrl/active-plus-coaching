@@ -108,7 +108,7 @@ function fieldRow(spec, value) {
 function roleAssignmentFields(role) {
   if (role === 'teacher') {
     return [
-      { name: 'classes', label: 'Assigned Class/শ্রেণি', type: 'select', multiple: true, options: enabledClasses.map(name => ({ value: name, label: name })), hint: 'একাধিক নির্বাচন করতে চেপে ধরে টানুন (Ctrl/⌘ + ক্লিক)' },
+      { name: 'classes', label: 'Assigned Class/শ্রেণি', type: 'select', multiple: true, options: enabledClasses.map(name => ({ value: name, label: name })), hint: 'তালিকা থেকে এক বা একাধিক শ্রেণি বেছে নিন' },
       { name: 'subjects', label: 'বিষয়সমূহ', placeholder: 'যেমন: উচ্চতর গণিত, পদার্থবিজ্ঞান', hint: 'কমা দিয়ে একাধিক বিষয় লিখুন' },
       { name: 'batches', label: 'ব্যাচ / বিভাগ', placeholder: 'যেমন: বিজ্ঞান বিভাগ, A ব্যাচ' }
     ];
@@ -361,8 +361,8 @@ function staffFormHtml(record) {
     { name: 'address', label: 'ঠিকানা (ঐচ্ছিক)', max: 300, value: record?.address }
   ];
   return `
-    <form id="staffForm" class="staff-form staff-create-form" novalidate>
-      ${editing ? `<div class="staff-form-notice">${icon('lock', 'staff-inline-icon')}<span>Staff ID <strong>${escapeHtml(record.staffId)}</strong> — স্থায়ী পরিচয়, পরিবর্তন করা যাবে না</span></div>` : ''}
+    <form id="staffForm" class="staff-form staff-create-form${editing ? ' is-editing' : ' is-creating'}" novalidate>
+      ${editing ? `<div class="staff-form-notice">${icon('lock', 'staff-inline-icon')}<span>Staff ID <strong>${escapeHtml(record.staffId)}</strong> — স্থায়ী পরিচয়, পরিবর্তন করা যাবে না</span></div>` : `<div class="staff-create-guide"><span class="staff-guide-icon" aria-hidden="true">${icon('staff', 'staff-inline-icon')}</span><div><strong>৩টি সহজ ধাপে অ্যাকাউন্ট তৈরি</strong><small>পরিচিতি দিন, রোল বাছুন, তারপর দায়িত্বের তথ্য পূরণ করুন।</small></div></div>`}
       <div class="staff-form-section-block">
         <div class="staff-form-section-title"><span class="staff-section-number">১</span><div><strong>অ্যাকাউন্টের তথ্য</strong><small>স্টাফের পরিচয় ও লগইন তথ্য দিন</small></div></div>
         <div class="staff-form-grid">
