@@ -1,4 +1,4 @@
-import { examRepository as repo, EXAM_TYPES, TEACHER_ACTOR, ADMIN_ACTOR, MANAGER_ACTOR, examTemplate, parseQuestions, totalMarks, watchExams } from './exam-data.js';
+import { examRepository as repo, EXAM_TYPES, TEACHER_ACTOR, ADMIN_ACTOR, MANAGER_ACTOR, examTemplate, MCQ_SAMPLE_TEMPLATES, parseQuestions, totalMarks, watchExams } from './exam-data.js';
 import { examMeta, questionPreview, resultMarkup, downloadResults, esc, num } from './exam-ui.js';
 import { downloadExamPDF } from './exam-pdf.js';
 import { enabledClasses } from './config.js';
@@ -54,7 +54,7 @@ export function initExamManager(container, role) {
       ${type === 'mcq' ? field('negative', 'প্রতি ভুল উত্তরে কাটা নম্বর (০ হলে কাটবে না)', 'number', 'min="0" max="1000" step="0.01" required') : ''}
       ${field('passPercent', 'পাস নম্বরের হার (%)', 'number', 'min="1" max="100" required')}
       <label>নির্দেশনা<textarea name="instructions" maxlength="2000">${esc(data.instructions)}</textarea></label>
-      <details><summary>প্রশ্নের টেমপ্লেট দেখুন</summary><textarea data-copy-template readonly aria-label="কপি করার টেমপ্লেট">${esc(examTemplate(type))}</textarea><div class="exam-actions">${button('copy-template', 'টেমপ্লেট কপি করুন')}${button('sample', 'উদাহরণ বসান')}</div><p class="exam-note">প্রশ্ন আলাদা করতে --- দিন। প্রতিটি লেখা একটি লাইনে রাখুন। নম্বর আলাদা হতে পারে। সর্বোচ্চ ১০০ প্রশ্ন; শুধু লেখা।</p></details>
+      <details><summary>প্রশ্নের টেমপ্লেট ও ৩০টি নমুনা দেখুন</summary>${type === 'mcq' ? `<label class="mcq-template-picker">নমুনা টেমপ্লেট নির্বাচন করুন<select data-mcq-template-index>${MCQ_SAMPLE_TEMPLATES.map(([name], index) => \`<option value="${index}">${index + 1}. ${esc(name)}</option>\`).join('')}</select></label><div class="exam-actions">${button('use-mcq-template', 'নির্বাচিত টেমপ্লেট বসান')}${button('copy-template', 'টেমপ্লেট কপি করুন')}</div>` : `<div class="exam-actions">${button('copy-template', 'টেমপ্লেট কপি করুন')}${button('sample', 'উদাহরণ বসান')}</div>`}<textarea data-copy-template readonly aria-label="কপি করার টেমপ্লেট">${esc(examTemplate(type))}</textarea><p class="exam-note">MCQ-তে ৩০টি নমুনা টেমপ্লেট থেকে একটি বেছে নিয়ে কপি/বসাতে পারবেন। প্রশ্ন আলাদা করতে --- দিন। সর্বোচ্চ ১০০ প্রশ্ন।</p></details>
       <label>টেমপ্লেট অনুযায়ী প্রশ্ন পেস্ট করুন *<textarea name="template" data-question-source rows="12" required maxlength="150000" placeholder="${type === 'mcq' ? 'প্রশ্ন: …\nA: …\nB: …\nC: …\nD: …\nউত্তর: A' : 'প্রশ্ন: …\nনম্বর: …'}">${esc(data.template)}</textarea><small class="exam-note">${type === 'mcq' ? 'MCQ-তে প্রতি প্রশ্নের নম্বর ১ নির্ধারিত — “নম্বর:” লাইন লিখতে হবে না। মোট নম্বর = প্রশ্ন সংখ্যা।' : 'প্রতি প্রশ্নের নম্বর আলাদা করে লিখুন।'}</small></label>
       <div class="exam-preview" data-parsed-preview aria-live="polite"></div>
       <button type="submit" class="primary">খসড়া সংরক্ষণ করুন</button>
@@ -96,6 +96,7 @@ export function initExamManager(container, role) {
     else if (action === 'grade') { try { await grade(e); } catch (e) { error(e.message); } }
     else if (action === 'csv') downloadResults(db, e);
     else if (action === 'paper' || action === 'solutions') run(() => downloadExamPDF(e, { authorPreview: true, solutions: action === 'solutions' }), 'PDF ডাউনলোড শুরু হয়েছে।', () => {});
+    else if (action === 'use-mcq-template') { const index = Number($('[data-mcq-template-index]')?.value || 0); const sample = MCQ_SAMPLE_TEMPLATES[index]?.[1]; if (sample) { $('[name=template]').value = sample; $('[name=template]').dispatchEvent(new Event('input')); message('নির্বাচিত MCQ টেমপ্লেট বসানো হয়েছে।'); } }
     else if (action === 'copy-template') { try { await navigator.clipboard.writeText($('[data-copy-template]').value); message('টেমপ্লেট কপি হয়েছে।'); } catch { $('[data-copy-template]').select(); message('টেমপ্লেট নির্বাচন করা হয়েছে। মোবাইলের কপি অপশন চাপুন।'); } }
     else if (action === 'sample') { $('[name=template]').value = $('[data-copy-template]').value; $('[name=template]').dispatchEvent(new Event('input')); }
   });
