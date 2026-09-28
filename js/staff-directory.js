@@ -46,7 +46,10 @@ import {
   hasStaffSession
 } from './staff-auth.js';
 
-/** Device-local storage key. Like every staff record, it never leaves the device. */
+/** Device-local storage key. Records live here as an encrypted envelope and
+    are mirrored through the optional online bridge (js/realtime-sync.js) so
+    the same Login User ID signs in on any device — hashes only, never a
+    plaintext password. */
 export const STAFF_DIRECTORY_KEY = 'activePlus.staffDirectory.v1';
 /** When the last backup was taken (shown on Backup & Restore / Security). */
 export const BACKUP_STAMP_KEY = 'activePlus.lastBackupAt.v1';
