@@ -493,7 +493,8 @@ function wireForm(form, record) {
     refreshAutoId(form, record);
     if (!assignmentHost) return;
     assignmentHost.dataset.role = role;
-    assignmentHost.querySelector('.staff-form-section').textContent = `${STAFF_ROLE_META[role]?.labelBn || 'স্টাফ'} — Assignment`;
+    const assignmentTitle = assignmentHost.querySelector('#staffAssignmentTitle');
+    if (assignmentTitle) assignmentTitle.textContent = `${STAFF_ROLE_META[role]?.labelBn || 'স্টাফ'} — দায়িত্ব`;
     const grid = assignmentHost.querySelector('.staff-form-grid');
     if (grid) {
       grid.innerHTML = roleAssignmentFields(role)
