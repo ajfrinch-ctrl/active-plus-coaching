@@ -653,3 +653,250 @@ html[data-theme="dark"] .theme-quick-toggle {
 html[data-theme="dark"] a {
   color: #f5f5f5 !important;
 }
+
+
+/* ==========================================================================
+   AMOLED VISUAL POLISH — typography, icons, spacing and interaction language
+   Presentation only. No markup, data, role, storage or workflow changes.
+   ========================================================================== */
+html[data-theme="dark"] {
+  --ink: #f7f7f7 !important;
+  --muted: #a8a8ad !important;
+  --muted-2: #77777e !important;
+  --line: rgba(255,255,255,.10) !important;
+  --surface: #0b0b0d !important;
+  --white: #ffffff !important;
+  --radius-xl: 24px;
+  --radius-lg: 20px;
+  --radius-md: 16px;
+  --radius-sm: 12px;
+}
+
+/* Premium typography: Bengali-first, crisp on low-end Android screens. */
+html[data-theme="dark"] body,
+html[data-theme="dark"] button,
+html[data-theme="dark"] input,
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea {
+  font-family: "Noto Sans Bengali", "Noto Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+html[data-theme="dark"] h1,
+html[data-theme="dark"] h2,
+html[data-theme="dark"] h3,
+html[data-theme="dark"] strong,
+html[data-theme="dark"] .brand-copy strong,
+html[data-theme="dark"] .admin-brand strong {
+  color: #ffffff !important;
+  letter-spacing: -.015em;
+}
+html[data-theme="dark"] small,
+html[data-theme="dark"] .muted,
+html[data-theme="dark"] .secondary-text {
+  color: #9b9ba3 !important;
+}
+
+/* One material system for every surface. */
+html[data-theme="dark"] .auth-card,
+html[data-theme="dark"] .home-hero,
+html[data-theme="dark"] .home-list-card,
+html[data-theme="dark"] .quick-wrap,
+html[data-theme="dark"] .teaching-board,
+html[data-theme="dark"] .admin-card,
+html[data-theme="dark"] .admin-more-menu,
+html[data-theme="dark"] .teacher-summary,
+html[data-theme="dark"] .teacher-record-card,
+html[data-theme="dark"] .pay-card,
+html[data-theme="dark"] .payment-card,
+html[data-theme="dark"] .settings-list,
+html[data-theme="dark"] .help-card,
+html[data-theme="dark"] .rp-card,
+html[data-theme="dark"] .rp-report,
+html[data-theme="dark"] .rp-choose,
+html[data-theme="dark"] .rp-preview-bar,
+html[data-theme="dark"] .rp-empty,
+html[data-theme="dark"] .modal,
+html[data-theme="dark"] .admin-modal {
+  background: rgba(12,12,14,.94) !important;
+  border: 1px solid rgba(255,255,255,.105) !important;
+  box-shadow: 0 18px 50px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.035) !important;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+/* Top bars + floating navigation become one restrained glass system. */
+html[data-theme="dark"] .topbar,
+html[data-theme="dark"] .admin-topbar,
+html[data-theme="dark"] .auth-topbar,
+html[data-theme="dark"] .pay-topbar,
+html[data-theme="dark"] .bottom-nav,
+html[data-theme="dark"] .admin-bottom {
+  background: rgba(7,7,9,.88) !important;
+  border-color: rgba(255,255,255,.09) !important;
+  box-shadow: 0 12px 34px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.035) !important;
+  backdrop-filter: blur(22px) saturate(120%);
+  -webkit-backdrop-filter: blur(22px) saturate(120%);
+}
+
+/* Water-drop icon language: monochrome frosted glass, consistent everywhere. */
+html[data-theme="dark"] .home-hero-icon,
+html[data-theme="dark"] .home-stat-icon,
+html[data-theme="dark"] .home-hero-foot-icon,
+html[data-theme="dark"] .home-row-icon,
+html[data-theme="dark"] .settings-icon,
+html[data-theme="dark"] .help-icon,
+html[data-theme="dark"] .admin-hero-icon,
+html[data-theme="dark"] .tile-icon,
+html[data-theme="dark"] .admin-hero-foot-icon,
+html[data-theme="dark"] .admin-dashboard-collect-icon,
+html[data-theme="dark"] .admin-more-icon,
+html[data-theme="dark"] .admin-stat-icon,
+html[data-theme="dark"] .learning-home-icon,
+html[data-theme="dark"] .nav-chip,
+html[data-theme="dark"] .rp-report-icon,
+html[data-theme="dark"] .contact-icon {
+  background-color: #151518 !important;
+  border: 1px solid rgba(255,255,255,.12) !important;
+  box-shadow: 0 8px 20px rgba(0,0,0,.48), inset 0 1px 0 rgba(255,255,255,.07) !important;
+  filter: saturate(.2) brightness(1.12);
+}
+html[data-theme="dark"] .bottom-link.active .nav-chip,
+html[data-theme="dark"] .admin-bottom-item.active .nav-chip {
+  background-color: #242428 !important;
+  border-color: rgba(255,255,255,.22) !important;
+  box-shadow: 0 9px 24px rgba(0,0,0,.58), inset 0 1px 0 rgba(255,255,255,.10) !important;
+  transform: scale(1.08);
+}
+html[data-theme="dark"] .bottom-link span:last-child,
+html[data-theme="dark"] .admin-bottom-item span:last-child {
+  color: #85858d !important;
+}
+html[data-theme="dark"] .bottom-link.active span:last-child,
+html[data-theme="dark"] .admin-bottom-item.active span:last-child {
+  color: #ffffff !important;
+}
+
+/* Buttons: premium black, clear hierarchy, no green accent. */
+html[data-theme="dark"] button,
+html[data-theme="dark"] .primary-action,
+html[data-theme="dark"] .primary-btn,
+html[data-theme="dark"] .forest-btn,
+html[data-theme="dark"] .admin-btn,
+html[data-theme="dark"] .auth-submit {
+  border-radius: 14px;
+  border-color: rgba(255,255,255,.13) !important;
+}
+html[data-theme="dark"] .primary-action,
+html[data-theme="dark"] .primary-btn,
+html[data-theme="dark"] .forest-btn,
+html[data-theme="dark"] .auth-submit,
+html[data-theme="dark"] .admin-btn.primary {
+  background: #f4f4f5 !important;
+  color: #08080a !important;
+  border-color: #f4f4f5 !important;
+  box-shadow: 0 9px 22px rgba(0,0,0,.42), inset 0 1px 0 rgba(255,255,255,.7) !important;
+}
+html[data-theme="dark"] button:active {
+  transform: translateY(1px);
+}
+html[data-theme="dark"] .danger,
+html[data-theme="dark"] .logout-button {
+  color: #ffb4ad !important;
+  border-color: rgba(255,120,110,.25) !important;
+  background: rgba(80,18,15,.30) !important;
+}
+
+/* Inputs: deep-black field with a subtle focus ring. */
+html[data-theme="dark"] input,
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea {
+  background: #070709 !important;
+  color: #f5f5f7 !important;
+  border: 1px solid rgba(255,255,255,.12) !important;
+  border-radius: 13px !important;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.65) !important;
+}
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] textarea::placeholder {
+  color: #66666d !important;
+}
+html[data-theme="dark"] input:focus,
+html[data-theme="dark"] select:focus,
+html[data-theme="dark"] textarea:focus {
+  border-color: rgba(255,255,255,.38) !important;
+  box-shadow: 0 0 0 3px rgba(255,255,255,.055), inset 0 1px 2px rgba(0,0,0,.65) !important;
+  outline: none !important;
+}
+
+/* Chips, badges and selected states stay monochrome. */
+html[data-theme="dark"] .chip,
+html[data-theme="dark"] .saved-tag,
+html[data-theme="dark"] .home-count-pill,
+html[data-theme="dark"] .home-date-pill,
+html[data-theme="dark"] .dashboard-time-pill,
+html[data-theme="dark"] .pending-id,
+html[data-theme="dark"] .finance-nav-pills {
+  background: #141417 !important;
+  color: #e8e8eb !important;
+  border-color: rgba(255,255,255,.10) !important;
+}
+html[data-theme="dark"] .finance-nav-pills .chip.active,
+html[data-theme="dark"] .day-tabs button.active {
+  background: #eeeeef !important;
+  color: #08080a !important;
+}
+
+/* Hero areas: elegant monochrome instead of brand-green gradients. */
+html[data-theme="dark"] .welcome-card,
+html[data-theme="dark"] .admin-hero,
+html[data-theme="dark"] button.exam-link {
+  background: linear-gradient(145deg,#17171a 0%,#0c0c0f 58%,#08080a 100%) !important;
+  border-color: rgba(255,255,255,.13) !important;
+  box-shadow: 0 18px 42px rgba(0,0,0,.58), inset 0 1px 0 rgba(255,255,255,.055) !important;
+}
+html[data-theme="dark"] .welcome-greeting,
+html[data-theme="dark"] .welcome-advice,
+html[data-theme="dark"] button.exam-link small {
+  color: rgba(255,255,255,.68) !important;
+}
+
+/* Dividers and list rows: clean, quiet hierarchy. */
+html[data-theme="dark"] .home-row,
+html[data-theme="dark"] .settings-list > button,
+html[data-theme="dark"] .admin-more-item {
+  border-color: rgba(255,255,255,.07) !important;
+}
+html[data-theme="dark"] .home-row:active,
+html[data-theme="dark"] .settings-list > button:active,
+html[data-theme="dark"] .admin-more-item:active,
+html[data-theme="dark"] .admin-more-item:hover {
+  background: rgba(255,255,255,.045) !important;
+}
+
+/* Scrollbars and selection follow the AMOLED language. */
+html[data-theme="dark"] ::selection {
+  background: rgba(255,255,255,.20);
+  color: #fff;
+}
+html[data-theme="dark"] * {
+  scrollbar-color: #3a3a40 #000;
+}
+html[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: #303036 !important;
+  border-radius: 999px;
+}
+
+/* Keep motion refined rather than decorative. */
+html[data-theme="dark"] .home-hero-icon,
+html[data-theme="dark"] .home-stat-icon,
+html[data-theme="dark"] .home-hero-foot-icon,
+html[data-theme="dark"] .home-row-icon,
+html[data-theme="dark"] .settings-icon,
+html[data-theme="dark"] .help-icon,
+html[data-theme="dark"] .admin-hero-icon,
+html[data-theme="dark"] .tile-icon,
+html[data-theme="dark"] .admin-more-icon,
+html[data-theme="dark"] .admin-stat-icon {
+  animation-duration: 7s !important;
+}
