@@ -472,267 +472,37 @@
         </button>
         <div class="page-intro">
           <div><p class="eyebrow">System Settings</p><h1 id="appManagementTitle">সিস্টেম সেটিংস</h1></div>
-          <div class="page-intro-actions">
-            <button class="admin-btn primary" type="button" id="btnSaveTopAppSettings">সব সেটিংস সংরক্ষণ করুন</button>
-            <a class="admin-btn ghost" href="index.html" target="_blank">
-              <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-smartphone"></use></svg>
-              শিক্ষার্থী অ্যাপ দেখুন
-            </a>
-          </div>
         </div>
-
         <div class="app-control-grid">
-          <!-- Card 1: App Status & Access Rules -->
           <article class="admin-card">
-            <header class="admin-card-head">
-              <div><p class="eyebrow">Status & Access</p><h2>অ্যাপ স্ট্যাটাস ও এক্সেস কন্ট্রোল</h2></div>
-              <span class="badge badge-approved" id="appStatusLiveBadge">অ্যাপ লাইভ</span>
-            </header>
+            <header class="admin-card-head"><div><p class="eyebrow">Branding &amp; Contacts</p><h2>ব্র্যান্ডিং ও যোগাযোগ তথ্য</h2></div></header>
             <div class="app-setting-group">
-              <label class="app-toggle-item">
-                <div class="app-toggle-copy">
-                  <strong>সাময়িক রক্ষণাবেক্ষণ মোড (Maintenance Mode)</strong>
-                  <small>চালু করলে শিক্ষার্থী অ্যাপে নোটিশ লক স্ক্রিন দেখাবে এবং সাধারণ কাজ স্থগিত থাকবে</small>
-                </div>
-                <span class="toggle-switch">
-                  <input type="checkbox" id="cfgMaintenanceMode">
-                  <i></i>
-                </span>
-              </label>
-
-              <div class="app-field" id="cfgMaintenanceBox">
-                <label for="cfgMaintenanceMsg">রক্ষণাবেক্ষণ বার্তা (শিক্ষার্থীদের জন্য)</label>
-                <textarea id="cfgMaintenanceMsg" rows="2" placeholder="রক্ষণাবেক্ষণের বার্তা লিখুন..."></textarea>
-              </div>
-
-              <label class="app-toggle-item">
-                <div class="app-toggle-copy">
-                  <strong>নতুন শিক্ষার্থী রেজিস্ট্রেশন অনুমোদন</strong>
-                  <small>বন্ধ রাখলে অ্যাপ থেকে নতুন শিক্ষার্থী রেজিস্ট্রেশন বন্ধ থাকবে</small>
-                </div>
-                <span class="toggle-switch">
-                  <input type="checkbox" id="cfgAllowRegistration" checked>
-                  <i></i>
-                </span>
-              </label>
-
-              <label class="app-toggle-item">
-                <div class="app-toggle-copy">
-                  <strong>দ্রুত প্রবেশ / পাসওয়ার্ড চেক শিথিল মোড</strong>
-                  <small>চালু রাখলে বিশ্বস্ত ডিভাইসে শিক্ষার্থীদের বারবার পাসওয়ার্ড চাওয়ার প্রয়োজন হবে না</small>
-                </div>
-                <span class="toggle-switch">
-                  <input type="checkbox" id="cfgSkipSecurity" checked>
-                  <i></i>
-                </span>
-              </label>
-            </div>
-          </article>
-
-          <!-- Card 2: Teacher Registration Control -->
-          <article class="admin-card">
-            <header class="admin-card-head">
-              <div><p class="eyebrow">Teacher Registration</p><h2>শিক্ষক রেজিস্ট্রেশন নিয়ন্ত্রণ</h2></div>
-              <span class="badge badge-approved" id="teacherRegBadge">খোলা আছে</span>
-            </header>
-            <div class="app-setting-group">
-              <label class="app-toggle-item">
-                <div class="app-toggle-copy">
-                  <strong>নতুন শিক্ষক রেজিস্ট্রেশন / প্রবেশ অনুমোদন</strong>
-                  <small>বন্ধ করলে শিক্ষক প্যানেলে (teacher.html) নতুন শিক্ষকের রেজিস্ট্রেশন ও প্রবেশ সাময়িক বন্ধ থাকবে; চালু করলে আবার খুলে যাবে</small>
-                </div>
-                <span class="toggle-switch">
-                  <input type="checkbox" id="cfgTeacherRegistration" checked>
-                  <i></i>
-                </span>
-              </label>
-              <div class="app-field">
-                <label>বর্তমানে যুক্ত শিক্ষক (রুটিন অনুযায়ী)</label>
-                <div class="teacher-chip-row" id="teacherRegList" aria-label="বর্তমান শিক্ষক তালিকা"></div>
-                <small style="color:var(--muted);font-size:11px;">শিক্ষক যোগ হয় ক্লাস রুটিনের শিক্ষক তালিকা থেকে; নতুন শিক্ষক রুটিনে যোগ করলেই এখানে দেখা যাবে।</small>
-              </div>
-              <p class="finance-hint">সেটিংসটি "সব সেটিংস সংরক্ষণ করুন" চাপলে সংরক্ষিত হয়ে সঙ্গে সঙ্গে শিক্ষক প্যানেলে কার্যকর হয়।</p>
-            </div>
-          </article>
-
-          <!-- Card 3: Live Alert & Broadcast Banner -->
-          <article class="admin-card">
-            <header class="admin-card-head">
-              <div><p class="eyebrow">Live Broadcast</p><h2>লাইভ ব্রডকাস্ট ও এলার্ট নোটিশ</h2></div>
-              <span class="badge badge-approved" id="cfgBroadcastBadge">সক্রিয়</span>
-            </header>
-            <div class="app-setting-group">
-              <label class="app-toggle-item">
-                <div class="app-toggle-copy">
-                  <strong>হোম স্ক্রিনে লাইভ এলার্ট ব্যানার চালু রাখুন</strong>
-                  <small>শিক্ষার্থী অ্যাপের ড্যাশবোর্ডের শীর্ষে নোটিসটি স্ক্রল বা হাইলাইট হবে</small>
-                </div>
-                <span class="toggle-switch">
-                  <input type="checkbox" id="cfgBroadcastAlert" checked>
-                  <i></i>
-                </span>
-              </label>
-
-              <div class="app-field">
-                <label for="cfgBroadcastMsg">ব্যানার বার্তা</label>
-                <textarea id="cfgBroadcastMsg" rows="2" placeholder="সকল শিক্ষার্থীদের জন্য জরুরি ঘোষণা লিখুন..."></textarea>
-              </div>
-
-              <div class="app-field">
-                <label for="cfgBroadcastTone">ব্যানারের ধরন ও গুরুত্ব</label>
-                <select id="cfgBroadcastTone">
-                  <option value="green">সবুজ (সাধারণ একাডেমিক নোটিশ)</option>
-                  <option value="amber">হলুদ / কমলা (সতর্কতা ও রিমাইন্ডার)</option>
-                  <option value="red">লাল (জরুরি / স্থগিত নোটিশ)</option>
-                </select>
-              </div>
-            </div>
-          </article>
-
-          <!-- Card 3: Feature Modules Toggle -->
-          <article class="admin-card">
-            <header class="admin-card-head">
-              <div><p class="eyebrow">Module Permissions</p><h2>ফিচার মডিউল নিয়ন্ত্রণ</h2></div>
-            </header>
-            <div class="app-setting-group">
-              <label class="app-toggle-item">
-                <div class="app-toggle-copy">
-                  <strong><img class="app-toggle-icon" src="assets/icons/admin/routine.png" alt="" width="22" height="22"> ক্লাস রুটিন মডিউল</strong>
-                  <small>শিক্ষার্থীদের সাপ্তাহিক ক্লাস রুটিন ও সময়সূচি ট্যাব</small>
-                </div>
-                <span class="toggle-switch">
-                  <input type="checkbox" id="cfgModRoutine" checked>
-                  <i></i>
-                </span>
-              </label>
-
-              <label class="app-toggle-item">
-                <div class="app-toggle-copy">
-                  <strong><img class="app-toggle-icon" src="assets/icons/admin/classes.png" alt="" width="22" height="22"> কোর্স ও লেকচার শিট মডিউল</strong>
-                  <small>বিষয়ভিত্তিক অধ্যায় ও শিট ডাউনলোডের তালিকা ট্যাব</small>
-                </div>
-                <span class="toggle-switch">
-                  <input type="checkbox" id="cfgModCourses" checked>
-                  <i></i>
-                </span>
-              </label>
-
-              <label class="app-toggle-item">
-                <div class="app-toggle-copy">
-                  <strong><img class="app-toggle-icon" src="assets/icons/admin/reports.png" alt="" width="22" height="22"> পরীক্ষার ফলাফল ও মেধা তালিকা</strong>
-                  <small>মডেল টেস্ট ও সাপ্তাহিক পরীক্ষার রেজাল্ট কার্ড ট্যাব</small>
-                </div>
-                <span class="toggle-switch">
-                  <input type="checkbox" id="cfgModResults" checked>
-                  <i></i>
-                </span>
-              </label>
-
-              <label class="app-toggle-item">
-                <div class="app-toggle-copy">
-                  <strong><img class="app-toggle-icon" src="assets/icons/admin/app.png" alt="" width="22" height="22"> অ্যাপ ইনস্টলেশন প্রম্পট (PWA)</strong>
-                  <small>শিক্ষার্থী ফোনে হোম স্ক্রিনে অ্যাপ ইনস্টল করার পরামর্শ দেখাবে</small>
-                </div>
-                <span class="toggle-switch">
-                  <input type="checkbox" id="cfgModInstall" checked>
-                  <i></i>
-                </span>
-              </label>
-            </div>
-          </article>
-
-          <!-- Card 4: Branding & Support Contact Info -->
-          <article class="admin-card">
-            <header class="admin-card-head">
-              <div><p class="eyebrow">Branding & Contacts</p><h2>ব্র্যান্ডিং ও যোগাযোগ তথ্য</h2></div>
-            </header>
-            <div class="app-setting-group">
-              <div class="app-field">
-                <label for="cfgTagline">অ্যাপ ট্যাগলাইন / মূল স্লোগান</label>
-                <input type="text" id="cfgTagline" placeholder="যেমন: শিখতে থাকো, এগিয়ে যাও">
-              </div>
-
+              <div class="app-field"><label for="cfgTagline">অ্যাপ ট্যাগলাইন / মূল স্লোগান</label><input type="text" id="cfgTagline"></div>
               <div class="app-field-row">
-                <div class="app-field">
-                  <label for="cfgHelpline">অফিসিয়াল হেল্পলাইন নম্বর</label>
-                  <input type="tel" id="cfgHelpline" placeholder="০১৮১৯৪৮৬৯৬৬">
-                </div>
-                <div class="app-field">
-                  <label for="cfgWhatsapp">WhatsApp সাপোর্ট নম্বর</label>
-                  <input type="tel" id="cfgWhatsapp" placeholder="০১৮১৯৪৮৬৯৬৬">
-                </div>
+                <div class="app-field"><label for="cfgHelpline">অফিসিয়াল হেল্পলাইন নম্বর</label><input type="tel" id="cfgHelpline"></div>
+                <div class="app-field"><label for="cfgWhatsapp">WhatsApp সাপোর্ট নম্বর</label><input type="tel" id="cfgWhatsapp"></div>
               </div>
-
               <div class="app-field-row">
-                <div class="app-field">
-                  <label for="cfgEmail">অফিসিয়াল ইমেইল</label>
-                  <input type="email" id="cfgEmail" placeholder="activeplus.coaching@gmail.com">
-                </div>
-                <div class="app-field">
-                  <label for="cfgAddress">ক্যাম্পাস / অফিসের ঠিকানা</label>
-                  <input type="text" id="cfgAddress" placeholder="দিনাজপুর সদর, দিনাজপুর">
-                </div>
+                <div class="app-field"><label for="cfgEmail">অফিসিয়াল ইমেইল</label><input type="email" id="cfgEmail"></div>
+                <div class="app-field"><label for="cfgAddress">ক্যাম্পাস / অফিসের ঠিকানা</label><input type="text" id="cfgAddress"></div>
               </div>
             </div>
           </article>
-
-          <!-- Card 5: Visual Theme & Appearance Override -->
           <article class="admin-card">
-            <header class="admin-card-head">
-              <div><p class="eyebrow">Visual Appearance</p><h2>ভিজ্যুয়াল থিম ও পরিবেশ নিয়ন্ত্রণ</h2></div>
-            </header>
+            <header class="admin-card-head"><div><p class="eyebrow">Class Management</p><h2>চলমান ক্লাস</h2></div><span class="classes-count" id="classesCount"></span></header>
+            <div class="class-list" id="classList"></div>
+          </article>
+          <article class="admin-card">
+            <header class="admin-card-head"><div><p class="eyebrow">Save</p><h2>সংরক্ষণ</h2></div></header>
             <div class="app-setting-group">
-              <div class="app-field">
-                <label for="cfgThemeMode">থিম মোড নির্বাচন করুন</label>
-                <select id="cfgThemeMode">
-                  <option value="auto">স্বয়ংক্রিয় (সময় ও আবহাওয়া অনুযায়ী পরিবর্তনশীল)</option>
-                  <option value="morning">সর্বদা সকাল থিম (Fresh Morning Mood)</option>
-                  <option value="day">সর্বদা দুপুর/দিন থিম (Clear Daylight Mood)</option>
-                  <option value="evening">সর্বদা সন্ধ্যা থিম (Sunset Glow Mood)</option>
-                  <option value="night">সর্বদা রাত থিম (Soft Moonlight Mood)</option>
-                </select>
-                <small style="display:block;margin-top:4px;color:var(--muted);font-size:11px;">
-                  অটো মোডে সকাল, দুপুর, সন্ধ্যা ও রাতের সাথে অ্যাপের অ্যাম্বিয়েন্ট লাইটিং নিজে থেকেই পরিবর্তিত হবে।
-                </small>
-              </div>
+              <p class="finance-hint">ব্র্যান্ডিং তথ্য সংরক্ষণ করুন।</p>
+              <button class="admin-btn primary" type="button" id="btnSaveAppSettings">সেটিংস সংরক্ষণ করুন</button>
             </div>
           </article>
-
-          <!-- Card 6: Actions & Database Sync -->
-          <article class="admin-card">
-            <header class="admin-card-head">
-              <div><p class="eyebrow">Save & Sync</p><h2>সংরক্ষণ ও তাৎক্ষণিক প্রয়োগ</h2></div>
-            </header>
-            <div class="app-setting-group">
-              <p style="font-size:12px;color:var(--muted);line-height:1.6;">
-                সংরক্ষণ বাটনে ক্লিক করার সাথে সাথে শিক্ষার্থী অ্যাপে নতুন নিয়ম ও তথ্য রিয়েলটাইমে কার্যকর হবে।
-              </p>
-              <div class="app-action-buttons">
-                <button class="admin-btn primary" type="button" id="btnSaveAppSettings">
-                  <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-check-circle"></use></svg>
-                  কনফিগারেশন সেভ করুন
-                </button>
-                <button class="admin-btn ghost" type="button" id="btnResetAppSettings">
-                  ডিফল্ট সেটিংসে ফিরুন
-                </button>
-                <a class="admin-btn ghost" href="index.html" target="_blank">
-                  শিক্ষার্থী অ্যাপ প্রিভিউ →
-                </a>
-              </div>
-            </div>
-          </article>
-
-          <article class="admin-card">
-          <header class="admin-card-head">
-            <div><p class="eyebrow">Class Management</p><h2>চলমান ক্লাস</h2></div>
-            <span class="classes-count" id="classesCount"></span>
-          </header>
-          <div class="class-list" id="classList"></div>
-        </article>
+        </div>
       </section>
 
-      <!-- Admin Profile -->
-      <section class="admin-view" data-view-panel="profile" aria-labelledby="adminProfileTitle">
+      data-view-panel="profile" aria-labelledby="adminProfileTitle">
         <button class="admin-more-back" type="button" data-admin-view="more">← আরও-তে ফিরুন</button>
         <div class="page-intro">
           <div><p class="eyebrow">Admin Profile</p><h1 id="adminProfileTitle">আমার প্রোফাইল</h1></div>
