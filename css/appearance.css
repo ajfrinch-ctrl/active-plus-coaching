@@ -212,3 +212,29 @@ td{color:var(--apc-text)!important;border-color:#e3e8ef!important}
   .auth-brand strong,.admin-brand strong{font-size:14px!important}
   .auth-brand small,.admin-brand small{font-size:10.5px!important}
 }
+
+
+/* === PURE WHITE THEME === */
+html,body,body::before,body::after,.app-shell,.admin-shell,.teacher-shell,.pay-shell,.auth-screen,.app-main,.admin-main,.pay-main,.pending-screen{
+  background:#ffffff!important;background-image:none!important;
+}
+.app-shell,.admin-shell,.teacher-shell,.pay-shell,.auth-screen{color:#172033!important}
+.auth-topbar,.admin-topbar,.pay-topbar,.bottom-nav,.admin-bottom,.app-bottom-nav,.bottom-navigation{
+  background:#ffffff!important;background-image:none!important;border-color:#e1e6ed!important;
+}
+.auth-card,.home-hero,.home-list-card,.quick-wrap,.teaching-board,.admin-card,.teacher-summary,.teacher-record-card,.pay-card,.payment-card,.settings-list,.modal,.admin-modal,.welcome-card,.admin-hero,.home-stat,.admin-stat-tile,.course-item,.result-row,.result-stats>div,.pending-info{
+  background:#ffffff!important;background-image:none!important;box-shadow:0 6px 20px rgba(31,45,68,.06)!important;
+}
+.home-stat,.admin-stat-tile,.result-stats>div,.result-row,.course-item,.quick-tile,.notice-strip,.detail-grid>div,.fee-balance-grid>div{
+  background:#ffffff!important;background-image:none!important;
+}
+.quick-tile-btn,.bottom-link .nav-chip,.admin-bottom-item .nav-chip,.admin-hero-icon,.tile-icon,.home-hero-icon,.home-stat-icon,.home-row-icon,.settings-icon,.help-icon,.learning-home-icon{
+  background:#f5f7fa!important;background-image:none!important;border-color:#e0e6ee!important;
+}
+input,select,textarea,.auth-panel input,.auth-panel select,.auth-panel textarea,.field input,.field select,.field textarea,.admin-card input{
+  background:#ffffff!important;
+}
+.auth-tabs,.registration-mode,.day-tabs,.finance-nav-pills,[class*="nav-pills"],.filter-tabs,.filter-bar{
+  background:#f5f7fa!important;background-image:none!important;
+}
+.modal-backdrop{background:rgba(15,23,42,.34)!important}
