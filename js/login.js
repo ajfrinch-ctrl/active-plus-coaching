@@ -177,11 +177,18 @@ async function handleLogin(event, state, onAuthenticated) {
   // Staff credentials are shared across devices through the optional online bridge.
   // Hydrate before resolving the role so a newly-created Admin can sign in on a second device.
   if (navigator.onLine && typedId) {
-    try {
-      const { hydrateStaffAccounts } = await import('./realtime-sync.js?v=20260928-1731');
-      await hydrateStaffAccounts();
-    } catch (error) {
-      console.warn('[Active Plus] staff account sync unavailable during login:', error);
+    // Never re-hydrate an existing local Admin record during a normal
+    // logout/login cycle. Logout removes only the session; the local account
+    // remains the authoritative credential on this device. Hydrate only when
+    // the device has no Admin record yet (the cross-device first-login case).
+    const hasLocalAdmin = staffAccountRecordExists('admin');
+    if (!hasLocalAdmin) {
+      try {
+        const { hydrateStaffAccounts } = await import('./realtime-sync.js?v=20260928-1731');
+        await hydrateStaffAccounts();
+      } catch (error) {
+        console.warn('[Active Plus] staff account sync unavailable during login:', error);
+      }
     }
   }
   // Staff usernames are reserved, so a match here can only be that panel.
