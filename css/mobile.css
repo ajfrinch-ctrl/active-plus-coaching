@@ -108,3 +108,45 @@ body.admin-modal-open .admin-main { overflow-y: hidden; }
 .student-topbar .auth-brand span { min-width: 0; }
 .student-topbar .auth-brand strong, .student-topbar .auth-brand small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .student-topbar .notification-button { flex: 0 0 44px; width: 44px; height: 44px; }
+
+/* Touch pull-to-refresh feedback. */
+.pull-refresh-indicator {
+  position: fixed;
+  z-index: 10000;
+  top: calc(env(safe-area-inset-top, 0px) + 8px);
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 42px;
+  padding: 0 15px;
+  color: #fff;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 999px;
+  box-shadow: 0 4px 18px rgba(0,0,0,.24);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, calc(-125% + var(--pull-distance, 0px)));
+  transition: opacity .15s ease, transform .15s ease;
+}
+.pull-refresh-indicator.is-pulling,
+.pull-refresh-indicator.is-refreshing {
+  opacity: 1;
+}
+.pull-refresh-spinner {
+  width: 15px;
+  height: 15px;
+  border: 2px solid rgba(255,255,255,.35);
+  border-top-color: currentColor;
+  border-radius: 50%;
+}
+.pull-refresh-indicator.is-ready .pull-refresh-spinner,
+.pull-refresh-indicator.is-refreshing .pull-refresh-spinner {
+  animation: pull-refresh-spin .7s linear infinite;
+}
+@keyframes pull-refresh-spin { to { transform: rotate(360deg); } }

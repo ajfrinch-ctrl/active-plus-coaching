@@ -4,7 +4,7 @@ import { teachingRepository, DEMO_TEACHER } from './teaching-data.js';
 import { isTeacherAssigned } from './teacher-assignments.js';
 import { hasStaffSession, readStaffAccount } from './staff-auth.js';
 import { enabledClasses } from './config.js';
-import { KEYS, readRaw, writeRaw } from './database.js';
+import { KEYS, readRaw, writeRaw, newId } from './database.js';
 export const EXAM_KEY = KEYS.exams;
 export const EXAM_TYPES = Object.freeze({ mcq: 'MCQ', written: 'লিখিত', short: 'সংক্ষিপ্ত উত্তর' });
 export const EXAM_STATUSES = Object.freeze({ draft: 'খসড়া', pending: 'অনুমোদনের অপেক্ষায়', rejected: 'সংশোধনের জন্য ফেরত', published: 'প্রকাশিত' });
@@ -226,13 +226,42 @@ C: সুন্দরী
 D: গরান
 উত্তর: C`;
 
-export const examTemplate = (type, sampleCount = null) => {
-  if (type === 'mcq') {
-    if (sampleCount === 30 || sampleCount === '30') return MCQ_30_SAMPLE;
-    return 'প্রশ্ন: বাংলাদেশের রাজধানী কোনটি?\nA: ঢাকা\nB: চট্টগ্রাম\nC: খুলনা\nD: রাজশাহী\nউত্তর: A\n---\nপ্রশ্ন: ৫ + ৩ = কত?\nA: ৬\nB: ৭\nC: ৮\nD: ৯\nউত্তর: C';
-  }
-  return 'প্রশ্ন: পরিবেশ রক্ষায় গাছের গুরুত্ব লেখো।\nনম্বর: ৫\n---\nপ্রশ্ন: পানি দূষণ রোধের তিনটি উপায় লেখো।\nনম্বর: ৩';
-};
+export const MCQ_SAMPLE_TEMPLATES = Object.freeze([
+  ['বাংলা — সাহিত্য', 'প্রশ্ন: রবীন্দ্রনাথ ঠাকুর কোন গ্রন্থের জন্য নোবেল পুরস্কার পান?\nA: গীতাঞ্জলি\nB: সোনার তরী\nC: বলাকা\nD: মানসী\nউত্তর: A'],
+  ['বাংলা — ব্যাকরণ', 'প্রশ্ন: “বিদ্যালয়” শব্দের সন্ধিবিচ্ছেদ কোনটি?\nA: বিদ্যা + আলয়\nB: বিদ্য + আলয়\nC: বিদ্যা + লয়\nD: বিদ + আলয়\nউত্তর: A'],
+  ['English — Grammar', 'প্রশ্ন: Choose the correct sentence.\nA: He go to school.\nB: He goes to school.\nC: He going school.\nD: He gone school.\nউত্তর: B'],
+  ['English — Vocabulary', 'প্রশ্ন: What is the synonym of “rapid”?\nA: Slow\nB: Weak\nC: Fast\nD: Late\nউত্তর: C'],
+  ['গণিত — মৌলিক', 'প্রশ্ন: ১২ × ৮ = কত?\nA: ৮৬\nB: ৯৬\nC: ১০৬\nD: ১১৬\nউত্তর: B'],
+  ['গণিত — ভগ্নাংশ', 'প্রশ্ন: ১/২ + ১/৪ = কত?\nA: ১/৪\nB: ২/৪\nC: ৩/৪\nD: ৪/৪\nউত্তর: C'],
+  ['গণিত — শতকরা', 'প্রশ্ন: ২০০-এর ২৫% কত?\nA: ২৫\nB: ৪০\nC: ৫০\nD: ৭৫\nউত্তর: C'],
+  ['গণিত — বীজগণিত', 'প্রশ্ন: x + ৭ = ১২ হলে x-এর মান কত?\nA: ৩\nB: ৪\nC: ৫\nD: ৬\nউত্তর: C'],
+  ['বিজ্ঞান — পদার্থ', 'প্রশ্ন: বলের SI একক কোনটি?\nA: জুল\nB: নিউটন\nC: ওয়াট\nD: প্যাসকেল\nউত্তর: B'],
+  ['বিজ্ঞান — রসায়ন', 'প্রশ্ন: পানির রাসায়নিক সংকেত কোনটি?\nA: CO₂\nB: O₂\nC: H₂O\nD: NaCl\nউত্তর: C'],
+  ['বিজ্ঞান — জীববিজ্ঞান', 'প্রশ্ন: উদ্ভিদের খাদ্য তৈরির প্রধান প্রক্রিয়া কোনটি?\nA: শ্বসন\nB: সালোকসংশ্লেষণ\nC: বাষ্পীভবন\nD: পরাগায়ন\nউত্তর: B'],
+  ['বিজ্ঞান — মানবদেহ', 'প্রশ্ন: মানুষের হৃদপিণ্ডে কয়টি প্রকোষ্ঠ থাকে?\nA: ২\nB: ৩\nC: ৪\nD: ৫\nউত্তর: C'],
+  ['বাংলাদেশ — মুক্তিযুদ্ধ', 'প্রশ্ন: বাংলাদেশের স্বাধীনতা দিবস কবে?\nA: ২১ ফেব্রুয়ারি\nB: ২৬ মার্চ\nC: ১৬ ডিসেম্বর\nD: ১৭ এপ্রিল\nউত্তর: B'],
+  ['বাংলাদেশ — বিজয়', 'প্রশ্ন: বাংলাদেশের বিজয় দিবস কবে?\nA: ২৬ মার্চ\nB: ১৫ আগস্ট\nC: ১৬ ডিসেম্বর\nD: ২১ ফেব্রুয়ারি\nউত্তর: C'],
+  ['বাংলাদেশ — ভূগোল', 'প্রশ্ন: বাংলাদেশের দীর্ঘতম সমুদ্রসৈকত কোথায়?\nA: কুয়াকাটা\nB: কক্সবাজার\nC: পতেঙ্গা\nD: সেন্ট মার্টিন\nউত্তর: B'],
+  ['বাংলাদেশ — সংবিধান', 'প্রশ্ন: বাংলাদেশের সংবিধান কার্যকর হয় কবে?\nA: ২৬ মার্চ ১৯৭১\nB: ১৬ ডিসেম্বর ১৯৭১\nC: ৪ নভেম্বর ১৯৭২\nD: ১৬ ডিসেম্বর ১৯৭২\nউত্তর: D'],
+  ['বিশ্ব — ভূগোল', 'প্রশ্ন: পৃথিবীর বৃহত্তম মহাদেশ কোনটি?\nA: আফ্রিকা\nB: ইউরোপ\nC: এশিয়া\nD: অস্ট্রেলিয়া\nউত্তর: C'],
+  ['বিশ্ব — মহাসাগর', 'প্রশ্ন: পৃথিবীর বৃহত্তম মহাসাগর কোনটি?\nA: আটলান্টিক\nB: ভারত\nC: প্রশান্ত\nD: আর্কটিক\nউত্তর: C'],
+  ['ICT — কম্পিউটার', 'প্রশ্ন: CPU-এর পূর্ণরূপ কী?\nA: Central Processing Unit\nB: Computer Primary Unit\nC: Central Program Utility\nD: Control Processing User\nউত্তর: A'],
+  ['ICT — ইন্টারনেট', 'প্রশ্ন: WWW-এর পূর্ণরূপ কী?\nA: World Wide Web\nB: World Web Window\nC: Wide World Wire\nD: Web World Work\nউত্তর: A'],
+  ['ICT — নিরাপত্তা', 'প্রশ্ন: শক্তিশালী পাসওয়ার্ডের বৈশিষ্ট্য কোনটি?\nA: শুধু নাম\nB: শুধু জন্মতারিখ\nC: বিভিন্ন ধরনের অক্ষর ও সংখ্যা\nD: শুধু 123456\nউত্তর: C'],
+  ['সাধারণ জ্ঞান — বিজ্ঞান', 'প্রশ্ন: সূর্যের সবচেয়ে কাছের গ্রহ কোনটি?\nA: শুক্র\nB: পৃথিবী\nC: বুধ\nD: মঙ্গল\nউত্তর: C'],
+  ['সাধারণ জ্ঞান — মহাকাশ', 'প্রশ্ন: পৃথিবীর একমাত্র প্রাকৃতিক উপগ্রহ কোনটি?\nA: সূর্য\nB: চাঁদ\nC: মঙ্গল\nD: শুক্র\nউত্তর: B'],
+  ['ভূগোল — জলবায়ু', 'প্রশ্ন: বৃষ্টিপাত পরিমাপের যন্ত্র কোনটি?\nA: ব্যারোমিটার\nB: রেইন গেজ\nC: থার্মোমিটার\nD: অ্যানিমোমিটার\nউত্তর: B'],
+  ['ইতিহাস — প্রাচীন', 'প্রশ্ন: মিশরের বিখ্যাত প্রাচীন স্থাপনা কোনটি?\nA: পিরামিড\nB: কলোসিয়াম\nC: তাজমহল\nD: বিগ বেন\nউত্তর: A'],
+  ['নৈতিক শিক্ষা', 'প্রশ্ন: সত্য কথা বলার বিপরীত আচরণ কোনটি?\nA: সততা\nB: ন্যায়পরায়ণতা\nC: মিথ্যাচার\nD: সহমর্মিতা\nউত্তর: C'],
+  ['ব্যবসায় শিক্ষা', 'প্রশ্ন: সম্পদের মালিকানার প্রমাণ হিসেবে কোনটি ব্যবহৃত হয়?\nA: সম্পদ দলিল\nB: উপস্থিতি খাতা\nC: রুটিন\nD: বিজ্ঞাপন\nউত্তর: A'],
+  ['অর্থনীতি', 'প্রশ্ন: চাহিদা সাধারণত কোন বিষয়ের সঙ্গে সম্পর্কিত?\nA: ক্রেতার ইচ্ছা ও ক্রয়ক্ষমতা\nB: শুধু উৎপাদন\nC: শুধু কর\nD: শুধু রপ্তানি\nউত্তর: A'],
+  ['জীবনদক্ষতা', 'প্রশ্ন: পরীক্ষার প্রস্তুতিতে কোন পদ্ধতিটি বেশি সহায়ক?\nA: শেষ রাতে সব পড়া\nB: নিয়মিত পরিকল্পিত অনুশীলন\nC: পড়া বাদ দেওয়া\nD: শুধু অনুমান করা\nউত্তর: B'],
+  ['পরিবেশ', 'প্রশ্ন: পরিবেশ রক্ষায় কোন কাজটি সহায়ক?\nA: বৃক্ষরোপণ\nB: প্লাস্টিক পোড়ানো\nC: নদীতে বর্জ্য ফেলা\nD: অযথা পানি অপচয়\nউত্তর: A']
+]);
+export const examTemplate = type => type === 'mcq'
+  ? 'প্রশ্ন: বাংলাদেশের রাজধানী কোনটি?\nA: ঢাকা\nB: চট্টগ্রাম\nC: খুলনা\nD: রাজশাহী\nউত্তর: A\n---\nপ্রশ্ন: ৫ + ৩ = কত?\nA: ৬\nB: ৭\nC: ৮\nD: ৯\nউত্তর: C'
+  : 'প্রশ্ন: পরিবেশ রক্ষায় গাছের গুরুত্ব লেখো।\nনম্বর: ৫\n---\nপ্রশ্ন: পানি দূষণ রোধের তিনটি উপায় লেখো।\nনম্বর: ৩';
+
 export function parseQuestions(text, type) {
   if (!Object.hasOwn(EXAM_TYPES, type)) fail('পরীক্ষার ধরন নির্বাচন করুন।');
   if (!String(text).trim() || String(text).length > 150000) fail('প্রশ্নের টেমপ্লেট পূরণ করুন (সর্বোচ্চ ১৫০,০০০ অক্ষর)।');
@@ -408,7 +437,7 @@ export const examRepository = {
     const db = await mutate(db => {
       const old = input.id ? examById(db, input.id) : null;
       if (old) { teacherOwns(old, actor); if (old.status === 'published' || db.attempts.some(a => a.examId === old.id)) fail('প্রকাশিত/চালু পরীক্ষার প্রশ্ন বদলানো যাবে না।'); }
-      const exam = { ...fields, id: old?.id || `EX-${crypto.randomUUID()}`, teacherId: actor.id, teacherName, status: 'draft', reviewNote: '', createdAt: old?.createdAt || Date.now(), updatedAt: Date.now(), participants: [] };
+      const exam = { ...fields, id: old?.id || newId('E'), teacherId: actor.id, teacherName, status: 'draft', reviewNote: '', createdAt: old?.createdAt || Date.now(), updatedAt: Date.now(), participants: [] };
       if (old) db.exams[db.exams.indexOf(old)] = exam; else db.exams.unshift(exam);
     });
     return teacherExamSnapshot(db, actor);
@@ -467,7 +496,7 @@ export const examRepository = {
       if (!own.length && now > e.startAt + e.lateMinutes * 60000) fail('দেরিতে প্রবেশের সময়সীমা শেষ।');
       if (own.length && !retryEligibility(db, e, person.id, now)) fail('দ্বিতীয় সুযোগের যোগ্যতা নেই বা সময় শেষ।');
       const order = shuffled(e.questions).map(q => ({ id: q.id, options: shuffled(q.options.map(o => o.id)) }));
-      db.attempts.push({ id: `AT-${crypto.randomUUID()}`, examId, studentId: person.id, name: person.name, className: person.className, number: own.length + 1, status: 'active', startedAt: now, savedAt: now, order, answers: {} });
+      db.attempts.push({ id: newId('A'), examId, studentId: person.id, name: person.name, className: person.className, number: own.length + 1, status: 'active', startedAt: now, savedAt: now, order, answers: {} });
       if (!e.participants.some(s => s.id === person.id)) e.participants.push(person);
     });
   },
@@ -521,7 +550,7 @@ export const examRepository = {
       if (e.questions.some(q => !Object.hasOwn(questionScores, q.id) || !['string', 'number'].includes(typeof questionScores[q.id]) || !String(questionScores[q.id]).trim() || !Number.isFinite(Number(questionScores[q.id])) || round(Number(questionScores[q.id])) !== Number(questionScores[q.id]) || Number(questionScores[q.id]) < 0 || Number(questionScores[q.id]) > q.marks)) fail('প্রতিটি প্রশ্নের নম্বর শূন্য থেকে পূর্ণমানের মধ্যে দিন।');
       const score = round(e.questions.reduce((sum, q) => sum + Number(questionScores[q.id]), 0));
       let a = db.attempts.find(a => a.examId === e.id && a.studentId === person.id);
-      if (!a) { a = { id: `AT-${crypto.randomUUID()}`, examId, studentId: person.id, name: person.name, className: person.className, number: 1, startedAt: Date.now(), order: [], answers: {} }; db.attempts.push(a); }
+      if (!a) { a = { id: newId('A'), examId, studentId: person.id, name: person.name, className: person.className, number: 1, startedAt: Date.now(), order: [], answers: {} }; db.attempts.push(a); }
       const cleanScores = Object.fromEntries(e.questions.map(q => [q.id, Number(questionScores[q.id])]));
       Object.assign(a, { score, questionScores: cleanScores, status: 'submitted', finishedAt: Date.now() });
       e.absentIds = (e.absentIds || []).filter(id => id !== person.id);

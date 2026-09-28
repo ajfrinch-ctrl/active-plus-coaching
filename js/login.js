@@ -1,6 +1,6 @@
 /* Login feature: one door for everyone.
    A student signs in with username/mobile + password and lands in the student app.
-   Staff (admin, teacher, payment counter) sign in on the same form with their
+   Staff (admin, manager, teacher, payment counter) sign in on the same form with their
    reserved username + password; the session is written first, so the panel
    opens directly on arrival — no second credential prompt.
 
@@ -28,7 +28,7 @@ import { isPasswordRecord } from './password-hash.js';
 const STAFF_PANEL = Object.freeze({ admin: 'admin.html', manager: 'manager.html', teacher: 'teacher.html', payment: 'payment.html' });
 const STAFF_LABEL = Object.freeze({ admin: 'এডমিন প্যানেল', manager: 'ম্যানেজার প্যানেল', teacher: 'শিক্ষক প্যানেল', payment: 'পেমেন্ট রিসিভ প্যানেল' });
 const STAFF_ID_HINT = 'স্টাফ লগইন';
-const DEFAULT_ID_HINT = 'শিক্ষার্থী: ইউজারনেম বা মোবাইল নম্বর ও পাসওয়ার্ড। শিক্ষক, এডমিন ও পেমেন্ট কাউন্টার: নিজের ইউজারনেম ও পাসওয়ার্ড দিয়ে এখানেই লগইন করুন।';
+const DEFAULT_ID_HINT = 'শিক্ষার্থী: ইউজারনেম বা মোবাইল নম্বর ও পাসওয়ার্ড। এডমিন, ম্যানেজার, শিক্ষক ও পেমেন্ট কাউন্টার: নিজের ইউজারনেম ও পাসওয়ার্ড দিয়ে এখানেই লগইন করুন।';
 
 export function staffRoleFor(value) {
   const typed = normalizeStaffUsername(value);
@@ -174,6 +174,23 @@ async function handleLogin(event, state, onAuthenticated) {
   const typedId = String(form.get('mobile') || '').trim();
   const pin = String(form.get('pin') || '');
 
+  // Staff credentials are shared across devices through the optional online bridge.
+  // Hydrate before resolving the role so a newly-created Admin can sign in on a second device.
+  if (navigator.onLine && typedId) {
+    // Never re-hydrate an existing local Admin record during a normal
+    // logout/login cycle. Logout removes only the session; the local account
+    // remains the authoritative credential on this device. Hydrate only when
+    // the device has no Admin record yet (the cross-device first-login case).
+    const hasLocalAdmin = staffAccountRecordExists('admin');
+    if (!hasLocalAdmin) {
+      try {
+        const { hydrateStaffAccounts } = await import('./realtime-sync.js?v=20260928-1731');
+        await hydrateStaffAccounts();
+      } catch (error) {
+        console.warn('[Active Plus] staff account sync unavailable during login:', error);
+      }
+    }
+  }
   // Staff usernames are reserved, so a match here can only be that panel.
   const staffRole = await resolveStaffRoleByUsername(typedId);
   if (staffRole) {
@@ -307,6 +324,19 @@ async function lockFirstAdminSetup(reason = '') {
 async function initFirstAdminSetup() {
   const panel = $('#firstAdminPanel');
   if (!panel) return;                       // page carries no first-use form
+
+  // On a new device the Admin record may exist only in Firebase at first.
+  // Hydrate staff accounts before deciding whether the one-time setup is
+  // available, so a real Admin account is never shown as "Create Admin".
+  if (navigator.onLine) {
+    try {
+      const { hydrateStaffAccounts } = await import('./realtime-sync.js?v=20260928-1731');
+      await hydrateStaffAccounts();
+    } catch (error) {
+      console.warn('[Active Plus] staff account sync unavailable during first-use check:', error);
+    }
+  }
+
   if (await staffAccountRecordExists('admin')) {
     await lockFirstAdminSetup();             // Admin Count >= 1 → never offered
     return;

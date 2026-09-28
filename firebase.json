@@ -1,5 +1,6 @@
 {
   "firestore": { "rules": "firestore.rules" },
+  "database": { "rules": "database.rules.json" },
   "functions": [{ "source": "functions", "codebase": "active-plus", "runtime": "nodejs22" }],
   "emulators": {
     "auth": { "port": 9099 },

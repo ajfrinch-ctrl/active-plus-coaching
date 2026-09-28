@@ -14,7 +14,7 @@ import { toBanglaNumber } from './ui.js';
 import { classCodes, feeCategories, paymentMethods } from './admin-data.js';
 import { loadAppConfig, saveAppConfig, loadAccount, saveAccount } from './storage.js';
 import { loadRoster, saveRoster, syncAccountStatus, loadNotices, loadRoutine } from './office-data.js';
-import { authenticateStaff, changeStaffPassword, updateStaffProfile, ensureBootstrapStaffAccounts, readStaffAccount, staffAccountRecordExists, saveStaffSession, hasStaffSession, clearStaffSession, goToLoginPage, STAFF_SESSION_RULES, STAFF_KEYS_LIST } from './staff-auth.js';
+import { changeStaffPassword, updateStaffProfile, ensureBootstrapStaffAccounts, readStaffAccount, hasStaffSession, clearStaffSession, goToLoginPage, STAFF_SESSION_RULES, STAFF_KEYS_LIST } from './staff-auth.js';
 import { openStaffPasswordDialog } from './staff-password-dialog.js';
 import { financeRepository, monthLabel, dateLabel, searchStudents, studentFeeSummary, newestTransactions, stampTransaction, isFinalizedTransaction, TRANSACTIONS_KEY } from './finance-data.js';
 import { newId, KEYS, readJSON, writeJSON } from './database.js';
@@ -116,8 +116,7 @@ function showBootstrapCredentials(accounts) {
   $('#bootstrapCredentialsBackdrop').hidden = false;
 }
 
-async function enterPanel({ bootstrapCredentials = [] } = {}) {
-  $('#adminEntry').hidden = true;
+async function enterPanel() {
   $('#adminShell').hidden = false;
   // The capability set follows the role stored in the account record — the
   // existing role system is never modified, only read.
@@ -138,8 +137,7 @@ async function enterPanel({ bootstrapCredentials = [] } = {}) {
   const route = routeFromHash(window.location.hash);
   setView(route && access.allowsView(route) ? route : state.activeView);
   toast('এডমিন প্যানেলে সফলভাবে প্রবেশ করা হয়েছে');
-  if (bootstrapCredentials.length) showBootstrapCredentials(bootstrapCredentials);
-  else readStaffAccount('admin')
+  readStaffAccount('admin')
     .then(account => ensureBootstrapStaffAccounts(account?.username || 'admin.apc'))
     .then(result => { if (result.ok && result.accounts.length) showBootstrapCredentials(result.accounts); });
 }
@@ -148,8 +146,6 @@ function exitPanel() {
   clearStaffSession('admin');
   // Logout always returns to the shared login page, never to a panel entry form.
   $('#adminShell').hidden = true;
-  const pin = $('#adminLoginPin');
-  if (pin) pin.value = '';
   goToLoginPage();
 }
 
@@ -168,6 +164,7 @@ function setView(view) {
   if (!access.allowsView(target)) return false;
   if (!$$('.admin-view').some(panel => panel.dataset.viewPanel === target)) return false;
   state.activeView = target;
+  $('#adminMain')?.classList.toggle('is-staff-view', target === 'staff');
   $$('.admin-view').forEach(panel => panel.classList.toggle('active', panel.dataset.viewPanel === target));
   $$('.admin-bottom-item').forEach(item => {
     const isMore = item.dataset.adminView === 'more' && moreViews.has(target);
@@ -332,54 +329,73 @@ function visibleStudents() {
   });
 }
 
+function renderStudentOverviewStats() {
+  const host = $('#studentOverviewStats');
+  if (!host) return;
+  const total = state.students.length;
+  const approved = state.students.filter(s => s.status === 'approved').length;
+  const pending = state.students.filter(s => s.status === 'pending').length;
+  const rejected = state.students.filter(s => s.status === 'rejected').length;
+  const classes = new Set(state.students.map(s => s.className).filter(Boolean)).size;
+  host.innerHTML = [
+    ['মোট শিক্ষার্থী', total, 'users'],
+    ['অনুমোদিত', approved, 'check-circle'],
+    ['অপেক্ষমাণ', pending, 'clipboard'],
+    ['শ্রেণি', classes, 'book']
+  ].map(([label, value, iconName]) => `
+    <div class="student-summary-card">
+      <span class="student-summary-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-${iconName}"></use></svg></span>
+      <div><small>${label}</small><strong>${bn(value)}</strong></div>
+    </div>`).join('');
+}
+
 function renderStudents() {
+  renderStudentOverviewStats();
   const list = visibleStudents();
   const clearBtn = $('#studentSearchClear');
   const countBadge = $('#studentCountBadge');
 
-  if (clearBtn) {
-    clearBtn.hidden = !state.query.trim();
-  }
+  if (clearBtn) clearBtn.hidden = !state.query.trim();
 
   if (countBadge) {
     const count = list.length;
-    if (state.query.trim()) {
-      countBadge.textContent = count > 0
-        ? `${bn(count)} জন শিক্ষার্থী পাওয়া গেছে`
-        : 'কোনো ফলাফল মেলেনি';
-    } else {
-      countBadge.textContent = `${bn(count)} জন শিক্ষার্থী`;
-    }
+    countBadge.textContent = state.query.trim()
+      ? (count > 0 ? `${bn(count)} জন শিক্ষার্থী পাওয়া গেছে` : 'কোনো ফলাফল মেলেনি')
+      : `${bn(count)} জন শিক্ষার্থী`;
   }
 
   $('#studentList').innerHTML = list.length
-    ? list.map(student => `
-      <article class="student-row student-row-locked">
-        <span class="student-avatar locked" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-lock"></use></svg></span>
-        <div class="student-copy">
-          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-            <strong class="student-name-hidden">গোপন রাখা হয়েছে</strong>
-            <span class="audit-id-badge">ID: ${student.id}</span>
-          </div>
-          <small>ব্যক্তিগত তথ্য লুকানো — দেখতে "তথ্য দেখুন" চাপুন</small>
-        </div>
-        <div class="student-side">
-          <span class="badge ${statusMeta[student.status].className}">${statusMeta[student.status].label}</span>
-          <div class="student-actions">
-            <button class="mini-btn" type="button" data-action="view" data-id="${student.id}">তথ্য দেখুন</button>
-            <button class="mini-btn" type="button" data-action="edit" data-id="${student.id}">সম্পাদনা</button>
-            <button class="mini-btn" type="button" data-action="reset-pin" data-id="${student.id}">পাসওয়ার্ড রিসেট</button>
-          </div>
-        </div>
-      </article>`).join('')
+    ? list.map(student => {
+        const status = statusMeta[student.status] || statusMeta.pending;
+        const mobile = student.mobile ? bn(student.mobile) : 'মোবাইল নেই';
+        const group = student.group ? ` • ${escapeHtml(student.group)}` : '';
+        return `
+          <article class="student-row student-row-redesigned">
+            <div class="student-row-main">
+              <span class="student-avatar" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-users"></use></svg></span>
+              <div class="student-copy">
+                <div class="student-title-line">
+                  <strong>${escapeHtml(student.name || 'নাম নেই')}</strong>
+                  <span class="badge ${status.className}">${status.label}</span>
+                </div>
+                <div class="student-meta-line">
+                  <span class="audit-id-badge">ID: ${escapeHtml(student.id)}</span>
+                  <span>${escapeHtml(student.className || 'শ্রেণি নেই')}${group}</span>
+                </div>
+                <small><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-phone"></use></svg>${escapeHtml(mobile)}</small>
+              </div>
+            </div>
+            <div class="student-actions">
+              <button class="mini-btn primary" type="button" data-action="view" data-id="${escapeHtml(student.id)}">তথ্য দেখুন</button>
+              <button class="mini-btn" type="button" data-action="edit" data-id="${escapeHtml(student.id)}">সম্পাদনা</button>
+              <button class="mini-btn" type="button" data-action="reset-pin" data-id="${escapeHtml(student.id)}">পাসওয়ার্ড রিসেট</button>
+            </div>
+          </article>`;
+      }).join('')
     : state.query.trim()
-      ? `<div class="admin-empty-search">
-          <p>🔍 "<strong>${escapeHtml(state.query.trim())}</strong>" দিয়ে কোনো শিক্ষার্থী পাওয়া যায়নি</p>
-          <small>নামের বানান বা ১১ ডিজিটের মোবাইল নম্বর (যেমন: ০১৭... বা 017...) দিয়ে খুঁজুন। অমিল রেকর্ড স্বয়ংক্রিয়ভাবে লুকানো রয়েছে (অটো হাইড)।</small>
-        </div>`
+      ? `<div class="admin-empty-search"><p>🔍 "${escapeHtml(state.query.trim())}" দিয়ে কোনো শিক্ষার্থী পাওয়া যায়নি</p><small>Student ID, নাম, পিতার নাম, শ্রেণি বা মোবাইল নম্বর দিয়ে খুঁজে দেখুন।</small></div>`
       : '<p class="admin-empty">কোনো শিক্ষার্থী পাওয়া যায়নি।</p>';
 }
-
 function findStudent(id) {
   return state.students.find(student => student.id === id);
 }
@@ -846,11 +862,9 @@ async function collectFee(event) {
     return;
   }
   const now = new Date();
-  const token = crypto.randomUUID();
-  const prefix = `${String(now.getFullYear()).slice(-2)}${String(now.getMonth() + 1).padStart(2, '0')}`;
   const tx = stampTransaction({
-    id: `TRX-${token}`,
-    receiptNo: `REC-${prefix}-${now.getTime().toString(36).toUpperCase()}-${token.slice(0, 8).toUpperCase()}`,
+    id: newId('T'),
+    receiptNo: newId('R'),
     studentId: student.id,
     studentName: student.name,
     className: student.className,
@@ -935,125 +949,28 @@ function routineTeacherNames() {
   return [...new Set(Object.values(state.routine).flatMap(info => info.classes.map(cls => cls.teacher).filter(Boolean)))];
 }
 
-function renderTeacherRegistrationControl(cfg = state.appConfig || loadAppConfig()) {
-  const allowed = cfg.allowTeacherRegistration !== false;
-  if ($('#cfgTeacherRegistration')) $('#cfgTeacherRegistration').checked = allowed;
-  if ($('#teacherRegBadge')) {
-    $('#teacherRegBadge').textContent = allowed ? 'খোলা আছে' : 'বন্ধ আছে';
-    $('#teacherRegBadge').className = `badge ${allowed ? 'badge-approved' : 'badge-rejected'}`;
-  }
-  if ($('#teacherRegList')) {
-    const teachers = routineTeacherNames();
-    $('#teacherRegList').innerHTML = teachers.length
-      ? teachers.map(teacher => `<span class="teacher-chip">${escapeHtml(teacher)}</span>`).join('')
-      : '<span class="finance-hint">রুটিনে এখনও কোনো শিক্ষক যোগ করা হয়নি।</span>';
-  }
-}
-
 function renderAppManagement() {
   const cfg = state.appConfig || loadAppConfig();
-
-  // Status & Access
-  if ($('#cfgMaintenanceMode')) $('#cfgMaintenanceMode').checked = !!cfg.maintenanceMode;
-  if ($('#cfgMaintenanceMsg')) $('#cfgMaintenanceMsg').value = cfg.maintenanceMessage || '';
-  if ($('#cfgAllowRegistration')) $('#cfgAllowRegistration').checked = cfg.allowRegistration !== false;
-  if ($('#cfgSkipSecurity')) $('#cfgSkipSecurity').checked = cfg.skipSecurityCheck !== false;
-  renderTeacherRegistrationControl(cfg);
-  if ($('#appStatusLiveBadge')) {
-    $('#appStatusLiveBadge').textContent = cfg.maintenanceMode ? 'রক্ষণাবেক্ষণ মোড' : 'অ্যাপ লাইভ';
-    $('#appStatusLiveBadge').className = `badge ${cfg.maintenanceMode ? 'badge-rejected' : 'badge-approved'}`;
-  }
-
-  // Broadcast
-  if ($('#cfgBroadcastAlert')) $('#cfgBroadcastAlert').checked = cfg.broadcastAlert !== false;
-  if ($('#cfgBroadcastMsg')) $('#cfgBroadcastMsg').value = cfg.broadcastMessage || '';
-  if ($('#cfgBroadcastTone')) $('#cfgBroadcastTone').value = cfg.broadcastTone || 'green';
-  if ($('#cfgBroadcastBadge')) {
-    $('#cfgBroadcastBadge').textContent = cfg.broadcastAlert !== false ? 'সক্রিয়' : 'নিষ্ক্রিয়';
-    $('#cfgBroadcastBadge').className = `badge ${cfg.broadcastAlert !== false ? 'badge-approved' : 'badge-pending'}`;
-  }
-
-  // Modules
-  if ($('#cfgModRoutine')) $('#cfgModRoutine').checked = cfg.modules?.routine !== false;
-  if ($('#cfgModCourses')) $('#cfgModCourses').checked = cfg.modules?.courses !== false;
-  if ($('#cfgModResults')) $('#cfgModResults').checked = cfg.modules?.results !== false;
-  if ($('#cfgModInstall')) $('#cfgModInstall').checked = cfg.modules?.installPrompt !== false;
-
-  // Branding & Contacts
   if ($('#cfgTagline')) $('#cfgTagline').value = cfg.tagline || 'শিখতে থাকো, এগিয়ে যাও';
   if ($('#cfgHelpline')) $('#cfgHelpline').value = cfg.helplineMobile || ADMIN_ID || '01819486966';
   if ($('#cfgWhatsapp')) $('#cfgWhatsapp').value = cfg.whatsappNumber || ADMIN_ID || '01819486966';
   if ($('#cfgEmail')) $('#cfgEmail').value = cfg.officialEmail || 'activeplus.coaching@gmail.com';
   if ($('#cfgAddress')) $('#cfgAddress').value = cfg.campusAddress || 'দিনাজপুর সদর, দিনাজপুর';
-
-  // Theme Mode
-  if ($('#cfgThemeMode')) $('#cfgThemeMode').value = cfg.themeMode || 'auto';
 }
 
 function saveAppSettingsFromForm() {
-  const maintenanceMode = $('#cfgMaintenanceMode')?.checked || false;
-  const maintenanceMessage = $('#cfgMaintenanceMsg')?.value.trim() || DEFAULT_APP_SETTINGS.maintenanceMessage;
-  const allowRegistration = $('#cfgAllowRegistration')?.checked !== false;
-  const allowTeacherRegistration = $('#cfgTeacherRegistration')?.checked !== false;
-  const skipSecurityCheck = $('#cfgSkipSecurity')?.checked !== false;
-
-  const broadcastAlert = $('#cfgBroadcastAlert')?.checked !== false;
-  const broadcastMessage = $('#cfgBroadcastMsg')?.value.trim() || DEFAULT_APP_SETTINGS.broadcastMessage;
-  const broadcastTone = $('#cfgBroadcastTone')?.value || 'green';
-
-  const routine = $('#cfgModRoutine')?.checked !== false;
-  const courses = $('#cfgModCourses')?.checked !== false;
-  const results = $('#cfgModResults')?.checked !== false;
-  const installPrompt = $('#cfgModInstall')?.checked !== false;
-
-  const tagline = $('#cfgTagline')?.value.trim() || DEFAULT_APP_SETTINGS.tagline;
-  const helplineMobile = $('#cfgHelpline')?.value.trim() || DEFAULT_APP_SETTINGS.helplineMobile;
-  const whatsappNumber = $('#cfgWhatsapp')?.value.trim() || DEFAULT_APP_SETTINGS.whatsappNumber;
-  const officialEmail = $('#cfgEmail')?.value.trim() || DEFAULT_APP_SETTINGS.officialEmail;
-  const campusAddress = $('#cfgAddress')?.value.trim() || DEFAULT_APP_SETTINGS.campusAddress;
-
-  const themeMode = $('#cfgThemeMode')?.value || 'auto';
-
+  const current = state.appConfig || loadAppConfig();
   state.appConfig = {
-    maintenanceMode,
-    maintenanceMessage,
-    allowRegistration,
-    allowTeacherRegistration,
-    skipSecurityCheck,
-    broadcastAlert,
-    broadcastMessage,
-    broadcastTone,
-    tagline,
-    helplineMobile,
-    whatsappNumber,
-    officialEmail,
-    campusAddress,
-    themeMode,
-    modules: {
-      routine,
-      courses,
-      results,
-      installPrompt
-    }
-  };
-
-  saveAppConfig(state.appConfig);
-  renderAppManagement();
-  renderDashboard();
-  toast(allowTeacherRegistration
-    ? 'সেটিংস সংরক্ষিত — শিক্ষক রেজিস্ট্রেশন ও প্যানেল প্রবেশ খোলা আছে'
-    : 'সেটিংস সংরক্ষিত — শিক্ষক রেজিস্ট্রেশন ও প্যানেল প্রবেশ বন্ধ করা হয়েছে');
-}
-
-function resetAppSettingsToDefault() {
-  state.appConfig = {
-    ...DEFAULT_APP_SETTINGS,
-    modules: { ...DEFAULT_APP_SETTINGS.modules }
+    ...current,
+    tagline: $('#cfgTagline')?.value.trim() || current.tagline || DEFAULT_APP_SETTINGS.tagline,
+    helplineMobile: $('#cfgHelpline')?.value.trim() || current.helplineMobile || DEFAULT_APP_SETTINGS.helplineMobile,
+    whatsappNumber: $('#cfgWhatsapp')?.value.trim() || current.whatsappNumber || DEFAULT_APP_SETTINGS.whatsappNumber,
+    officialEmail: $('#cfgEmail')?.value.trim() || current.officialEmail || DEFAULT_APP_SETTINGS.officialEmail,
+    campusAddress: $('#cfgAddress')?.value.trim() || current.campusAddress || DEFAULT_APP_SETTINGS.campusAddress
   };
   saveAppConfig(state.appConfig);
   renderAppManagement();
-  renderDashboard();
-  toast('শিক্ষার্থী অ্যাপের ডিফল্ট সেটিংস সফলভাবে প্রয়োগ করা হয়েছে');
+  toast('ব্র্যান্ডিং ও যোগাযোগের তথ্য সংরক্ষিত হয়েছে');
 }
 
 /* ---------- Roles & Permissions ----------
@@ -1546,45 +1463,6 @@ function onStaffChanged() {
 /* ---------- Wiring ---------- */
 
 $('#btnSaveAppSettings')?.addEventListener('click', saveAppSettingsFromForm);
-$('#btnSaveTopAppSettings')?.addEventListener('click', saveAppSettingsFromForm);
-$('#btnResetAppSettings')?.addEventListener('click', resetAppSettingsToDefault);
-
-$('#cfgMaintenanceMode')?.addEventListener('change', event => {
-  const isMaint = event.target.checked;
-  if ($('#appStatusLiveBadge')) {
-    $('#appStatusLiveBadge').textContent = isMaint ? 'রক্ষণাবেক্ষণ মোড' : 'অ্যাপ লাইভ';
-    $('#appStatusLiveBadge').className = `badge ${isMaint ? 'badge-rejected' : 'badge-approved'}`;
-  }
-});
-
-$('#cfgBroadcastAlert')?.addEventListener('change', event => {
-  const isAlert = event.target.checked;
-  if ($('#cfgBroadcastBadge')) {
-    $('#cfgBroadcastBadge').textContent = isAlert ? 'সক্রিয়' : 'নিষ্ক্রিয়';
-    $('#cfgBroadcastBadge').className = `badge ${isAlert ? 'badge-approved' : 'badge-pending'}`;
-  }
-});
-
-$('#cfgTeacherRegistration')?.addEventListener('change', event => {
-  renderTeacherRegistrationControl({ ...loadAppConfig(), allowTeacherRegistration: event.target.checked });
-});
-
-async function enterAdminPanel(remember, bootstrapCredentials = []) {
-  if (!(await saveStaffSession('admin', remember))) {
-    const box = $('#adminLoginError');
-    if (box) {
-      box.textContent = 'সেশন সংরক্ষণ করা যায়নি — ব্রাউজারের স্টোরেজ পরীক্ষা করে আবার চেষ্টা করুন।';
-      box.hidden = false;
-    }
-    return;
-  }
-  await enterPanel({ bootstrapCredentials });
-}
-
-/* The first Admin Account is created once, from the login page (index.html).
-   This panel never shows a creation form, and js/staff-auth.js refuses
-   createInitialAdmin() while an Admin record exists — so a direct call, a copied
-   URL or a hidden route cannot start the workflow a second time. */
 
 $('#bootstrapCredentialsDone')?.addEventListener('click', () => { $('#bootstrapCredentialsBackdrop').hidden = true; });
 $('#bootstrapCopyCredentials')?.addEventListener('click', async () => {
@@ -1594,41 +1472,7 @@ $('#bootstrapCopyCredentials')?.addEventListener('click', async () => {
   catch { toast('কপি করা যায়নি — তথ্যগুলো হাতে সংরক্ষণ করুন'); }
 });
 
-$('#adminLoginForm')?.addEventListener('submit', async event => {
-  event.preventDefault();
-  const username = $('#adminLoginUser')?.value || '';
-  const password = $('#adminLoginPin')?.value || '';
-  const result = await authenticateStaff('admin', username, password);
-  if (!result.ok) {
-    const box = $('#adminLoginError');
-    if (box) {
-      box.textContent = 'ইউজারনেম বা পাসওয়ার্ড সঠিক নয়।';
-      box.hidden = false;
-    }
-    return;
-  }
-  const box = $('#adminLoginError');
-  if (box) box.hidden = true;
-  const remember = $('#rememberAdmin')?.checked !== false;
-  if (result.needsSetup || result.needsPasswordChange) {
-    openStaffPasswordDialog({
-      role: 'admin',
-      mode: result.needsSetup ? 'setup' : 'change',
-      onDone: () => enterAdminPanel(remember)
-    });
-    return;
-  }
-  await enterAdminPanel(remember);
-});
 $('#adminExitButton')?.addEventListener('click', exitPanel);
-$$('[data-toggle-pin]').forEach(button => {
-  button.addEventListener('click', () => {
-    const input = $(`#${button.dataset.togglePin}`);
-    if (!input) return;
-    input.type = input.type === 'password' ? 'text' : 'password';
-  });
-});
-
 /* Bottom-bar tabs and "More" menu rows are rebuilt by the permission model
    (js/admin-panel-ui.js) and call `navigate` themselves; the markup-driven
    shortcuts below are wired once. */
@@ -1884,31 +1728,31 @@ window.addEventListener('storage', event => {
   if (!state.savingFee && (event.key === TRANSACTIONS_KEY || event.key === null)) loadFinanceTransactions();
 });
 
-// The full-profile first-run form appears only if no Admin record has ever been stored.
-// A corrupt existing record is never silently replaced by a new first owner.
+// Every staff login starts at index.html. This page only restores an existing session.
 async function initAdminEntry() {
-  const exists = await staffAccountRecordExists('admin');
-  const login = $('#adminEntry');
-  const notice = $('#adminNoAccount');
-  const form = $('#adminLoginForm');
-  if (!exists) {
-    // No Admin on this device: the one-time creation form is on the login page.
-    if (login) login.hidden = false;
-    if (notice) notice.hidden = false;
-    if (form) form.hidden = true;
-    notice?.querySelector('a')?.focus({ preventScroll: true });
-    return;
+  try {
+    if (!(await hasStaffSession('admin'))) {
+      goToLoginPage();
+      return;
+    }
+    const account = await readStaffAccount('admin');
+    if (!account) {
+      clearStaffSession('admin');
+      goToLoginPage();
+      return;
+    }
+    await enterPanel();
+  } catch (error) {
+    /* Never leave admin.html blank when a stored session/account or optional
+       panel initializer is corrupted. Clear only the invalid Admin session;
+       application data is untouched. */
+    console.error('[Active Plus] Admin panel startup failed:', error);
+    clearStaffSession('admin');
+    goToLoginPage();
   }
-  if (notice) notice.hidden = true;
-  if (form) form.hidden = false;
-  if (login) login.hidden = false;
-  const account = await readStaffAccount('admin');
-  if (!account) {
-    const box = $('#adminLoginError');
-    if (box) { box.textContent = 'Admin Account-এর সংরক্ষিত তথ্য পড়া যাচ্ছে না। নিরাপত্তার জন্য নতুন Initial Setup দেখানো হয়নি।'; box.hidden = false; }
-    return;
-  }
-  // Existing device-bound session opens the panel without asking again.
-  if (await hasStaffSession('admin')) await enterPanel();
 }
-initAdminEntry();
+void initAdminEntry().catch(error => {
+  console.error('[Active Plus] Admin entry failed:', error);
+  clearStaffSession('admin');
+  goToLoginPage();
+});

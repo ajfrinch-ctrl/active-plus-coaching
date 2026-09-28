@@ -1,3 +1,4 @@
+import { loadAppConfig } from './storage.js';
 /* Report layout engine — one measured draw-list, two identical renderers.
 
    A report is described as a small document (headings, key/value blocks,
@@ -24,7 +25,7 @@ export const PAGE = Object.freeze({ width: 794, height: 1123, margin: 44 });
 export const CONTENT = Object.freeze({
   left: 44,
   right: PAGE.width - 44,
-  top: 118,
+  top: 174,
   bottom: 1052,
   width: PAGE.width - 88
 });
@@ -150,14 +151,27 @@ function newPage(index) {
 
 /** Branded header: full title block on page 1, a compact strip afterwards. */
 function drawHeader(page, doc, logo, total) {
-  const { left, right } = CONTENT;
-  page.items.unshift({ kind: 'image', image: logo, x: left, y: 40, w: 46, h: 46 });
-  page.items.unshift({ kind: 'text', text: BRAND, x: left + 58, y: 64, size: 20, weight: 800, color: COLORS.forest });
-  page.items.unshift({ kind: 'text', text: TAGLINE, x: left + 58, y: 84, size: 10, weight: 500, color: COLORS.muted });
-  if (page.index > 1) {
-    page.items.unshift({ kind: 'text', text: doc.title, x: right, y: 60, size: 12, weight: 700, color: COLORS.ink, align: 'right' });
-    if (doc.period) page.items.unshift({ kind: 'text', text: doc.period, x: right, y: 80, size: 10, weight: 500, color: COLORS.forest, align: 'right' });
-    if (total) page.items.unshift({ kind: 'text', text: `পৃষ্ঠা ${bengaliNumber(page.index)} / ${bengaliNumber(total)}`, x: right, y: 96, size: 9, weight: 600, color: COLORS.muted, align: 'right' });
+  const center = PAGE.width / 2;
+  const cfg = loadAppConfig();
+  const address = String(cfg.campusAddress || '').trim();
+  const tagline = String(cfg.tagline || TAGLINE).trim();
+
+  // Report PDF header is intentionally centered: logo, institution name,
+  // address and tagline all share the same center axis on every page.
+  page.items.unshift({ kind: 'image', image: logo, x: center - 28, y: 22, w: 56, h: 56 });
+  page.items.unshift({ kind: 'text', text: BRAND, x: center, y: 94, size: 20, weight: 800, color: COLORS.forest, align: 'center' });
+  if (tagline) {
+    page.items.unshift({ kind: 'text', text: tagline, x: center, y: 112, size: 9.5, weight: 500, color: COLORS.muted, align: 'center' });
+  }
+  if (address) {
+    const addressLines = measureLines(address, { size: 9.5, weight: 400, width: CONTENT.width - 80 });
+    addressLines.slice(0, 2).forEach((line, index) => {
+      page.items.unshift({ kind: 'text', text: line, x: center, y: 130 + index * 14, size: 9.5, weight: 400, color: COLORS.muted, align: 'center' });
+    });
+  }
+
+  if (page.index > 1 && total) {
+    page.items.unshift({ kind: 'text', text: `পৃষ্ঠা ${bengaliNumber(page.index)} / ${bengaliNumber(total)}`, x: PAGE.width - CONTENT.left, y: 1080, size: 9, weight: 600, color: COLORS.muted, align: 'right' });
   }
   void total;
 }

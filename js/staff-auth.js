@@ -191,17 +191,26 @@ export async function ensureBootstrapStaffAccounts(ownerUsername = 'admin.apc') 
 
 export async function resolveStaffRoleByUsername(value) {
   const username = normalizeStaffUsername(value);
-  const fixed = Object.keys(STAFF_ACCOUNTS).find(role => normalizeStaffUsername(STAFF_ACCOUNTS[role].username) === username);
-  if (fixed) {
-    if (fixed === 'admin' || fixed === 'manager') {
-      const account = await readStaffAccount(fixed);
-      if (!account) return null; // only Admin provisioning creates these owner/approval roles
-      if (account.username) return normalizeStaffUsername(account.username) === username ? fixed : null;
+  if (!username) return null;
+
+  // Resolve against the actual stored account first. This is required for the
+  // first Admin, whose username is generated as firstName.admin.apc and is
+  // therefore different from the fixed fallback "admin.apc".
+  for (const role of Object.keys(STAFF_ACCOUNTS)) {
+    const account = await readStaffAccount(role);
+    if (!account) continue;
+    const storedUsername = normalizeStaffUsername(account.username);
+    if (storedUsername && storedUsername === username && account.status !== 'inactive') {
+      return role;
     }
-    return fixed;
   }
-  const admin = await readStaffAccount('admin');
-  return admin?.status === 'active' && normalizeStaffUsername(admin.username) === username ? 'admin' : null;
+
+  // Fall back to the reserved role username only for an account that has not
+  // yet stored its own username (for example an untouched bootstrap role).
+  const fixed = Object.keys(STAFF_ACCOUNTS).find(
+    role => normalizeStaffUsername(STAFF_ACCOUNTS[role].username) === username
+  );
+  return fixed || null;
 }
 
 export function staffSpec(role) {

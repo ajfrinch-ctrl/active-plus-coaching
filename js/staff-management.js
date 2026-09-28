@@ -108,7 +108,7 @@ function fieldRow(spec, value) {
 function roleAssignmentFields(role) {
   if (role === 'teacher') {
     return [
-      { name: 'classes', label: 'Assigned Class/শ্রেণি', type: 'select', multiple: true, options: enabledClasses.map(name => ({ value: name, label: name })), hint: 'একাধিক নির্বাচন করতে চেপে ধরে টানুন (Ctrl/⌘ + ক্লিক)' },
+      { name: 'classes', label: 'Assigned Class/শ্রেণি', type: 'select', multiple: true, options: enabledClasses.map(name => ({ value: name, label: name })), hint: 'তালিকা থেকে এক বা একাধিক শ্রেণি বেছে নিন' },
       { name: 'subjects', label: 'বিষয়সমূহ', placeholder: 'যেমন: উচ্চতর গণিত, পদার্থবিজ্ঞান', hint: 'কমা দিয়ে একাধিক বিষয় লিখুন' },
       { name: 'batches', label: 'ব্যাচ / বিভাগ', placeholder: 'যেমন: বিজ্ঞান বিভাগ, A ব্যাচ' }
     ];
@@ -361,21 +361,32 @@ function staffFormHtml(record) {
     { name: 'address', label: 'ঠিকানা (ঐচ্ছিক)', max: 300, value: record?.address }
   ];
   return `
-    <form id="staffForm" class="staff-form" novalidate>
-      ${editing ? `<p class="staff-id-lock">${icon('lock', 'staff-inline-icon')} Staff ID <strong>${escapeHtml(record.staffId)}</strong> — স্থায়ী পরিচয়, পরিবর্তন করা যায় না</p>` : ''}
-      <div class="staff-form-grid">
-        ${identityFields.map(spec => fieldRow(spec, spec.value)).join('')}
+    <form id="staffForm" class="staff-form staff-create-form${editing ? ' is-editing' : ' is-creating'}" novalidate>
+      ${editing ? `<div class="staff-form-notice">${icon('lock', 'staff-inline-icon')}<span>Staff ID <strong>${escapeHtml(record.staffId)}</strong> — স্থায়ী পরিচয়, পরিবর্তন করা যাবে না</span></div>` : `<div class="staff-create-guide"><span class="staff-guide-icon" aria-hidden="true">${icon('staff', 'staff-inline-icon')}</span><div><strong>৩টি সহজ ধাপে অ্যাকাউন্ট তৈরি</strong><small>পরিচিতি দিন, রোল বাছুন, তারপর দায়িত্বের তথ্য পূরণ করুন।</small></div></div>`}
+      <div class="staff-form-section-block">
+        <div class="staff-form-section-title"><span class="staff-section-number">১</span><div><strong>অ্যাকাউন্টের তথ্য</strong><small>স্টাফের পরিচয় ও লগইন তথ্য দিন</small></div></div>
+        <div class="staff-form-grid">
+          ${identityFields.slice(0, 2).map(spec => fieldRow(spec, spec.value)).join('')}
+        </div>
       </div>
-      <div class="staff-assignment" id="staffAssignmentFields" data-role="${escapeHtml(role)}">
-        <p class="staff-form-section">${escapeHtml(STAFF_ROLE_META[role]?.labelBn || 'স্টাফ')} — Assignment</p>
+      <div class="staff-form-section-block">
+        <div class="staff-form-section-title"><span class="staff-section-number">২</span><div><strong>রোল ও যোগাযোগ</strong><small>রোল নির্বাচন করলে Login User ID স্বয়ংক্রিয়ভাবে তৈরি হবে</small></div></div>
+        <div class="staff-form-grid">
+          ${identityFields.slice(2).map(spec => fieldRow(spec, spec.value)).join('')}
+        </div>
+      </div>
+      <div class="staff-assignment staff-form-section-block" id="staffAssignmentFields" data-role="${escapeHtml(role)}">
+        <div class="staff-form-section-title"><span class="staff-section-number">৩</span><div><strong id="staffAssignmentTitle">${escapeHtml(STAFF_ROLE_META[role]?.labelBn || 'স্টাফ')} — দায়িত্ব</strong><small>এই রোল অনুযায়ী প্রয়োজনীয় দায়িত্বের তথ্য দিন</small></div></div>
         <div class="staff-form-grid">
           ${roleAssignmentFields(role).map(spec => fieldRow(spec, spec.name === 'classes' ? assignment.classes : assignment[spec.name])).join('')}
         </div>
       </div>
-      <p class="finance-error" id="staffFormError" role="alert" hidden></p>
-      <div class="modal-actions">
-        <button class="admin-btn primary" type="submit">${icon('save', 'staff-inline-icon')}<span>${editing ? 'সংরক্ষণ করুন' : 'স্টাফ তৈরি করুন'}</span></button>
-        <button class="admin-btn ghost" type="button" data-staff-modal="close">বাতিল</button>
+      <div class="staff-form-footer">
+        <p class="finance-error" id="staffFormError" role="alert" hidden></p>
+        <div class="modal-actions">
+          <button class="admin-btn primary" type="submit">${icon('save', 'staff-inline-icon')}<span>${editing ? 'তথ্য সংরক্ষণ করুন' : 'স্টাফ অ্যাকাউন্ট তৈরি করুন'}</span></button>
+          <button class="admin-btn ghost" type="button" data-staff-modal="close">বাতিল</button>
+        </div>
       </div>
     </form>`;
 }
@@ -482,7 +493,8 @@ function wireForm(form, record) {
     refreshAutoId(form, record);
     if (!assignmentHost) return;
     assignmentHost.dataset.role = role;
-    assignmentHost.querySelector('.staff-form-section').textContent = `${STAFF_ROLE_META[role]?.labelBn || 'স্টাফ'} — Assignment`;
+    const assignmentTitle = assignmentHost.querySelector('#staffAssignmentTitle');
+    if (assignmentTitle) assignmentTitle.textContent = `${STAFF_ROLE_META[role]?.labelBn || 'স্টাফ'} — দায়িত্ব`;
     const grid = assignmentHost.querySelector('.staff-form-grid');
     if (grid) {
       grid.innerHTML = roleAssignmentFields(role)

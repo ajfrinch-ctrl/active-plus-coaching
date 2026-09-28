@@ -26,6 +26,11 @@ import { initStudentTeaching } from './student-teaching.js';
 import { initStudentDashboard } from './student-dashboard.js';
 import { mountReports, refreshReports } from './reports.js';
 
+/* Always reveal the login shell before optional startup work. A failure in any
+   secondary feature must never leave the entry page completely blank. */
+showAuthScreen();
+switchAuthTab('login');
+
 initFixedShell();
 runMigrations();
 
@@ -208,6 +213,8 @@ initProfile({
 });
 initRoutine();
 initConnectivity();
+// Firebase is optional during online testing; offline startup remains independent.
+if (navigator.onLine) import('./firebase-online-test.js').then(({ testFirebaseOnlineConnection }) => testFirebaseOnlineConnection());
 initDynamicTheme();
 initAppearance();
 initCopyChips();

@@ -120,10 +120,25 @@ export function replaceDocumentsStrict(collection, docs) {
   writeJSONStrict(KEYS[collection], docs);
 }
 
-export function newId(prefix) {
-  const token = (globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`)
-    .replace(/-/g, '');
-  return `${prefix}-${token}`;
+const sequenceFallback = new Map();
+
+export function nextSequence(scope, floor = 0) {
+  const key = `activePlus.idSequence.v1:${scope}`;
+  let value = Math.max(floor, sequenceFallback.get(key) || 0);
+  try {
+    value = Math.max(value, Number(globalThis.localStorage?.getItem(key) || 0)) + 1;
+    globalThis.localStorage?.setItem(key, String(value));
+  } catch { value += 1; }
+  sequenceFallback.set(key, value);
+  return value;
+}
+
+export function newId(prefix, now = new Date()) {
+  const cleanPrefix = String(prefix || 'ID').replace(/[^A-Za-z]/g, '').toUpperCase();
+  const yy = String(now.getFullYear()).slice(-2);
+  const date = `${yy}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+  const sequence = nextSequence(`${cleanPrefix}:${date}`);
+  return `${cleanPrefix}${date}${String(sequence).padStart(3, '0')}`;
 }
 
 /** Fields safe to sync. Secrets never leave the device account. */

@@ -1,565 +1,693 @@
-/* ---------------------------------------------------------------------------
-   Appearance — light + dark themes.
-   The dark theme is opt-in via html[data-theme="dark"] (set pre-paint by
-   js/appearance-boot.js and managed by js/appearance.js). Tokens flip first;
-   the glass language of liquid-glass.css stays intact on top of them. This
-   file is loaded last so its patches win over the feature stylesheets that
-   still paint literal light colours.
-   Also holds the small affordances of the ported patterns: the theme quick
-   toggle and tap-to-copy ID chips.
-   ------------------------------------------------------------------------ */
+/* Active Plus Coaching — unified bright mobile app design system.
+   Visual redesign only. Existing data, roles, storage, routing and workflows remain unchanged. */
 
-/* --- theme quick toggle (auth topbar, brand row) ------------------------- */
-.theme-quick-toggle {
-  display: grid;
-  place-items: center;
-  flex: 0 0 auto;
-  order: 2;
-  width: 38px;
-  height: 38px;
-  margin-left: auto;
-  padding: 0;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  color: var(--forest-text);
-  background: var(--surface);
-  box-shadow: var(--soft-shadow);
+:root{
+  --apc-bg:#f4f7fb;--apc-surface:#ffffff;--apc-surface-2:#f8fafc;--apc-border:#dce4ee;
+  --apc-text:#172033;--apc-muted:#526176;--apc-dim:#718096;
+  --apc-primary:#315efb;--apc-primary-dark:#2448c9;--apc-primary-soft:#edf2ff;
+  --apc-success:#087f5b;--apc-warning:#b45309;--apc-danger:#c92a3d;
+  --apc-shadow:0 10px 30px rgba(31,45,68,.08);--apc-shadow-lg:0 18px 45px rgba(31,45,68,.12);
+  --apc-radius:18px;--apc-radius-sm:13px;
 }
-.theme-quick-toggle svg {
-  width: 19px;
-  height: 19px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+html,html[data-theme="dark"],html[data-theme="light"]{
+  color-scheme:light!important;--ink:var(--apc-text)!important;--muted:var(--apc-muted)!important;--muted-2:var(--apc-dim)!important;
+  --cream:var(--apc-bg)!important;--surface:var(--apc-surface)!important;--line:var(--apc-border)!important;
+  --mint:var(--apc-primary-soft)!important;--mint-2:#e5ebff!important;--mint-strong:#cbd7ff!important;
+  --forest-text:var(--apc-text)!important;--forest-dark-text:var(--apc-text)!important;--forest:var(--apc-primary)!important;
+  --forest-dark:var(--apc-primary-dark)!important;--forest-light:#5b7cff!important;
+  --glass:var(--apc-surface)!important;--glass-strong:var(--apc-surface)!important;--glass-soft:var(--apc-surface-2)!important;
+  --glass-border:var(--apc-border)!important;--glass-shadow:var(--apc-shadow)!important;
+  --admin-glass:var(--apc-surface)!important;--admin-glass-border:var(--apc-border)!important;--admin-shadow:var(--apc-shadow)!important;--panel-card-solid:#fff!important;
 }
-.theme-quick-toggle .icon-moon { display: none; }
-html[data-theme="dark"] .theme-quick-toggle .icon-sun { display: none; }
-html[data-theme="dark"] .theme-quick-toggle .icon-moon { display: block; }
+html,body,html[data-theme="dark"],html[data-theme="light"],html[data-theme="dark"] body,html[data-theme="light"] body{
+  background:var(--apc-bg)!important;color:var(--apc-text)!important;
+  font-family:"Noto Sans Bengali","Noto Sans","Nirmala UI","Segoe UI",system-ui,-apple-system,sans-serif;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+body::before,body::after,.app-shell::before,.admin-shell::before,.auth-screen::before{background:none!important;box-shadow:none!important;animation:none!important}
+h1,h2,h3,h4,h5,strong,b{color:var(--apc-text)!important;letter-spacing:-.015em}p,small,label,.muted,.eyebrow{color:var(--apc-muted)!important}a{color:var(--apc-primary-dark)!important}button{font-family:inherit}
 
-/* --- tap-to-copy ID chips ----------------------------------------------- */
-[data-copy-target] {
-  cursor: pointer;
-  border-radius: 8px;
-  text-decoration: underline;
-  text-decoration-style: dashed;
-  text-decoration-color: var(--muted-2);
-  text-underline-offset: 3px;
-  transition: background .15s ease;
+.auth-card,.home-hero,.home-list-card,.quick-wrap,.teaching-board,.admin-card,.teacher-summary,.teacher-record-card,.pay-card,.payment-card,.settings-list,.admin-more-menu,.modal,.admin-modal,.rp-card,.rp-report,.rp-choose,.rp-preview-bar,.rp-empty,.rp-page,.study-progress-card,.dashboard-routine-card,.dashboard-empty-card,.challenge-card,.dashboard-empty,.contact-card,.help-card,.pending-id,.welcome-card,.admin-hero,.home-stat,.admin-stat-tile,.admin-dashboard-collect,.course-item,.result-row,.result-stats>div,.pending-info,.maintenance-alert-card{
+  background:var(--apc-surface)!important;border:1px solid var(--apc-border)!important;border-radius:var(--apc-radius)!important;box-shadow:var(--apc-shadow)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
 }
-[data-copy-target]:hover { background: var(--mint-2); }
-[data-copy-target]:active { background: var(--mint-strong); }
+.topbar,.admin-topbar,.auth-topbar,.pay-topbar,.bottom-nav,.admin-bottom,.app-bottom-nav,.bottom-navigation{
+  background:rgba(255,255,255,.97)!important;border-color:var(--apc-border)!important;box-shadow:0 6px 24px rgba(31,45,68,.08)!important;backdrop-filter:blur(14px)!important;-webkit-backdrop-filter:blur(14px)!important;
+}
+.theme-quick-toggle,[data-theme-toggle]{display:none!important}
+.quick-tile-btn,.bottom-link .nav-chip,.admin-bottom-item .nav-chip,.admin-hero-icon,.tile-icon,.admin-hero-foot-icon,.admin-dashboard-collect-icon,.admin-more-icon,.admin-stat-icon,.home-hero-icon,.home-stat-icon,.home-hero-foot-icon,.home-row-icon,.settings-icon,.help-icon,.learning-home-icon{
+  background:var(--apc-primary-soft)!important;background-image:none!important;border:1px solid #d9e2ff!important;box-shadow:none!important;filter:none!important;animation:none!important;
+}
+.quick-tile-btn svg,.bottom-link .nav-chip svg,.admin-bottom-item .nav-chip svg,.admin-hero-icon svg,.tile-icon svg,.admin-hero-foot-icon svg,.admin-dashboard-collect-icon svg,.admin-more-icon svg,.admin-stat-icon svg,.home-hero-icon svg,.home-stat-icon svg,.home-hero-foot-icon svg,.home-row-icon svg,.settings-icon svg,.help-icon svg,.learning-home-icon svg{
+  display:block!important;opacity:1!important;visibility:visible!important;width:24px!important;height:24px!important;background:none!important;color:var(--apc-primary)!important;
+}
+svg{color:#334155}svg *{stroke:currentColor}.bottom-link .nav-chip,.admin-bottom-item .nav-chip{width:42px!important;height:38px!important}
+.bottom-link.active .nav-chip,.admin-bottom-item.active .nav-chip{background:var(--apc-primary)!important;border-color:var(--apc-primary)!important;transform:scale(1.05)!important;box-shadow:0 7px 18px rgba(49,94,251,.22)!important}
+.bottom-link.active .nav-chip svg,.admin-bottom-item.active .nav-chip svg{color:#fff!important}.bottom-link.active span:last-child,.admin-bottom-item.active span:last-child{color:var(--apc-primary-dark)!important;font-weight:800}
 
-/* --- dark palette -------------------------------------------------------- */
+input,select,textarea,.auth-panel input,.auth-panel select,.auth-panel textarea,.field input,.field select,.field textarea,.admin-card input{
+  color:var(--apc-text)!important;background:#fff!important;border:1px solid #cfd9e6!important;border-radius:var(--apc-radius-sm)!important;box-shadow:0 1px 2px rgba(31,45,68,.04)!important;
+}
+input::placeholder,textarea::placeholder{color:#7b8798!important}input:focus,select:focus,textarea:focus{border-color:var(--apc-primary)!important;box-shadow:0 0 0 3px rgba(49,94,251,.12)!important;outline:none!important}.input-wrap{background:transparent!important}
+.auth-tabs,.registration-mode,.day-tabs{background:#eef2f7!important;border:1px solid #dbe3ed!important;border-radius:14px!important;backdrop-filter:none!important}
+.auth-tab.active,.mode-button.active,.chip.active{background:#fff!important;color:var(--apc-primary-dark)!important;border-color:#d5def0!important;box-shadow:0 3px 10px rgba(31,45,68,.08)!important}
+button.primary,.auth-submit,.logout-confirm,.admin-btn.primary,.mini-btn.approve{background:var(--apc-primary)!important;color:#fff!important;border:1px solid var(--apc-primary)!important;box-shadow:0 8px 18px rgba(49,94,251,.20)!important;border-radius:14px!important;font-weight:800}
+button.primary:hover,.auth-submit:hover,.admin-btn.primary:hover{background:var(--apc-primary-dark)!important}
+.step-back,.filter-button,.modal-close,.rp-back,.rp-mini-btn{background:#fff!important;color:#334155!important;border:1px solid #cfd9e6!important;border-radius:13px!important}.danger,.logout-button{color:var(--apc-danger)!important}
+.chip,.home-count-pill,.home-date-pill,.saved-tag,.dashboard-time-pill,.pending-kicker{background:#f1f4f8!important;color:#405069!important;border:1px solid #dce4ed!important}
+.progress-ring{background:conic-gradient(var(--apc-primary) 0deg var(--progress),#e4e9f0 var(--progress) 360deg)!important}.progress-ring::before{background:#fff!important}
+[class*="green"],[class*="mint"],[class*="forest"],.tone-blue,.tone-amber,.settings-icon.purple,.settings-icon.danger{filter:none!important}
+.modal-backdrop{background:rgba(15,23,42,.38)!important;backdrop-filter:blur(5px)!important;-webkit-backdrop-filter:blur(5px)!important}
+.install-toast,.resource-modal-body,.exam-timer,.rp-download-bar{background:#fff!important;color:var(--apc-text)!important;border-color:var(--apc-border)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;box-shadow:var(--apc-shadow-lg)!important}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,[tabindex]:focus-visible{outline:3px solid rgba(49,94,251,.25)!important;outline-offset:2px}
+.app-main,.admin-main,.pay-main{overflow-x:hidden}
+@media(max-width:400px){.bottom-nav,.admin-bottom{width:min(calc(100% - 16px),452px)!important;padding-left:4px!important;padding-right:4px!important}.bottom-link span:last-child,.admin-bottom-item span{font-size:9.5px}}
+@media(max-width:360px){.bottom-link span:last-child,.admin-bottom-item span{font-size:9px}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition-duration:.01ms!important}}
+@media print{*{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}}
+
+/* === FINAL VISUAL OVERRIDES: remove legacy green/glass appearance === */
+.app-shell,.admin-shell,.teacher-shell,.pay-shell,.auth-screen{
+  background:var(--apc-bg)!important;
+}
+.welcome-card,.admin-hero,.home-hero{
+  color:var(--apc-text)!important;
+  background:var(--apc-surface)!important;
+  border:1px solid var(--apc-border)!important;
+  box-shadow:var(--apc-shadow)!important;
+}
+.welcome-card *,.admin-hero *,.home-hero *{
+  color:inherit;
+}
+.welcome-card .hero-icon,.admin-hero .hero-icon,.home-hero .hero-icon,
+.welcome-card svg,.admin-hero svg,.home-hero svg{
+  color:var(--apc-primary)!important;
+}
+.notice-strip{
+  background:#fffaf0!important;
+  color:#7c4a03!important;
+  border:1px solid #f0dfb6!important;
+}
+.finance-nav-pills,[class*="nav-pills"],.filter-tabs,.filter-bar{
+  background:#eef2f7!important;
+  border-color:#dbe3ed!important;
+}
+.finance-nav-pills [data-finance-tab],.filter-tabs button,.filter-bar button{
+  color:#526176!important;
+  background:transparent!important;
+}
+.finance-nav-pills [data-finance-tab].active,.filter-tabs button.active,.filter-bar button.active{
+  color:var(--apc-primary-dark)!important;
+  background:#fff!important;
+  box-shadow:0 3px 10px rgba(31,45,68,.08)!important;
+}
+.status-success,.success,.approved,.paid{
+  color:var(--apc-success)!important;
+}
+.status-warning,.warning,.pending{
+  color:var(--apc-warning)!important;
+}
+.status-danger,.error,.rejected,.overdue{
+  color:var(--apc-danger)!important;
+}
+.quick-wrap{
+  background:var(--apc-surface)!important;
+  border:1px solid var(--apc-border)!important;
+}
+.quick-tile{
+  background:transparent!important;
+}
+.quick-tile-btn{
+  width:52px!important;height:52px!important;
+  border-radius:15px!important;
+  background:var(--apc-primary-soft)!important;
+  border:1px solid #d9e2ff!important;
+}
+.auth-screen{
+  padding-top:calc(86px + env(safe-area-inset-top,0px))!important;
+}
+.auth-topbar{
+  background:#fff!important;
+  border-bottom:1px solid var(--apc-border)!important;
+}
+.auth-card{
+  padding:18px!important;
+  border-radius:22px!important;
+}
+.auth-panel-heading h2{font-size:22px!important}
+.auth-panel-heading p,.fixed-field-note{color:var(--apc-muted)!important}
+.auth-submit{min-height:50px!important;font-size:15px!important}
+.admin-card-head,.section-heading,.page-intro{
+  color:var(--apc-text)!important;
+}
+.admin-card-head h2,.admin-card-head h3,.section-heading h2,.page-intro h1{
+  color:var(--apc-text)!important;
+}
+.admin-card-head p,.section-heading p,.page-intro>p{
+  color:var(--apc-muted)!important;
+}
+.admin-btn:not(.primary),.mini-btn:not(.approve){
+  background:#fff!important;
+  color:#334155!important;
+  border:1px solid #cfd9e6!important;
+}
+table{background:#fff!important;border-color:var(--apc-border)!important}
+th{background:#f1f4f8!important;color:#405069!important}
+td{color:var(--apc-text)!important;border-color:#e3e8ef!important}
+.badge,.tag,.pill{
+  border-radius:999px!important;
+  font-weight:750!important;
+}
+@media(max-width:480px){
+  .auth-card,.admin-card,.home-hero,.welcome-card,.admin-hero,.teacher-summary,.pay-card,.payment-card{
+    border-radius:18px!important;
+  }
+  .app-main,.admin-main,.pay-main{
+    padding-left:14px!important;padding-right:14px!important;
+  }
+}
+
+
+/* === HEADER CLARITY — unified brand header === */
+.auth-topbar,.admin-topbar,.pay-topbar{
+  background:#ffffff!important;
+  border-bottom:1px solid #dbe3ed!important;
+  box-shadow:0 4px 16px rgba(31,45,68,.07)!important;
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+}
+.auth-brand,.admin-brand{
+  color:#172033!important;
+  opacity:1!important;
+}
+.auth-brand strong,.admin-brand strong{
+  display:block!important;
+  color:#13213a!important;
+  font-size:15px!important;
+  line-height:1.25!important;
+  font-weight:850!important;
+  letter-spacing:-.2px!important;
+  opacity:1!important;
+  text-shadow:none!important;
+}
+.auth-brand small,.admin-brand small{
+  display:block!important;
+  margin-top:3px!important;
+  color:#4b5d75!important;
+  font-size:11px!important;
+  line-height:1.3!important;
+  font-weight:650!important;
+  letter-spacing:0!important;
+  opacity:1!important;
+  text-shadow:none!important;
+}
+.auth-brand img,.admin-brand img{
+  flex:0 0 auto!important;
+  width:40px!important;height:40px!important;
+  object-fit:contain!important;
+  border-radius:11px!important;
+  background:#fff!important;
+}
+.admin-topbar-inner{min-height:64px!important;}
+@media(max-width:480px){
+  .auth-brand strong,.admin-brand strong{font-size:14px!important}
+  .auth-brand small,.admin-brand small{font-size:10.5px!important}
+}
+
+
+/* === PURE WHITE THEME === */
+html,body,body::before,body::after,.app-shell,.admin-shell,.teacher-shell,.pay-shell,.auth-screen,.app-main,.admin-main,.pay-main,.pending-screen{
+  background:#ffffff!important;background-image:none!important;
+}
+.app-shell,.admin-shell,.teacher-shell,.pay-shell,.auth-screen{color:#172033!important}
+.auth-topbar,.admin-topbar,.pay-topbar,.bottom-nav,.admin-bottom,.app-bottom-nav,.bottom-navigation{
+  background:#ffffff!important;background-image:none!important;border-color:#e1e6ed!important;
+}
+.auth-card,.home-hero,.home-list-card,.quick-wrap,.teaching-board,.admin-card,.teacher-summary,.teacher-record-card,.pay-card,.payment-card,.settings-list,.modal,.admin-modal,.welcome-card,.admin-hero,.home-stat,.admin-stat-tile,.course-item,.result-row,.result-stats>div,.pending-info{
+  background:#ffffff!important;background-image:none!important;box-shadow:0 6px 20px rgba(31,45,68,.06)!important;
+}
+.home-stat,.admin-stat-tile,.result-stats>div,.result-row,.course-item,.quick-tile,.notice-strip,.detail-grid>div,.fee-balance-grid>div{
+  background:#ffffff!important;background-image:none!important;
+}
+.quick-tile-btn,.bottom-link .nav-chip,.admin-bottom-item .nav-chip,.admin-hero-icon,.tile-icon,.home-hero-icon,.home-stat-icon,.home-row-icon,.settings-icon,.help-icon,.learning-home-icon{
+  background:#f5f7fa!important;background-image:none!important;border-color:#e0e6ee!important;
+}
+input,select,textarea,.auth-panel input,.auth-panel select,.auth-panel textarea,.field input,.field select,.field textarea,.admin-card input{
+  background:#ffffff!important;
+}
+.auth-tabs,.registration-mode,.day-tabs,.finance-nav-pills,[class*="nav-pills"],.filter-tabs,.filter-bar{
+  background:#f5f7fa!important;background-image:none!important;
+}
+.modal-backdrop{background:rgba(15,23,42,.34)!important}
+
+
+/* === PAYMENT COUNTER FINAL THEME OVERRIDE === */
+.pay-body,.pay-shell:not([hidden]),.pay-main{background:#fff!important;background-image:none!important;color:#172033!important}
+.pay-topbar,.pay-stickybar{background:#fff!important;background-image:none!important;border-color:#e1e6ed!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.pay-search-card,#payProfileCard,.pay-activity-card{background:#fff!important;border:1px solid #dfe5ec!important;box-shadow:0 5px 18px rgba(31,45,68,.05)!important}
+.pay-search-input,.pay-amount-field{background:#f8fafc!important;border-color:#d8e0ea!important}
+.pay-search-input input[type=search],.pay-amount-field input#payFeeAmount{color:#172033!important}
+.pay-search-card .admin-card-head h2,#payProfileCard .admin-card-head h2,.pay-activity-card .admin-card-head h2,.pay-quick-profile .fee-profile-heading h3{color:#14213a!important}
+.pay-search-card .admin-card-head .eyebrow,#payProfileCard .admin-card-head .eyebrow{color:#315efb!important}
+.pay-current-date{background:#f4f7fb!important;color:#315efb!important;border-color:#dce4ee!important}
+.pay-keypad button,.pay-method,.pay-form .form-grid-2 input{background:#fff!important;color:#253550!important;border-color:#dfe5ec!important}
+.pay-method[aria-checked=true]{background:#eef3ff!important;color:#315efb!important;border-color:#315efb!important}
+.pay-quick-profile .fee-profile-details>div{background:#f9fafb!important}
+.pay-stickybar .admin-btn,.pay-quick-profile .fee-profile-collect,.pay-form-actions #paySaveButton{background:#315efb!important;color:#fff!important;border-color:#315efb!important}
+
+
+/* ==========================================================================
+   ACTIVE PLUS — FINAL GLOBAL EDUCATION THEME
+   White Minimal + Dark Royal Blue + Soft Glass + Water-drop Icons
+   This block is visual-only. No workflow/data behavior is changed.
+   ========================================================================== */
+:root{
+  --apc-bg:#ffffff;
+  --apc-surface:rgba(255,255,255,.82);
+  --apc-surface-solid:#ffffff;
+  --apc-border:rgba(30,58,95,.12);
+  --apc-border-strong:rgba(30,58,95,.20);
+  --apc-text:#14213d;
+  --apc-muted:#667085;
+  --apc-primary:#173b8f;
+  --apc-primary-strong:#102d70;
+  --apc-primary-soft:#eef3ff;
+  --apc-shadow:0 10px 30px rgba(20,42,78,.08);
+  --apc-shadow-soft:0 5px 18px rgba(20,42,78,.055);
+  --forest:#173b8f;
+  --forest-dark:#102d70;
+  --forest-text:#14213d;
+  --mint:#eef3ff;
+  --surface:#fff;
+  --ink:#14213d;
+  --muted:#667085;
+  --line:rgba(30,58,95,.12);
+}
+
+html,body{
+  background:#fff!important;
+  color:#14213d!important;
+  background-image:none!important;
+}
+body::before,body::after,
+.app-shell::before,.admin-shell::before,.pay-shell::before,
+.auth-screen::before,.auth-screen::after{
+  display:none!important;
+}
+
+/* Glass language: white, very subtle, readable—not dark/translucent. */
+.topbar,.auth-topbar,.admin-topbar,.pay-topbar,
+.bottom-nav,.admin-bottom,.app-bottom-nav,.bottom-navigation{
+  background:rgba(255,255,255,.90)!important;
+  border-color:rgba(23,59,143,.12)!important;
+  box-shadow:0 5px 22px rgba(20,42,78,.055)!important;
+  backdrop-filter:blur(16px)!important;
+  -webkit-backdrop-filter:blur(16px)!important;
+}
+.auth-topbar,.admin-topbar,.pay-topbar{color:#14213d!important}
+
+/* All primary surfaces share one education-app visual system. */
+.auth-card,.home-hero,.home-list-card,.quick-wrap,.teaching-board,
+.admin-card,.teacher-summary,.teacher-record-card,.pay-card,.payment-card,
+.settings-list,.welcome-card,.admin-hero,.home-stat,.admin-stat-tile,
+.course-item,.result-row,.result-stats>div,.pending-info,.dash-finance-card,
+.dash-finance-tile,.manager-student-card,.staff-card,.student-row-redesigned,
+.pay-search-card,#payProfileCard,.pay-activity-card{
+  background:rgba(255,255,255,.82)!important;
+  border:1px solid rgba(23,59,143,.11)!important;
+  box-shadow:var(--apc-shadow-soft)!important;
+  backdrop-filter:blur(14px)!important;
+  -webkit-backdrop-filter:blur(14px)!important;
+}
+.auth-card{box-shadow:0 14px 38px rgba(20,42,78,.09)!important}
+
+/* Royal-blue typography and accents. */
+h1,h2,h3,h4,strong,.admin-card-head h2,.page-intro h1,
+.auth-brand strong,.admin-brand strong{
+  color:#14213d!important;
+}
+.eyebrow,.section-eyebrow,.admin-card-head .eyebrow{
+  color:#173b8f!important;
+}
+
+/* Pill buttons. */
+button,.admin-btn,.mini-btn,.auth-submit,.logout-confirm,
+.chip,.home-count-pill,.home-date-pill,.saved-tag{
+  border-radius:999px!important;
+}
+.admin-btn.primary,.admin-btn.primary:hover,
+.auth-submit,.logout-confirm,.mini-btn.approve,
+.exam-workspace button.primary,.exam-link,
+.pay-stickybar .admin-btn,.pay-form-actions #paySaveButton{
+  background:#173b8f!important;
+  border-color:#173b8f!important;
+  color:#fff!important;
+  box-shadow:0 7px 17px rgba(23,59,143,.18)!important;
+}
+.admin-btn.secondary,.mini-btn,
+.exam-workspace button:not(.primary),
+.pay-keypad button,.pay-method{
+  background:#fff!important;
+  color:#173b8f!important;
+  border-color:rgba(23,59,143,.18)!important;
+}
+
+/* Inputs: clean white, royal-blue focus. */
+input,select,textarea,
+.auth-panel input,.auth-panel select,.auth-panel textarea,
+.field input,.field select,.field textarea,.admin-card input{
+  background:#fff!important;
+  color:#14213d!important;
+  border-color:rgba(30,58,95,.16)!important;
+}
+input:focus,select:focus,textarea:focus,
+input:focus-visible,select:focus-visible,textarea:focus-visible{
+  border-color:#173b8f!important;
+  box-shadow:0 0 0 3px rgba(23,59,143,.10)!important;
+  outline:none!important;
+}
+
+/* Water-drop / soft-square icon language. */
+.home-hero-icon,.home-stat-icon,.home-row-icon,.settings-icon,.help-icon,
+.admin-hero-icon,.tile-icon,.admin-stat-icon,.admin-more-icon,
+.learning-home-icon,.admin-bottom-item .nav-chip,.bottom-link .nav-chip,
+.quick-tile-btn>span:first-child,.pay-pulse-icon{
+  background:linear-gradient(145deg,#f8fbff,#eaf0ff)!important;
+  border:1px solid rgba(23,59,143,.13)!important;
+  color:#173b8f!important;
+  border-radius:16px!important;
+  box-shadow:inset 0 1px 0 #fff,0 5px 12px rgba(23,59,143,.08)!important;
+}
+
+/* Keep image-based water-drop icons visible and coherent. */
+button.exam-link::before,
+.teacher-home-link .learning-home-icon{
+  background-color:#f4f7ff!important;
+  border:1px solid rgba(23,59,143,.12)!important;
+  box-shadow:inset 0 1px 0 #fff,0 5px 12px rgba(23,59,143,.08)!important;
+}
+
+/* Flat bottom navigation with blue active state. */
+.bottom-link,.admin-bottom-item{
+  background:transparent!important;
+  color:#667085!important;
+}
+.bottom-link.active,.admin-bottom-item.active{
+  color:#173b8f!important;
+}
+.bottom-link.active .nav-chip,.admin-bottom-item.active .nav-chip{
+  background:#eef3ff!important;
+  color:#173b8f!important;
+  box-shadow:none!important;
+  transform:none!important;
+}
+.bottom-link .nav-chip,.admin-bottom-item .nav-chip{
+  box-shadow:none!important;
+}
+
+/* Tabs/chips. */
+.auth-tabs,.registration-mode,.day-tabs,.finance-nav-pills,
+[class*="nav-pills"],.filter-tabs,.filter-bar{
+  background:#f7f9fc!important;
+  border-color:rgba(23,59,143,.10)!important;
+}
+.chip,.finance-nav-pills .chip{
+  color:#52627a!important;
+}
+.chip.active,.chip[aria-selected="true"],
+.finance-nav-pills .chip.active{
+  background:#173b8f!important;
+  color:#fff!important;
+  border-color:#173b8f!important;
+}
+
+/* Soft/pastel status colors. */
+.badge.success,.status-success,.is-success,.success{
+  background:#eaf7ef!important;color:#287a4b!important;border-color:#cfe9d8!important;
+}
+.badge.pending,.status-pending,.is-pending,.pending{
+  background:#fff5df!important;color:#946514!important;border-color:#f1dfb7!important;
+}
+.badge.error,.status-error,.is-error,.error{
+  background:#fff0f0!important;color:#a94343!important;border-color:#f0d0d0!important;
+}
+.badge.info,.status-info,.is-info,.info{
+  background:#edf4ff!important;color:#315f9f!important;border-color:#d5e4fb!important;
+}
+
+/* Modals retain glass feel while staying bright/readable. */
+.modal,.admin-modal{
+  background:rgba(255,255,255,.94)!important;
+  border:1px solid rgba(23,59,143,.13)!important;
+  box-shadow:0 24px 65px rgba(20,42,78,.18)!important;
+  backdrop-filter:blur(18px)!important;
+  -webkit-backdrop-filter:blur(18px)!important;
+}
+.modal-backdrop,.admin-modal-backdrop{
+  background:rgba(20,33,61,.22)!important;
+  backdrop-filter:blur(5px)!important;
+  -webkit-backdrop-filter:blur(5px)!important;
+}
+
+/* Education/exam elements. */
+.exam-workspace button,.exam-link{
+  border-color:rgba(23,59,143,.14)!important;
+  color:#173b8f!important;
+  background:#fff!important;
+}
+.exam-workspace button.primary,.exam-link{
+  background:#173b8f!important;color:#fff!important;border-color:#173b8f!important;
+}
+.exam-option:has(input:checked){
+  background:#eef3ff!important;
+  border-color:#173b8f!important;
+}
+.exam-option input{accent-color:#173b8f!important}
+.exam-timer{
+  background:#eef3ff!important;
+  color:#173b8f!important;
+  border-color:#d7e2fb!important;
+}
+.exam-message{
+  background:#eaf7ef!important;color:#287a4b!important;
+}
+.exam-error{
+  background:#fff0f0!important;color:#a94343!important;
+}
+.exam-tag{
+  background:#eef3ff!important;color:#173b8f!important;
+}
+
+/* Staff/student/finance special surfaces follow the same system. */
+.staff-form-section-block,.staff-assignment,
+.staff-activity-grid>div,.staff-history li,
+.bootstrap-credential-row,.student-row-redesigned,
+.manager-student-card{
+  background:rgba(255,255,255,.82)!important;
+  border-color:rgba(23,59,143,.11)!important;
+}
+.staff-section-number,.student-avatar{
+  background:#eef3ff!important;color:#173b8f!important;
+}
+.auto-id-preview{
+  background:#f3f6ff!important;
+  color:#173b8f!important;
+  border-color:#cfdcf8!important;
+}
+
+/* Remove legacy green gradients/shadows from previously layered styles. */
+.admin-dashboard-collect,.teacher-home-link,
+button.exam-link{
+  background:#173b8f!important;
+  border-color:#173b8f!important;
+}
+.admin-more-item:hover,.settings-list>button:hover{
+  background:#f7f9fc!important;
+}
+.quick-tile,.notice-strip,.detail-grid>div,.fee-balance-grid>div{
+  background:rgba(255,255,255,.82)!important;
+}
+
+/* AMOLED pure-black theme and compact top-bar switch. */
+:root {
+  --amoled-black: #000;
+  --amoled-panel: #080808;
+  --amoled-raised: #101010;
+  --amoled-line: #252525;
+  --amoled-text: #f5f5f5;
+  --amoled-muted: #b7b7b7;
+  --amoled-accent: #8aa7ff;
+}
 html[data-theme="dark"] {
-  color-scheme: dark;
-  --ink: #e8f1ed;
-  --muted: #a4b6ae;
-  --muted-2: #7f918a;
-  --cream: #0d1a17;
-  --surface: #152420;
-  --line: rgba(255, 255, 255, .12);
-  --mint: #14312a;
-  --mint-2: #17382f;
-  --mint-strong: #1d463a;
-  --forest-text: #47d3a4;
-  --forest-dark-text: #47d3a4;
-  --shadow: 0 8px 28px rgba(0, 0, 0, .38), 0 1px 2px rgba(0, 0, 0, .3);
-  --soft-shadow: 0 4px 16px rgba(0, 0, 0, .3);
-  /* flat card layer (css/glass.css :root tokens) */
-  --glass: var(--surface);
-  --glass-strong: var(--surface);
-  --glass-soft: var(--surface);
-  --glass-border: rgba(255, 255, 255, .12);
-  --glass-shadow: 0 8px 28px rgba(0, 0, 0, .38), 0 1px 2px rgba(0, 0, 0, .3);
-  /* admin + manager panel local tokens */
-  --admin-glass: #152420;
-  --admin-glass-border: rgba(255, 255, 255, .12);
-  --admin-shadow: 0 8px 28px rgba(0, 0, 0, .38), 0 1px 2px rgba(0, 0, 0, .3);
-  --panel-card-solid: #152420;
+  color-scheme: dark !important;
+  --apc-bg: #000 !important;
+  --apc-surface: #080808 !important;
+  --apc-surface-2: #101010 !important;
+  --apc-border: #252525 !important;
+  --apc-text: #f5f5f5 !important;
+  --apc-muted: #b7b7b7 !important;
+  --apc-dim: #999 !important;
+  --apc-primary: #8aa7ff !important;
+  --apc-primary-dark: #a9bdff !important;
+  --apc-primary-soft: #111a30 !important;
+  --apc-success: #6ee7b7 !important;
+  --apc-warning: #fbbf24 !important;
+  --apc-danger: #ff7b86 !important;
+  --apc-shadow: none !important;
+  --apc-shadow-lg: none !important;
+  --ink: #f5f5f5 !important; --muted: #b7b7b7 !important; --muted-2: #999 !important;
+  --cream: #000 !important; --surface: #080808 !important; --line: #252525 !important;
+  --mint: #111a30 !important; --mint-2: #17213a !important; --mint-strong: #253456 !important;
+  --forest-text: #f5f5f5 !important; --forest-dark-text: #f5f5f5 !important;
+  --forest: #8aa7ff !important; --forest-dark: #a9bdff !important; --forest-light: #a9bdff !important;
+  --glass: #080808 !important; --glass-strong: #080808 !important; --glass-soft: #101010 !important;
+  --glass-border: #252525 !important; --glass-shadow: none !important;
+  --admin-glass: #080808 !important; --admin-glass-border: #252525 !important;
+  --admin-shadow: none !important; --panel-card-solid: #080808 !important;
 }
-
-/* --- base surfaces ------------------------------------------------------- */
 html[data-theme="dark"],
-html[data-theme="dark"] body {
-  background: linear-gradient(175deg, #0d1a17 0%, #10201c 45%, #0c1a20 100%);
-}
+html[data-theme="dark"] body,
+html[data-theme="dark"] body::before,
+html[data-theme="dark"] body::after,
 html[data-theme="dark"] .app-shell,
-html[data-theme="dark"] .auth-screen,
-html[data-theme="dark"] .admin-shell,
-html[data-theme="dark"] .teacher-shell,
-html[data-theme="dark"] .pay-shell {
-  background: transparent;
-}
-html[data-theme="dark"] .app-shell:not(.is-pending) .app-main {
-  background: transparent;
-}
-
-/* --- chrome bars --------------------------------------------------------- */
-html[data-theme="dark"] .topbar-strip { background: #182924 !important; }
-html[data-theme="dark"] .app-shell .topbar,
-html[data-theme="dark"] .auth-topbar {
-  background: rgba(21, 36, 32, .96);
-  border-bottom-color: rgba(255, 255, 255, .12);
-}
-html[data-theme="dark"] .pay-topbar {
-  background: linear-gradient(180deg, rgba(26, 42, 37, .88), rgba(20, 34, 30, .7)) !important;
-  border-bottom-color: rgba(255, 255, 255, .12) !important;
-}
-html[data-theme="dark"] .pay-method[aria-checked="true"] {
-  background: linear-gradient(170deg, rgba(21, 36, 32, .95), rgba(23, 56, 47, .9)) !important;
-  border-color: rgba(16, 185, 129, .35) !important;
-}
-html[data-theme="dark"] .day-tabs { background: rgba(255, 255, 255, .08) !important; }
-html[data-theme="dark"] .mini-btn.danger { background: rgba(120, 40, 30, .35) !important; }
-
-/* --- the glass card family (css/app-redesign.css) ------------------------ */
-/* The big liquid-glass rule paints these white with !important — dark must
-   answer with !important too, or it silently loses the cascade. */
-html[data-theme="dark"] .auth-card,
-html[data-theme="dark"] .home-hero,
-html[data-theme="dark"] .home-list-card,
-html[data-theme="dark"] .admin-card,
-html[data-theme="dark"] .admin-more-menu {
-  background: rgba(21, 36, 32, .92) !important;
-}
-html[data-theme="dark"] .home-hero,
-html[data-theme="dark"] .home-list-card,
-html[data-theme="dark"] .quick-wrap,
-html[data-theme="dark"] .teaching-board,
-html[data-theme="dark"] .auth-card,
-html[data-theme="dark"] .admin-card,
-html[data-theme="dark"] .teacher-summary,
-html[data-theme="dark"] .teacher-record-card,
-html[data-theme="dark"] .pay-card,
-html[data-theme="dark"] .payment-card {
-  background: rgba(21, 36, 32, .88);
-  border-color: rgba(255, 255, 255, .12);
-}
-html[data-theme="dark"] .welcome-card,
-html[data-theme="dark"] .admin-hero {
-  /* keep the brand-green hero gradient — white type already fits */
-  color: var(--ink);
-}
-html[data-theme="dark"] .home-stat {
-  background: linear-gradient(145deg, #17292a, #14231e) !important;
-  border-color: rgba(255, 255, 255, .1);
-}
-html[data-theme="dark"] .home-stat.tone-blue { background: linear-gradient(145deg, var(--surface), #172c3d) !important; }
-html[data-theme="dark"] .home-stat.tone-amber { background: linear-gradient(145deg, var(--surface), #332a16) !important; }
-html[data-theme="dark"] .home-hero-foot,
-html[data-theme="dark"] .admin-hero-foot {
-  background: rgba(255, 255, 255, .06);
-  border-color: rgba(255, 255, 255, .1);
-}
-html[data-theme="dark"] .admin-dashboard-collect,
-html[data-theme="dark"] .teacher-home-link {
-  background: linear-gradient(120deg, #16302a, var(--surface));
-}
-html[data-theme="dark"] .settings-list,
-html[data-theme="dark"] .admin-more-menu {
-  background: rgba(21, 36, 32, .9);
-  border-color: rgba(255, 255, 255, .12);
-}
-html[data-theme="dark"] .settings-list > button {
-  background: rgba(255, 255, 255, .05);
-}
-html[data-theme="dark"] .admin-stat-tile {
-  background: rgba(21, 36, 32, .92);
-  border-color: rgba(255, 255, 255, .12);
-}
-html[data-theme="dark"] .admin-more-item:hover,
-html[data-theme="dark"] .home-row:active,
-html[data-theme="dark"] .settings-list > button:active {
-  background: rgba(255, 255, 255, .08);
-}
-html[data-theme="dark"] .finance-nav-pills {
-  background: rgba(255, 255, 255, .06);
-  border-color: rgba(255, 255, 255, .12);
-}
-html[data-theme="dark"] .bootstrap-credential-row code { background: var(--mint-2); }
-
-/* --- student home (css/student-home.css) --------------------------------- */
-html[data-theme="dark"] .study-progress-card,
-html[data-theme="dark"] .dashboard-routine-card,
-html[data-theme="dark"] .dashboard-empty-card,
-html[data-theme="dark"] .challenge-card,
-html[data-theme="dark"] .dashboard-empty {
-  background: var(--surface);
-  border-color: rgba(255, 255, 255, .1);
-}
-html[data-theme="dark"] .study-progress-top {
-  background: linear-gradient(110deg, #16302a, #152724 70%, var(--surface));
-}
-html[data-theme="dark"] .study-progress-icon,
-html[data-theme="dark"] .dashboard-feature-icon {
-  background: var(--mint-2);
-  border-color: rgba(255, 255, 255, .1);
-  color: var(--forest-text);
-}
-html[data-theme="dark"] .progress-ring {
-  background: conic-gradient(#2fbf74 0deg var(--progress), #24352f var(--progress) 360deg);
-}
-html[data-theme="dark"] .progress-ring::before { background: var(--surface); }
-html[data-theme="dark"] .progress-ring strong { color: var(--forest-text); }
-html[data-theme="dark"] .progress-ring small,
-html[data-theme="dark"] .study-progress-stats small,
-html[data-theme="dark"] .study-progress-note { color: var(--muted); }
-html[data-theme="dark"] .study-progress-heading p { color: var(--muted); }
-html[data-theme="dark"] .study-progress-heading h1,
-html[data-theme="dark"] .student-identity strong,
-html[data-theme="dark"] .student-date strong,
-html[data-theme="dark"] .study-progress-stats strong,
-html[data-theme="dark"] .dashboard-routine-main > strong,
-html[data-theme="dark"] .dashboard-empty-card strong,
-html[data-theme="dark"] .dashboard-feature-copy strong,
-html[data-theme="dark"] .challenge-copy strong { color: var(--ink); }
-html[data-theme="dark"] .student-identity small,
-html[data-theme="dark"] .student-date small,
-html[data-theme="dark"] .student-date,
-html[data-theme="dark"] .dashboard-routine-main > small,
-html[data-theme="dark"] .dashboard-routine-status,
-html[data-theme="dark"] .dashboard-empty-card small,
-html[data-theme="dark"] .dashboard-feature-copy small,
-html[data-theme="dark"] .challenge-copy small,
-html[data-theme="dark"] .dashboard-empty { color: var(--muted); }
-html[data-theme="dark"] .dashboard-section-heading h2,
-html[data-theme="dark"] .dashboard-text-link,
-html[data-theme="dark"] .dashboard-routine-icon,
-html[data-theme="dark"] .dashboard-empty-icon,
-html[data-theme="dark"] .dashboard-time-pill,
-html[data-theme="dark"] .dashboard-empty-card button,
-html[data-theme="dark"] .challenge-open,
-html[data-theme="dark"] .challenge-star { color: var(--forest-text); }
-html[data-theme="dark"] .dashboard-routine-icon.tone-1,
-html[data-theme="dark"] .dashboard-routine-icon.tone-2 { color: var(--muted); }
-html[data-theme="dark"] .dashboard-routine-icon,
-html[data-theme="dark"] .dashboard-empty-icon,
-html[data-theme="dark"] .dashboard-time-pill,
-html[data-theme="dark"] .dashboard-empty-card button,
-html[data-theme="dark"] .challenge-open { background: var(--mint-2); }
-html[data-theme="dark"] .dashboard-routine-icon.tone-1 { background: #182c3c; }
-html[data-theme="dark"] .dashboard-routine-icon.tone-2 { background: #272244; }
-html[data-theme="dark"] .dashboard-exam-card,
-html[data-theme="dark"] .dashboard-fee-card {
-  background: var(--mint);
-  border-color: rgba(255, 255, 255, .1);
-}
-html[data-theme="dark"] .dashboard-fee-card { background: #2c2414; border-color: rgba(242, 181, 68, .3); }
-html[data-theme="dark"] .dashboard-fee-card.is-paid { background: var(--mint); border-color: rgba(255, 255, 255, .1); }
-html[data-theme="dark"] .dashboard-fee-card .dashboard-feature-copy strong,
-html[data-theme="dark"] .dashboard-fee-amount { color: #f0b274; }
-html[data-theme="dark"] .dashboard-fee-card.is-paid .dashboard-feature-copy strong,
-html[data-theme="dark"] .dashboard-fee-card.is-paid .dashboard-fee-amount { color: var(--forest-text); }
-html[data-theme="dark"] .exam-feature-icon { background: var(--mint-2); }
-html[data-theme="dark"] .challenge-progress-track { background: #24352f; }
-html[data-theme="dark"] .study-progress-stats > div + div { border-left-color: rgba(255, 255, 255, .1); }
-
-/* --- auth + forms + modals + toasts -------------------------------------- */
-html[data-theme="dark"] .auth-tabs,
-html[data-theme="dark"] .registration-mode { background: var(--mint-2); }
-html[data-theme="dark"] .auth-tab.active,
-html[data-theme="dark"] .mode-button.active { background: #24413a !important; }
-html[data-theme="dark"] .auth-panel input,
-html[data-theme="dark"] .auth-panel select,
-html[data-theme="dark"] .auth-panel textarea,
-html[data-theme="dark"] .edit-modal input,
-html[data-theme="dark"] .edit-modal select,
-html[data-theme="dark"] .edit-modal textarea,
-html[data-theme="dark"] .staff-pw-form input {
-  background: var(--surface);
-  border-color: rgba(255, 255, 255, .14);
-  color: var(--ink);
-}
-html[data-theme="dark"] .edit-modal input:disabled { background: var(--mint); }
-html[data-theme="dark"] .auth-panel input[readonly],
-html[data-theme="dark"] .field .locked-input input {
-  background: var(--mint-2);
-}
-html[data-theme="dark"] .demo-button {
-  background: rgba(71, 115, 163, .18);
-  border-color: rgba(120, 170, 220, .3);
-}
-html[data-theme="dark"] .step-progress-track { background: rgba(255, 255, 255, .12); }
-html[data-theme="dark"] .form-section-title { border-bottom-color: rgba(255, 255, 255, .1); }
-html[data-theme="dark"] .form-section-title > span { background: var(--mint-2); }
-html[data-theme="dark"] .admin-reset-note,
-html[data-theme="dark"] .staff-pw-error {
-  background: rgba(180, 83, 9, .16);
-}
-html[data-theme="dark"] .step-back,
-html[data-theme="dark"] .filter-button,
-html[data-theme="dark"] .class-context button,
-html[data-theme="dark"] .modal-close,
-html[data-theme="dark"] .rp-back,
-html[data-theme="dark"] .rp-mini-btn {
-  background: var(--surface);
-}
-html[data-theme="dark"] .modal-close { background: var(--mint-2); }
-html[data-theme="dark"] .install-toast,
-html[data-theme="dark"] .resource-modal-body {
-  background: linear-gradient(180deg, rgba(26, 42, 37, .95), rgba(20, 34, 30, .88)) !important;
-  border-color: rgba(255, 255, 255, .12) !important;
-}
-html[data-theme="dark"] .maintenance-alert-card {
-  background: rgba(180, 83, 9, .16);
-  border-color: rgba(247, 160, 120, .35);
-}
-html[data-theme="dark"] .maintenance-alert-card .maint-icon { background: rgba(180, 83, 9, .25); }
-html[data-theme="dark"] .logout-cancel { background: var(--mint-2); }
-html[data-theme="dark"] .notice-strip { background: rgba(180, 83, 9, .16); }
-html[data-theme="dark"] .notice-detail { border-top-color: rgba(255, 255, 255, .1); }
-html[data-theme="dark"] .notice-detail-icon.light { background: var(--mint-2); }
-
-/* --- routine / courses / results / exams / teaching ---------------------- */
-html[data-theme="dark"] .class-context,
-html[data-theme="dark"] .routine-body,
-html[data-theme="dark"] .course-item,
-html[data-theme="dark"] .result-stats > div,
-html[data-theme="dark"] .result-row {
-  border-color: rgba(255, 255, 255, .1);
-}
-html[data-theme="dark"] .course-item[open] { border-color: rgba(255, 255, 255, .18); }
-html[data-theme="dark"] .course-item-details { border-top-color: rgba(255, 255, 255, .12); }
-html[data-theme="dark"] .routine-list::before { background: #2a3c35; }
-html[data-theme="dark"] .mini-progress { background: #24352f; }
-html[data-theme="dark"] .exam-error { background: rgba(180, 83, 9, .16); }
-html[data-theme="dark"] .exam-template { background: var(--mint); }
-html[data-theme="dark"] .exam-timer {
-  background: linear-gradient(180deg, rgba(26, 42, 37, .9), rgba(20, 34, 30, .8)) !important;
-}
-html[data-theme="dark"] .learning-error { border-color: rgba(220, 120, 100, .35); }
-html[data-theme="dark"] .learning-summary .learning-summary-pending {
-  background: rgba(180, 83, 9, .14);
-  border-color: rgba(242, 181, 68, .25);
-}
-html[data-theme="dark"] .teaching-progress-line.pending { background: rgba(180, 83, 9, .2); }
-
-/* --- reports centre (css/reports.css) ------------------------------------ */
-html[data-theme="dark"] {
-  --rp-glass: var(--surface);
-  --rp-glass-strong: var(--surface);
-}
-html[data-theme="dark"] .rp-head {
-  background: linear-gradient(135deg, rgba(23, 48, 42, .9), rgba(21, 36, 32, .8));
-  border-color: rgba(255, 255, 255, .1);
-}
-html[data-theme="dark"] .rp-card,
-html[data-theme="dark"] .rp-report,
-html[data-theme="dark"] .rp-choose,
-html[data-theme="dark"] .rp-preview-bar,
-html[data-theme="dark"] .rp-empty {
-  background: var(--surface);
-  border-color: rgba(255, 255, 255, .1);
-}
-html[data-theme="dark"] .rp-page { background: var(--surface); }
-html[data-theme="dark"] .rp-filters input { background: var(--surface); }
-html[data-theme="dark"] .rp-report-icon { background: linear-gradient(145deg, var(--mint-2), var(--surface)); }
-html[data-theme="dark"] .rp-status[data-tone="error"] { background: rgba(180, 83, 9, .18); }
-html[data-theme="dark"] .rp-back,
-html[data-theme="dark"] .rp-mini-btn {
-  background: var(--surface);
-  border-color: rgba(255, 255, 255, .12);
-}
-html[data-theme="dark"] .rp-report-action {
-  background: var(--mint-2);
-  color: var(--forest-text);
-}
-html[data-theme="dark"] .rp-csv-download {
-  background: var(--surface);
-  border-color: rgba(71, 211, 164, .45);
-}
-html[data-theme="dark"] .rp-download-bar {
-  background: linear-gradient(180deg, rgba(13, 26, 23, 0), rgba(13, 26, 23, .92) 40%);
-}
-
-/* --- profile + pending screens ------------------------------------------- */
-html[data-theme="dark"] .contact-card {
-  background: var(--mint);
-  border-color: rgba(255, 255, 255, .1);
-}
-html[data-theme="dark"] .contact-icon { background: var(--mint-2); }
-html[data-theme="dark"] .settings-list > button,
-html[data-theme="dark"] .settings-toggle { border-color: rgba(255, 255, 255, .1); }
-html[data-theme="dark"] .settings-icon.mint,
-html[data-theme="dark"] .settings-icon.green,
-html[data-theme="dark"] .settings-icon.purple,
-html[data-theme="dark"] .settings-icon.danger { background: var(--mint-2); }
-html[data-theme="dark"] .saved-tag { background: var(--mint-2); }
-html[data-theme="dark"] .help-card {
-  background: rgba(21, 36, 32, .9);
-  border-color: rgba(255, 255, 255, .1);
-}
-html[data-theme="dark"] .help-icon { background: var(--mint-2); }
-html[data-theme="dark"] .settings-list .logout-button { border-color: rgba(220, 120, 110, .3); }
-html[data-theme="dark"] .toggle-switch i { background: #2a3c35; }
-html[data-theme="dark"] .pending-kicker { background: rgba(180, 83, 9, .16); }
-html[data-theme="dark"] .pending-id {
-  background: var(--mint);
-  border-color: rgba(255, 255, 255, .1);
-}
-html[data-theme="dark"] .pending-info { background: rgba(180, 83, 9, .14); }
-
-/* --- admin/teacher/manager/payment extras -------------------------------- */
-html[data-theme="dark"] .admin-more-item { border-bottom-color: rgba(255, 255, 255, .08); }
-html[data-theme="dark"] .admin-card textarea {
-  background: rgba(255, 255, 255, .07) !important;
-}
-html[data-theme="dark"] .admin-card textarea:focus {
-  background: rgba(255, 255, 255, .12) !important;
-}
-html[data-theme="dark"] input,
-html[data-theme="dark"] select,
-html[data-theme="dark"] textarea {
-  background-color: var(--surface);
-}
-html[data-theme="dark"] input::placeholder,
-html[data-theme="dark"] textarea::placeholder {
-  color: var(--muted-2);
-}
-html[data-theme="dark"] .fake-check { background: rgba(255, 255, 255, .08); }
-
-
-/* --- Dark Premium Glass theme -------------------------------------------- */
-html[data-theme="dark"] {
-  color-scheme: dark;
-  --ink: #f5f7f7;
-  --muted: #aab3b3;
-  --muted-2: #788383;
-  --cream: #000000;
-  --surface: rgba(15,15,15,.82);
-  --line: rgba(255,255,255,.12);
-  --mint: rgba(0,42,31,.70);
-  --mint-2: rgba(0,63,45,.64);
-  --mint-strong: rgba(0,95,67,.72);
-  --forest-text: #59e6b2;
-  --forest-dark-text: #59e6b2;
-  --shadow: 0 18px 50px rgba(0,0,0,.72);
-  --soft-shadow: 0 10px 30px rgba(0,0,0,.58);
-  --glass: rgba(15,15,15,.72);
-  --glass-strong: rgba(20,20,20,.86);
-  --glass-soft: rgba(255,255,255,.045);
-  --glass-border: rgba(255,255,255,.13);
-  --glass-shadow: 0 18px 50px rgba(0,0,0,.62);
-  --admin-glass: rgba(15,15,15,.78);
-  --admin-glass-border: rgba(255,255,255,.13);
-  --admin-shadow: 0 18px 50px rgba(0,0,0,.62);
-  --panel-card-solid: #0f0f0f;
-}
-
-html[data-theme="dark"],
-html[data-theme="dark"] body {
-  background: #000000 !important;
-  color: var(--ink) !important;
-}
-
-html[data-theme="dark"] .app-shell,
-html[data-theme="dark"] .auth-screen,
 html[data-theme="dark"] .admin-shell,
 html[data-theme="dark"] .teacher-shell,
 html[data-theme="dark"] .pay-shell,
-html[data-theme="dark"] .app-main {
-  background: #000000 !important;
+html[data-theme="dark"] .auth-screen,
+html[data-theme="dark"] .app-main,
+html[data-theme="dark"] .admin-main,
+html[data-theme="dark"] .pay-main,
+html[data-theme="dark"] .pending-screen {
+  color: var(--amoled-text) !important;
+  background: #000 !important;
+  background-image: none !important;
 }
-
-html[data-theme="dark"] .app-shell .topbar,
-html[data-theme="dark"] .auth-topbar,
-html[data-theme="dark"] .pay-topbar,
-html[data-theme="dark"] .bottom-nav,
-html[data-theme="dark"] .app-bottom-nav,
-html[data-theme="dark"] .bottom-navigation,
-html[data-theme="dark"] nav[aria-label*="Bottom"] {
-  background: rgba(0,0,0,.88) !important;
-  color: #f5f7f7 !important;
-  border-color: rgba(255,255,255,.12) !important;
-  backdrop-filter: blur(22px) saturate(140%);
-  -webkit-backdrop-filter: blur(22px) saturate(140%);
-}
-
-html[data-theme="dark"] .auth-card,
-html[data-theme="dark"] .home-hero,
-html[data-theme="dark"] .home-list-card,
-html[data-theme="dark"] .admin-card,
-html[data-theme="dark"] .admin-more-menu,
-html[data-theme="dark"] .quick-wrap,
-html[data-theme="dark"] .teaching-board,
-html[data-theme="dark"] .teacher-summary,
-html[data-theme="dark"] .teacher-record-card,
-html[data-theme="dark"] .pay-card,
-html[data-theme="dark"] .payment-card,
-html[data-theme="dark"] .study-progress-card,
-html[data-theme="dark"] .dashboard-routine-card,
-html[data-theme="dark"] .dashboard-empty-card,
-html[data-theme="dark"] .challenge-card,
-html[data-theme="dark"] .rp-card,
-html[data-theme="dark"] .rp-report,
-html[data-theme="dark"] .rp-choose,
-html[data-theme="dark"] .rp-preview-bar,
-html[data-theme="dark"] .rp-empty,
-html[data-theme="dark"] .settings-list,
-html[data-theme="dark"] .contact-card,
-html[data-theme="dark"] .help-card,
-html[data-theme="dark"] .course-item,
-html[data-theme="dark"] .result-row,
-html[data-theme="dark"] .admin-stat-tile,
-html[data-theme="dark"] .home-stat {
-  background: rgba(15,15,15,.82) !important;
-  color: #f5f7f7 !important;
-  border-color: rgba(255,255,255,.12) !important;
-  box-shadow: 0 16px 44px rgba(0,0,0,.62), inset 0 1px 0 rgba(255,255,255,.045);
-  backdrop-filter: blur(20px) saturate(135%);
-  -webkit-backdrop-filter: blur(20px) saturate(135%);
-}
-
-/* AMOLED-safe form controls and readable text */
-html[data-theme="dark"] input,
-html[data-theme="dark"] select,
-html[data-theme="dark"] textarea {
+html[data-theme="dark"] :is(.auth-card,.home-hero,.home-list-card,.quick-wrap,.teaching-board,.admin-card,.teacher-summary,.teacher-record-card,.pay-card,.payment-card,.settings-list,.admin-more-menu,.modal,.admin-modal,.rp-card,.rp-report,.rp-choose,.rp-preview-bar,.rp-empty,.rp-page,.study-progress-card,.dashboard-routine-card,.dashboard-empty-card,.challenge-card,.dashboard-empty,.contact-card,.help-card,.pending-id,.welcome-card,.admin-hero,.home-stat,.admin-stat-tile,.admin-dashboard-collect,.course-item,.result-row,.result-stats>div,.pending-info,.maintenance-alert-card,.staff-form-section-block,.staff-assignment,.staff-activity-grid>div,.staff-history li,.bootstrap-credential-row,.student-row-redesigned,.manager-student-card,.detail-grid>div,.fee-balance-grid>div,.notice-strip,.quick-tile,.admin-more-item,.settings-list>button) {
+  color: var(--amoled-text) !important;
   background: #080808 !important;
-  color: #f5f7f7 !important;
-  border-color: rgba(255,255,255,.16) !important;
+  background-image: none !important;
+  border-color: #252525 !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
 }
-html[data-theme="dark"] input::placeholder,
-html[data-theme="dark"] textarea::placeholder {
-  color: #7f8b8b !important;
+html[data-theme="dark"] :is(.topbar,.admin-topbar,.auth-topbar,.pay-topbar,.bottom-nav,.admin-bottom,.app-bottom-nav,.bottom-navigation) {
+  color: var(--amoled-text) !important;
+  background: #000 !important;
+  border-color: #252525 !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
 }
-html[data-theme="dark"] label,
-html[data-theme="dark"] p,
-html[data-theme="dark"] li,
-html[data-theme="dark"] td,
-html[data-theme="dark"] th,
-html[data-theme="dark"] span,
-html[data-theme="dark"] div {
-  color: inherit;
+html[data-theme="dark"] * {
+  color: #f5f5f5 !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
 }
-html[data-theme="dark"] h1,
-html[data-theme="dark"] h2,
-html[data-theme="dark"] h3,
-html[data-theme="dark"] h4,
-html[data-theme="dark"] h5,
-html[data-theme="dark"] h6,
-html[data-theme="dark"] strong,
-html[data-theme="dark"] .section-title {
-  color: #f5f7f7 !important;
+html[data-theme="dark"] :is(h1,h2,h3,h4,h5,strong,b,.auth-brand,.admin-brand,.auth-brand strong,.admin-brand strong,.page-intro h1,.section-heading h2,.admin-card-head h2,.admin-card-head h3,.tile-value,td,label) { color: #f5f5f5 !important; }
+html[data-theme="dark"] :is(p,small,.muted,.eyebrow,.auth-brand small,.admin-brand small,.page-intro>p,.section-heading p,.admin-card-head p,th) { color: #b7b7b7 !important; }
+html[data-theme="dark"] a, html[data-theme="dark"] .link-button, html[data-theme="dark"] .inline-link { color: #a9bdff !important; }
+html[data-theme="dark"] :is(input,select,textarea,.auth-panel input,.auth-panel select,.auth-panel textarea,.field input,.field select,.field textarea,.admin-card input) {
+  color: #f5f5f5 !important;
+  background: #080808 !important;
+  border-color: #333 !important;
+  box-shadow: none !important;
+  color-scheme: dark;
 }
-html[data-theme="dark"] small,
-html[data-theme="dark"] .muted,
-html[data-theme="dark"] .secondary-text {
-  color: #aab3b3 !important;
+html[data-theme="dark"] :is(input::placeholder,textarea::placeholder) { color: #999 !important; }
+html[data-theme="dark"] :is(table,thead,tbody,tr,th,td) { background-color: #080808 !important; border-color: #252525 !important; color: #eee !important; }
+html[data-theme="dark"] :is(button,.admin-btn,.mini-btn,.icon-button) { color: #f5f5f5; }
+html[data-theme="dark"] :is(.primary,.auth-submit,.admin-dashboard-collect,.teacher-home-link,button.exam-link) { color: #000 !important; background: #a9bdff !important; border-color: #a9bdff !important; }
+html[data-theme="dark"] :is(.quick-tile-btn,.bottom-link .nav-chip,.admin-bottom-item .nav-chip,.admin-hero-icon,.tile-icon,.admin-hero-foot-icon,.admin-dashboard-collect-icon,.admin-more-icon,.admin-stat-icon,.home-hero-icon,.home-stat-icon,.home-hero-foot-icon,.home-row-icon,.settings-icon,.help-icon,.learning-home-icon,.staff-section-number,.student-avatar,.auto-id-preview) {
+  color: #a9bdff !important; background: #111a30 !important; border-color: #28375a !important; box-shadow: none !important;
 }
-html[data-theme="dark"] a {
-  color: #59e6b2;
+html[data-theme="dark"] .bottom-link.active .nav-chip,
+html[data-theme="dark"] .admin-bottom-item.active .nav-chip { color: #000 !important; background: #a9bdff !important; border-color: #a9bdff !important; box-shadow: none !important; }
+html[data-theme="dark"] .bottom-link.active .nav-chip svg,
+html[data-theme="dark"] .admin-bottom-item.active .nav-chip svg { color: #000 !important; }
+html[data-theme="dark"] .auth-tabs,.auth-tabs { border-color: var(--apc-border); }
+
+.theme-quick-toggle {
+  display: grid !important;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px;
+  padding: 0 !important;
+  margin-left: auto;
+  order: 10;
+  color: var(--apc-text) !important;
+  background: var(--apc-surface) !important;
+  border: 1px solid var(--apc-border) !important;
+  border-radius: 50% !important;
+  box-shadow: none !important;
+  cursor: pointer;
 }
-html[data-theme="dark"] .auth-tab.active,
-html[data-theme="dark"] .mode-button.active,
-html[data-theme="dark"] .theme-quick-toggle {
-  color: #59e6b2 !important;
-  border-color: rgba(89,230,178,.32) !important;
-  background: rgba(0,55,40,.70) !important;
+.theme-quick-toggle svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.theme-quick-toggle .icon-sun { display: none; }
+.theme-quick-toggle .icon-moon { display: block; }
+html[data-theme="dark"] .theme-quick-toggle { color: #fff !important; background: #111 !important; border-color: #333 !important; }
+html[data-theme="dark"] .theme-quick-toggle .icon-sun { display: block; }
+html[data-theme="dark"] .theme-quick-toggle .icon-moon { display: none; }
+.student-header-tools > .theme-quick-toggle { margin-left: 0; order: 0; }
+.manager-top-actions { align-items: center; }
+@media (prefers-reduced-motion: reduce) { *,*::before,*::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; } }
+
+
+/* =====================================================================
+   FINAL DARK-THEME VISIBILITY FIX — Active Plus
+   Keep AMOLED black, but restore readable surfaces, borders and controls.
+   ===================================================================== */
+html[data-theme="dark"] {
+  --amoled-bg: #000000 !important;
+  --amoled-surface: #0d1220 !important;
+  --amoled-surface-2: #111827 !important;
+  --amoled-border: #2a3550 !important;
+  --amoled-text: #f7f9ff !important;
+  --amoled-muted: #b9c2d6 !important;
+  --amoled-primary: #9db5ff !important;
 }
-html[data-theme="dark"] .forest-btn,
-html[data-theme="dark"] .primary-action,
-html[data-theme="dark"] .primary-btn {
-  box-shadow: 0 10px 28px rgba(0,0,0,.55);
+html[data-theme="dark"] :is(.auth-card,.admin-card,.admin-hero,.admin-stat-tile,.admin-more-menu,.admin-more-item,.admin-modal,.modal,.teacher-summary,.teacher-record-card,.pay-card,.payment-card,.settings-list,.rp-card,.rp-report,.rp-choose,.rp-preview-bar,.rp-empty,.rp-page,.home-hero,.home-list-card,.quick-wrap,.teaching-board,.student-row-redesigned,.manager-student-card,.notice-strip,.quick-tile,.contact-card,.help-card,.welcome-card,.course-item,.result-row,.result-stats>div,.study-progress-card,.challenge-card,.dashboard-routine-card,.dashboard-empty-card,.dashboard-empty,.staff-form-section-block,.staff-assignment,.staff-activity-grid>div,.staff-history li,.bootstrap-credential-row) {
+  color: var(--amoled-text) !important;
+  background: var(--amoled-surface) !important;
+  background-image: none !important;
+  border-color: var(--amoled-border) !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,.28) !important;
+}
+html[data-theme="dark"] :is(.auth-screen,.admin-main,.app-main,.pay-main,.teacher-main) { color: var(--amoled-text) !important; }
+html[data-theme="dark"] :is(h1,h2,h3,h4,h5,h6,strong,b,label,.tile-value,.admin-card-head h2,.admin-card-head h3,.page-intro h1,.section-heading h2,.auth-brand strong,.admin-brand strong,.admin-more-copy strong,.admin-bottom-item .nav-label) { color: #f7f9ff !important; }
+html[data-theme="dark"] :is(p,small,.muted,.eyebrow,.page-intro>p,.section-heading p,.admin-card-head p,.admin-more-copy small,th) { color: #b9c2d6 !important; }
+html[data-theme="dark"] :is(input,select,textarea,.auth-panel input,.auth-panel select,.auth-panel textarea,.field input,.field select,.field textarea,.admin-card input,.admin-card select,.admin-card textarea) {
+  color: #f7f9ff !important;
+  background: #111827 !important;
+  border-color: #34415f !important;
+  color-scheme: dark;
+}
+html[data-theme="dark"] :is(input::placeholder,textarea::placeholder) { color: #9aa6bd !important; }
+html[data-theme="dark"] :is(table,thead,tbody,tr,th,td) { background: #0d1220 !important; color: #eef2ff !important; border-color: #2a3550 !important; }
+html[data-theme="dark"] :is(.admin-btn,.mini-btn,.icon-button,.chip,.auth-tab) { color: #eef2ff !important; border-color: #34415f !important; background: #111827 !important; }
+html[data-theme="dark"] :is(.primary,.auth-submit,.admin-dashboard-collect,.teacher-home-link,button.exam-link) { color: #071027 !important; background: #9db5ff !important; border-color: #9db5ff !important; }
+html[data-theme="dark"] :is(.admin-hero-icon,.tile-icon,.admin-hero-foot-icon,.admin-dashboard-collect-icon,.admin-more-icon,.admin-stat-icon,.home-hero-icon,.home-stat-icon,.home-hero-foot-icon,.home-row-icon,.settings-icon,.help-icon,.learning-home-icon,.staff-section-number,.student-avatar,.auto-id-preview,.topbar-icon) { color: #b8c9ff !important; background: #17213a !important; border-color: #34466f !important; }
+html[data-theme="dark"] :is(.admin-bottom,.admin-topbar,.auth-topbar,.pay-topbar,.topbar,.bottom-nav,.app-bottom-nav,.bottom-navigation) { background: #05070c !important; border-color: #2a3550 !important; color: #f7f9ff !important; }
+html[data-theme="dark"] .admin-app-link { display:none !important; }
+
+
+/* Topbar network-state border: online = green, offline = red.
+   Only the top and two side borders change; no layout/workflow changes. */
+:where(.auth-topbar,.admin-topbar,.topbar,.teacher-topbar,.manager-topbar,.pay-topbar,header[class*="topbar"]) {
+  border-top: 3px solid #e1e7ef !important;
+  border-left: 3px solid #e1e7ef !important;
+  border-right: 3px solid #e1e7ef !important;
+  transition: border-color .18s ease;
+}
+:where(.auth-topbar,.admin-topbar,.topbar,.teacher-topbar,.manager-topbar,.pay-topbar,header[class*="topbar"]).connection-online {
+  border-top-color: #22a06b !important;
+  border-left-color: #22a06b !important;
+  border-right-color: #22a06b !important;
+}
+:where(.auth-topbar,.admin-topbar,.topbar,.teacher-topbar,.manager-topbar,.pay-topbar,header[class*="topbar"]).connection-offline {
+  border-top-color: #dc4c4c !important;
+  border-left-color: #dc4c4c !important;
+  border-right-color: #dc4c4c !important;
 }

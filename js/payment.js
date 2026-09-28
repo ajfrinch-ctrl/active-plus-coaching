@@ -7,18 +7,16 @@ import { loadRoster } from './office-data.js';
 import { financeRepository, monthLabel, dateLabel, searchStudents, studentFeeSummary, latinDigits, stampTransaction, isFinalizedTransaction, TRANSACTIONS_KEY } from './finance-data.js';
 import { receiptMarkup, downloadReceipt, createReceiptPNG } from './finance-receipt.js';
 import { toBanglaNumber } from './ui.js';
+import { newId } from './database.js';
 import { registerServiceWorker } from './service-worker.js';
 import { goToLoginPage } from './staff-auth.js';
 import { escapeHtml } from './sanitize.js';
 import {
   PAYMENT_USER_ID,
-  authenticatePayment,
-  savePaymentSession,
   hasPaymentSession,
   clearPaymentSession,
   changePaymentPin
 } from './payment-auth.js';
-import { openStaffPasswordDialog } from './staff-password-dialog.js';
 import { mountReports, refreshReports } from './reports.js';
 
 export { PAYMENT_USER_ID };
@@ -48,6 +46,18 @@ const statusMeta = {
 const money = value => `৳${bn(Number(value || 0).toLocaleString('en-US'))}`;
 const todayText = () => dateLabel(new Date());
 
+function renderCurrentDate() {
+  const el = $('#payCurrentDate');
+  if (!el) return;
+  const now = new Date();
+  el.textContent = new Intl.DateTimeFormat('bn-BD', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  }).format(now);
+}
+
 function toast(message, tone = 'info') {
   const el = $('#payToast');
   el.textContent = message;
@@ -66,15 +76,11 @@ $$('[data-toggle-pin]').forEach(button => {
     input.type = input.type === 'password' ? 'text' : 'password';
   });
 });
-$$('.input-wrap input').forEach(input => {
-  input.addEventListener('input', () => { $('#payLoginError').hidden = true; });
-});
 
-async function enterPanel(remember) {
+async function enterPanel() {
   state.students = loadRoster();
-  $('#payEntry').hidden = true;
   $('#payShell').hidden = false;
-  await savePaymentSession(remember);
+  renderCurrentDate();
   renderMethodPills();
   populateMonths();
   // Focus as soon as the desk is visible. Waiting for the ledger load lets the
@@ -84,38 +90,12 @@ async function enterPanel(remember) {
   mountReports($('#paymentReports'), { panel: 'payment' });
 }
 
-$('#payLoginForm').addEventListener('submit', async event => {
-  event.preventDefault();
-  const userId = $('#payLoginUser').value.trim();
-  const pin = $('#payLoginPin').value;
-  const result = await authenticatePayment(userId, pin);
-  if (!result.ok) {
-    $('#payLoginError').textContent = 'ইউজারনেম বা পাসওয়ার্ড সঠিক নয়। আবার চেষ্টা করুন।';
-    $('#payLoginError').hidden = false;
-    $('#payLoginPin').value = '';
-    $('#payLoginPin').focus();
-    return;
-  }
-  $('#payLoginError').hidden = true;
-  const remember = $('#rememberPay').checked;
-  if (result.needsSetup || result.needsPasswordChange) {
-    openStaffPasswordDialog({
-      role: 'payment',
-      mode: result.needsSetup ? 'setup' : 'change',
-      onDone: () => enterPanel(remember)
-    });
-    return;
-  }
-  enterPanel(remember);
-});
-
 $('#payExitButton').addEventListener('click', () => {
   clearPaymentSession();
   state.selectedId = null;
   closeCollectionForm();
   $('#payStickyBar').hidden = true;
   $('#payShell').hidden = true;
-  $('#payLoginPin').value = '';
   // Logout always returns to the shared login page, never to a panel entry form.
   goToLoginPage();
 });
@@ -476,11 +456,9 @@ $('#payCollectionForm').addEventListener('submit', async event => {
     return;
   }
   const now = new Date();
-  const token = crypto.randomUUID();
-  const prefix = `${String(now.getFullYear()).slice(-2)}${String(now.getMonth() + 1).padStart(2, '0')}`;
   const tx = stampTransaction({
-    id: `TRX-${token}`,
-    receiptNo: `REC-${prefix}-${now.getTime().toString(36).toUpperCase()}-${token.slice(0, 8).toUpperCase()}`,
+    id: newId('T'),
+    receiptNo: newId('R'),
     studentId: student.id,
     studentName: student.name,
     className: student.className,
@@ -700,8 +678,7 @@ window.addEventListener('storage', event => {
 // check is asynchronous (the stored record may be encrypted), so the entry
 // screen is hidden as soon as the answer arrives.
 hasPaymentSession().then(valid => {
-  if (!valid) return;
-  $('#payEntry').hidden = true;
+  if (!valid) { goToLoginPage(); return; }
   $('#payShell').hidden = false;
-  enterPanel(true);
+  void enterPanel();
 });

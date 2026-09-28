@@ -2,12 +2,14 @@
 <html lang="bn">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https:; manifest-src 'self'; worker-src 'self'; base-uri 'self'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https:; manifest-src 'self'; worker-src 'self'; base-uri 'self'; object-src 'none'">
   <meta name="referrer" content="no-referrer">
   <script src="js/sanitize-url.js"></script>
+  <script src="js/topbar-connectivity.js?v=20260928-1740"></script>
+  <script type="module" src="js/realtime-sync-entry.js"></script>
   <script src="js/appearance-boot.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#087b66">
+  <meta name="theme-color" content="#000000">
   <meta name="description" content="Active Plus Coaching Manager operations panel">
   <meta name="robots" content="noindex">
   <title>Active Plus | Manager Operations</title>
@@ -26,27 +28,10 @@
   <link rel="stylesheet" href="css/appearance.css">
 </head>
 <body>
-  <section class="auth-screen admin-auth-screen" id="managerLogin" aria-label="ম্যানেজার লগইন">
-    <div class="auth-topbar">
-      <button class="theme-quick-toggle" type="button" data-theme-toggle aria-label="ডার্ক মোড চালু করুন"><svg class="icon-sun" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-sun"></use></svg><svg class="icon-moon" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-moon"></use></svg></button><div class="auth-brand"><img src="assets/icons/logo-128.png" alt="" width="38" height="38"><span><strong>Active Plus Coaching</strong><small>Manager Operations</small></span></div></div>
-    <div class="auth-card">
-      <p class="eyebrow">শুধু অনুমোদিত Manager</p><h1>ম্যানেজার পোর্টালে প্রবেশ</h1>
-      <p class="finance-hint">দৈনন্দিন Coaching operations, student approval, finance review ও academic monitoring।</p>
-      <form id="managerLoginForm" novalidate>
-        <label for="managerUsername">Manager Username</label><div class="input-wrap"><input id="managerUsername" name="username" type="text" autocomplete="username" autocapitalize="none" required></div>
-        <label for="managerPassword">পাসওয়ার্ড</label><div class="input-wrap"><input id="managerPassword" name="password" type="password" autocomplete="current-password" required><button class="show-pin" type="button" id="managerTogglePassword" aria-label="পাসওয়ার্ড দেখুন">◉</button></div>
-        <label class="remember-label"><input id="managerRemember" type="checkbox" checked><span class="fake-check"></span>এই ডিভাইসে মনে রাখুন</label>
-        <p class="finance-error" id="managerLoginError" role="alert" hidden></p>
-        <button class="auth-submit" type="submit">ম্যানেজার পোর্টালে প্রবেশ করুন</button>
-      </form>
-      <p class="auth-footnote"><a class="inline-link" href="index.html">← মূল লগইন পেইজে ফিরুন</a></p>
-    </div>
-  </section>
-
   <div class="admin-shell manager-shell" id="managerShell" hidden>
     <header class="admin-topbar"><div class="admin-topbar-inner">
       <div class="admin-brand"><img src="assets/icons/logo-128.png" alt="" width="38" height="38"><span><strong>Manager Operations</strong><small>Coaching Operational Controller</small></span></div>
-      <div class="manager-top-actions"><button class="manager-profile-shortcut" type="button" data-manager-view="profile" id="managerNameShort">Manager Profile</button><button class="admin-exit" id="managerLogout" type="button" aria-label="লগআউট"><svg viewBox="0 0 24 24"><use href="#icon-logout"></use></svg><span>লগআউট</span></button></div>
+      <div class="manager-top-actions"><button class="theme-quick-toggle" type="button" data-theme-toggle aria-label="ডার্ক মোড চালু করুন" aria-pressed="true" title="থিম বদলান"><svg class="icon-sun" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-sun"></use></svg><svg class="icon-moon" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-moon"></use></svg></button><button class="manager-profile-shortcut" type="button" data-manager-view="profile" id="managerNameShort">Manager Profile</button><button class="admin-exit" id="managerLogout" type="button" aria-label="লগআউট"><svg viewBox="0 0 24 24"><use href="#icon-logout"></use></svg><span>লগআউট</span></button></div>
     </div></header>
     <main class="admin-main manager-main" id="managerMain">
       <aside class="manager-local-notice" role="note"><strong>Offline workspace:</strong> এই প্যানেলের তথ্য এই ব্রাউজারে সংরক্ষিত। Firebase/backend authorization ও multi-device sync এখনো সংযুক্ত নয়।</aside>
@@ -96,6 +81,8 @@
   </div>
   <svg class="icon-sprite" aria-hidden="true"><symbol id="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"/></symbol><symbol id="icon-moon" viewBox="0 0 24 24"><path d="M20 15.5A8.5 8.5 0 0 1 8.5 4 8.5 8.5 0 1 0 20 15.5Z"/></symbol><symbol id="icon-logout" viewBox="0 0 24 24"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></symbol><symbol id="icon-shield" viewBox="0 0 24 24"><path d="M12 3 20 6v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z"/></symbol><symbol id="icon-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20v-1a6 6 0 0 1 12 0v1M16 5.5a3 3 0 0 1 0 5.5m2 3a5 5 0 0 1 3 5v1"/></symbol><symbol id="icon-clipboard" viewBox="0 0 24 24"><path d="M9 4h6l1 2h3v15H5V6h3z"/><path d="m8 13 2.5 2.5L16 10"/></symbol><symbol id="icon-trending" viewBox="0 0 24 24"><path d="m3 17 6-6 4 4 8-9"/><path d="M15 6h6v6"/></symbol><symbol id="icon-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10H3z"/><path d="M9 20v-6h6v6"/></symbol><symbol id="icon-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></symbol></svg>
   <div class="admin-toast" id="managerToast" role="status" hidden></div>
+  <script type="module" src="js/theme-entry.js"></script>
+  <script type="module" src="js/pull-to-refresh.js"></script>
   <script type="module" src="js/manager.js"></script>
 </body>
 </html>
