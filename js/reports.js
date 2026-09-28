@@ -11,7 +11,7 @@ import {
 } from './report-catalog.js';
 import { resolveActor, actorScope, enforceAccess } from './report-access.js';
 import { loadSnapshot } from './report-sources.js';
-import { buildReportPDF } from './report-layout.js';
+import { buildReport, renderPagesPDF } from './report-layout.js';
 import { downloadBlob } from './exam-pdf.js';
 
 const el = (tag, cls = '', text = '') => {
@@ -253,8 +253,9 @@ class ReportCenter {
 
       /* One final document becomes one PDF Blob. The exact same Blob is used
          for both the Preview iframe and Download PDF. */
-      const blob=await buildReportPDF(result.doc);
-      this.openPreview(blob);
+      const rendered=await buildReport(result.doc);
+      const blob=await renderPagesPDF(rendered.pages);
+      this.openPreview(blob, rendered.html);
     } catch(error) {
       if (error?.code==='FORBIDDEN') this.showStatus(error.message || 'এই রিপোর্ট দেখার অনুমতি নেই।','error');
       else this.showStatus(error?.message || 'Report তৈরি করা যায়নি।','error');
@@ -263,7 +264,7 @@ class ReportCenter {
     }
   }
 
-  openPreview(blob) {
+  openPreview(blob, previewHtml = '') {
     this.revokePdf();
     this.pdfBlob=blob;
     this.pdfUrl=URL.createObjectURL(blob);
@@ -277,10 +278,15 @@ class ReportCenter {
     bar.append(back,title);
     preview.append(bar);
 
-    const frame=el('iframe','rc-pdf-frame');
-    frame.title='PDF Preview';
-    frame.src=this.pdfUrl;
-    preview.append(frame);
+    /* Use the report engine's own measured HTML pages for the on-screen
+       preview. This avoids relying on the device's embedded PDF viewer, which
+       can render an object-URL PDF as a blank frame on some mobile Chrome
+       builds. The downloaded file is still the exact PDF built from the same
+       pages. */
+    const previewBody=el('div','rc-pdf-preview');
+    previewBody.setAttribute('role','document');
+    previewBody.innerHTML=previewHtml || '<p class="rc-preview-empty">রিপোর্ট প্রিভিউ তৈরি করা যায়নি।</p>';
+    preview.append(previewBody);
 
     const download=el('button','rc-download','Download PDF');
     download.type='button';
@@ -288,7 +294,7 @@ class ReportCenter {
     preview.append(download);
 
     this.root.replaceChildren(preview);
-    requestAnimationFrame(()=>frame.focus?.());
+
   }
 
   closePreview() {
