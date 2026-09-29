@@ -1,8 +1,8 @@
 // Active Plus — real Firebase connection smoke test.
 // This is diagnostic only; it never changes local app data.
-import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js';
-import { getDatabase, ref, onValue } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js';
-import { firebaseApp, firebaseConfig, appCheckReady } from './firebase-config.js';
+import { firebaseApp, appCheckReady } from '../firebase/firebase-init.js';
+import { firebaseConfig } from '../firebase/firebase-config.js';
+import { getAuth, signInAnonymously, getDatabase, ref, onValue, get } from '../firebase/firebase-services.js';
 
 export async function testFirebaseOnlineConnection(timeout = 8000) {
   if (!navigator.onLine) return { ok: false, reason: 'offline' };
