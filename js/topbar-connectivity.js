@@ -7,7 +7,9 @@
   const CHIP_CLASS = 'topbar-sync-chip';
   const CHIP_LABEL = 'সিঙ্ক';
 
-  const syncConfirmed = () => document.documentElement?.dataset?.realtimeSync === 'online';
+  // `pending` means the link is up and changes are still being written: the
+  // border stays blue, the chip already says সিঙ্ক. Errors stay off this list.
+  const syncConfirmed = () => ['online', 'pending'].includes(document.documentElement?.dataset?.realtimeSync);
 
   /** The chip joins the header's right-hand tool cluster when the panel has one, so
       the theme/exit/bell buttons keep their exact place. Without a cluster (login

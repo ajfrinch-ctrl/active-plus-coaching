@@ -1,13 +1,22 @@
 /* Active Plus — Realtime Database online test sync.
    Offline-first: localStorage remains the source used by the UI.
-   SYNCABLE application data plus every cross-device LOGIN IDENTITY is
-   mirrored: the four staff role accounts, the Staff Directory records, the
-   claimed Login User ID registry, the local student login AND the exam
-   database (exams + attempts, through a dedicated id-keyed mirror).
-   Only records that already hold PBKDF2 password HASHES travel the bridge —
-   a plaintext password or security answer never does, and sessions stay
-   device-bound. This is a cross-device TEST bridge, not the final auth
-   architecture. */
+
+   Mirrored, each with its own merge rules:
+     • application collections (students, transactions, notices, routine,
+       teaching, settings, teacher assignments) through a durable per-record
+       outbox (js/record-sync.js) — offline edits and deletions survive
+       reloads and are merged into current server state
+     • the four staff role accounts and the AES-encrypted Staff Directory
+     • the claimed Login User ID registry
+     • one student login record per login ID (studentAccounts/<encoded-id>),
+       selected on a device only after its password has been verified
+     • the exam database (exams + attempts) through its dedicated mirror
+
+   Only records that already hold PBKDF2 password HASHES travel the bridge — a
+   plaintext password or security answer never does, and sessions stay
+   device-bound. The bridge signs in anonymously and every authenticated user
+   of the project can read/write these nodes: it is a cross-device TEST bridge,
+   not the final authentication or authorization architecture. */
 import { getAuth, signInAnonymously, setPersistence, browserLocalPersistence } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js';
 import { getDatabase, ref, get, set, runTransaction, onValue as firebaseOnValue } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js';
 import { firebaseApp, appCheckReady } from './firebase-config.js';
@@ -16,6 +25,7 @@ import { STAFF_ACCOUNTS } from './staff-auth.js';
 import { encodeRealtimeRecords, decodeRealtimeRecords } from './realtime-value-codec.js';
 import { collectionPayload, remoteToLocal } from './sync-collections.js';
 import { createRecordSync, mergeRecordOperations } from './record-sync.js';
+import { preferLocalCopy } from './sync-merge.js';
 import { reportSyncError, setSyncStatus } from './sync-status.js';
 import { isPasswordRecord, verifyPassword } from './password-hash.js';
 import { normalizeUsername, contactNumber } from './account-policy.js';
@@ -72,6 +82,13 @@ function onValue(node, callback) {
   }, syncError);
   subscriptions.add(unsubscribe);
   return unsubscribe;
+}
+
+/** Push everything still waiting in the durable outboxes. */
+async function flushPending() {
+  const bridges = [...recordBridges.values()];
+  if (!bridges.length) return;
+  await Promise.all(bridges.map(bridge => bridge.flush()));
 }
 
 function paintSyncStatus() {
@@ -182,6 +199,14 @@ async function syncStaffRole(role, { forcePush = false } = {}) {
   if (snap.exists() && !forcePush) {
     const remote = snap.val();
     if (remote && typeof remote === 'object' && remote.username && remote.password) {
+      // A password changed here while offline is newer than the cloud copy:
+      // upload it instead of silently restoring the old credential. On equal
+      // timestamps the cloud copy still wins (the long-standing bridge rule).
+      if (isPasswordRecord(local?.password) && preferLocalCopy(local, remote, { localWinsTie: false })) {
+        await set(node, local);
+        lastRemote.set('staff:' + role, JSON.stringify(local));
+        return;
+      }
       // A valid remote staff account must contain both its identity and a
       // password record. Never replace a working local account with an
       // incomplete remote snapshot.
@@ -291,7 +316,13 @@ async function syncStudentAccount() {
   const key = studentKey(local);
   if (!key || !isPasswordRecord(local?.pinHash)) return;
   const node = ref(getDatabase(firebaseApp), STUDENTS_ROOT + '/' + encodeUsernameKey(key));
-  const result = await runTransaction(node, current => current || local, { applyLocally: false });
+  const result = await runTransaction(node, current => {
+    if (!current) return local;
+    // The key belongs to one login ID: never adopt a record for another one.
+    if (studentKey(current) !== key) return current;
+    // Newest wins, so a password changed offline is uploaded rather than lost.
+    return preferLocalCopy(local, current) ? local : current;
+  }, { applyLocally: false });
   const remote = result.snapshot.val();
   if (isStudentAccountRecord(remote) && studentKey(remote) === key) {
     lastRemote.set('student:' + key, JSON.stringify(remote));
@@ -445,6 +476,21 @@ function applyExamDbRemote(remoteRoot) {
   const { db } = readExamDbLocal();
   let changed = false;
 
+  // Firebase returns an array when every child key is a sequential integer and
+  // drops empty objects entirely; both shapes must be restored before the app's
+  // strict document validation reads the file.
+  const asMap = value => {
+    if (!Array.isArray(value)) return value || {};
+    const map = {};
+    value.forEach((entry, index) => { if (entry !== null) map[String(index)] = entry; });
+    return map;
+  };
+  const asList = value => {
+    if (Array.isArray(value)) return value;
+    if (!value || typeof value !== 'object') return [];
+    return Object.keys(value).sort((left, right) => Number(left) - Number(right)).map(key => value[key]);
+  };
+
   const upsert = (space, item) => {
     const remoteJson = stableStringify(item);
     const key = `${space}/${item.id}`;
@@ -483,7 +529,7 @@ function applyExamDbRemote(remoteRoot) {
   const liveExamIds = new Set(db.exams.map(item => item.id));
   const remoteAttemptIds = new Set();
   for (const raw of Object.values(remoteAttempts)) {
-    const item = { ...raw, answers: raw.answers || {}, order: raw.order || [] };
+    const item = { ...raw, answers: asMap(raw.answers), order: asList(raw.order) };
     if (!attemptItemValid(item)) continue;
     remoteAttemptIds.add(item.id);
     examSync.lastRemote.attempts.set(item.id, stableStringify(item));
@@ -718,16 +764,46 @@ function listenCollection(collection) {
   });
 }
 
+let pendingTimer = null;
+let attemptTimer = null;
+
+/** A record left in the outbox (failed write, or an edit made before startup)
+    is retried by itself, so nothing waits for a reload or a new click. */
+function schedulePendingFlush() {
+  clearInterval(pendingTimer);
+  pendingTimer = setInterval(() => {
+    if (!ready || !navigator.onLine) return;
+    if (![...recordBridges.values()].some(bridge => bridge.hasPending())) return;
+    flushPending().catch(syncError);
+  }, 3000);
+}
+
+window.addEventListener('apc-student-login', () => {
+  // The student just signed in with a verified password: pull their exam data
+  // in the background. The background startup does the same, only later.
+  if (!ready) return;
+  void syncExamDb().catch(syncError);
+});
+
 export async function startRealtimeSync() {
   if (!navigator.onLine) { setSyncStatus('offline'); return { ok: false, reason: 'offline' }; }
   if (booting) return booting;
-  if (started && !syncFailed) { paintSyncStatus(); return { ok: true }; }
+  if (started && !syncFailed) {
+    // Already running: still push anything the outbox is holding. A database
+    // reconnect does not fire the browser's `online` event, so without this the
+    // pending change could sit unsent until the next reload.
+    try { await flushPending(); } catch (error) { syncError(error); }
+    paintSyncStatus();
+    return { ok: true };
+  }
   booting = (async () => {
     ready = false;
     syncFailed = false;
     setSyncStatus('connecting');
     for (const stop of subscriptions) stop();
     subscriptions.clear();
+    clearInterval(pendingTimer);
+    clearTimeout(attemptTimer);
     stopStudent = null;
     studentListeningKey = null;
     try {
@@ -756,6 +832,7 @@ export async function startRealtimeSync() {
       listenExamDb();
       ready = true;
       started = true;
+      schedulePendingFlush();
       paintSyncStatus();
       return { ok: true, mode: 'realtime-test-sync' };
     } catch (error) {
@@ -769,3 +846,7 @@ export async function startRealtimeSync() {
 
 window.addEventListener('offline', () => { connected = false; setSyncStatus('offline'); });
 window.addEventListener('online', () => { started = false; void startRealtimeSync(); });
+// A reconnect that never reaches a listener must still not leave data unsent.
+attemptTimer = setInterval(() => {
+  if (navigator.onLine && ready && !connected) void startRealtimeSync();
+}, 20000);

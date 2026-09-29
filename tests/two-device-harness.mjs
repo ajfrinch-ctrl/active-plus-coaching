@@ -85,6 +85,7 @@ const affects = (listenerPath, writtenPath) =>
 export function startMockCloud() {
   const state = {};
   let revision = 0;
+  let paused = false;
   const subscribers = new Set();
   const send = (sub, nodePath) => {
     const val = getAt(state, nodePath);
@@ -105,7 +106,24 @@ export function startMockCloud() {
       res.end(JSON.stringify({ revision, exists: val !== undefined, val: val === undefined ? null : val }));
       return;
     }
+    if (req.method === 'POST' && url.pathname === '/control') {
+      let body = '';
+      req.on('data', chunk => { body += chunk; });
+      req.on('end', () => {
+        paused = JSON.parse(body || '{}').paused === true;
+        res.writeHead(200, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ paused }));
+      });
+      return;
+    }
     if (req.method === 'POST' && url.pathname === '/db') {
+      if (paused) {
+        // Writes are refused, but reads and listeners stay alive: the device
+        // keeps its outbox and must not lose the local change.
+        res.writeHead(503, { 'content-type': 'application/json' });
+        res.end('{"error":"unavailable"}');
+        return;
+      }
       let body = '';
       req.on('data', chunk => { body += chunk; });
       req.on('end', () => {

@@ -1731,12 +1731,16 @@ window.addEventListener('storage', event => {
   clearTimeout(cloudRefreshTimer);
   cloudRefreshTimer = setTimeout(async () => {
     if ($('#adminShell').hidden) return;
-    state.students = loadRoster();
-    state.notices = loadNotices();
-    state.routine = loadRoutine();
-    await refreshStaffSnapshot();
-    renderAll();
-    refreshReports($('#adminReports'));
+    try {
+      state.students = loadRoster();
+      state.notices = loadNotices();
+      state.routine = loadRoutine();
+      await refreshStaffSnapshot();
+      renderAll();
+      refreshReports($('#adminReports'));
+    } catch (error) {
+      console.warn('[Active Plus] cloud refresh failed:', error?.message);
+    }
   }, 100);
 });
 

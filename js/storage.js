@@ -69,6 +69,9 @@ export async function persistAccount(account) {
   const previous = raw === null ? null : JSON.parse(raw);
   const value = protectAccountIdentity(account, previous);
   const stored = await hashSecrets(value, account);
+  // Cross-device merge tiebreak: the newest local change must not be replaced
+  // by an older cloud copy (e.g. a password changed while offline).
+  stored.updatedAt = new Date().toISOString();
   storage.setItem(STORAGE_KEYS.account, JSON.stringify(stored));
   rememberAccount(stored);
   return stored;

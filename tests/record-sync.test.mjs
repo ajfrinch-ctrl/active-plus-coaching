@@ -88,3 +88,26 @@ test('an edit made during an in-flight write is not discarded by its acknowledge
   assert.equal(cloud.value.a.text, 'two');
   assert.equal(d.bridge.hasPending(), false);
 });
+
+test('an older outbox state is discarded instead of inventing deletions', async () => {
+  const cloud = { value: { a: { text: 'keep me' } } };
+  const disk = { state: { version: 1, view: { a: { text: 'keep me' } }, pending: { a: { value: null } } } };
+  const rebooted = device(cloud, {}, disk);   // the local file no longer holds that record
+  rebooted.bridge.receive(cloud.value);
+  await rebooted.bridge.flush();
+  assert.deepEqual(cloud.value, { a: { text: 'keep me' } }, 'a stale delete request is not replayed');
+  assert.deepEqual(rebooted.local(), { a: { text: 'keep me' } }, 'and the record is pulled back down');
+});
+
+test('the persisted outbox stores fingerprints, not a second copy of every record', async () => {
+  const cloud = { value: {} };
+  const big = { body: 'x'.repeat(4000) };
+  const d = device(cloud, { A: big });
+  await d.bridge.flush();
+  const saved = JSON.stringify(d.disk.state);
+  assert.ok(saved.length < 400, `outbox state stayed small (${saved.length} bytes)`);
+  assert.equal(d.bridge.hasPending(), false);
+  d.edit({ A: { body: 'changed' } });          // a real change is still detected
+  await d.bridge.flush();
+  assert.equal(cloud.value.A.body, 'changed');
+});

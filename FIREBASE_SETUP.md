@@ -158,6 +158,61 @@ Implemented and tested locally, **not deployed to Firebase or GitHub Pages**:
   failures and reports errors/pending/offline state. Blue status requires database
   connection and successful startup; it is not a financial settlement receipt.
 
+### Audit round 2 — 2026-09-29 (same branch, not deployed)
+
+Re-read of every changed file plus new regression tests. Found and fixed:
+
+- **A stale cloud copy could revert a newer local password.** The account
+  mirror used to accept whatever the cloud held. Now every saved account is
+  stamped with `updatedAt` (`js/storage.js`) and the merge keeps the newest
+  copy (`js/sync-merge.js`): a password changed while the cloud was unreachable
+  is uploaded instead of being silently restored to the old one. Student ties
+  keep the device's verified copy; staff ties keep the long-standing
+  cloud-first rule. Regression: `tests/sync-merge.test.mjs` and the two-device
+  test *"a password changed while the cloud was unreachable is never reverted"*.
+- **A failed or missed reconnect could leave changes unsent.** The outbox is now
+  also flushed when `startRealtimeSync` is called on an already-running bridge,
+  by a 3-second timer while anything is pending, and by a 20-second check for a
+  lost database connection. Regression: the two-device test using a silent
+  `navigator.onLine` flip (no `online`/`offline` event at all).
+- **A wrong cloud password could block a valid local login.** The login page no
+  longer stops at a cloud mismatch; it continues with the device's own
+  credentials and only uses the cloud answer to choose the message. Also, the
+  staff and student cloud lookups now run in parallel instead of one after the
+  other.
+- **Explicit `null` values disappeared.** Realtime Database deletes a node
+  written as `null`, so a roster student's `monthlyFee: null` came back missing.
+  The transport codec now carries a marker instead, and drops `undefined` the
+  way `JSON.stringify` does.
+- **Routine order could change after a round trip.** Firebase returns object
+  keys in key order; classes now carry `_syncOrder`, so every device shows the
+  order the Manager entered.
+- **A future teaching document version could have wiped the cloud copy.** An
+  unknown `version` is no longer treated as "empty list" and is never uploaded.
+- **The outbox no longer stores a second copy of every record.** The persisted
+  view keeps a short fingerprint per record, so the sync state cannot exhaust
+  the device's storage quota; a pre-audit state shape is discarded instead of
+  being replayed (which could have invented deletions).
+- **A failing panel refresh could break the others.** The cloud-refresh handlers
+  in the Admin, Cash Counter and student panels are individually guarded, so one
+  error no longer stops the rest of the update.
+- **Exam attempts** are normalised on arrival (an empty `answers` object, a
+  missing `order` array), so a record RTDB trimmed is still readable.
+
+Known limitations left in place (documented, not fixed):
+
+- Logging in with a *mobile number* on a device that has never seen that
+  student reads the whole `studentAccounts` subtree (RTDB has no indexed lookup
+  here). Username logins read a single path. A small phone → login-ID index
+  would remove the scan.
+- `activePlus.directorySyncBaseline.v2` stays in plain localStorage: it holds
+  Staff record IDs and their `updatedAt` only (no names, no password hashes),
+  while the directory itself stays AES-encrypted.
+- Same-record concurrent edits remain last-write-wins; balances, counters and
+  approvals still need a trusted backend (Cloud Functions) to be authoritative.
+- The exam mirror is one global node, so a device uploading the exam database is
+  effectively the leader until another device opens the exam panel.
+
 ### Publishing and acceptance
 
 GitHub Pages currently publishes the repository's **main** branch at `/`.

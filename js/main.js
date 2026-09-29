@@ -265,28 +265,32 @@ window.addEventListener('popstate', () => {
 // Cloud writes occur in this window; native storage events alone never fire here.
 window.addEventListener('storage', async event => {
   if (!event.apcRemote) return;
-  if (event.key === KEYS.students) {
-    const account = loadAccount();
-    const id = account?.student?.id || account?.studentId;
-    const roster = listDocuments('students').find(student => student.id === id);
-    const status = roster?.status === 'approved' ? 'active' : roster?.status;
-    if (roster && status !== account?.status) {
-      await syncAccountStatus(id, roster.status);
+  try {
+    if (event.key === KEYS.students) {
+      const account = loadAccount();
+      const id = account?.student?.id || account?.studentId;
+      const roster = listDocuments('students').find(student => student.id === id);
+      const status = roster?.status === 'approved' ? 'active' : roster?.status;
+      if (roster && status !== account?.status) {
+        await syncAccountStatus(id, roster.status);
+        state.account = loadAccount();
+      }
+    }
+    if (event.key === KEYS.account) {
       state.account = loadAccount();
+      if (state.account?.student) {
+        state.student = { ...defaultStudent, ...state.account.student };
+        saveStudent(state.student);
+        renderStudent(state.student);
+      }
     }
+    if (!$('#appShell').hidden) openStudentApp(state);
+    refreshDashboard();
+    refreshTeaching();
+    refreshExams();
+    refreshNotices();
+    refreshReports($('#studentReports'));
+  } catch (error) {
+    console.warn('[Active Plus] cloud refresh failed:', error?.message);
   }
-  if (event.key === KEYS.account) {
-    state.account = loadAccount();
-    if (state.account?.student) {
-      state.student = { ...defaultStudent, ...state.account.student };
-      saveStudent(state.student);
-      renderStudent(state.student);
-    }
-  }
-  if (!$('#appShell').hidden) openStudentApp(state);
-  refreshDashboard();
-  refreshTeaching();
-  refreshExams();
-  refreshNotices();
-  refreshReports($('#studentReports'));
 });

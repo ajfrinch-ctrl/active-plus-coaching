@@ -1,10 +1,32 @@
 /* Durable record-level outbox. Cloud transport is injected so the same merge
    rules can be tested without a Firebase project. A persisted view distinguishes
-   an offline deletion from a record this device has never seen. */
+   an offline deletion from a record this device has never seen; it stores a
+   short per-record fingerprint instead of a second copy of every record, so the
+   outbox cannot exhaust the device's storage quota. */
 export function stableJSON(value) {
   if (Array.isArray(value)) return `[${value.map(stableJSON).join(',')}]`;
   if (value && typeof value === 'object') return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${stableJSON(value[key])}`).join(',')}}`;
-  return JSON.stringify(value);
+  const json = JSON.stringify(value);
+  return json === undefined ? 'undefined' : json;
+}
+
+/** Two independent 32-bit hashes plus the length: cheap, collision-resistant. */
+function fingerprint(value) {
+  const text = stableJSON(value);
+  let first = 0x811c9dc5;
+  let second = 0x9e3779b9;
+  for (let index = 0; index < text.length; index += 1) {
+    const code = text.charCodeAt(index);
+    first = Math.imul(first ^ code, 0x01000193) >>> 0;
+    second = Math.imul(second ^ code, 0x85ebca6b) >>> 0;
+  }
+  return `${first.toString(16)}-${second.toString(16)}-${text.length.toString(16)}`;
+}
+
+function viewOf(records) {
+  const view = {};
+  for (const [id, value] of Object.entries(records || {})) view[id] = fingerprint(value);
+  return view;
 }
 const copy = value => JSON.parse(JSON.stringify(value));
 const same = (a, b) => stableJSON(a) === stableJSON(b);
@@ -22,31 +44,35 @@ export function mergeRecordOperations(remote, operations) {
 
 export function createRecordSync({ loadState, saveState, readLocal, writeLocal, commit }) {
   const saved = loadState();
-  let view = saved?.view ?? null;
-  let pending = saved?.pending || {};
+  // State from an older shape is dropped: re-seeding is harmless, but a stale
+  // "already seen" view could invent deletions of records that do exist.
+  const state = saved?.version === 2 ? saved : { view: null, pending: {} };
+  let view = state.view ?? null;
+  let pending = state.pending || {};
   let flight = null;
-  const persist = () => saveState({ version: 1, view, pending });
+  const persist = () => saveState({ version: 2, view, pending });
 
   function capture() {
     const local = readLocal();
     if (local === null) return; // unreadable is NOT a request to delete everything
+    const hashes = viewOf(local);
     const ids = new Set([...Object.keys(view || {}), ...Object.keys(local)]);
     for (const id of ids) {
-      if (view !== null && same(view[id], local[id])) continue;
+      if (view !== null && view[id] === hashes[id]) continue;
       const value = own(local, id) ? local[id] : null;
       Object.defineProperty(pending, id, {
         value: { value, ...(view === null ? { seed: true } : {}) },
         enumerable: true, configurable: true, writable: true
       });
     }
-    view = copy(local);
+    view = hashes;
     persist(); // save the outbox before making a network request
   }
 
   function receive(remote) {
     capture();
     const next = mergeRecordOperations(remote, pending);
-    view = copy(next);
+    view = viewOf(next);
     persist();
     writeLocal(next);
   }

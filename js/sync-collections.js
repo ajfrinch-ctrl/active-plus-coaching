@@ -15,12 +15,17 @@ export function collectionPayload(collection, value) {
       entries.push(['day-' + day, { _syncDay: day, _syncDate: true, date: info.date || '' }]);
       for (const [index, item] of (info.classes || []).entries()) {
         const id = item.id || `legacy-${day}-${index}`;
-        entries.push([id, { ...item, id, _syncDay: day }]);
+        // `_syncOrder` keeps the period order: Firebase returns object keys in
+        // key order, which is not the order the classes were entered in.
+        entries.push([id, { ...item, id, _syncDay: day, _syncOrder: index }]);
       }
     }
     return Object.fromEntries(entries);
   }
-  const items = collection === 'teaching' ? value?.activities : value;
+  // A document from an unknown schema version is never uploaded: treating it as
+  // an empty collection would delete the records other devices still rely on.
+  if (collection === 'teaching' && value?.version !== 1) return null;
+  const items = collection === 'teaching' ? value.activities : value;
   if (!Array.isArray(items)) return null;
   return Object.fromEntries(items.filter(item => item && typeof item.id === 'string').map(item => [item.id, item]));
 }
@@ -30,11 +35,21 @@ export function remoteToLocal(collection, value) {
   const items = Object.values(value || {}).filter(Boolean);
   if (collection === 'routine') {
     const week = Object.fromEntries(DAYS.map(day => [day, { date: '', classes: [] }]));
-    for (const record of items) {
-      if (!DAYS.includes(record._syncDay)) continue;
-      const { _syncDay: day, _syncDate: dateOnly, ...item } = record;
-      if (dateOnly) week[day].date = item.date || '';
-      else week[day].classes.push(item);
+    const classes = Object.fromEntries(DAYS.map(day => [day, []]));
+    items.forEach((record, index) => {
+      if (!DAYS.includes(record._syncDay)) return;
+      const { _syncDay: day, _syncDate: dateOnly, _syncOrder: order, ...item } = record;
+      if (dateOnly) { week[day].date = item.date || ''; return; }
+      classes[day].push({ item, order: typeof order === 'number' ? order : null, index });
+    });
+    // Stable sort: records without an order keep their arrival order, last.
+    for (const day of DAYS) {
+      week[day].classes = classes[day].sort((left, right) => {
+        if (left.order === null && right.order === null) return 0;
+        if (left.order === null) return 1;
+        if (right.order === null) return -1;
+        return left.order - right.order;
+      }).map(entry => entry.item);
     }
     return week;
   }

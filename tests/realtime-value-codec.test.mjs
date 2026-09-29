@@ -32,3 +32,21 @@ test('routine flattens by class ID rather than overwriting a whole day', () => {
   assert.deepEqual(result.sun.classes, []);
   assert.equal(Object.hasOwn(result.sat.classes[0], '_syncDay'), false);
 });
+
+test('explicit null fields survive even though RTDB deletes null nodes', () => {
+  const value = { a: { note: null, list: [null, 'x'], nested: { keep: null, drop: 'y' } } };
+  const encoded = encodeRealtimeRecords(value);
+  const verify = node => {
+    if (Array.isArray(node)) return node.forEach(verify);
+    if (!node || typeof node !== 'object') { assert.notEqual(node, null, 'no bare null reaches the database'); return; }
+    for (const child of Object.values(node)) verify(child);
+  };
+  verify(encoded);
+  assert.deepEqual(decodeRealtimeRecords(encoded), value);
+});
+
+test('undefined fields are dropped the way JSON.stringify drops them', () => {
+  const encoded = encodeRealtimeRecords({ a: { kept: 1, gone: undefined } });
+  assert.equal(Object.hasOwn(encoded.a, 'gone'), false);
+  assert.deepEqual(decodeRealtimeRecords(encoded), { a: { kept: 1 } });
+});

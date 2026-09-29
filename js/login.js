@@ -230,22 +230,25 @@ async function handleLogin(event, state, onAuthenticated) {
   // Hydrate before resolving the role so a newly-created Admin can sign in on a second device.
   // `onlineIdentities` remembers whether that cloud lookup actually finished,
   // so a missing account later reports the real cause instead of blaming the device.
-  const onlineIdentities = { attempted: false, synced: true };
+  const onlineIdentities = { attempted: false, synced: true, cloudPasswordMismatch: false };
   if (navigator.onLine && typedId) {
     onlineIdentities.attempted = true;
-    // Never re-hydrate an existing local Admin record during a normal
-    // logout/login cycle. Logout removes only the session; the local account
-    // remains the authoritative credential on this device. Hydrate only when
-    // the device has no Admin record yet (the cross-device first-login case).
-    await hydrateStaffAccountsOnline('login');
-    // Login IDs created on other devices: directory accounts, the claimed-id
-    // registry and the student login (missing records only — see above).
-    const result = await hydrateUserIdentifiersOnline('login', typedId, pin);
-    onlineIdentities.synced = Boolean(result?.ok);
-    if (result?.credentialMismatch) {
-      setAuthMessage('ইউজারনেম/মোবাইল নম্বর অথবা পাসওয়ার্ড সঠিক নয়। আবার চেষ্টা করুন।');
-      return;
-    }
+    // Staff accounts and student logins live on different cloud paths, so both
+    // lookups run together instead of one waiting for the other.
+    const [, identities] = await Promise.all([
+      // Never re-hydrate an existing local Admin record during a normal
+      // logout/login cycle. Logout removes only the session; the local account
+      // remains the authoritative credential on this device.
+      hydrateStaffAccountsOnline('login'),
+      // Login IDs created on other devices: directory accounts, the claimed-id
+      // registry and the student login (a verified password is required before
+      // anything is written to this device).
+      hydrateUserIdentifiersOnline('login', typedId, pin)
+    ]);
+    onlineIdentities.synced = Boolean(identities?.ok);
+    // A cloud copy whose password does not match must never block a valid
+    // local credential: this device's account can be the newer one.
+    onlineIdentities.cloudPasswordMismatch = Boolean(identities?.found && identities?.credentialMismatch);
   }
   // Staff usernames are reserved, so a match here can only be that panel.
   const staffRole = await resolveStaffRoleByUsername(typedId);
@@ -278,7 +281,9 @@ async function handleLogin(event, state, onAuthenticated) {
     return;
   }
   if (!state.account) {
-    if (onlineIdentities.attempted && !onlineIdentities.synced) {
+    if (onlineIdentities.cloudPasswordMismatch) {
+      setAuthMessage('ইউজারনেম/মোবাইল নম্বর অথবা পাসওয়ার্ড সঠিক নয়। আবার চেষ্টা করুন।');
+    } else if (onlineIdentities.attempted && !onlineIdentities.synced) {
       // The cloud lookup itself failed (offline, timed out or refused — e.g.
       // App Check enforcement blocking the Realtime Database). An account that
       // lives on another phone would make "register first" a false message.
@@ -311,6 +316,8 @@ async function handleLogin(event, state, onAuthenticated) {
   const remember = $('#rememberMe')?.checked !== false;
   await persistSession(remember);
   if (remember) setTrustedDevice(true);
+  // Lets the sync bridge fetch this student's exam/result data in the background.
+  window.dispatchEvent(new Event('apc-student-login'));
   onAuthenticated?.();
 }
 

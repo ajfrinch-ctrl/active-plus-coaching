@@ -668,8 +668,12 @@ document.addEventListener('keydown', event => {
 
 // Manager review in another same-origin tab updates provisional receipts/statuses.
 window.addEventListener('storage', event => {
-  if (event.apcRemote) state.students = loadRoster();
-  if (event.apcRemote || event.key === TRANSACTIONS_KEY || event.key === null) void loadTransactions();
+  try {
+    if (event.apcRemote) state.students = loadRoster();
+    if (event.apcRemote || event.key === TRANSACTIONS_KEY || event.key === null) void loadTransactions();
+  } catch (error) {
+    console.warn('[Active Plus] cloud refresh failed:', error?.message);
+  }
 });
 
 /* ---------- Returning session: a remembered device (or a sign-in from the

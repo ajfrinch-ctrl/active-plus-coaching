@@ -328,6 +328,57 @@ test('real weekly routine schema updates the visible student routine without rel
   await deviceB.run('wait-routine-ui', { count: 0 });
 });
 
+test('a password changed while the cloud was unreachable is never reverted by the stale cloud copy', async () => {
+  const { KEYS } = await import('../js/database.js');
+  const before = await deviceA.run('snapshot', { keys: [KEYS.account] });
+  const staleHash = before.values[KEYS.account].pinHash;
+  assert.ok(staleHash, 'device A has a stored student login');
+
+  // The cloud refuses writes (outage, flaky mobile data) …
+  await deviceA.run('set-cloud', { paused: true });
+  const newPin = '9988';
+  await deviceA.run('write-student-account', {
+    username: 'dolon', pin: newPin, fullName: 'দোলন আক্তার', mobile: '01812345678'
+  });
+  const changed = await deviceA.run('snapshot', { keys: [KEYS.account] });
+  assert.notDeepEqual(changed.values[KEYS.account].pinHash, staleHash, 'the password really changed here');
+  assert.deepEqual(SYNC_ROOT(cloud).studentAccounts.dolon.pinHash, staleHash, 'the cloud still holds the old copy');
+
+  // … then the network returns and the app restarts its sync.
+  await deviceA.run('set-cloud', { paused: false });
+  await deviceA.run('boot');
+  const wanted = JSON.stringify(changed.values[KEYS.account].pinHash);
+  await waitForCloud(() => JSON.stringify(SYNC_ROOT(cloud).studentAccounts?.dolon?.pinHash) === wanted, 'newest local password uploaded');
+  const after = await deviceA.run('snapshot', { keys: [KEYS.account] });
+  assert.deepEqual(after.values[KEYS.account].pinHash, changed.values[KEYS.account].pinHash, 'the local record was not reverted');
+  const login = await deviceA.run('form-login', { username: 'dolon', pin: newPin });
+  assert.equal(login.studentSession, true, login.message);
+});
+
+test('a change made while the browser missed every connectivity event still reaches the cloud', async () => {
+  const { KEYS } = await import('../js/database.js');
+  // navigator.onLine flips without any online/offline event — the SDK-style
+  // reconnect no listener hears about.
+  await deviceA.run('network-silent', { online: false });
+  await deviceA.run('write-notice', { id: 'NOTICE-SILENT', title: 'শান্ত পুনঃসংযোগ', at: Date.now() });
+  assert.equal(SYNC_ROOT(cloud).notices?.['NOTICE-SILENT'], undefined, 'nothing is pushed while offline');
+  await deviceA.run('network-silent', { online: true });
+  await waitForCloud(() => Boolean(SYNC_ROOT(cloud).notices?.['NOTICE-SILENT']), 'pending outbox flushed by the retry timer', 15000);
+});
+
+test('a fresh device reports a wrong password instead of adopting the cloud account', async () => {
+  const fresh = new Device('wrong-password', cloud.url);
+  fresh.start();
+  try {
+    const { KEYS } = await import('../js/database.js');
+    const attempt = await fresh.run('form-login', { username: 'dolon', pin: '0000' });
+    assert.equal(attempt.studentSession, false, 'a wrong password never signs in');
+    assert.match(String(attempt.message || ''), /পাসওয়ার্ড/, 'the message names the password, not a missing account');
+    const snapshot = await fresh.run('snapshot', { keys: [KEYS.account] });
+    assert.equal(snapshot.values[KEYS.account], null, 'no account is written after a failed password check');
+  } finally { await fresh.stop(); }
+});
+
 test('package still declares the realtime bridge', async () => {
   const loginSource = readFileSync(new URL('../js/login.js', import.meta.url), 'utf8');
   assert.match(loginSource, /hydrateUserIdentifiers/, 'login.js hydrates synced user IDs');

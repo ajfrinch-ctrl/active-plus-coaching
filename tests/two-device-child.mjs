@@ -164,7 +164,22 @@ const commands = {
     return { ok: true };
   },
 
-  async 'write-student-account'({ username, pin, fullName, mobile }) {
+  async 'set-cloud'({ paused }) {
+    const response = await fetch(`${process.env.MOCK_CLOUD_URL}/control`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ paused })
+    });
+    if (!response.ok) throw new Error('cloud control failed');
+    return { paused };
+  },
+  /* Flip navigator.onLine without firing the browser's online/offline events:
+     the SDK-style reconnect a listener never hears about. */
+  async 'network-silent'({ online }) {
+    Object.defineProperty(ctx.window.navigator, 'onLine', { value: online, configurable: true });
+    return { ok: true };
+  },
+  async 'write-student-account'({ username, pin, fullName, mobile, updatedAt }) {
     const { hashPassword } = await mod('password-hash.js');
     const pinHash = await hashPassword(pin);
     const account = {
@@ -173,7 +188,8 @@ const commands = {
       mobile,
       student: { username, fullName },
       pinHash,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      updatedAt: updatedAt || new Date().toISOString()
     };
     if (!db.writeJSON(db.KEYS.account, account)) throw new Error('student account write failed');
     return { ok: true };
