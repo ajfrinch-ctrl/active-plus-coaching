@@ -1,4 +1,4 @@
-const CACHE_NAME = 'active-plus-student-v99-firebase-diagnostic';
+const CACHE_NAME = 'active-plus-student-v102-firebase-sync-current';
 const APP_SHELL = [
   './js/panel-lockdown.js',
   './js/firebase-config.js',
