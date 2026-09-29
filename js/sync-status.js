@@ -1,13 +1,17 @@
+import { CLOUD_PAUSED_MESSAGE } from '../sync/cloud-access.js';
 /* Firebase sync status — transport, auth and local data remain separate. */
 let lastSuccessfulSyncAt = '';
 
 const codeOf = error => String(error?.code || error?.name || '').toLowerCase();
 const messageFor = (state, error = null) => {
+  if (state === 'paused') return CLOUD_PAUSED_MESSAGE;
   const code = codeOf(error);
-  if (state === 'offline') return 'অফলাইন — পরিবর্তন এই ডিভাইসে আছে';
+  if (state === 'offline') return navigator.onLine
+    ? 'ক্লাউড সংযোগ বিচ্ছিন্ন — পরিবর্তন এই ডিভাইসে আছে'
+    : 'অফলাইন — পরিবর্তন এই ডিভাইসে আছে';
   if (state === 'connecting') return 'Firebase সংযোগ করা হচ্ছে…';
   if (state === 'pending') return 'পরিবর্তন Firebase-এ সিঙ্ক হচ্ছে…';
-  if (state === 'online') return 'Cloud Synced';
+  if (state === 'online') return lastSuccessfulSyncAt ? '🟢 Firebase-এ ডেটা সিঙ্ক হয়েছে' : 'ক্লাউড সিঙ্ক যাচাই হচ্ছে…';
   if (state === 'conflict') return 'সিঙ্ক দ্বন্দ্ব — ডেটা নিরাপদে এই ডিভাইসে রাখা হয়েছে';
   if (state === 'storage') return 'ফোনের স্টোরেজ ভর্তি — পুরোনো ছবি/অ্যাপ ডেটা ফাঁকা করুন';
 
@@ -51,7 +55,8 @@ export function setSyncStatus(state, error = null) {
     : messageFor(state, error);
   const root = document.documentElement;
   root.dataset.internetState = navigator.onLine ? 'online' : 'offline';
-  root.dataset.firebaseConnection = state === 'online' || state === 'pending' ? 'connected' : state === 'offline' ? 'offline' : 'unknown';
+  // Transport state is set by .info/connected, not inferred from a write/UI error.
+  if (!root.dataset.firebaseConnection) root.dataset.firebaseConnection = 'unknown';
   root.dataset.realtimeSync = state;
   root.dataset.realtimeSyncMessage = message;
   root.dataset.firebaseLastSync = lastSuccessfulSyncAt;

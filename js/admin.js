@@ -1,3 +1,4 @@
+import { studentRecordMarkup } from './student-record.js';
 import { iconMarkup } from './icons.js';
 /* Admin panel — System Control + Staff Management + Permissions + Security +
    Data + Reports + Settings.
@@ -366,39 +367,7 @@ function findStudent(id) {
 /* ---------- Student detail and পাসওয়ার্ড reset modal ---------- */
 
 function openStudentDetail(student) {
-  const classCode = classCodes[student.className] || 'CLS-GEN';
-  const rows = [
-    ['Student Unique ID', `<span class="audit-id-badge">${student.id}</span>`],
-    ['অডিট ট্র্যাকিং কোড', `<span class="audit-id-badge amber">AUD-STU-${student.id.replace(/[^0-9A-Za-z]/g, '')}</span>`],
-    ['নাম (বাংলা)', student.name],
-    ['নাম (English)', student.nameEn],
-    ['পিতার নাম', student.fatherName],
-    ['শ্রেণি ও কোড', `${student.className} <span class="audit-id-badge purple">${classCode}</span>`],
-    ['বিভাগ / গ্রুপ', student.group],
-    ['মোবাইল', bn(student.mobile)],
-    ['অভিভাবকের মোবাইল', bn(student.guardianMobile)],
-    ['ঠিকানা', student.address],
-    ['রেজিস্ট্রেশন', student.enrolledAt],
-    ['সর্বশেষ সক্রিয়', student.lastActive],
-    ['স্ট্যাটাস', statusMeta[student.status].label]
-  ];
-  const performance = student.status === 'approved'
-    ? `উপস্থিতি ${bn(student.attendance)}% • গড় ফলাফল ${bn(student.average)}%`
-    : 'অনুমোদনের পরে থেকে দেখা যাবে';
-  openModal(
-    'শিক্ষার্থী রেকর্ড (Audit Ready)',
-    student.name,
-    `
-      <dl class="detail-grid">
-        ${rows.map(([label, value]) => `<div><dt>${label}</dt><dd>${value}</dd></div>`).join('')}
-        <div><dt>অগ্রগতি</dt><dd>${performance}</dd></div>
-      </dl>
-      <div class="modal-actions">
-        <button class="admin-btn primary" type="button" data-modal-action="edit">সম্পাদনা করুন</button>
-        <button class="admin-btn ghost" type="button" data-modal-action="reset-pin">পাসওয়ার্ড রিসেট</button>
-        <button class="admin-btn ghost" type="button" data-modal-action="close">বন্ধ করুন</button>
-      </div>`
-  );
+  openModal('শিক্ষার্থী প্রোফাইল', student.name || 'নাম দেওয়া হয়নি', studentRecordMarkup(student), 'student-record');
   const actions = $('#adminModalBody').querySelectorAll('[data-modal-action]');
   actions.forEach(button => {
     button.addEventListener('click', () => {
@@ -542,7 +511,8 @@ function openPinReset(student) {
 }
 
 let modalTrigger;
-function openModal(kicker, title, bodyHtml) {
+function openModal(kicker, title, bodyHtml, variant = '') {
+  $('#adminModalBackdrop .admin-modal').classList.toggle('student-record-modal', variant === 'student-record');
   if ($('#adminModalBackdrop').hidden) modalTrigger = document.activeElement;
   $('#adminModalKicker').textContent = kicker;
   $('#adminModalTitle').textContent = title;
@@ -1149,52 +1119,10 @@ function clearSelectedCollection() {
 }
 
 function resetAllLocalData() {
-  if (!access.has(CAPABILITIES.DATA_MANAGE)) {
-    toast('এই কাজটি শুধু Admin করতে পারবেন।');
-    return;
-  }
-  openModal('Reset Application', 'সব লোকাল ডেটা মুছে ফেলবেন?', `
-    <div class="staff-confirm-copy">
-      <p style="color:var(--danger,#e11d48);font-weight:700;margin-bottom:8px;">⚠️ WARNING: This will permanently remove all locally stored application data.</p>
-      <p>এই ডিভাইসে সংরক্ষিত সকল শিক্ষার্থী, লেনদেন, স্টাফ, রুটিন ও সেটিংস স্থায়ীভাবে মুছে যাবে। এই কাজটি আর ফেরানো যাবে না।</p>
-    </div>
-    <div class="modal-actions">
-      <button class="admin-btn ghost" type="button" data-modal-action="close">Cancel</button>
-      <button class="admin-btn danger" type="button" data-modal-action="confirm-reset-all">Reset All Local Data</button>
-    </div>`);
-  const button = $('#adminModalBody [data-modal-action="confirm-reset-all"]');
-  button?.addEventListener('click', () => {
-    closeModal();
-    try {
-      for (const key of BACKUP_KEYS) {
-        window.localStorage.removeItem(key);
-      }
-      try { window.localStorage.clear(); } catch {}
-      try { window.sessionStorage.clear(); } catch {}
-    } catch {
-      toast('ডেটা রিসেট করা যায়নি।');
-      return;
-    }
-    toast('সকল লোকাল ডেটা মুছে ফেলা হয়েছে। আবার লগইন করতে হবে।');
-    window.setTimeout(() => {
-      /* No jump to another page: the panel locks itself in place and the lock
-         card offers the login page as the one way onward. */
-      void lockPanel({ role: 'admin.html', reason: 'সব ডেটা মুছে ফেলা হয়েছে — নিরাপত্তার জন্য এডমিন প্যানেল বন্ধ করা হলো।' });
-    }, 1200);
-  });
+  // Destructive reset is intentionally unavailable while offline records and
+  // pending operations are the primary durable copy. No storage is cleared.
+  toast('ডেটা সুরক্ষার জন্য সম্পূর্ণ রিসেট বন্ধ আছে। আগে ব্যাকআপ এক্সপোর্ট করুন।');
 }
-
-/* ---------- Backup & Restore ---------- */
-
-const BACKUP_KEYS = Object.freeze([
-  ...new Set([
-    ...Object.values(KEYS),
-    ...STAFF_KEYS_LIST,
-    STAFF_DIRECTORY_KEY,
-    TEACHER_ASSIGNMENTS_KEY,
-    'activePlus.initialAdminUsername.v1'
-  ])
-]);
 
 function renderBackup() {
   paintIcon($('#backupExportButton .apc-icon'), 'download', 'apc-icon');

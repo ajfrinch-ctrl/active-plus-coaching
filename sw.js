@@ -1,6 +1,10 @@
-const CACHE_VERSION = 109;
+const CACHE_VERSION = 117;
 const CACHE_NAME = `active-plus-student-v${CACHE_VERSION}-minimal-education`;
 const APP_SHELL = [
+  './css/app-polish.css',
+  './css/student-record.css',
+  './js/student-record.js',
+  './sync/cloud-access.js',
   './js/app-entry.js',
   './css/ui-auth.css',
   './js/launch-screen.js',
@@ -34,6 +38,7 @@ const APP_SHELL = [
   './js/firebase-diagnostics.js',
   './js/realtime-sync-entry.js',
   './js/realtime-sync.js',
+  './js/sync-session.js',
   './js/sync-status.js',
   './js/record-sync.js',
   './js/sync-merge.js',

@@ -57,7 +57,8 @@ test('a fresh device asks the counter to set its own password first', async () =
   assert.equal(browser.localStorage.getItem(PAYMENT_ACCOUNT_KEY), null);
 
   const first = await authenticatePayment('payment.apc', 'anything');
-  assert.deepEqual(first, { ok: true, needsSetup: true });
+  assert.equal(first.ok, false, 'a reserved ID without a password cannot authenticate');
+  assert.equal(first.needsSetup, true);
   // No session is written before a password exists.
   assert.equal(browser.localStorage.getItem(PAYMENT_SESSION_KEY), null);
   assert.equal(await hasPaymentSession(), false);

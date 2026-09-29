@@ -1,16 +1,17 @@
 import { iconMarkup } from './icons.js';
-/* Application composition root. Feature modules can be replaced independently.
-   Updated: don't ask security check every time - auto-login for trusted devices. */
+/* Application composition root. Feature modules can be replaced independently. */
 import { runMigrations } from './storage/migration.js';
 import { KEYS, listDocuments } from './database.js';
 import { syncAccountStatus } from './office-data.js';
 import { APP_TAGLINE, defaultStudent } from './config.js';
-import { loadStudent, loadAccount, hasSession, persistSession, saveStudent, clearSession, isSecurityCheckDisabled, loadAppConfig } from './storage.js';
+import { loadStudent, loadAccount, hasSession, saveStudent, clearSession, loadAppConfig } from './storage.js';
 import { escapeHtml } from './sanitize.js';
 import { $, setAuthMessage, showFeedback } from './ui.js';
 import { renderStudent, openStudentApp, showAuthScreen, setView, viewRouteFromHash } from './shell.js';
 import { initAppearance } from './appearance.js';
 import { initCopyChips } from './copy.js';
+import { activeStaffRoles } from './staff-auth.js';
+import { staffPanelPath } from './login.js';
 import { switchAuthTab, initLogin } from './login.js';
 import { initRegister } from './register.js';
 import { initRecovery } from './recovery.js';
@@ -175,6 +176,8 @@ function handleAction(action) {
 }
 
 function enterApp() {
+  // A completed login wins over an in-flight asynchronous session restore.
+  sessionRestoreSequence += 1;
   // A #view shortcut in the URL opens exactly that view after any login;
   // otherwise every login lands on Home. A leftover panel from a previous
   // session must never greet the student.
@@ -184,12 +187,15 @@ function enterApp() {
   refreshTeaching();
   refreshExams();
   refreshNotices();
+  window.dispatchEvent(new Event('apc-session-ready'));
   // A student's reports are their own: the module re-reads the signed-in id.
   mountReports($('#studentReports'), { panel: 'student' });
 }
 
 function leaveApp() {
+  sessionRestoreSequence += 1;
   clearSession();
+  window.dispatchEvent(new Event('apc-session-ended'));
   switchAuthTab('login');
   showAuthScreen();
   // Logout always lands on the login page itself — drop a leftover view hash too.
@@ -197,12 +203,10 @@ function leaveApp() {
   setAuthMessage('লগআউট হয়েছে। আবার প্রবেশ করতে মোবাইল নম্বর ও পাসওয়ার্ড দিন।');
 }
 
-/* Auto-login needs a real session: a device-bound, unexpired token. The
-   only shortcut is the explicit on-device preference to skip the password
-   prompt; an existing account alone never opens the app. */
+/* A remembered, device-bound session is the only way to restore the app
+   without retyping credentials. An account or legacy skip flag is not enough. */
 async function shouldAutoLogin() {
   if (!state.account) return false;
-  if (isSecurityCheckDisabled()) return true;
   return hasSession();
 }
 
@@ -235,12 +239,7 @@ initLogin({
   state,
   onAuthenticated: enterApp
 });
-initRegister({
-  state,
-  onRegistered: () => {
-    enterApp();
-  }
-});
+initRegister({ state });
 initRecovery({ state });
 initLogout({ onLoggedOut: leaveApp });
 
@@ -249,27 +248,35 @@ $('#pendingLogout')?.addEventListener('click', leaveApp);
 
 // The entry decision is asynchronous: the stored session may be encrypted.
 // A #view shortcut in the URL is applied by enterApp once the screen opens.
-window.addEventListener('popstate', () => {
-  if (state.account && hasSession()) {
-    setView(viewRouteFromHash(), { history: 'keep' });
-  } else {
-    showAuthScreen();
-    switchAuthTab('login');
+let sessionRestoreSequence = 0;
+async function restoreEntrySession() {
+  const sequence = ++sessionRestoreSequence;
+  const roles = await activeStaffRoles();
+  if (sequence !== sessionRestoreSequence) return;
+  if (roles.length) {
+    window.location.replace(staffPanelPath(roles[0]));
+    return;
   }
-});
-
-(async () => {
-  if (await shouldAutoLogin()) {
+  state.account = loadAccount();
+  const authenticated = await shouldAutoLogin();
+  if (sequence !== sessionRestoreSequence) return;
+  if (authenticated) {
     state.student = { ...state.student, ...(state.account.student || {}) };
     saveStudent(state.student);
-    // Ensure a session exists so the next launch also skips the prompt.
-    if (!(await hasSession())) await persistSession(true);
+    if (sequence !== sessionRestoreSequence) return;
     enterApp();
   } else {
+    window.dispatchEvent(new Event('apc-session-ended'));
     showAuthScreen();
     switchAuthTab('login');
   }
-})();
+}
+window.addEventListener('popstate', () => { void restoreEntrySession(); });
+// Back/forward cache restores an old DOM without running module startup again.
+window.addEventListener('pageshow', event => {
+  if (event.persisted) void restoreEntrySession();
+});
+void restoreEntrySession();
 
 // Cloud writes occur in this window; native storage events alone never fire here.
 window.addEventListener('storage', async event => {

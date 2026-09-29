@@ -1,10 +1,11 @@
+import { LEGACY_CLOUD_ENABLED, CLOUD_PAUSED_MESSAGE, cloudPausedResult } from '../sync/cloud-access.js';
 // Active Plus — Firebase read-only diagnostic.
 // Does not clear, overwrite, or delete any LocalStorage/IndexedDB data.
-import { firebaseApp, appCheckReady } from '../firebase/firebase-init.js';
-import { firebaseConfig } from '../firebase/firebase-config.js';
-import { getAuth, signInAnonymously, getDatabase, ref, get, onValue } from '../firebase/firebase-services.js';
 
-const waitForConnection = (db, timeoutMs = 8000) => new Promise(resolve => {
+import { firebaseConfig } from '../firebase/firebase-config.js';
+
+
+const waitForConnection = (db, { ref, onValue }, timeoutMs = 8000) => new Promise(resolve => {
   let done = false;
   const finish = value => { if (done) return; done = true; off(); resolve(value); };
   const connectionRef = ref(db, '.info/connected');
@@ -24,18 +25,23 @@ export async function diagnoseFirebaseSync() {
     error: ''
   };
 
+  if (!LEGACY_CLOUD_ENABLED) return { ...result, ...cloudPausedResult(), error: CLOUD_PAUSED_MESSAGE };
   try {
     if (!navigator.onLine) {
       result.error = 'ডিভাইস বর্তমানে অফলাইনে আছে';
       return result;
     }
+    const { hasSyncSession } = await import('./sync-session.js');
+    if (!(await hasSyncSession())) throw new Error('authentication-required');
+    const { firebaseApp, appCheckReady } = await import('../firebase/firebase-init.js');
+    const { getAuth, signInAnonymously, getDatabase, ref, get, onValue } = await import('../firebase/firebase-services.js');
     await appCheckReady;
     const auth = getAuth(firebaseApp);
     if (!auth.currentUser) await signInAnonymously(auth);
     result.authentication = !!auth.currentUser;
 
     const db = getDatabase(firebaseApp);
-    result.firebaseConnection = await waitForConnection(db);
+    result.firebaseConnection = await waitForConnection(db, { ref, onValue });
     if (!result.firebaseConnection) {
       result.error = 'Firebase Realtime Database connection পাওয়া যায়নি';
       return result;

@@ -1,15 +1,13 @@
-/* Active Plus — topbar network-state border indicator.
-   লাল = ইন্টারনেট নেই · সবুজ = ইন্টারনেট আছে (সিঙ্ক এখনো যাচাই হয়নি)
-   · নীল = ইন্টারনেট + Firebase রিয়েলটাইম সিঙ্ক চালু — নীল অবস্থায় টপবারে
-     "সিঙ্ক" লেখাটুকুও দেখায়, যাতে রং ছাড়াও অবস্থাটা পড়া যায়। */
+/* Presentation only: green means confirmed Firebase data sync, not internet availability. */
 (() => {
   const selector = '.auth-topbar, .admin-topbar, .topbar, .teacher-topbar, .manager-topbar, .pay-topbar, header[class*="topbar"]';
   const CHIP_CLASS = 'topbar-sync-chip';
-  const CHIP_LABEL = 'সিঙ্ক';
+  const CHIP_LABEL = '🟢 সিঙ্ক হয়েছে';
 
-  // `pending` means the link is up and changes are still being written: the
-  // border stays blue, the chip already says সিঙ্ক. Errors stay off this list.
-  const syncConfirmed = () => ['online', 'pending'].includes(document.documentElement?.dataset?.realtimeSync);
+  const syncConfirmed = () => {
+    const data = document.documentElement?.dataset || {};
+    return data.realtimeSync === 'online' && Boolean(data.firebaseLastSync);
+  };
 
   /** The chip joins the header's right-hand tool cluster when the panel has one, so
       the theme/exit/bell buttons keep their exact place. Without a cluster (login
@@ -28,7 +26,7 @@
       chip = document.createElement('span');
       chip.className = CHIP_CLASS;
       chip.setAttribute('role', 'status');
-      chip.setAttribute('aria-label', 'রিয়েলটাইম সিঙ্ক চালু');
+      chip.setAttribute('aria-label', 'Firebase-এ ডেটা সিঙ্ক হয়েছে');
       chip.textContent = CHIP_LABEL;
       const { host, before } = chipSlot(topbar);
       host.insertBefore(chip, before);
@@ -50,18 +48,16 @@
   }
 
   // Some role topbars are rendered after page load. Observe the DOM so the
-  // green/red border is applied as soon as a topbar is created.
+  // status is applied as soon as a topbar is created.
   const observe = () => {
     update();
     const root = document.body || document.documentElement;
     if (root) new MutationObserver(update).observe(root, { childList: true, subtree: true });
-    // The realtime bridge starts ~1.2s after load and on reconnect; it flips
-    // <html data-realtime-sync="online"> when the Firebase link is up —
-    // watch that attribute so the topbar turns blue the moment it does.
+    // Both a successful data transfer and a settled queue are required.
     if (document.documentElement) {
       new MutationObserver(update).observe(document.documentElement, {
         attributes: true,
-        attributeFilter: ['data-realtime-sync']
+        attributeFilter: ['data-realtime-sync', 'data-firebase-last-sync']
       });
     }
   };

@@ -1,12 +1,13 @@
+import { LEGACY_CLOUD_ENABLED } from '../sync/cloud-access.js';
 /* Registration feature: step-by-step student self-registration with auto Student ID.
-   Updated: auto-login after registration so the password check isn't needed immediately.
+   Registration saves the account; entry still requires a submitted login.
    The student also picks a permanent username here — a login ID that never
    changes, so the phone number does not have to be shared to log in. */
 import { $, $$, normalizeMobile, normalizeAnswer, setAuthMessage, showFeedback } from './ui.js';
 import { enabledClasses } from './config.js';
 import { contactNumber, isContactNumber, normalizeUsername, usernameError, suggestUsername } from './account-policy.js';
 import {
-  saveAccount, saveStudent, generateStudentId, generateClassRoll, persistSession, setTrustedDevice, usernameTaken, reserveUsername, releaseUsername, loadAccount
+  saveAccount, saveStudent, generateStudentId, generateClassRoll, usernameTaken, reserveUsername, releaseUsername, loadAccount
 } from './storage.js';
 import { upsertStudentRosterRow } from './office-data.js';
 import { listDocuments } from './database.js';
@@ -85,6 +86,7 @@ function initUsernameField() {
    failed lookup answers null and never blocks local-first registration (the
    bridge's own merge guard still protects the other student's record). */
 async function checkUsernameOnline(username) {
+  if (!LEGACY_CLOUD_ENABLED) return null;
   if (!navigator.onLine) return null;
   const budget = 4000;
   const bounded = promise => Promise.race([
@@ -92,7 +94,7 @@ async function checkUsernameOnline(username) {
     new Promise((_, reject) => setTimeout(() => reject(new Error('lookup timed out')), budget))
   ]);
   try {
-    const bridge = await bounded(import('./realtime-sync.js?v=20260929-fbaudit'));
+    const bridge = await bounded(import('./realtime-sync.js'));
     return await bounded(bridge.usernameTakenOnline(username));
   } catch (error) {
     console.warn('[Active Plus] cloud login-id check unavailable:', error.message);
@@ -179,19 +181,15 @@ async function handleRegistration(event, state, onRegistered) {
   state.student = { ...state.student, ...studentData };
   saveStudent(state.student);
   upsertStudentRosterRow();   // the exact personal fields, nothing the branch owns
-  await persistSession(true);
-  setTrustedDevice(true);
   formElement.reset();
   toggleMajorField();
   $('#pendingStudentId').textContent = studentId;
-  if (onRegistered) {
-    onRegistered();
-    showFeedback(`রেজিস্ট্রেশন সফল — ID: ${studentId} • ইউজারনেম: ${username}`);
-  } else {
-    switchAuthTab('login');
-    $('#loginMobile').value = username;
-    setAuthMessage(`রেজিস্ট্রেশন সফল। Student ID: ${studentId} • ক্লাস রোল: ${studentData.roll} • ID স্থায়ী থাকবে; লগইনে “${username}” ব্যবহার করো।`, true);
-  }
+  switchAuthTab('login');
+  $('#loginMobile').value = username;
+  $('#loginPin').value = '';
+  setAuthMessage(`রেজিস্ট্রেশন সফল। Student ID: ${studentId} • লগইনে “${username}” ও আপনার পাসওয়ার্ড দিন।`, true);
+  onRegistered?.();
+  showFeedback(`রেজিস্ট্রেশন সফল — ID: ${studentId} • ইউজারনেম: ${username}`);
 }
 
 function initRegistrationSteps() {

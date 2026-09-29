@@ -3,7 +3,7 @@
 import { $, openModal, closeModal, showFeedback, normalizeMobile } from './ui.js';
 import { enabledClasses } from './config.js';
 import { appendAccountMobile } from './account-policy.js';
-import { loadAccount, saveStudent, persistAccount, isSecurityCheckDisabled, setSecurityCheckDisabled, isTrustedDevice, setTrustedDevice, persistSession, generateClassRoll } from './storage.js';
+import { loadAccount, saveStudent, persistAccount, isTrustedDevice, setTrustedDevice, hasSession, persistSession, generateClassRoll } from './storage.js';
 import { upsertStudentRosterRow } from './office-data.js';
 
 export function populateProfileClassOptions() {
@@ -94,24 +94,15 @@ export function shareStudentOnWhatsApp(student) {
 }
 
 function initSecurityToggle() {
-  const skipToggle = $('#skipSecurityToggle');
   const trustedToggle = $('#trustedDeviceToggle');
-  if (skipToggle) {
-    skipToggle.checked = isSecurityCheckDisabled();
-    skipToggle.addEventListener('change', () => {
-      setSecurityCheckDisabled(skipToggle.checked);
-      if (skipToggle.checked) {
-        void persistSession(true);
-        setTrustedDevice(true);
-        showFeedback('এখন থেকে প্রতিবার পাসওয়ার্ড চাওয়া হবে না');
-      } else {
-        showFeedback('নিরাপত্তা চেক আবার চালু করা হয়েছে');
-      }
-    });
-  }
   if (trustedToggle) {
     trustedToggle.checked = isTrustedDevice();
-    trustedToggle.addEventListener('change', () => {
+    trustedToggle.addEventListener('change', async () => {
+      // A preference may extend an authenticated session, never create one.
+      if (!(await hasSession())) {
+        trustedToggle.checked = false;
+        return;
+      }
       setTrustedDevice(trustedToggle.checked);
       if (trustedToggle.checked) {
         void persistSession(true);

@@ -233,9 +233,7 @@ async function readStudentSession() {
 }
 
 export async function hasSession() {
-  // An explicit on-device preference can skip the password prompt; it is a
-  // product choice, not a session, and it never reveals any secret.
-  if (isSecurityCheckDisabled()) return true;
+  // Only a real session obtained after credential verification may open the app.
   const record = await readStudentSession();
   if (!record) return false;
   if (record.tab) return true;

@@ -18,5 +18,7 @@ test('every module imports one and the same sync instance', () => {
     for (const match of source.matchAll(/['"]\.\/realtime-sync\.js(?:\?[^'"]*)?['"]/g)) specifiers.add(match[0]);
   }
   assert.ok(specifiers.size > 0, 'the sync module is imported somewhere');
-  assert.equal(specifiers.size, 1, `expected one specifier, saw: ${[...specifiers].join(', ')}`);
+  assert.deepEqual([...specifiers], ["'./realtime-sync.js'"], 'all direct imports use the canonical, unversioned implementation URL');
+  const facade = readFileSync(new URL('../sync/sync-core.js', import.meta.url), 'utf8');
+  assert.match(facade, /import\('\.\.\/js\/realtime-sync\.js'\)/);
 });

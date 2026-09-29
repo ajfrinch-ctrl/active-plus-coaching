@@ -1,3 +1,4 @@
+import { LEGACY_CLOUD_ENABLED } from '../sync/cloud-access.js';
 /* Staff Directory — the Admin-owned identity layer for every non-student user.
 
    Why this exists
@@ -465,13 +466,14 @@ function passwordProblem(nextPassword, confirmPassword) {
    well, so an unsynced device cannot create a second account with an ID that
    already belongs to somebody else. Offline/failed lookup = unknown = allow. */
 async function loginIdTakenInCloud(username) {
+  if (!LEGACY_CLOUD_ENABLED) return null;
   if (!navigator.onLine) return false;
   const bounded = promise => Promise.race([
     promise,
     new Promise((_, reject) => setTimeout(() => reject(new Error('lookup timed out')), 4000))
   ]);
   try {
-    const bridge = await bounded(import('./realtime-sync.js?v=20260929-fbaudit'));
+    const bridge = await bounded(import('./realtime-sync.js'));
     return Boolean((await bounded(bridge.usernameTakenOnline(username)))?.taken);
   } catch (error) {
     console.warn('[Active Plus] cloud login-id check unavailable:', error.message);

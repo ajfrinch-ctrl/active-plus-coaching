@@ -2,9 +2,9 @@
    Usernames are reserved so a student cannot claim them.
 
    Security rules (Phase 1):
-   • There is no built-in default password. The first time a role signs in on
-     a device it sets its own password; a password created by an office
-     provisioning flow (or migrated from the retired plaintext default) is
+   • There is no built-in default password. Login requires an existing
+     credential; first Admin creation and office provisioning are separate
+     flows. A provisioned password (or migrated legacy password) is
      marked must-change and has to be replaced before the panel opens.
    • Passwords are stored only as PBKDF2-HMAC-SHA256 hashes (password-hash.js),
      inside an AES-GCM envelope when the platform allows it (secure-store.js).
@@ -305,7 +305,7 @@ export async function staffNeedsSetup(role) {
 /**
  * One call for every login form. Resolves to:
  *  { ok: false, error }                      — wrong username or password
- *  { ok: true, needsSetup: true }            — first use: the role picks a password
+ *  { ok: false, needsSetup: true, error }   — no credential: provisioning required
  *  { ok: true, needsPasswordChange: true }   — verified, but a new password is due
  *  { ok: true }                              — verified and up to date
  * Legacy plaintext records are verified once and immediately re-hashed.
@@ -324,7 +324,7 @@ export async function authenticateStaff(role, username, password) {
   if (!account && staffAccountRecordExists(role)) return { ok: false, error: PASSWORD_STORE_FAILED };
   const credential = storedStaffPassword(account, role);
   if (!account || typeof credential === 'undefined') {
-    return { ok: true, needsSetup: true };
+    return { ok: false, needsSetup: true, error: WRONG_CREDENTIALS };
   }
   if (isPasswordRecord(credential)) {
     const valid = await verifyPassword(password, credential);

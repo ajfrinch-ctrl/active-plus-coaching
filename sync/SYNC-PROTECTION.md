@@ -1,3 +1,8 @@
+> **2026-09-29 security update:** The legacy anonymous RTDB bridge is now disabled.
+> Rules deny all client reads/writes; cloud login, sync and push registration are
+> paused. Earlier anonymous/test-bridge instructions below are historical, not
+> deployment instructions. See `docs/CLOUD-CONTAINMENT-114.md` for impact and rollout.
+
 # Active Plus — Protected Online Sync Core
 
 ## Protected Zone

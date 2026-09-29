@@ -1,3 +1,8 @@
+> **2026-09-29 security update:** The legacy anonymous RTDB bridge is now disabled.
+> Rules deny all client reads/writes; cloud login, sync and push registration are
+> paused. Earlier anonymous/test-bridge instructions below are historical, not
+> deployment instructions. See `docs/CLOUD-CONTAINMENT-114.md` for impact and rollout.
+
 # নোটিফিকেশন সিস্টেম — কী চালু হলো, কীভাবে চালাবেন
 
 Active Plus-এ এখন **তিন স্তরের নোটিফিকেশন** আছে। প্রথম স্তর আজই কাজ করে, কোনো সেটআপ ছাড়া; তৃতীয় স্তর (অ্যাপ সম্পূর্ণ বন্ধ থাকলেও push) চালু করতে দুটি ছোট ধাপ আপনার করতে হবে — নিচে ধাপে ধাপে লেখা আছে।

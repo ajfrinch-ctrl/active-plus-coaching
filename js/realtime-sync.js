@@ -1,3 +1,4 @@
+import { LEGACY_CLOUD_ENABLED, assertCloudAccess, cloudPausedResult } from '../sync/cloud-access.js';
 /* Active Plus — Realtime Database online test sync.
    Offline-first: localStorage remains the source used by the UI.
 
@@ -14,9 +15,9 @@
 
    Only records that already hold PBKDF2 password HASHES travel the bridge — a
    plaintext password or security answer never does, and sessions stay
-   device-bound. The bridge signs in anonymously and every authenticated user
-   of the project can read/write these nodes: it is a cross-device TEST bridge,
-   not the final authentication or authorization architecture. */
+   device-bound. This legacy anonymous TEST bridge is now disabled by
+   cloud-access.js and deny-all database rules. It must not be reopened before
+   server-verified authentication and per-user authorization are implemented. */
 import { firebaseApp, appCheckReady } from '../firebase/firebase-init.js';
 import { getAuth, signInAnonymously, setPersistence, browserLocalPersistence, getDatabase, ref, get, set, runTransaction, onValue as firebaseOnValue } from '../firebase/firebase-services.js';
 import { SYNCABLE, KEYS } from './database.js';
@@ -51,6 +52,12 @@ let authFlight = null;
 let connected = false;
 let ready = false;
 let syncFailed = false;
+let syncEnabled = false;
+let syncGeneration = 0;
+let hasConnected = false;
+let partialFailures = [];
+let partialRetry = null;
+let lastPartialRetry = 0;
 
 function notifyRemote(key, collection) {
   const event = new window.StorageEvent('storage', {
@@ -71,7 +78,15 @@ function remoteWrite(key, value, collection) {
 }
 
 function syncError(error) {
+  if (!syncEnabled) return;
   syncFailed = true;
+  reportSyncError(error);
+}
+
+function recordSyncError(error) {
+  // A failed outbox write stays queued for retry; it does not invalidate the
+  // RTDB listeners. Only a failed listener or a failed boot needs resubscribe.
+  if (!syncEnabled) return;
   reportSyncError(error);
 }
 
@@ -89,15 +104,24 @@ function clearConflict(code) {
 }
 
 function onValue(node, callback) {
+  const generation = syncGeneration;
   const unsubscribe = firebaseOnValue(node, snapshot => {
-    Promise.resolve().then(() => callback(snapshot)).catch(syncError);
-  }, syncError);
+    if (!syncEnabled || generation !== syncGeneration) return;
+    Promise.resolve().then(() => {
+      if (syncEnabled && generation === syncGeneration) return callback(snapshot);
+    }).catch(syncError);
+  }, error => {
+    if (!syncEnabled || generation !== syncGeneration) return;
+    syncFailed = true;
+    syncError(error);
+  });
   subscriptions.add(unsubscribe);
   return unsubscribe;
 }
 
 /** Push everything still waiting in the durable outboxes. */
 async function flushPending() {
+  if (!syncEnabled) return;
   const bridges = [...recordBridges.values()];
   if (!bridges.length) return;
   await Promise.all(bridges.map(bridge => bridge.flush()));
@@ -105,7 +129,9 @@ async function flushPending() {
 
 function paintSyncStatus() {
   if (!navigator.onLine) setSyncStatus('offline');
-  else if (syncFailed || conflict) return;
+  else if (conflict) return;
+  else if (syncFailed || partialFailures.length) setSyncStatus('error', partialFailures[0]?.error);
+  else if (!connected && hasConnected) setSyncStatus('offline');
   else if (!connected) setSyncStatus('connecting');
   else if (!ready) setSyncStatus('connecting');
   else if ([...recordBridges.values()].some(bridge => bridge.hasPending())) setSyncStatus('pending');
@@ -113,6 +139,7 @@ function paintSyncStatus() {
 }
 
 export async function ensureCloudAuth() {
+  assertCloudAccess();
   if (authFlight) return authFlight;
   authFlight = (async () => {
     await appCheckReady;
@@ -206,11 +233,16 @@ const isStudentAccountRecord = value =>
 
 const staffFlights = new Map();
 function syncStaffRole(role) {
+  const generation = syncGeneration;
+  const live = () => syncEnabled && generation === syncGeneration;
+  if (!live()) return Promise.resolve();
   if (staffFlights.has(role)) return staffFlights.get(role);
   const flight = (async () => {
     const local = await readStaffLocal(role);
+    if (!live()) return;
     const node = ref(getDatabase(firebaseApp), STAFF_ROOT + '/' + role);
     const snap = await get(node);
+    if (!live()) return;
     const remote = snap.exists() ? snap.val() : null;
     const decision = chooseStaffCopy(local, remote, { role });
     if (decision === 'conflict') {
@@ -247,10 +279,14 @@ const pushStaffRole = role => syncStaffRole(role);
    entire staff list. The baseline only stores revision dates, never secrets. */
 const DIRECTORY_BASELINE = 'activePlus.directorySyncBaseline.v2';
 let directoryQueue = Promise.resolve();
-function syncDirectory() {
+function syncDirectory({ readOnly = false } = {}) {
+  const generation = syncGeneration;
+  const live = () => readOnly || (syncEnabled && generation === syncGeneration);
   const work = directoryQueue.catch(() => {}).then(async () => {
+    if (!live()) return;
     const beforeRaw = localStorage.getItem(STAFF_DIRECTORY_KEY);
     const local = await readDirectoryLocal();
+    if (!live()) return;
     const baseline = readLocal(DIRECTORY_BASELINE);
     const records = Object.fromEntries((local?.records || []).map(record => [record.id, record]));
     const operations = {};
@@ -263,8 +299,9 @@ function syncDirectory() {
     }
     const node = ref(getDatabase(firebaseApp), DIRECTORY_ROOT);
     let remote;
-    if (Object.keys(operations).length) {
+    if (!readOnly && Object.keys(operations).length) {
       const result = await runTransaction(node, current => {
+        if (!live()) return;
         const existing = Object.fromEntries((current?.records || []).map(record => [record.id, record]));
         return {
           version: 1,
@@ -274,10 +311,15 @@ function syncDirectory() {
       }, { applyLocally: false });
       remote = result.snapshot.val();
     } else remote = (await get(node)).val();
+    if (!live()) return;
     if (!remote && !baseline) return;
     remote = { version: 1, ...remote, records: remote?.records || [] };
     if (!isDirectoryRecord(remote)) throw new Error('Invalid remote staff directory');
-    const envelope = await encryptValue(JSON.stringify(remote));
+    const applied = readOnly ? { ...remote, records: Object.values(mergeRecordOperations(
+      Object.fromEntries(remote.records.map(record => [record.id, record])), operations
+    )) } : remote;
+    const envelope = await encryptValue(JSON.stringify(applied));
+    if (!live()) return;
     // A user may have edited while encryption/network was pending. Their next
     // queued write uses the old baseline and must not be overwritten here.
     if (localStorage.getItem(STAFF_DIRECTORY_KEY) !== beforeRaw) return;
@@ -285,7 +327,7 @@ function syncDirectory() {
       Object.fromEntries(remote.records.map(record => [record.id, record.updatedAt || '']))
     ));
     lastRemote.set('staffDirectory', JSON.stringify(remote));
-    remoteWrite(STAFF_DIRECTORY_KEY, envelope || remote, 'staffDirectory');
+    remoteWrite(STAFF_DIRECTORY_KEY, envelope || applied, 'staffDirectory');
   });
   directoryQueue = work;
   return work;
@@ -299,11 +341,15 @@ const pushDirectory = () => syncDirectory();
  * made on this device is not lost mid-session.
  */
 async function syncUsernames() {
+  const generation = syncGeneration;
+  if (!syncEnabled) return;
   const local = readUsernamesLocal() || {};
   const node = ref(getDatabase(firebaseApp), USERNAMES_ROOT);
-  const result = await runTransaction(node, current => ({
-    ...encodeUsernameRegistry(local), ...(current || {})
-  }), { applyLocally: false });
+  const result = await runTransaction(node, current =>
+    syncEnabled && generation === syncGeneration ? {
+      ...encodeUsernameRegistry(local), ...(current || {})
+    } : undefined, { applyLocally: false });
+  if (!syncEnabled || generation !== syncGeneration) return;
   const remote = result.snapshot.val() || {};
   lastRemote.set('usernames', JSON.stringify(remote));
   remoteWrite(KEYS.usernames, decodeUsernameRegistry(remote), 'usernames');
@@ -320,6 +366,8 @@ function studentKey(account) {
 const studentMatches = (account, identifier) => matchesLoginIdentifier(account, identifier);
 let studentFlight = null;
 function syncStudentAccount() {
+  const generation = syncGeneration;
+  if (!syncEnabled) return Promise.resolve();
   if (studentFlight) return studentFlight;
   studentFlight = (async () => {
     const local = studentAccountPayload(readLocal(KEYS.account));
@@ -331,8 +379,10 @@ function syncStudentAccount() {
     const result = await runTransaction(node, current => {
       // Only a write that really changes something is committed: 'remote'
       // needs no write, and a duplicate login ID must abort untouched.
+      if (!syncEnabled || generation !== syncGeneration) return;
       return chooseStudentCopy(local, current) === 'local' ? local : undefined;
     }, { applyLocally: false });
+    if (!syncEnabled || generation !== syncGeneration) return;
     const remote = result.snapshot.val();
     if (!isStudentAccountRecord(remote) || studentKey(remote) !== key) return;
     lastRemote.set('student:' + key, JSON.stringify(remote));
@@ -408,7 +458,7 @@ async function hydrateStudent(identifier, password) {
   // account: a previous duplicate-ID warning is settled now.
   clearConflict('login-id-conflict');
   remoteWrite(KEYS.account, account, 'studentAccount');
-  await syncStudentAccount();
+  // Credential reads must not wait for a write transaction (or write permission).
   if (ready) listenStudentAccount();
   return { found: true };
 }
@@ -487,6 +537,7 @@ function markLocalExamChanges() {
 }
 
 async function pushExamDb() {
+  if (!syncEnabled) return;
   const { db, readable } = readExamDbLocal();
   if (!readable) return;
   const tasks = [];
@@ -621,8 +672,11 @@ function applyExamDbRemote(remoteRoot) {
 }
 
 async function syncExamDb() {
+  const generation = syncGeneration;
+  if (!syncEnabled) return;
   const node = ref(getDatabase(firebaseApp), EXAMDB_ROOT);
   const snap = await get(node);
+  if (!syncEnabled || generation !== syncGeneration) return;
   if (!snap.exists()) {
     // Fresh cloud space: this device seeds it.
     await pushExamDb();
@@ -659,10 +713,14 @@ function recordBridge(collection) {
     readLocal: () => collectionPayload(collection, readLocal(key)),
     writeLocal: value => remoteWrite(key, remoteToLocal(collection, value), collection),
     commit: async operations => {
+      const generation = syncGeneration;
+      if (!syncEnabled) throw new Error('session-ended');
       const result = await runTransaction(node, current => {
+        if (!syncEnabled || generation !== syncGeneration) return;
         const decoded = decodeRealtimeRecords(current || {});
         return encodeRealtimeRecords(mergeRecordOperations(decoded, operations));
       }, { applyLocally: false });
+      if (!syncEnabled || generation !== syncGeneration) throw new Error('session-ended');
       markSyncSuccess('write');
       return normalizeCollectionSnapshot(collection, result.snapshot.val());
     }
@@ -672,8 +730,11 @@ function recordBridge(collection) {
 }
 
 async function syncCollection(collection) {
+  const generation = syncGeneration;
+  if (!syncEnabled) return;
   const bridge = recordBridge(collection);
   const snapshot = await get(ref(getDatabase(firebaseApp), DB_ROOT + '/' + collection));
+  if (!syncEnabled || generation !== syncGeneration) return;
   markSyncSuccess('read');
   bridge.receive(normalizeCollectionSnapshot(collection, snapshot.val()));
   await bridge.flush();
@@ -700,13 +761,13 @@ function installLocalWriteBridge() {
   const originalSetItem = Storage.prototype.setItem;
   Storage.prototype.setItem = function(key, value) {
     const result = originalSetItem.call(this, key, value);
-    if (this === window.localStorage) {
+    if (syncEnabled && this === window.localStorage) {
       const staffRole = staffRoleByAccountKey(key);
       if (staffRole) pushStaffRole(staffRole).catch(syncError);
       for (const collection of RECORD_COLLECTIONS) {
         if (collection === 'exams') continue;   // mirrored by the dedicated examDb path
         if (localKey(collection) === key) {
-          pushCollection(collection).catch(syncError);
+          pushCollection(collection).catch(recordSyncError);
         }
       }
       try { pushIdentityKey(key)?.catch(syncError); } catch {}
@@ -714,11 +775,11 @@ function installLocalWriteBridge() {
     return result;
   };
   window.addEventListener('storage', event => {
-    if (event.apcRemote || event.storageArea !== window.localStorage) return;
+    if (!syncEnabled || event.apcRemote || event.storageArea !== window.localStorage) return;
     for (const collection of RECORD_COLLECTIONS) {
       if (collection === 'exams') continue;     // mirrored by the dedicated examDb path
       if (localKey(collection) === event.key) {
-        pushCollection(collection).catch(syncError);
+        pushCollection(collection).catch(recordSyncError);
       }
     }
     const role = staffRoleByAccountKey(event.key);
@@ -787,13 +848,29 @@ function listenStudentAccount() {
   });
 }
 
+// Read only the first-use Admin node. Do not hydrate other accounts or start
+// syncing application records merely because the login page was opened.
+export async function firstAdminExistsOnline() {
+  if (!navigator.onLine) return { ok: false, reason: 'offline' };
+  try {
+    await ensureCloudAuth();
+    const snapshot = await get(ref(getDatabase(firebaseApp), STAFF_ROOT + '/admin'));
+    return { ok: true, exists: snapshot.exists() };
+  } catch (error) {
+    return { ok: false, reason: 'admin-check-failed', error };
+  }
+}
+
 export async function hydrateStaffAccounts({ preserveLocalAdmin = false } = {}) {
   if (!navigator.onLine) return { ok: false, reason: 'offline' };
   try {
     await ensureCloudAuth();
     for (const role of Object.keys(STAFF_ACCOUNTS)) {
       if (role === 'admin' && preserveLocalAdmin && await readStaffLocal(role)) continue;
-      await syncStaffRole(role);
+      // Credential hydration is read-only, even if this device has local edits.
+      const snapshot = await get(ref(getDatabase(firebaseApp), STAFF_ROOT + '/' + role));
+      const account = snapshot.val();
+      if (account?.username && isPasswordRecord(account.password)) await writeStaffLocal(role, account);
     }
     return { ok: true };
   } catch (error) {
@@ -812,12 +889,12 @@ export async function hydrateUserIdentifiers({ identifier = '', password = '' } 
   if (!navigator.onLine) return { ok: false, reason: 'offline' };
   try {
     await ensureCloudAuth();
-    // Refresh even an existing directory: another device may have added staff.
-    // Exams and unrelated records must not gate credential lookup.
-    const results = await Promise.allSettled([syncDirectory(), syncUsernames(), hydrateStudent(identifier, password)]);
-    const failed = results.find(result => result.status === 'rejected');
-    if (failed) throw failed.reason;
-    return { ok: true, ...results[2].value };
+    // A student login is read-only. Unrelated registry/directory writes must
+    // never turn a verified account into a sync failure or hold login hostage.
+    const student = await hydrateStudent(identifier, password);
+    if (student.found) return { ok: true, ...student };
+    await syncDirectory({ readOnly: true });
+    return { ok: true, ...student };
   } catch (error) {
     syncError(error);
     return { ok: false, reason: 'identity-sync-failed', error };
@@ -839,9 +916,9 @@ let attemptTimer = null;
 function schedulePendingFlush() {
   clearInterval(pendingTimer);
   pendingTimer = setInterval(() => {
-    if (!ready || !navigator.onLine) return;
+    if (!ready || !navigator.onLine || !connected) return;
     if (![...recordBridges.values()].some(bridge => bridge.hasPending())) return;
-    flushPending().catch(syncError);
+    flushPending().then(paintSyncStatus).catch(recordSyncError);
   }, 3000);
 }
 
@@ -852,25 +929,66 @@ window.addEventListener('apc-student-login', () => {
   void syncExamDb().catch(syncError);
 });
 
+export function stopRealtimeSync() {
+  syncEnabled = false;
+  syncGeneration += 1;
+  booting = null;
+  ready = false;
+  started = false;
+  connected = false;
+  hasConnected = false;
+  partialFailures = [];
+  for (const stop of subscriptions) stop();
+  subscriptions.clear();
+  stopStudent = null;
+  studentListeningKey = null;
+  clearInterval(pendingTimer);
+  // The watchdog interval remains installed but is inert while signed out.
+}
+window.addEventListener('apc-session-ended', stopRealtimeSync);
+
 export async function startRealtimeSync() {
+  if (!LEGACY_CLOUD_ENABLED) {
+    stopRealtimeSync();
+    setSyncStatus('paused');
+    return cloudPausedResult();
+  }
+  // Every entry point (manual retry, reconnect, storage bridge, login) must
+  // use a real app session, not merely Firebase anonymous authentication.
+  const generation = syncGeneration;
+  let session;
+  try {
+    const { hasSyncSession } = await import('./sync-session.js');
+    session = await hasSyncSession();
+  } catch {
+    session = false;
+  }
+  if (!session || generation !== syncGeneration) {
+    if (!session && generation === syncGeneration) stopRealtimeSync();
+    return { ok: false, reason: 'authentication-required' };
+  }
+  syncEnabled = true;
   if (!navigator.onLine) { setSyncStatus('offline'); return { ok: false, reason: 'offline' }; }
   if (booting) return booting;
   if (started && !syncFailed) {
     // Already running: still push anything the outbox is holding. A database
     // reconnect does not fire the browser's `online` event, so without this the
     // pending change could sit unsent until the next reload.
-    try { await flushPending(); } catch (error) { syncError(error); }
+    if (connected) {
+      try { await flushPending(); } catch (error) { recordSyncError(error); }
+      await retryPartialSync();
+    }
     paintSyncStatus();
     return { ok: true };
   }
-  booting = (async () => {
+  const flight = (async () => {
     ready = false;
     syncFailed = false;
+    partialFailures = [];
     setSyncStatus('connecting');
     for (const stop of subscriptions) stop();
     subscriptions.clear();
     clearInterval(pendingTimer);
-    clearTimeout(attemptTimer);
     stopStudent = null;
     studentListeningKey = null;
     try {
@@ -878,26 +996,38 @@ export async function startRealtimeSync() {
       for (const collection of RECORD_COLLECTIONS) recordBridge(collection);
       installLocalWriteBridge();
       await ensureCloudAuth();
+      if (!syncEnabled || generation !== syncGeneration) return { ok: false, reason: 'session-ended' };
       onValue(ref(getDatabase(firebaseApp), '.info/connected'), snap => {
+        const wasConnected = connected;
         connected = snap.val() === true;
+        if (connected) {
+          hasConnected = true;
+          // Firebase reconnects listeners itself. Only pending writes need a
+          // push; the rest of the application must not rehydrate on every blip.
+          if (!wasConnected && ready) {
+            void flushPending().then(paintSyncStatus).catch(recordSyncError);
+            void retryPartialSync();
+          }
+        }
         document.documentElement.dataset.firebaseConnection = connected ? 'connected' : 'disconnected';
         paintSyncStatus();
       });
       const tasks = [
-        ...RECORD_COLLECTIONS.map(collection => syncCollection(collection)),
-        ...Object.keys(STAFF_ACCOUNTS).map(role => syncStaffRole(role)),
-        syncDirectory(), syncUsernames(), syncStudentAccount(), syncExamDb()
+        ...RECORD_COLLECTIONS.map(collection => () => syncCollection(collection)),
+        ...Object.keys(STAFF_ACCOUNTS).map(role => () => syncStaffRole(role)),
+        () => syncDirectory(), () => syncUsernames(), () => syncStudentAccount(), () => syncExamDb()
       ];
-      /* One failed collection must not prevent account hydration or other reads:
-         a single unreadable/refused node (a rejected write, an oversized
-         collection, a rules gap on one path) used to abort the whole startup,
-         which left the login bridge dead for every device. Only a TOTAL
-         failure — no task succeeded — means the bridge itself is unusable, and
-         that stays a hard stop with the error shown in the status bar. */
-      const results = await Promise.allSettled(tasks);
-      const failures = results.filter(result => result.status === 'rejected');
-      for (const failure of failures) reportSyncError(failure.reason);
-      if (failures.length === tasks.length) throw failures[0].reason;
+      // Keep failed collections separate. An independent node's rejection must
+      // neither discard working listeners nor be falsely painted "synced".
+      const results = await Promise.allSettled(tasks.map(run => run()));
+      if (!syncEnabled || generation !== syncGeneration) return { ok: false, reason: 'session-ended' };
+      partialFailures = results.flatMap((result, index) => result.status === 'rejected'
+        ? [{ run: tasks[index], error: result.reason }] : []);
+      if (partialFailures.length === tasks.length) throw partialFailures[0].error;
+      if (partialFailures.length) {
+        lastPartialRetry = Date.now();
+        reportSyncError(partialFailures[0].error);
+      }
       for (const collection of RECORD_COLLECTIONS) listenCollection(collection);
       for (const role of Object.keys(STAFF_ACCOUNTS)) listenStaffRole(role);
       listenDirectory();
@@ -907,21 +1037,54 @@ export async function startRealtimeSync() {
       ready = true;
       started = true;
       schedulePendingFlush();
-      paintSyncStatus();
       markSyncSuccess('read');
+      paintSyncStatus();
     return { ok: true, mode: 'realtime-test-sync' };
     } catch (error) {
+      if (!syncEnabled || generation !== syncGeneration) return { ok: false, reason: 'session-ended' };
       started = false;
+      syncFailed = true;
       syncError(error);
       return { ok: false, reason: 'sync-failed', error };
     }
-  })().finally(() => { booting = null; });
-  return booting;
+  })();
+  booting = flight;
+  try { return await flight; } finally { if (booting === flight) booting = null; }
 }
 
-window.addEventListener('offline', () => { connected = false; setSyncStatus('offline'); });
-window.addEventListener('online', () => { started = false; void startRealtimeSync(); });
-// A reconnect that never reaches a listener must still not leave data unsent.
+window.addEventListener('offline', () => {
+  connected = false;
+  if (syncEnabled) setSyncStatus('offline');
+});
+window.addEventListener('online', () => {
+  if (!syncEnabled) return;
+  // Do not discard healthy subscriptions: the SDK's reconnect will deliver
+  // .info/connected and pending changes. A failed listener does need a retry.
+  if (syncFailed) void startRealtimeSync();
+  else paintSyncStatus();
+});
+// The SDK owns transport reconnects; only detached listeners and independent
+// failed boot tasks need retries. Never rehydrate every collection for a normal
+// browser offline/online cycle, even one lasting several minutes.
+async function retryPartialSync() {
+  if (partialRetry || !syncEnabled || !ready || !connected || !partialFailures.length) return partialRetry;
+  const generation = syncGeneration;
+  const failures = partialFailures;
+  partialRetry = (async () => {
+    const results = await Promise.allSettled(failures.map(({ run }) => run()));
+    if (!syncEnabled || generation !== syncGeneration) return;
+    partialFailures = failures.flatMap((task, index) => results[index].status === 'rejected'
+      ? [{ run: task.run, error: results[index].reason }] : []);
+    if (partialFailures.length) reportSyncError(partialFailures[0].error);
+    else paintSyncStatus();
+  })().finally(() => { partialRetry = null; });
+  return partialRetry;
+}
 attemptTimer = setInterval(() => {
-  if (navigator.onLine && ready && !connected) void startRealtimeSync();
+  if (!navigator.onLine || !syncEnabled || booting) return;
+  if (syncFailed) { void startRealtimeSync(); return; }
+  if (!connected || !ready || !partialFailures.length || partialRetry) return;
+  if (Date.now() - lastPartialRetry < 60000) return;
+  lastPartialRetry = Date.now();
+  void retryPartialSync();
 }, 20000);

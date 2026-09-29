@@ -49,7 +49,8 @@ test('a fresh device needs setup for every role, and setup stores only a hash', 
   for (const role of ROLES) {
     assert.equal(await staffNeedsSetup(role), true, `${role} must need a first password`);
     const result = await authenticateStaff(role, username(role), 'whatever');
-    assert.deepEqual(result, { ok: true, needsSetup: true });
+    assert.equal(result.ok, false, 'an unprovisioned account cannot authenticate');
+    assert.equal(result.needsSetup, true);
   }
   // Setup each role for real.
   for (const role of ROLES) {
