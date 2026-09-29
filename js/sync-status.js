@@ -1,38 +1,69 @@
-/* No Firebase dependency: status remains available when the CDN/auth fails. */
-export function setSyncStatus(state, error = null) {
-  const code = String(error?.code || '').replace(/^auth\//, '');
-  let message = {
-    offline: 'অফলাইন — পরিবর্তন এই ডিভাইসে আছে',
-    connecting: 'ক্লাউডে সংযোগ করা হচ্ছে…',
-    pending: 'পরিবর্তন সিঙ্ক হচ্ছে…',
-    online: 'ক্লাউড সিঙ্ক চালু',
-    conflict: 'একই লগইন আইডি দুই ডিভাইসে — এডমিনকে জানান',
-    storage: 'ফোনের স্টোরেজ ভর্তি — পুরোনো ছবি/অ্যাপ ডেটা ফাঁকা করুন',
-    error: 'সিঙ্ক হয়নি — আবার চেষ্টা করুন'
-  }[state] || 'সিঙ্কের অপেক্ষায়';
-  if (/QuotaExceededError|quota/i.test(code) || /QuotaExceeded/i.test(String(error?.name || ''))) {
-    // localStorage is about 5 MB per origin: when it is full NOTHING can be
-    // saved locally, so the cloud has nothing to send either.
-    state = 'storage';
-    message = 'ফোনের স্টোরেজ ভর্তি — পুরোনো ছবি/অ্যাপ ডেটা ফাঁকা করুন';
-  } else if (typeof error?.publicMessage === 'string' && error.publicMessage) message = error.publicMessage;
-  else if (/operation-not-allowed|admin-restricted-operation/.test(code)) message = 'Firebase Console-এ Anonymous sign-in চালু করুন';
-  else if (/permission|denied/i.test(code)) message = 'Firebase Rules ও App Check পরীক্ষা করুন';
-  else if (/network/.test(code)) message = 'ক্লাউডে পৌঁছানো যায়নি — ইন্টারনেট পরীক্ষা করুন';
+/* Firebase sync status — transport, auth and local data remain separate. */
+let lastSuccessfulSyncAt = '';
+
+const codeOf = error => String(error?.code || error?.name || '').toLowerCase();
+const messageFor = (state, error = null) => {
+  const code = codeOf(error);
+  if (state === 'offline') return 'অফলাইন — পরিবর্তন এই ডিভাইসে আছে';
+  if (state === 'connecting') return 'Firebase সংযোগ করা হচ্ছে…';
+  if (state === 'pending') return 'পরিবর্তন Firebase-এ সিঙ্ক হচ্ছে…';
+  if (state === 'online') return 'Cloud Synced';
+  if (state === 'conflict') return 'সিঙ্ক দ্বন্দ্ব — ডেটা নিরাপদে এই ডিভাইসে রাখা হয়েছে';
+  if (state === 'storage') return 'ফোনের স্টোরেজ ভর্তি — পুরোনো ছবি/অ্যাপ ডেটা ফাঁকা করুন';
+
+  if (/operation-not-allowed|admin-restricted-operation/.test(code)) {
+    return 'Firebase Authentication-এ Anonymous sign-in চালু নেই';
+  }
+  if (/auth\/network-request-failed|network-request-failed/.test(code)) {
+    return 'Firebase Authentication নেটওয়ার্কে পৌঁছাতে পারেনি';
+  }
+  if (/invalid-api-key|app\/invalid-api-key/.test(code)) {
+    return 'Firebase Configuration Error — API key যাচাই করুন';
+  }
+  if (/database.*not[-_ ]found|database-not-found/.test(code)) {
+    return 'Firebase Database Not Found — databaseURL যাচাই করুন';
+  }
+  if (/permission[-_ ]denied|permission_denied|permission/.test(code)) {
+    return 'Firebase Database Permission Denied — Rules/App Check যাচাই করুন';
+  }
+  if (/app[-_ ]check|appcheck|missing appcheck/i.test(code + ' ' + String(error?.message || ''))) {
+    return 'Firebase App Check বাধা দিচ্ছে';
+  }
+  if (/network|timeout|unavailable|failed-to-fetch|err_internet/.test(code + ' ' + String(error?.message || '').toLowerCase())) {
+    return 'Firebase Connection Failed — নেটওয়ার্ক/Database connection যাচাই করুন';
+  }
+  return 'Firebase Sync Failed — বিস্তারিত কারণ Console-এ পাওয়া যাবে';
+};
+
+export function markSyncSuccess(kind = 'read') {
+  if (kind === 'write' || kind === 'read') lastSuccessfulSyncAt = new Date().toISOString();
   const root = document.documentElement;
-  root.dataset.realtimeSync = state;
-  root.dataset.realtimeSyncMessage = message;
-  window.dispatchEvent(new CustomEvent('apc-sync-status', { detail: { state, message, code } }));
+  root.dataset.firebaseLastSync = lastSuccessfulSyncAt;
 }
 
-/** A cloud record that must not be overwritten: two devices claimed the same
-    login ID. Reported separately from transport errors so it stays visible. */
+export function setSyncStatus(state, error = null) {
+  const code = codeOf(error);
+  if (/QuotaExceededError|quota/i.test(code) || /QuotaExceeded/i.test(String(error?.name || ''))) {
+    state = 'storage';
+  }
+  const message = typeof error?.publicMessage === 'string' && error.publicMessage
+    ? error.publicMessage
+    : messageFor(state, error);
+  const root = document.documentElement;
+  root.dataset.internetState = navigator.onLine ? 'online' : 'offline';
+  root.dataset.firebaseConnection = state === 'online' || state === 'pending' ? 'connected' : state === 'offline' ? 'offline' : 'unknown';
+  root.dataset.realtimeSync = state;
+  root.dataset.realtimeSyncMessage = message;
+  root.dataset.firebaseLastSync = lastSuccessfulSyncAt;
+  window.dispatchEvent(new CustomEvent('apc-sync-status', {
+    detail: { state, message, code, firebaseConnection: root.dataset.firebaseConnection, lastSuccessfulSyncAt }
+  }));
+}
+
 export function reportSyncConflict(code) {
   const message = {
     'admin-conflict': 'এই সিস্টেমে আগে থেকেই Admin আছে — ক্লাউডে থাকা ID দিয়ে লগইন করুন',
     'login-id-conflict': 'এই ইউজারনেম অন্য ডিভাইসে আগেই ব্যবহার হচ্ছে — এডমিনকে জানান',
-    /* One record cannot travel: Realtime Database rejects a key holding
-       `.` `#` `$` `[` `]` or `/` (js/rtdb-keys.js). Everything else still syncs. */
     'unsafe-record': 'একটি রেকর্ডে ফায়ারবেস-নিষিদ্ধ অক্ষর (. # $ [ ] /) আছে — সেটি বাদে বাকি সব সিঙ্ক হয়েছে'
   }[code] || 'একই লগইন আইডি দুই ডিভাইসে — এডমিনকে জানান';
   setSyncStatus('conflict', { code: 'conflict/' + code, publicMessage: message });
@@ -41,6 +72,5 @@ export function reportSyncConflict(code) {
 
 export function reportSyncError(error) {
   setSyncStatus(navigator.onLine ? 'error' : 'offline', error);
-  // Never include database values, password hashes or tokens in diagnostics.
   console.warn('[Active Plus] Sync failed:', error?.code || error?.name || 'unknown');
 }
