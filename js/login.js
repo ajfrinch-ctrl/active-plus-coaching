@@ -246,135 +246,179 @@ function isOwnIdentifier(account, identifier) {
   return /^s\d{6}/.test(typed) && Boolean(id) && id.startsWith(typed);
 }
 
+async function runBackgroundLoginSync() {
+  // Sync is deliberately fire-and-forget from the authentication path.
+  // A slow/failed cloud bridge must never mutate or gate the login form.
+  try {
+    const bridge = await import('../sync/sync-core.js?v=20260929-protected');
+    void bridge.startRealtimeSync().catch(error => {
+      console.warn('[Active Plus] background login sync unavailable:', error?.message || error);
+    });
+  } catch (error) {
+    console.warn('[Active Plus] background login sync bridge unavailable:', error?.message || error);
+  }
+}
+
+let loginAttemptId = 0;
+
 async function handleLogin(event, state, onAuthenticated) {
   event.preventDefault();
-  const form = new FormData(event.currentTarget);
-  const typedId = String(form.get('mobile') || '').trim();
-  const pin = String(form.get('pin') || '');
 
-  // Staff credentials are shared across devices through the optional online bridge.
-  // Hydrate before resolving the role so a newly-created Admin can sign in on a second device.
-  // `onlineIdentities` remembers whether that cloud lookup actually finished,
-  // so a missing account later reports the real cause instead of blaming the device.
-  const onlineIdentities = { attempted: false, synced: true, cloudPasswordMismatch: false };
-  if (navigator.onLine && typedId) {
-    onlineIdentities.attempted = true;
-    // A bridge that just pronounced itself dead must not stall this button:
-    // the full budget drops to a short grace for this one attempt.
-    const down = onlineLoginBudget();
-    // Staff accounts and student logins live on different cloud paths, so both
-    // lookups run together instead of one waiting for the other.
-    const [, identities] = await Promise.all([
-      // Never re-hydrate an existing local Admin record during a normal
-      // logout/login cycle. Logout removes only the session; the local account
-      // remains the authoritative credential on this device.
-      hydrateStaffAccountsOnline('login', down || ONLINE_BRIDGE_BUDGET_MS),
-      // Login IDs created on other devices: directory accounts, the claimed-id
-      // registry and the student login (a verified password is required before
-      // anything is written to this device).
-      hydrateUserIdentifiersOnline('login', typedId, pin, down || LOGIN_IDENTITY_BUDGET_MS)
-    ]);
-    onlineIdentities.synced = Boolean(identities?.ok);
-    // A cloud copy whose password does not match must never block a valid
-    // local credential: this device's account can be the newer one.
-    onlineIdentities.cloudPasswordMismatch = Boolean(identities?.found && identities?.credentialMismatch);
-    // "s260929001" matched more than one student in the cloud.
-    onlineIdentities.ambiguous = Boolean(identities?.ambiguous);
-    onlineIdentities.cloudAccounts = identities?.cloudAccounts ?? null;
-    onlineIdentities.similar = Array.isArray(identities?.similar) ? identities.similar : [];
-  }
-  // Staff usernames are reserved, so a match here can only be that panel.
-  const staffRole = await resolveStaffRoleByUsername(typedId);
-  if (staffRole) {
-    await handleStaffLogin(staffRole, typedId, pin);
+  // IMPORTANT: take an immutable credential snapshot before ANY async work.
+  // From this point onward authentication never reads the login inputs again.
+  const form = event.currentTarget;
+  const loginMobile = form.querySelector('#loginMobile') || $('#loginMobile');
+  const loginPin = form.querySelector('#loginPin') || $('#loginPin');
+  const typedId = String(loginMobile?.value || '').trim();
+  const pin = String(loginPin?.value || '');
+  const attemptId = ++loginAttemptId;
+
+  if ((!normalizeUsername(typedId) && !contactNumber(typedId)) || pin.length < 4) {
+    setAuthMessage('ইউজারনেম, মোবাইল নম্বর বা Student ID এবং ৪–৬ সংখ্যার পাসওয়ার্ড সঠিকভাবে দিন।');
     return;
   }
-  // A Staff ID identity created from Admin → Staff Management.
+
+  // Never let a sync operation own the login UI. Local authentication is always
+  // attempted first, even while the background bridge is connecting.
+  const remember = $('#rememberMe')?.checked !== false;
+
+  // 1) Fixed staff accounts — local first.
+  const staffRole = await resolveStaffRoleByUsername(typedId);
+  if (attemptId !== loginAttemptId) return;
+  if (staffRole) {
+    await handleStaffLogin(staffRole, typedId, pin);
+    if (attemptId === loginAttemptId) void runBackgroundLoginSync();
+    return;
+  }
+
+  // 2) Staff Directory — local first. This does not require Firebase.
   const directory = await authenticateDirectoryStaff(typedId, pin);
+  if (attemptId !== loginAttemptId) return;
   if (directory.ok) {
-    await handleDirectoryStaffLogin(directory, $('#rememberMe')?.checked !== false);
+    await handleDirectoryStaffLogin(directory, remember);
+    if (attemptId === loginAttemptId) void runBackgroundLoginSync();
     return;
   }
   if (directory.code === 'INACTIVE') {
     setAuthMessage(directory.error || 'এই স্টাফ অ্যাকাউন্টটি নিষ্ক্রিয়।');
     return;
   }
-  // The username belongs to a Staff Management account, so a wrong password is
-  // a staff error — it must not fall through to the student path.
   if (directory.code === 'WRONG_PASSWORD') {
     setAuthMessage('স্টাফ ইউজারনেম বা পাসওয়ার্ড সঠিক নয়। আবার চেষ্টা করুন।');
     return;
   }
 
-  const username = normalizeUsername(typedId);
-  const mobile = contactNumber(typedId);
+  // 3) Student account — local first.
   state.account = loadAccount() || state.account;
-  if ((!username && !mobile) || pin.length < 4) {
-    setAuthMessage('ইউজারনেম, মোবাইল নম্বর বা Student ID এবং ৪–৬ সংখ্যার পাসওয়ার্ড সঠিকভাবে দিন।');
-    return;
-  }
-  if (!state.account) {
-    if (onlineIdentities.ambiguous) {
-      setAuthMessage('এই সংক্ষিপ্ত Student ID দিয়ে একাধিক শিক্ষার্থী পাওয়া গেছে — সম্পূর্ণ Student ID লিখুন।');
-    } else if (onlineIdentities.cloudPasswordMismatch) {
-      setAuthMessage('ইউজারনেম, মোবাইল নম্বর বা Student ID অথবা পাসওয়ার্ড সঠিক নয়। আবার চেষ্টা করুন।');
-    } else if (onlineIdentities.attempted && !onlineIdentities.synced) {
-      // The cloud lookup itself failed (offline, timed out or refused — e.g.
-      // App Check enforcement blocking the Realtime Database). An account that
-      // lives on another phone would make "register first" a false message.
-      setAuthMessage('ক্লাউড থেকে অ্যাকাউন্ট আনা যায়নি। ইন্টারনেট ও Firebase সিঙ্ক পরীক্ষা করে আবার লগইন করুন। আগে অ্যাকাউন্ট তৈরি করে থাকলে নতুন করে রেজিস্ট্রেশন করবেন না।');
-    } else if (!navigator.onLine) {
-      setAuthMessage('এই ডিভাইসে অ্যাকাউন্ট সংরক্ষিত নেই। অন্য ডিভাইসে তৈরি অ্যাকাউন্টে প্রথমবার লগইন করতে ইন্টারনেট চালু করুন।');
-    } else {
-      // The username is the login ID: say so once, so a student who typed a
-      // name or a guardian's number knows exactly what to type.
-      const similar = onlineIdentities.similar.length
-        ? ` ক্লাউডে মিলে যেতে পারে: ${onlineIdentities.similar.join(', ')}।`
-        : '';
-      if (onlineIdentities.attempted && onlineIdentities.cloudAccounts === 0) {
-        // The cloud is reachable but holds no student login at all: the device
-        // that has the account never uploaded it.
-        setAuthMessage('ক্লাউডে এখনো কোনো শিক্ষার্থী অ্যাকাউন্ট ওঠেনি। যে ডিভাইসে অ্যাকাউন্টটি আছে সেখানে অ্যাপ অনলাইনে খুলে সিঙ্ক চালু করুন (উপরে সবুজ/নীল সিঙ্ক চিহ্ন), তারপর এখানে আবার চেষ্টা করুন।');
-      } else if (onlineIdentities.attempted && onlineIdentities.cloudAccounts > 0) {
-        setAuthMessage(`ক্লাউডে ${toBanglaNumber(onlineIdentities.cloudAccounts)}টি শিক্ষার্থী অ্যাকাউন্ট আছে, কিন্তু “${typedId}” দিয়ে কিছু পাওয়া যায়নি।${similar} নামের বানান মিলিয়ে দেখুন; না মিললে যে ডিভাইসে অ্যাকাউন্টটি আছে সেখানে অ্যাপ অনলাইনে খুলুন।`);
-      } else {
-        setAuthMessage('অ্যাকাউন্ট পাওয়া যায়নি। আগে অন্য ডিভাইসে তৈরি করে থাকলে সেই ডিভাইসে অ্যাপ অনলাইনে খুলে সিঙ্ক সম্পন্ন করুন, তারপর এখানে আবার চেষ্টা করুন।');
-      }
+  if (state.account && isOwnIdentifier(state.account, typedId)) {
+    if (!(await verifyAccountPassword(state.account, pin))) {
+      setAuthMessage('ইউজারনেম/মোবাইল নম্বর অথবা পাসওয়ার্ড সঠিক নয়।');
+      return;
     }
+
+    if (attemptId !== loginAttemptId) return;
+    if (!isPasswordRecord(state.account.pinHash)) {
+      state.account = await upgradeAccountSecrets(state.account, { pin }) || state.account;
+    }
+    state.student = { ...defaultStudent, ...(state.account.student || {}) };
+    saveStudent(state.student);
+    if (!(await persistSession(remember))) {
+      setAuthMessage('সেশন সংরক্ষণ করা যায়নি — স্টোরেজ পরীক্ষা করে আবার চেষ্টা করুন।');
+      return;
+    }
+    if (remember) setTrustedDevice(true);
+
+    // Login is complete before cloud work begins.
+    window.dispatchEvent(new Event('apc-student-login'));
+    onAuthenticated?.();
+    void runBackgroundLoginSync();
     return;
   }
-  // What the student may type: the login User ID, the mobile number used at
-  // registration, or the permanent Student ID from the profile. A Student ID
-  // without its random suffix ("s260929001") is accepted for this device's own
-  // account, so nobody has to read out the long tail.
-  if (!isOwnIdentifier(state.account, typedId)) {
-    // The record is here: naming it turns a typo into a one-second fix.
-    const knownId = state.account.username || state.account.student?.username || '';
-    const knownStudentId = studentIdOf(state.account);
-    const known = [knownId, knownStudentId].filter(Boolean).join(' / ');
-    setAuthMessage(`ইউজারনেম, মোবাইল নম্বর বা Student ID অথবা পাসওয়ার্ড সঠিক নয়। এই ডিভাইসের আইডি: ${known || '—'}`);
-    return;
+
+  // 4) No usable local account: ONLY NOW do a short, isolated cloud lookup.
+  // The snapshot above is the sole credential source; DOM values are never
+  // reread while Firebase is running.
+  const onlineIdentities = {
+    attempted: false,
+    synced: true,
+    cloudPasswordMismatch: false,
+    ambiguous: false,
+    cloudAccounts: null,
+    similar: []
+  };
+
+  if (navigator.onLine && typedId && attemptId === loginAttemptId) {
+    onlineIdentities.attempted = true;
+    const down = onlineLoginBudget();
+    const identities = await hydrateUserIdentifiersOnline(
+      'login',
+      typedId,
+      pin,
+      down || LOGIN_IDENTITY_BUDGET_MS
+    );
+
+    if (attemptId !== loginAttemptId) return;
+    onlineIdentities.synced = Boolean(identities?.ok);
+    onlineIdentities.cloudPasswordMismatch =
+      Boolean(identities?.found && identities?.credentialMismatch);
+    onlineIdentities.ambiguous = Boolean(identities?.ambiguous);
+    onlineIdentities.cloudAccounts = identities?.cloudAccounts ?? null;
+    onlineIdentities.similar = Array.isArray(identities?.similar)
+      ? identities.similar
+      : [];
+
+    // A verified cloud student account may now have been safely hydrated.
+    state.account = loadAccount() || state.account;
+    if (state.account && isOwnIdentifier(state.account, typedId) &&
+        await verifyAccountPassword(state.account, pin)) {
+      if (attemptId !== loginAttemptId) return;
+      if (!isPasswordRecord(state.account.pinHash)) {
+        state.account = await upgradeAccountSecrets(state.account, { pin }) || state.account;
+      }
+      state.student = { ...defaultStudent, ...(state.account.student || {}) };
+      saveStudent(state.student);
+      if (!(await persistSession(remember))) {
+        setAuthMessage('সেশন সংরক্ষণ করা যায়নি — স্টোরেজ পরীক্ষা করে আবার চেষ্টা করুন।');
+        return;
+      }
+      if (remember) setTrustedDevice(true);
+      window.dispatchEvent(new Event('apc-student-login'));
+      onAuthenticated?.();
+      void runBackgroundLoginSync();
+      return;
+    }
+
+    // Cloud Directory may have hydrated a staff identity.
+    const cloudDirectory = await authenticateDirectoryStaff(typedId, pin);
+    if (attemptId !== loginAttemptId) return;
+    if (cloudDirectory.ok) {
+      await handleDirectoryStaffLogin(cloudDirectory, remember);
+      if (attemptId === loginAttemptId) void runBackgroundLoginSync();
+      return;
+    }
   }
-  if (!(await verifyAccountPassword(state.account, pin))) {
-    setAuthMessage('ইউজারনেম/মোবাইল নম্বর অথবা পাসওয়ার্ড সঠিক নয়। আবার চেষ্টা করুন।');
-    return;
+
+  // Do not clear or reset the login form on any failure.
+  if (onlineIdentities.ambiguous) {
+    setAuthMessage('এই সংক্ষিপ্ত Student ID দিয়ে একাধিক শিক্ষার্থী পাওয়া গেছে — সম্পূর্ণ Student ID লিখুন।');
+  } else if (onlineIdentities.cloudPasswordMismatch) {
+    setAuthMessage('ইউজারনেম, মোবাইল নম্বর বা Student ID অথবা পাসওয়ার্ড সঠিক নয়।');
+  } else if (onlineIdentities.attempted && !onlineIdentities.synced) {
+    setAuthMessage('ক্লাউড থেকে অ্যাকাউন্ট আনা যায়নি। ইন্টারনেট ও Firebase সিঙ্ক পরীক্ষা করে আবার লগইন করুন। আগে অ্যাকাউন্ট তৈরি করে থাকলে নতুন করে রেজিস্ট্রেশন করবেন না।');
+  } else if (!navigator.onLine) {
+    setAuthMessage('এই ডিভাইসে অ্যাকাউন্ট সংরক্ষিত নেই। অন্য ডিভাইসে তৈরি অ্যাকাউন্টে প্রথমবার লগইন করতে ইন্টারনেট চালু করুন।');
+  } else {
+    const similar = onlineIdentities.similar.length
+      ? ` ক্লাউডে মিলে যেতে পারে: ${onlineIdentities.similar.join(', ')}।`
+      : '';
+    if (onlineIdentities.attempted && onlineIdentities.cloudAccounts === 0) {
+      setAuthMessage('ক্লাউডে এখনো কোনো শিক্ষার্থী অ্যাকাউন্ট ওঠেনি। যে ডিভাইসে অ্যাকাউন্টটি আছে সেখানে অ্যাপ অনলাইনে খুলে সিঙ্ক চালু করুন, তারপর এখানে আবার চেষ্টা করুন।');
+    } else if (onlineIdentities.attempted && onlineIdentities.cloudAccounts > 0) {
+      setAuthMessage(`ক্লাউডে ${toBanglaNumber(onlineIdentities.cloudAccounts)}টি শিক্ষার্থী অ্যাকাউন্ট আছে, কিন্তু “${typedId}” দিয়ে কিছু পাওয়া যায়নি।${similar} নামের বানান মিলিয়ে দেখুন; না মিললে যে ডিভাইসে অ্যাকাউন্টটি আছে সেখানে অ্যাপ অনলাইনে খুলুন।`);
+    } else {
+      setAuthMessage('অ্যাকাউন্ট পাওয়া যায়নি। আগে অন্য ডিভাইসে তৈরি করে থাকলে সেই ডিভাইসে অ্যাপ অনলাইনে খুলে সিঙ্ক সম্পন্ন করুন, তারপর এখানে আবার চেষ্টা করুন।');
+    }
   }
-  // A plaintext record from the retired scheme is replaced by a hash now that
-  // the password has been proven correct.
-  if (!isPasswordRecord(state.account.pinHash)) {
-    state.account = await upgradeAccountSecrets(state.account, { pin }) || state.account;
-  }
-  state.student = { ...defaultStudent, ...(state.account.student || {}) };
-  saveStudent(state.student);
-  const remember = $('#rememberMe')?.checked !== false;
-  if (!(await persistSession(remember))) {
-    setAuthMessage('সেশন সংরক্ষণ করা যায়নি — স্টোরেজ পরীক্ষা করে আবার চেষ্টা করুন।');
-    return;
-  }
-  if (remember) setTrustedDevice(true);
-  // Lets the sync bridge fetch this student's exam/result data in the background.
-  window.dispatchEvent(new Event('apc-student-login'));
-  onAuthenticated?.();
 }
 
 function initPinVisibility() {

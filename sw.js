@@ -1,4 +1,4 @@
-const CACHE_VERSION = 108;
+const CACHE_VERSION = 109;
 const CACHE_NAME = `active-plus-student-v${CACHE_VERSION}-minimal-education`;
 const APP_SHELL = [
   './js/app-entry.js',
