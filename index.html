@@ -21,13 +21,13 @@
   <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="assets/icons/favicon-16.png">
   <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
-  <link rel="stylesheet" href="css/aurora.css?v=20260929-panellock">
+  <link rel="stylesheet" href="css/aurora.css?v=20260929-panelswitch">
   <!-- Global glass design system. Presentation layer only; loaded last. -->
-  <link rel="stylesheet" href="css/aurora.css?v=20260929-panellock">
+  <link rel="stylesheet" href="css/aurora.css?v=20260929-panelswitch">
   <link rel="preload" href="assets/fonts/NotoSansBengali-Variable.ttf" as="font" type="font/ttf" crossorigin>
-  <link rel="stylesheet" href="css/aurora.css?v=20260929-panellock">
+  <link rel="stylesheet" href="css/aurora.css?v=20260929-panelswitch">
   <!-- Appearance (light/dark). Loaded last so its dark patches win the cascade. -->
-  <link rel="stylesheet" href="css/aurora.css?v=20260929-panellock">
+  <link rel="stylesheet" href="css/aurora.css?v=20260929-panelswitch">
 </head>
 <body>
   <!-- Authentication comes first. Credentials and registration data stay on this device. -->
@@ -51,6 +51,12 @@
           <button class="auth-submit" type="submit">লগইন করুন <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg></button>
         </form>
         <p class="auth-footnote">অ্যাকাউন্ট নেই? <button type="button" class="inline-link" data-auth-tab="register">রেজিস্ট্রেশন করুন</button></p>
+        <!-- Panel switch on this device. The shared login page is the only door
+             between panels, so the switch lives here: the panel this device has
+             open can be resumed, and another panel is one password away — no
+             logout step, and no tap-only route into a panel. Filled by
+             js/panel-switch.js. -->
+        <section class="panel-switch" id="staffSwitch" hidden aria-live="polite"></section>
         <!-- First use only: shown by js/login.js?v=20260928-1742 while this device has no Admin
              record at all. Once the first Admin exists it is removed. -->
         <p class="auth-footnote first-use-note" id="firstAdminFootnote" hidden>প্রথমবার ব্যবহার করছেন? <button type="button" class="inline-link" id="openFirstAdmin" data-auth-tab="first-admin">Admin Account তৈরি করুন</button></p>
@@ -399,6 +405,6 @@
     <symbol id="icon-shield" viewBox="0 0 24 24"><path d="M12 3 5 6v5.2c0 4.8 3 8 7 9.8 4-1.8 7-5 7-9.8V6l-7-3Z"/><path d="m9 12 2 2 4-4.5"/></symbol>
   </svg>
   <script type="module" src="js/pull-to-refresh.js"></script>
-  <script type="module" src="js/main.js?v=20260929-topbar"></script>
+  <script type="module" src="js/main.js?v=20260929-panelswitch"></script>
 </body>
 </html>

@@ -19,9 +19,11 @@ import {
 } from './storage.js';
 import {
   STAFF_ACCOUNTS, STAFF_USERNAMES, normalizeStaffUsername, authenticateStaff,
-  saveStaffSession, resolveStaffRoleByUsername, createInitialAdmin, staffAccountRecordExists
+  saveStaffSession, resolveStaffRoleByUsername, createInitialAdmin, staffAccountRecordExists,
+  activeStaffRoles
 } from './staff-auth.js';
 import { KEYS, readJSON } from './database.js';
+import { mountPanelSwitch } from './panel-switch.js';
 import { openStaffPasswordDialog } from './staff-password-dialog.js';
 import { authenticateDirectoryStaff, changeDirectoryStaffPassword, findDirectoryStaffByUsername } from './staff-directory.js';
 import { generateLoginId } from './user-id.js';
@@ -30,7 +32,7 @@ import { isPasswordRecord } from './password-hash.js';
 const STAFF_PANEL = Object.freeze({ admin: 'admin.html', manager: 'manager.html', teacher: 'teacher.html', payment: 'payment.html' });
 const STAFF_LABEL = Object.freeze({ admin: 'এডমিন প্যানেল', manager: 'ম্যানেজার প্যানেল', teacher: 'শিক্ষক প্যানেল', payment: 'পেমেন্ট রিসিভ প্যানেল' });
 const STAFF_ID_HINT = 'স্টাফ লগইন';
-const DEFAULT_ID_HINT = 'শিক্ষার্থী: লগইন সবসময় নিজের ইউজারনেম দিয়েই (চাইলে মোবাইল নম্বর বা প্রোফাইলের Student ID-ও চলবে) — সাথে নিজের পাসওয়ার্ড। এডমিন, ম্যানেজার, শিক্ষক ও পেমেন্ট কাউন্টার: নিজের ইউজারনেম ও পাসওয়ার্ড দিয়ে এখানেই লগইন করুন।';
+const DEFAULT_ID_HINT = 'শিক্ষার্থী: লগইন সবসময় নিজের ইউজারনেম দিয়েই (চাইলে মোবাইল নম্বর বা প্রোফাইলের Student ID-ও চলবে) — সাথে নিজের পাসওয়ার্ড। এডমিন, ম্যানেজার, শিক্ষক ও পেমেন্ট কাউন্টার: নিজের ইউজারনেম ও পাসওয়ার্ড দিয়ে এখানেই লগইন করুন — একই ডিভাইসে প্যানেল বদলাতে আগে লগআউট করার দরকার নেই।';
 
 export function staffRoleFor(value) {
   const typed = normalizeStaffUsername(value);
@@ -103,12 +105,19 @@ function staffRolePanelOf(staff) {
   return null; // "other" staff have no panel of their own yet
 }
 
+/* Switching is deliberate and password-gated: the target role's own credentials
+   were just verified, and the session they replace is named out loud. No logout
+   step is needed, and no tap alone can move this device to another panel. */
 async function enterStaffPanel(role, remember) {
+  const previous = (await activeStaffRoles()).filter(name => name !== role);
   if (!(await saveStaffSession(role, remember))) {
     setAuthMessage('সেশন সংরক্ষণ করা যায়নি — ব্রাউজারের স্টোরেজ পরীক্ষা করে আবার চেষ্টা করুন।');
     return;
   }
-  setAuthMessage(`${STAFF_LABEL[role]}ে নেওয়া হচ্ছে…`, 'success');
+  const switched = previous.length
+    ? ` — এই ডিভাইসের আগের ${STAFF_LABEL[previous[0]] || 'প্যানেল'} সেশনটি বন্ধ হয়েছে`
+    : '';
+  setAuthMessage(`${STAFF_LABEL[role]}ে নেওয়া হচ্ছে…${switched}`, 'success');
   window.location.replace(staffPanelPath(role));
 }
 
@@ -374,6 +383,8 @@ function initSkipSecurityToggle() {
 export function initLogin({ state, onAuthenticated }) {
   initPinVisibility();
   initSkipSecurityToggle();
+  // The strip that lets this device change panels without a logout step.
+  void mountPanelSwitch();
   $$('[data-auth-tab]').forEach(trigger => trigger.addEventListener('click', () => {
     switchAuthTab(trigger.dataset.authTab);
   }));

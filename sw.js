@@ -1,6 +1,7 @@
-const CACHE_NAME = 'active-plus-student-v92-panellock';
+const CACHE_NAME = 'active-plus-student-v93-panelswitch';
 const APP_SHELL = [
   './js/panel-lockdown.js',
+  './js/panel-switch.js',
   './js/record-sync.js',
   './js/sync-merge.js',
   './js/sync-collections.js',

@@ -73,6 +73,10 @@ const LOCK_PANELS = Object.freeze(['admin.html', 'manager.html', 'teacher.html',
      • each panel's own scripts may name their own page. */
 const NAV_OWNER = Object.freeze({
   'js/login.js': '*',
+  /* The login page's own switch strip routes to the panel the person just
+     signed into; it is the shared door, so it may name any panel — but only
+     through the lockdown module's table, never a hard-coded file name. */
+  'js/panel-switch.js': '*',
   'js/admin.js': 'admin.html',
   'js/manager.js': 'manager.html',
   'js/teacher.js': 'teacher.html',
@@ -157,6 +161,21 @@ test('every panel installs the lockdown guard and remembers its own page', () =>
     assert.match(source, new RegExp(`watchOwnPanelSession\\('${role}'\\)`), `${script}: locks itself when its session ends`);
     assert.match(source, /lockPanel\(\{ role: '/, `${script}: locks in place instead of navigating away`);
   }
+  // The switch strip exists on the shared login page only — never in a panel.
+  const index = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  assert.match(index, /id="staffSwitch"/, 'index.html carries the panel switch strip');
+  for (const page of LOCK_PANELS) {
+    assert.equal(new RegExp('id="staffSwitch"').test(readFileSync(new URL(`../${page}`, import.meta.url), 'utf8')), false,
+      `${page}: a panel must not carry the switch strip`);
+  }
+  const switcher = readFileSync(new URL('../js/panel-switch.js', import.meta.url), 'utf8');
+  for (const page of LOCK_PANELS) {
+    assert.equal(switcher.includes(page), false, `js/panel-switch.js must not hard-code ${page}`);
+  }
+  assert.match(switcher, /PANEL_BY_ROLE\[activeRole\]/, 'the switch routes through the lockdown module table');
+  assert.match(readFileSync(new URL('../js/login.js', import.meta.url), 'utf8'), /void mountPanelSwitch\(\);/,
+    'the login page mounts the switch strip');
+
   // The Admin boot fallback hands over only on a tap, never on a timer.
   const admin = readFileSync(new URL('../admin.html', import.meta.url), 'utf8');
   assert.equal(/window\.location\.replace\(/.test(admin), false, 'the boot fallback must not jump anywhere');

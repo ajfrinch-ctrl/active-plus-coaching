@@ -379,3 +379,121 @@ html[data-theme="dark"] .apc-lock-notice {
   background: #2a2415;
   color: #f2dfae;
 }
+
+/* === PANEL SWITCH (shared login page) =======================================
+   js/panel-switch.js fills #staffSwitch on index.html: the panel this device
+   has open, a resume and an end-session button, and a chip per panel that only
+   fills the username box. The panels themselves never link to each other.
+   ========================================================================== */
+
+.panel-switch {
+  margin-top: 14px;
+  padding: 13px 14px;
+  border: 1px solid #dbe2ec;
+  border-radius: 14px;
+  background: #f7f9fe;
+}
+
+html[data-theme="dark"] .panel-switch {
+  border-color: #2a3550;
+  background: #141c30;
+}
+
+.panel-switch-head {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: #14203c;
+}
+
+html[data-theme="dark"] .panel-switch-head { color: #e6ecff; }
+
+.panel-switch-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.panel-switch-actions button {
+  flex: 1 1 auto;
+  padding: 10px 12px;
+  border: 1px solid #dbe2ec;
+  border-radius: 11px;
+  background: #ffffff;
+  color: #14203c;
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.panel-switch-actions button:active { transform: scale(.98); }
+
+.panel-switch-actions button:focus-visible,
+.panel-switch-chip:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(49, 94, 251, .35);
+}
+
+.panel-switch-actions .panel-switch-primary {
+  border-color: #315efb;
+  background: #315efb;
+  color: #ffffff;
+}
+
+html[data-theme="dark"] .panel-switch-actions button {
+  border-color: #2a3550;
+  background: #1d2740;
+  color: #e6ecff;
+}
+
+html[data-theme="dark"] .panel-switch-actions .panel-switch-primary {
+  border-color: #a9bdff;
+  background: #a9bdff;
+  color: #0a1020;
+}
+
+.panel-switch-note {
+  margin: 0 0 8px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: #5b6780;
+}
+
+html[data-theme="dark"] .panel-switch-note { color: #93a1c0; }
+
+.panel-switch-tiny { margin-bottom: 0; font-size: 11.5px; }
+
+.panel-switch-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.panel-switch-chips-label {
+  font-size: 11.5px;
+  color: #5b6780;
+}
+
+html[data-theme="dark"] .panel-switch-chips-label { color: #93a1c0; }
+
+.panel-switch-chip {
+  padding: 7px 11px;
+  border: 1px solid #cfd9f5;
+  border-radius: 999px;
+  background: #eef3ff;
+  color: #1e3a8a;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.panel-switch-chip:active { transform: scale(.97); }
+
+html[data-theme="dark"] .panel-switch-chip {
+  border-color: #2a3550;
+  background: #1d2740;
+  color: #cdd9ff;
+}

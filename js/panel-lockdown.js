@@ -171,7 +171,9 @@ function panelLine(signedIn) {
     .map(file => PANEL_LABELS[file] || file)
     .filter(Boolean);
   if (!labels.length) return '';
-  return `এই ডিভাইসে এখন ${labels.join(', ')} লগইন করা আছে — প্যানেল বদলাতে আগে লগআউট করুন।`;
+  /* No logout step is asked for: the shared login page switches this device as
+     soon as the other panel's own username and password are typed there. */
+  return `এই ডিভাইসে এখন ${labels.join(', ')} লগইন করা আছে — প্যানেল বদলাতে লগইন পেজে গিয়ে সেই প্যানেলের ইউজারনেম ও পাসওয়ার্ড দিন।`;
 }
 
 /**
