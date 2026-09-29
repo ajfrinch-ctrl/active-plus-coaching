@@ -30,7 +30,7 @@ import { isPasswordRecord } from './password-hash.js';
 const STAFF_PANEL = Object.freeze({ admin: 'admin.html', manager: 'manager.html', teacher: 'teacher.html', payment: 'payment.html' });
 const STAFF_LABEL = Object.freeze({ admin: 'এডমিন প্যানেল', manager: 'ম্যানেজার প্যানেল', teacher: 'শিক্ষক প্যানেল', payment: 'পেমেন্ট রিসিভ প্যানেল' });
 const STAFF_ID_HINT = 'স্টাফ লগইন';
-const DEFAULT_ID_HINT = 'শিক্ষার্থী: ইউজারনেম, মোবাইল নম্বর অথবা প্রোফাইলের Student ID — সাথে নিজের পাসওয়ার্ড। এডমিন, ম্যানেজার, শিক্ষক ও পেমেন্ট কাউন্টার: নিজের ইউজারনেম ও পাসওয়ার্ড দিয়ে এখানেই লগইন করুন।';
+const DEFAULT_ID_HINT = 'শিক্ষার্থী: লগইন সবসময় নিজের ইউজারনেম দিয়েই (চাইলে মোবাইল নম্বর বা প্রোফাইলের Student ID-ও চলবে) — সাথে নিজের পাসওয়ার্ড। এডমিন, ম্যানেজার, শিক্ষক ও পেমেন্ট কাউন্টার: নিজের ইউজারনেম ও পাসওয়ার্ড দিয়ে এখানেই লগইন করুন।';
 
 export function staffRoleFor(value) {
   const typed = normalizeStaffUsername(value);
@@ -307,6 +307,8 @@ async function handleLogin(event, state, onAuthenticated) {
     } else if (!navigator.onLine) {
       setAuthMessage('এই ডিভাইসে অ্যাকাউন্ট সংরক্ষিত নেই। অন্য ডিভাইসে তৈরি অ্যাকাউন্টে প্রথমবার লগইন করতে ইন্টারনেট চালু করুন।');
     } else {
+      // The username is the login ID: say so once, so a student who typed a
+      // name or a guardian's number knows exactly what to type.
       const similar = onlineIdentities.similar.length
         ? ` ক্লাউডে মিলে যেতে পারে: ${onlineIdentities.similar.join(', ')}।`
         : '';

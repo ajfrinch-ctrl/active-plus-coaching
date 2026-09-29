@@ -23,6 +23,7 @@ import { mountReports, refreshReports } from './reports.js';
 import { registerServiceWorker } from './service-worker.js';
 import { initFixedShell } from './fixed-shell.js';
 import { escapeHtml } from './sanitize.js';
+import { matchesStudentQuery } from './student-search.js';
 import { createAccess, CAPABILITIES, routeFromHash } from './admin-permissions.js';
 import { initAdminPanelShell } from './admin-panel-ui.js';
 import { paintIcon } from './admin-icons.js';
@@ -270,62 +271,18 @@ const statusMeta = Object.freeze({
 });
 
 function visibleStudents() {
-  const rawQuery = state.query.trim().toLowerCase();
-  const digitQuery = normalizeDigitsOnly(rawQuery);
+  const query = state.query.trim();
 
   return state.students.filter(student => {
     const matchesFilter = state.filter === 'all' || student.status === state.filter;
     if (!matchesFilter) return false;
     // Class filter (student management made easy: pick a class, see only that class).
     if (state.classFilter !== 'all' && student.className !== state.classFilter) return false;
-    if (!rawQuery) return true;
-
-    // 1. Check Student ID (ID string, numeric digits, Bangla numerals)
-    const idStr = String(student.id || '').toLowerCase();
-    const idDigits = normalizeDigitsOnly(student.id);
-    const idBn = toBanglaNumber(student.id).toLowerCase();
-
-    if (
-      idStr.includes(rawQuery) ||
-      (digitQuery && idDigits.includes(digitQuery)) ||
-      idBn.includes(rawQuery)
-    ) {
-      return true;
-    }
-
-    // 2. Check Name (Bangla & English) and Father's Name
-    const nameBn = (student.name || '').toLowerCase();
-    const nameEn = (student.nameEn || '').toLowerCase();
-    const fatherName = (student.fatherName || '').toLowerCase();
-    if (nameBn.includes(rawQuery) || nameEn.includes(rawQuery) || fatherName.includes(rawQuery)) {
-      return true;
-    }
-
-    // 3. Check Mobile and Guardian Mobile (both English digits & Bangla digits)
-    const mobileNorm = normalizeDigitsOnly(student.mobile);
-    const guardianMobileNorm = normalizeDigitsOnly(student.guardianMobile);
-    const mobileBn = toBanglaNumber(student.mobile);
-    const guardianMobileBn = toBanglaNumber(student.guardianMobile);
-
-    if (
-      (digitQuery && (mobileNorm.includes(digitQuery) || guardianMobileNorm.includes(digitQuery))) ||
-      (student.mobile && student.mobile.toLowerCase().includes(rawQuery)) ||
-      (student.guardianMobile && student.guardianMobile.toLowerCase().includes(rawQuery)) ||
-      mobileBn.includes(rawQuery) ||
-      guardianMobileBn.includes(rawQuery)
-    ) {
-      return true;
-    }
-
-    // 4. Check Class & Group
-    const className = (student.className || '').toLowerCase();
-    const group = (student.group || '').toLowerCase();
-    if (className.includes(rawQuery) || group.includes(rawQuery)) {
-      return true;
-    }
-
-    // Auto-hide non-matching students
-    return false;
+    if (!query) return true;
+    // One shared rule for every panel: the permanent Student ID is the tracking
+    // key (full, short, Bangla digits or without dashes), plus name, guardian
+    // name, mobiles, class and group. See js/student-search.js.
+    return matchesStudentQuery(student, query);
   });
 }
 

@@ -9,6 +9,7 @@ import {
   saveAccount, saveStudent, generateStudentId, generateClassRoll, persistSession, setTrustedDevice, usernameTaken, reserveUsername, releaseUsername, loadAccount
 } from './storage.js';
 import { upsertLocalAccount } from './office-data.js';
+import { listDocuments } from './database.js';
 import { switchAuthTab } from './login.js';
 
 function populateRegistrationClasses() {
@@ -123,7 +124,14 @@ async function handleRegistration(event, state, onRegistered) {
   if (state.account) return setAuthMessage('এই ডিভাইসে ইতিমধ্যে একটি অ্যাকাউন্ট আছে। লগইন করুন অথবা এডমিনের সাহায্য নিন।');
 
   const className = String(form.get('className') || '');
-  const studentId = generateStudentId();
+  // The Student ID is the permanent tracking key every panel searches by, so
+  // one that this device already holds is never handed out twice. (A new id
+  // ends with a random suffix, making a collision practically impossible —
+  // this is the belt to its braces.)
+  const issuedIds = new Set(listDocuments('students').map(student => student?.id).filter(Boolean));
+  if (loadAccount()?.student?.id) issuedIds.add(loadAccount().student.id);
+  let studentId = generateStudentId();
+  for (let guard = 0; guard < 5 && issuedIds.has(studentId); guard += 1) studentId = generateStudentId();
   const studentData = {
     name: String(form.get('nameBn') || '').trim(),
     nameBn: String(form.get('nameBn') || '').trim(),

@@ -5,6 +5,7 @@ import { loadRoster } from './office-data.js';
 import { KEYS, readRaw, writeRaw, newId } from './database.js';
 import { isTeacherAssigned, assignedScopeForStudent } from './teacher-assignments.js';
 import { hasStaffSession, readStaffAccount } from './staff-auth.js';
+import { searchStudentsByQuery } from './student-search.js';
 
 export const TEACHING_KEY = KEYS.teaching;
 export const DEMO_TEACHER = Object.freeze({ id: 'TCH-001', name: 'মো. সাইফুল ইসলাম' });
@@ -33,12 +34,7 @@ export function matchesStudent(activity, student) {
 export function publishedForStudent(activities, student) {
   return activities.filter(a => a.status === 'published' && matchesStudent(a, student));
 }
-export function searchTeachingStudents(students, query) {
-  const normalize = value => String(value || '').normalize('NFC').toLowerCase().replace(/[০-৯]/g, d => '০১২৩৪৫৬৭৮৯'.indexOf(d)).replace(/[\s()+-]/g, '');
-  const text = normalize(query);
-  if (!text) return [];
-  return students.filter(s => [s.name, s.nameEn, s.id, s.mobile].some(v => normalize(v).includes(text)));
-}
+export const searchTeachingStudents = searchStudentsByQuery;
 function fail(message) { throw new Error(message); }
 function validDate(value) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value || '')) return false;

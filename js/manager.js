@@ -9,6 +9,7 @@ import { enabledClasses } from './config.js';
 import { classCodes, dayNames } from './admin-data.js';
 import { newId } from './database.js';
 import { escapeHtml } from './sanitize.js';
+import { matchesStudentQuery } from './student-search.js';
 import { registerServiceWorker } from './service-worker.js';
 import { initFixedShell } from './fixed-shell.js';
 import { initExamManager } from './exam-manager.js';
@@ -103,7 +104,9 @@ function renderDashboard() {
 }
 function routineDayForToday(date = new Date()) { return ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'][date.getDay()]; }
 function searchValue() { return String($('#managerStudentSearch')?.value || '').trim().toLocaleLowerCase(); }
-function studentMatches(student, query) { return !query || [student.name, student.nameEn, student.id, student.mobile, student.guardianMobile].some(value => String(value || '').toLocaleLowerCase().includes(query)); }
+/* The shared rule: the Student ID (full, short, Bangla digits or with dashes
+   removed) always finds the student; name, guardian and mobiles match too. */
+function studentMatches(student, query) { return !query || matchesStudentQuery(student, query); }
 function renderStudents() {
   const query = searchValue();
   const list = students.filter(student => (studentScope === 'all' || student.status === studentScope) && studentMatches(student, query));
