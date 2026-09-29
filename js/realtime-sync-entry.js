@@ -1,5 +1,7 @@
 /* Deferred, retryable sync. No page reload and no deletion of local data. */
-import { reportSyncError, setSyncStatus } from './sync-status.js';
+import { reportSyncError, setSyncStatus } from '../sync/sync-status.js';
+import { assertSyncGuard } from '../sync/sync-guard.js';
+import { retryDelay } from '../sync/sync-retry.js';
 
 let running = false;
 let timer;
@@ -27,11 +29,12 @@ async function bootRealtimeSync() {
     reportSyncError({ code: 'network-timeout' });
   }, 20000);
   try {
+    assertSyncGuard();
     const { startRealtimeSync } = await import('../sync/sync-core.js?v=20260929-protected');
     const result = await startRealtimeSync();
     if (!result?.ok) {
       reportSyncError(result?.error);
-      schedule(Math.min(30000, 1500 * 2 ** Math.min(attempt++, 5)));
+      schedule(retryDelay(attempt++));
     } else {
       attempt = 0;
       // Check again after cancelled listeners or a rejected background write.
@@ -39,7 +42,7 @@ async function bootRealtimeSync() {
     }
   } catch (error) {
     reportSyncError(error);
-    schedule(Math.min(30000, 1500 * 2 ** Math.min(attempt++, 5)));
+    schedule(retryDelay(attempt++));
   } finally {
     clearTimeout(slowTimer);
     running = false;
