@@ -15,6 +15,7 @@ import { classCodes, feeCategories, paymentMethods } from './admin-data.js';
 import { loadAppConfig, saveAppConfig, loadAccount, saveAccount } from './storage.js';
 import { loadRoster, saveRoster, syncAccountStatus, loadNotices, loadRoutine } from './office-data.js';
 import { changeStaffPassword, updateStaffProfile, ensureBootstrapStaffAccounts, readStaffAccount, hasStaffSession, clearStaffSession, goToLoginPage, STAFF_SESSION_RULES, STAFF_KEYS_LIST } from './staff-auth.js';
+import { installPanelGuard, lockPanel, rememberPanelPage, watchOwnPanelSession } from './panel-lockdown.js';
 import { openStaffPasswordDialog } from './staff-password-dialog.js';
 import { financeRepository, monthLabel, dateLabel, searchStudents, studentFeeSummary, newestTransactions, stampTransaction, isFinalizedTransaction, TRANSACTIONS_KEY } from './finance-data.js';
 import { newId, KEYS, readJSON, writeJSON } from './database.js';
@@ -1169,9 +1170,11 @@ function resetAllLocalData() {
       toast('ডেটা রিসেট করা যায়নি।');
       return;
     }
-    toast('সকল লোকাল ডেটা মুছে ফেলা হয়েছে। অ্যাপ রিলোড হচ্ছে...');
+    toast('সকল লোকাল ডেটা মুছে ফেলা হয়েছে। আবার লগইন করতে হবে।');
     window.setTimeout(() => {
-      window.location.assign('index.html');
+      /* No jump to another page: the panel locks itself in place and the lock
+         card offers the login page as the one way onward. */
+      void lockPanel({ role: 'admin.html', reason: 'সব ডেটা মুছে ফেলা হয়েছে — নিরাপত্তার জন্য এডমিন প্যানেল বন্ধ করা হলো।' });
     }, 1200);
   });
 }
@@ -1726,30 +1729,35 @@ window.addEventListener('storage', event => {
 });
 
 // Every staff login starts at index.html. This page only restores an existing session.
+// One door per panel: no route of ours leaves admin.html for another panel.
+installPanelGuard();
+void rememberPanelPage();
+
 async function initAdminEntry() {
   try {
     if (!(await hasStaffSession('admin'))) {
-      goToLoginPage();
+      /* The panel stays shut and explains itself instead of jumping to another
+         page: the lock card holds the only two exits (login page / reload). */
+      await lockPanel({ role: 'admin.html', reason: 'এডমিন প্যানেল শুধু এডমিন ইউজারনেম ও পাসওয়ার্ড দিয়ে খোলে।' });
       return;
     }
     const account = await readStaffAccount('admin');
     if (!account) {
-      clearStaffSession('admin');
-      goToLoginPage();
+      await lockPanel({ role: 'admin.html', clear: 'admin', reason: 'এই ডিভাইসে এডমিন অ্যাকাউন্টের রেকর্ড নেই — লগইন পেজ থেকে আবার প্রবেশ করুন।' });
       return;
     }
     await enterPanel();
+    watchOwnPanelSession('admin');
   } catch (error) {
     /* Never leave admin.html blank when a stored session/account or optional
        panel initializer is corrupted. Clear only the invalid Admin session;
        application data is untouched. */
     console.error('[Active Plus] Admin panel startup failed:', error);
-    clearStaffSession('admin');
-    goToLoginPage();
+    await lockPanel({ role: 'admin.html', clear: 'admin', reason: 'প্যানেল চালু করা যায়নি — লগইন পেজ থেকে আবার চেষ্টা করুন।' });
   }
 }
 void initAdminEntry().catch(error => {
   console.error('[Active Plus] Admin entry failed:', error);
   clearStaffSession('admin');
-  goToLoginPage();
+  void lockPanel({ role: 'admin.html', reason: 'প্যানেল চালু করা যায়নি — লগইন পেজ থেকে আবার চেষ্টা করুন।' });
 });

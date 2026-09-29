@@ -158,11 +158,18 @@ test('a fresh Admin portal offers no Admin creation of its own', async () => {
   await import('../js/admin.js?initial-setup');
   assert.equal(panel.$('#initialAdminSetup'), null, 'the old setup block is gone');
   assert.equal(panel.$('#initialAdminForm'), null);
-  // The panel stays shut and hands the visitor over to the shared login page.
-  await panel.waitFor(() => panel.jsdomErrors.some(error => /navigation/i.test(error)));
+  /* The panel stays shut and locks in place. It never jumps to another page on
+     its own any more (panel lockdown), so the login page is offered as a
+     button on the lock card instead of an automatic hand-off. */
+  await panel.waitFor(() => Boolean(panel.$('#apcPanelLock')));
   assert.equal(panel.$('#adminShell').hidden, true, 'the Admin panel must stay closed');
-  assert.equal(panel.$('#adminNoAccount'), null, 'it sends the owner to the login page');
+  assert.equal(panel.jsdomErrors.some(error => /navigation/i.test(error)), false, 'no automatic hand-off to another page');
+  assert.match(panel.$('#apcPanelLock').textContent, /লগইন পেজে যান/);
+  assert.equal(panel.$('#adminNoAccount'), null, 'no entry form of its own');
   assert.equal(panel.$('#adminLoginForm'), null);
+  // The card's one exit is the shared login page, and only a tap opens it.
+  panel.click(panel.$('#apcPanelLockLogin'));
+  assert.equal(panel.jsdomErrors.some(error => /navigation/i.test(error)), true, 'the lock card opens the shared login page');
 });
 
 /* Logout is not a step back to a panel's own form: every panel drops the

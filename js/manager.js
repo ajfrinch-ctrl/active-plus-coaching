@@ -1,4 +1,5 @@
 import { hasStaffSession, clearStaffSession, readStaffAccount, goToLoginPage } from './staff-auth.js';
+import { installPanelGuard, lockPanel, rememberPanelPage, watchOwnPanelSession } from './panel-lockdown.js';
 import { openStaffPasswordDialog } from './staff-password-dialog.js';
 import { loadRoster, saveRoster, syncAccountStatus, loadNotices, saveNotices, loadRoutine, saveRoutine, WEEK_DAYS } from './office-data.js';
 import { financeRepository, monthLabel, dateLabel, studentFeeSummary, newestTransactions, isFinalizedTransaction } from './finance-data.js';
@@ -378,16 +379,29 @@ $('#managerRoutineForm').addEventListener('submit', async event => {
   event.currentTarget.reset(); routineDay = routineDay; renderRoutine(); toast('Routine প্রকাশিত হয়েছে।');
 });
 $('#managerChangePassword').addEventListener('click', () => openStaffPasswordDialog({ role: 'manager', mode: 'change' }));
+/* One door per panel: no route of ours leaves manager.html for another panel. */
+installPanelGuard();
+void rememberPanelPage();
+
 async function enterManager() {
-  if (!(await hasStaffSession('manager'))) { goToLoginPage(); return; }
+  /* A missing session locks the page in place — it never jumps to another
+     page on its own (js/panel-lockdown.js). */
+  if (!(await hasStaffSession('manager'))) {
+    await lockPanel({ role: 'manager.html', reason: 'ম্যানেজার প্যানেল শুধু ম্যানেজার ইউজারনেম ও পাসওয়ার্ড দিয়ে খোলে।' });
+    return;
+  }
   managerAccount = await readStaffAccount('manager');
-  if (!managerAccount) { clearStaffSession('manager'); goToLoginPage(); return; }
+  if (!managerAccount) {
+    await lockPanel({ role: 'manager.html', clear: 'manager', reason: 'এই ডিভাইসে ম্যানেজার অ্যাকাউন্টের রেকর্ড নেই — লগইন পেজ থেকে আবার প্রবেশ করুন।' });
+    return;
+  }
   $('#managerShell').hidden = false;
   const shortName = $('#managerNameShort');
   if (shortName) shortName.textContent = managerAccount.fullName || 'Manager Profile';
   if (!examStarted) { initExamManager('#managerExamWorkspace', 'manager'); examStarted = true; }
   renderView('dashboard'); await loadOperationalData();
   mountReports($('#managerReports'), { panel: 'manager' });
+  watchOwnPanelSession('manager');
 }
 $('#managerLogout').addEventListener('click', () => { clearStaffSession('manager'); goToLoginPage(); });
 window.addEventListener('storage', event => {

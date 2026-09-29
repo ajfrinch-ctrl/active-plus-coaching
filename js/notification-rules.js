@@ -253,8 +253,9 @@ export function pushPayload(item) {
       collection: text(item?.source) || 'notices',
       id: text(item?.sourceId),
       key: text(item?.key),
-      kind: text(item?.kind),
-      url: './index.html'
+      // No `url`: which page opens is the device's own decision (its panel hint
+      // in the service worker), so no payload can send it into another panel.
+      kind: text(item?.kind)
     }
   };
 }

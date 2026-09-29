@@ -261,3 +261,121 @@ html[data-theme="dark"] .theme-switch .toggle-switch input:checked + i::after { 
 }
 
 .pay-desk-tools .admin-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; }
+
+/* === PANEL LOCK CARD ========================================================
+   Shown by js/panel-lockdown.js when a panel must not open: its own session is
+   missing, another role holds the device, or the Admin's own boot fallback in
+   admin.html ran. One card, the same on every panel, with the login page and a
+   reload as the only ways out — never a link into another panel.
+   ========================================================================== */
+
+.apc-lock-card {
+  max-width: 460px;
+  margin: 22px auto;
+  padding: 20px 18px;
+  border: 1px solid #dbe2ec;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 10px 30px rgba(9, 22, 51, .08);
+  font-family: 'Noto Sans Bengali', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color: #14203c;
+}
+
+.apc-lock-eyebrow {
+  margin: 0 0 6px;
+  font-size: 11px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: #7a869c;
+}
+
+.apc-lock-card h1 {
+  margin: 0 0 8px;
+  font-size: 17px;
+  line-height: 1.4;
+}
+
+.apc-lock-card p {
+  margin: 0 0 8px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.apc-lock-note { color: #5b6780; }
+
+.apc-lock-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.apc-lock-actions button {
+  flex: 1 1 auto;
+  padding: 11px 14px;
+  border: 1px solid #dbe2ec;
+  border-radius: 12px;
+  background: #f4f6fb;
+  color: #14203c;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.apc-lock-actions button:active { transform: scale(.98); }
+
+.apc-lock-actions button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(49, 94, 251, .35);
+}
+
+.apc-lock-actions .apc-lock-primary {
+  border-color: #315efb;
+  background: #315efb;
+  color: #ffffff;
+}
+
+.apc-lock-notice {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(76px + env(safe-area-inset-bottom));
+  z-index: 1200;
+  margin: 0 auto;
+  max-width: min(92vw, 420px);
+  padding: 10px 12px;
+  border: 1px solid #f0c48a;
+  border-radius: 12px;
+  background: #fff7ea;
+  color: #6b4310;
+  font: 12px/1.6 'Noto Sans Bengali', system-ui, sans-serif;
+  box-shadow: 0 6px 18px rgba(9, 22, 51, .16);
+}
+
+html[data-theme="dark"] .apc-lock-card {
+  border-color: #2a3550;
+  background: #141c30;
+  color: #e6ecff;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+}
+
+html[data-theme="dark"] .apc-lock-eyebrow,
+html[data-theme="dark"] .apc-lock-note { color: #93a1c0; }
+
+html[data-theme="dark"] .apc-lock-actions button {
+  border-color: #2a3550;
+  background: #1d2740;
+  color: #e6ecff;
+}
+
+html[data-theme="dark"] .apc-lock-actions .apc-lock-primary {
+  border-color: #a9bdff;
+  background: #a9bdff;
+  color: #0a1020;
+}
+
+html[data-theme="dark"] .apc-lock-notice {
+  border-color: #6b5a34;
+  background: #2a2415;
+  color: #f2dfae;
+}

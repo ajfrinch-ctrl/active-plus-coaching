@@ -2,6 +2,7 @@ import { loadRoutine, WEEK_DAYS } from './office-data.js';
 import { readStaffAccount } from './staff-auth.js';
 import { listTeacherAssignments } from './teacher-assignments.js';
 import { hasStaffSession, clearStaffSession, goToLoginPage } from './staff-auth.js';
+import { installPanelGuard, lockPanel, rememberPanelPage, watchOwnPanelSession } from './panel-lockdown.js';
 import { openStaffPasswordDialog } from './staff-password-dialog.js';
 import { loadAppConfig } from './storage.js';
 import { toBanglaNumber as bn } from './ui.js';
@@ -419,11 +420,18 @@ function showStudent(id) {
 
 ['teacherHomeClass', 'teacherClassFilter', 'teacherStudentClass'].forEach(id => { $('#' + id).insertAdjacentHTML('beforeend', classOptions()); });
 async function showTeacherShell() {
-  if (loadAppConfig().allowTeacherRegistration === false) { goToLoginPage(); return false; }
+  /* Access closed by the Admin: the page locks where it stands instead of
+     sending the teacher somewhere else. (The session itself is not thrown
+     away — the switch can be turned back on.) */
+  if (loadAppConfig().allowTeacherRegistration === false) {
+    await lockPanel({ role: 'teacher.html', reason: 'শিক্ষক প্যানেল প্রবেশ এই মুহূর্তে এডমিন কর্তৃক বন্ধ রাখা হয়েছে।' });
+    return false;
+  }
   $('#teacherShell').hidden = false;
   setView('home');
   const loaded = await reload();
   mountReports($('#teacherReports'), { panel: 'teacher' });
+  watchOwnPanelSession('teacher');
   return loaded;
 }
 $('#teacherChangePassword')?.addEventListener('click', () => openStaffPasswordDialog({ role: 'teacher', mode: 'change' }));
@@ -480,4 +488,11 @@ watchTeachingData(() => {
 });
 
 // An existing device-bound session opens the panel without asking again.
-hasStaffSession('teacher').then(valid => { if (valid) showTeacherShell(); else goToLoginPage(); });
+/* One door per panel: no route of ours leaves teacher.html for another panel. */
+installPanelGuard();
+void rememberPanelPage();
+
+hasStaffSession('teacher').then(valid => {
+  if (valid) return showTeacherShell();
+  return lockPanel({ role: 'teacher.html', reason: 'শিক্ষক প্যানেল শুধু শিক্ষক ইউজারনেম ও পাসওয়ার্ড দিয়ে খোলে।' });
+});

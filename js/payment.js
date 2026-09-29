@@ -10,6 +10,7 @@ import { toBanglaNumber } from './ui.js';
 import { newId } from './database.js';
 import { registerServiceWorker } from './service-worker.js';
 import { goToLoginPage } from './staff-auth.js';
+import { installPanelGuard, lockPanel, rememberPanelPage, watchOwnPanelSession } from './panel-lockdown.js';
 import { escapeHtml } from './sanitize.js';
 import {
   PAYMENT_USER_ID,
@@ -682,8 +683,17 @@ window.addEventListener('storage', event => {
 // A valid, device-bound session opens the desk without the entry form. The
 // check is asynchronous (the stored record may be encrypted), so the entry
 // screen is hidden as soon as the answer arrives.
+/* One door per panel: no route of ours leaves payment.html for another panel. */
+installPanelGuard();
+void rememberPanelPage();
+
 hasPaymentSession().then(valid => {
-  if (!valid) { goToLoginPage(); return; }
+  /* A missing session locks the desk in place; it never jumps to another page
+     on its own (js/panel-lockdown.js). */
+  if (!valid) {
+    return lockPanel({ role: 'payment.html', reason: 'পেমেন্ট রিসিভ প্যানেল শুধু কাউন্টারের ইউজারনেম ও পাসওয়ার্ড দিয়ে খোলে।' });
+  }
   $('#payShell').hidden = false;
+  watchOwnPanelSession('payment');
   void enterPanel();
 });

@@ -57,11 +57,11 @@ for (const width of [320, 360, 375, 390, 412, 430]) {
     await expect(page.locator('.admin-bottom button')).toHaveCount(5);
     // Icons are inline SVG now: one per container, drawn, and never overflowing
     // the chip, card, button, header or bottom bar that holds them.
-    const icons = page.locator('.admin-shell svg.nav-icon, .admin-shell svg.admin-feature-icon-svg, .admin-shell svg.admin-more-icon-svg, .admin-shell svg.topbar-icon');
+    const icons = page.locator('.admin-shell svg.nav-icon, .admin-shell svg.admin-feature-icon-svg, .admin-shell svg.admin-more-icon-svg, .admin-shell svg.app-topbar-icon');
     expect(await icons.count()).toBeGreaterThan(4);
     const iconFit = await page.evaluate(() => {
       const bad = [];
-      for (const svg of document.querySelectorAll('.admin-shell svg.nav-icon, .admin-shell svg.admin-feature-icon-svg, .admin-shell svg.admin-more-icon-svg, .admin-shell svg.topbar-icon')) {
+      for (const svg of document.querySelectorAll('.admin-shell svg.nav-icon, .admin-shell svg.admin-feature-icon-svg, .admin-shell svg.admin-more-icon-svg, .admin-shell svg.app-topbar-icon')) {
         const box = svg.getBoundingClientRect();
         const parent = svg.parentElement.getBoundingClientRect();
         if (!box.width || !box.height) bad.push('empty:' + svg.parentElement.className);

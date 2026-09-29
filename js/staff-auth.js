@@ -446,11 +446,31 @@ function sessionStores(spec) {
   } catch { return { local: null, tab: null }; }
 }
 
+/**
+ * One device, one panel: signing a role in ends every other staff session on
+ * this device. Without it a device could hold an Admin and a Manager session at
+ * once, and typing the other portal's address would open it — the exact
+ * cross-panel route the panels are supposed to close (js/panel-lockdown.js).
+ */
+export function clearOtherStaffSessions(role) {
+  for (const name of Object.keys(STAFF_ACCOUNTS)) {
+    if (name !== role) clearStaffSession(name);
+  }
+}
+
+/** Every staff role whose device-bound session is still valid right now. */
+export async function activeStaffRoles() {
+  const roles = Object.keys(STAFF_ACCOUNTS);
+  const live = await Promise.all(roles.map(name => hasStaffSession(name)));
+  return roles.filter((name, index) => live[index]);
+}
+
 export async function saveStaffSession(role, remember = true) {
   const spec = staffSpec(role);
   if (!spec) return false;
   const { local, tab } = sessionStores(spec);
   if (!local || !tab) return false;
+  clearOtherStaffSessions(role);
   try {
     local.removeItem(spec.sessionKey);
     tab.removeItem(spec.sessionKey);

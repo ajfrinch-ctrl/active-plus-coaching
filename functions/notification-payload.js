@@ -39,8 +39,7 @@ function noticePush(before, after) {
       collection: 'notices',
       id: text(after.id),
       kind: 'notice',
-      audience: text(after.audience),
-      url: './index.html'
+      audience: text(after.audience)
     }
   };
 }
@@ -56,7 +55,7 @@ function broadcastPush(before, after) {
     kind: 'broadcast',
     title: 'জরুরি ঘোষণা — Active Plus',
     body: short(message),
-    data: { collection: 'settings', id: 'broadcast', kind: 'broadcast', url: './index.html' }
+    data: { collection: 'settings', id: 'broadcast', kind: 'broadcast' }
   };
 }
 
@@ -83,7 +82,7 @@ function examPushes(before, after) {
       title: 'নতুন পরীক্ষা নির্ধারিত হয়েছে',
       body: short(`${label}${subject ? ` — ${subject}` : ''} · সময়সূচি অ্যাপে দেখুন`),
       studentIds,
-      data: { collection: 'exams', id: text(after.id), kind: 'exam', url: './index.html' }
+      data: { collection: 'exams', id: text(after.id), kind: 'exam' }
     });
   }
   const resultsJustOut = after.resultsPublished === true && (!isObject(before) || before.resultsPublished !== true);
@@ -93,7 +92,7 @@ function examPushes(before, after) {
       title: 'ফলাফল প্রকাশিত হয়েছে',
       body: short(`${label}${subject ? ` — ${subject}` : ''} পরীক্ষার ফলাফল এখন অ্যাপে দেখা যাচ্ছে।`),
       studentIds,
-      data: { collection: 'exams', id: text(after.id), kind: 'result', url: './index.html' }
+      data: { collection: 'exams', id: text(after.id), kind: 'result' }
     });
   }
   return pushed;
@@ -127,8 +126,10 @@ function messageFor(token, payload) {
     token,
     notification: { title: payload.title, body: payload.body },
     data: Object.fromEntries(Object.entries(payload.data || {}).map(([key, value]) => [key, text(value)])),
+    /* No fcmOptions.link on purpose: the sender cannot know which panel this
+       device belongs to, and a hard-coded page would drop a staff phone into
+       another portal. The device's own service worker picks its panel. */
     webpush: {
-      fcmOptions: { link: payload.data?.url || './index.html' },
       notification: { icon: './assets/icons/icon-192.png', tag: payload.data?.key || payload.kind || 'active-plus' }
     }
   };

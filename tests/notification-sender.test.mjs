@@ -59,9 +59,12 @@ test('recipients are batched at 500 and dead tokens are found', () => {
 });
 
 test('a pushed message and an in-app item read the same', () => {
-  const message = messageFor('token-1', { title: 'নতুন নোটিশ: ক', body: 'খ', data: { collection: 'notices', id: 'N1', key: 'notice:N1:1', kind: 'notice', url: './index.html' } });
+  const message = messageFor('token-1', { title: 'নতুন নোটিশ: ক', body: 'খ', data: { collection: 'notices', id: 'N1', key: 'notice:N1:1', kind: 'notice' } });
   assert.equal(message.token, 'token-1');
   assert.deepEqual(message.notification, { title: 'নতুন নোটিশ: ক', body: 'খ' });
   assert.equal(message.data.id, 'N1');
-  assert.equal(message.webpush.fcmOptions.link, './index.html');
+  // A pushed message carries no page link at all: the device's own service
+  // worker opens the panel that belongs to it.
+  assert.equal('fcmOptions' in message.webpush, false);
+  assert.equal(/index\.html/.test(JSON.stringify(message)), false);
 });

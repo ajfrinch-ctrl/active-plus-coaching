@@ -111,7 +111,9 @@ test('a push payload is short, tagged and carries no secret', () => {
   const payload = pushPayload(noticeItem(notice({ body: 'ক'.repeat(400) })));
   assert.ok(payload.body.length <= 140);
   assert.ok(payload.tag.startsWith('notice:N1:'));
-  assert.deepEqual(Object.keys(payload.data).sort(), ['collection', 'id', 'key', 'kind', 'url']);
+  // No `url`: the device's own panel decides which page opens, so a payload can
+  // never carry a link into another portal (tests/panel-lockdown.test.mjs).
+  assert.deepEqual(Object.keys(payload.data).sort(), ['collection', 'id', 'key', 'kind']);
 });
 
 test('a device record holds a token, a role and an ID — nothing else', () => {

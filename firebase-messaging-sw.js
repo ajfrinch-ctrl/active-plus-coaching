@@ -34,10 +34,27 @@ messaging.onBackgroundMessage(payload => {
   });
 });
 
-/* One tap brings the app to the front instead of stacking new tabs. */
+/* One tap brings the app to the front instead of stacking new tabs. With no
+   window open it opens the device's own panel (the hint js/panel-lockdown.js
+   left behind) or the app door — a pushed payload can never point a device at
+   another panel, so its `url` field is deliberately ignored here. */
+const PANEL_HINT_CACHE = 'apc-panel-hint';
+const PANEL_HINT_PATH = './__apc-last-panel';
+const PANEL_PAGES = ['admin.html', 'manager.html', 'teacher.html', 'payment.html'];
+const APP_ENTRY = './index.html';
+
+async function panelHintTarget() {
+  try {
+    const cache = await caches.open(PANEL_HINT_CACHE);
+    const response = await cache.match(PANEL_HINT_PATH);
+    if (!response) return '';
+    const file = (await response.text()).trim().toLowerCase();
+    return PANEL_PAGES.includes(file) ? `./${file}` : '';
+  } catch { return ''; }
+}
+
 self.addEventListener('notificationclick', event => {
   event.notification.close();
-  const target = event.notification?.data?.url || './index.html';
   event.waitUntil((async () => {
     const clientList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     for (const client of clientList) {
@@ -46,6 +63,7 @@ self.addEventListener('notificationclick', event => {
         return client.focus();
       }
     }
+    const target = (await panelHintTarget()) || APP_ENTRY;
     return self.clients.openWindow(target);
   })());
 });
