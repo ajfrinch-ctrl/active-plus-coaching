@@ -58,6 +58,42 @@ export function sameStudentRecord(first, second) {
 export const loginIdOf = record =>
   normalizeUsername(record?.username || record?.student?.username || '');
 
+/** The permanent Student ID shown on the profile ("s260929001-…"). */
+export const studentIdOf = record =>
+  normalizeUsername(record?.student?.id || record?.studentId || '');
+
+/**
+ * Does what the student typed (and remembers) belong to this account?
+ * Accepted: the login User ID, the mobile number used at registration, or the
+ * permanent Student ID. The Student ID may be typed in the short form
+ * ("s260929001") — see findLoginMatches for that.
+ */
+export function matchesLoginIdentifier(account, identifier) {
+  if (!account || !identifier) return false;
+  const typed = normalizeUsername(identifier);
+  const phone = contactNumber(identifier);
+  if (typed && (typed === loginIdOf(account) || typed === studentIdOf(account))) return true;
+  const registered = contactNumber(account.registrationMobile || account.mobile || '');
+  return Boolean(phone) && Boolean(registered) && phone === registered;
+}
+
+const STUDENT_ID_PREFIX = /^s\d{6}/;
+
+/**
+ * Every account a typed identifier could mean, most exact first: the direct
+ * match, then Student IDs that start with the typed digits (the random suffix
+ * of a new ID is hard to read out, so the short form is accepted when only one
+ * student matches). An empty list means "no such login here".
+ */
+export function findLoginMatches(accounts, identifier) {
+  const list = Array.isArray(accounts) ? accounts.filter(Boolean) : [];
+  const exact = list.filter(account => matchesLoginIdentifier(account, identifier));
+  if (exact.length) return exact;
+  const typed = normalizeUsername(identifier);
+  if (!STUDENT_ID_PREFIX.test(typed)) return [];
+  return list.filter(account => studentIdOf(account).startsWith(typed));
+}
+
 /**
  * Which copy of a student login wins: 'local', 'remote' or 'conflict'. The
  * record is keyed by the login ID, so a *different* student under the same key

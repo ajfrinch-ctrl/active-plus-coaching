@@ -25,7 +25,7 @@ import { STAFF_ACCOUNTS } from './staff-auth.js';
 import { encodeRealtimeRecords, decodeRealtimeRecords } from './realtime-value-codec.js';
 import { collectionPayload, remoteToLocal } from './sync-collections.js';
 import { createRecordSync, mergeRecordOperations } from './record-sync.js';
-import { chooseStaffCopy, chooseStudentCopy, sameStudentRecord, loginIdOf } from './sync-merge.js';
+import { chooseStaffCopy, chooseStudentCopy, sameStudentRecord, loginIdOf, matchesLoginIdentifier, findLoginMatches } from './sync-merge.js';
 import { reportSyncConflict, reportSyncError, setSyncStatus } from './sync-status.js';
 import { isPasswordRecord, verifyPassword } from './password-hash.js';
 import { normalizeUsername, contactNumber } from './account-policy.js';
@@ -314,12 +314,7 @@ function studentKey(account) {
   return normalizeUsername(account?.username || account?.student?.username || '') ||
     contactNumber(account?.registrationMobile || account?.mobile || '');
 }
-function studentMatches(account, identifier) {
-  const name = normalizeUsername(identifier);
-  const phone = contactNumber(identifier);
-  return (name && name === studentKey(account)) ||
-    (phone && phone === (account?.registrationMobile || account?.mobile));
-}
+const studentMatches = (account, identifier) => matchesLoginIdentifier(account, identifier);
 let studentFlight = null;
 function syncStudentAccount() {
   if (studentFlight) return studentFlight;
@@ -378,12 +373,21 @@ export async function usernameTakenOnline(username) {
 async function hydrateStudent(identifier, password) {
   if (!identifier) return { found: false };
   const db = getDatabase(firebaseApp);
+  // The login ID is the key, so it is read directly. A mobile number or a
+  // Student ID is not a key: those need a lookup (see below).
   let account = (await get(ref(db, STUDENTS_ROOT + '/' + encodeUsernameKey(normalizeUsername(identifier))))).val();
   if (!studentMatches(account, identifier)) account = null;
-  // Mobile login is retained for existing users; username is the primary key.
-  if (!account && /^01[3-9]\d{8}$/.test(contactNumber(identifier))) {
-    const snapshot = await get(ref(db, STUDENTS_ROOT));
-    account = Object.values(snapshot.val() || {}).find(item => studentMatches(item, identifier));
+  if (!account) {
+    const phone = contactNumber(identifier);
+    const typed = normalizeUsername(identifier);
+    const needsScan = /^01[3-9]\d{8}$/.test(phone) || /^s\d{6}/.test(typed);
+    if (needsScan) {
+      const snapshot = await get(ref(db, STUDENTS_ROOT));
+      const matches = findLoginMatches(Object.values(snapshot.val() || {}), identifier);
+      // "s260929001" is only usable while exactly one student matches it.
+      if (matches.length > 1) return { found: true, ambiguous: true };
+      account = matches[0] || null;
+    }
   }
   if (!account) {
     const legacy = (await get(ref(db, STUDENT_ROOT))).val();

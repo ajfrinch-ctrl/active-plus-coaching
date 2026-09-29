@@ -81,3 +81,40 @@ test('two login records are the same student by id, or by mobile for legacy reco
   assert.equal(sameStudentRecord(null, legacy), false);
   assert.equal(loginIdOf({ student: { username: 'DoLoN' } }), 'dolon');
 });
+
+/* ---- login identifiers (added for the Student ID login) ---- */
+import { matchesLoginIdentifier, findLoginMatches, studentIdOf } from '../js/sync-merge.js';
+
+const rakib = {
+  username: 'rakib', studentId: 's260929001-abcdef0123456789',
+  student: { id: 's260929001-abcdef0123456789', username: 'rakib' },
+  registrationMobile: '01755556666', pinHash: hash('rakib')
+};
+const raisa = {
+  username: 'raisa', studentId: 's260929002-fedcba9876543210',
+  student: { id: 's260929002-fedcba9876543210' }, registrationMobile: '01855556666', pinHash: hash('raisa')
+};
+
+test('a student may log in with the User ID, the mobile number or the Student ID', () => {
+  assert.equal(matchesLoginIdentifier(rakib, 'rakib'), true, 'login User ID');
+  assert.equal(matchesLoginIdentifier(rakib, 'Rakib'), true, 'the typed id is normalised');
+  assert.equal(matchesLoginIdentifier(rakib, '01755556666'), true, 'registration mobile');
+  assert.equal(matchesLoginIdentifier(rakib, '+8801755556666'), true, 'mobile in +88 form');
+  assert.equal(matchesLoginIdentifier(rakib, 's260929001-abcdef0123456789'), true, 'full Student ID');
+  assert.equal(matchesLoginIdentifier(rakib, 'S260929001-ABCDEF0123456789'), true, 'and in capitals');
+  assert.equal(matchesLoginIdentifier(rakib, 'raisa'), false, 'another student never matches');
+  assert.equal(matchesLoginIdentifier(rakib, '01855556666'), false, 'another mobile never matches');
+  assert.equal(matchesLoginIdentifier(null, 'rakib'), false);
+  assert.equal(matchesLoginIdentifier(rakib, ''), false);
+});
+
+test('the short Student ID works while exactly one student matches it', () => {
+  assert.deepEqual(findLoginMatches([rakib, raisa], 's260929001').map(item => item.username), ['rakib']);
+  assert.deepEqual(findLoginMatches([rakib, raisa], 's260929002-fedcba9876543210').map(item => item.username), ['raisa']);
+  assert.equal(findLoginMatches([rakib, raisa], 's2609290').length, 2, 'a shared prefix finds both');
+  assert.deepEqual(findLoginMatches([rakib, raisa], 's260929009'), [], 'an unknown ID finds nothing');
+  assert.deepEqual(findLoginMatches([rakib], 'rakib').map(item => item.username), ['rakib'], 'an exact id is not a scan');
+  assert.deepEqual(findLoginMatches([rakib], '01755556666').map(item => item.username), ['rakib'], 'phone numbers are exact');
+  assert.deepEqual(findLoginMatches(null, 'rakib'), []);
+  assert.equal(studentIdOf({ studentId: 's1' }), 's1', 'both storage shapes are read');
+});

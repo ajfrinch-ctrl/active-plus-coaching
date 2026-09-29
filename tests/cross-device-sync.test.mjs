@@ -445,6 +445,31 @@ test('a second Admin created on an unsynced device cannot replace the real Admin
   } finally { await intruder.stop(); }
 });
 
+test('a student can log in with the permanent Student ID shown on the profile', async () => {
+  const studentId = 's260929001-abcdef0123456789';
+  await deviceA.run('write-student-account', {
+    username: 'rakib', pin: '7788', fullName: 'রাকিব হাসান', mobile: '01755556666', studentId
+  });
+  await waitForCloud(() => SYNC_ROOT(cloud).studentAccounts?.rakib?.student?.id === studentId, 'student ID uploaded');
+
+  const fresh = new Device('student-id-login', cloud.url);
+  fresh.start();
+  try {
+    // The full ID, exactly as the profile shows it.
+    const byFullId = await fresh.run('form-login', { username: studentId, pin: '7788' });
+    assert.equal(byFullId.studentSession, true, byFullId.message);
+    // The short form ("s260929001") is enough while only one student matches it.
+    const byShortId = await fresh.run('form-login', { username: studentId.slice(0, 10), pin: '7788' });
+    assert.equal(byShortId.studentSession, true, byShortId.message);
+    // The username still works with the same record.
+    const byUsername = await fresh.run('form-login', { username: 'rakib', pin: '7788' });
+    assert.equal(byUsername.studentSession, true, byUsername.message);
+    // A wrong password is still refused.
+    const wrong = await fresh.run('form-login', { username: studentId, pin: '0000' });
+    assert.equal(wrong.studentSession, false, 'the ID is not a password');
+  } finally { await fresh.stop(); }
+});
+
 test('package still declares the realtime bridge', async () => {
   const loginSource = readFileSync(new URL('../js/login.js', import.meta.url), 'utf8');
   assert.match(loginSource, /hydrateUserIdentifiers/, 'login.js hydrates synced user IDs');

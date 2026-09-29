@@ -259,6 +259,24 @@ already owns"* and *"a second Admin created on an unsynced device cannot replace
 the real Admin"*. Both fail if any of the three guards is removed (verified by
 temporarily reverting each one).
 
+### Student ID দিয়ে লগইন (2026-09-29)
+
+আগে লগইন ফরম শুধু **ইউজারনেম** ও **মোবাইল নম্বর** চিনত — প্রোফাইলে দেখানো
+**Student ID** (`s260929001-…`) দিয়ে লগইন করা যেত না। এখন তিনটিই কাজ করে:
+`matchesLoginIdentifier()` / `findLoginMatches()` (`js/sync-merge.js`) একই নিয়ম
+লোকাল ও ক্লাউড দুই পথেই ব্যবহার করে।
+
+- পূর্ণ Student ID, অথবা সংক্ষিপ্ত রূপ (`s260929001`) — কিন্তু সংক্ষিপ্ত রূপ তখনই
+  খাটে যখন ঠিক একজন শিক্ষার্থীর সাথে মেলে; একাধিক হলে ফরম বলে দেয় সম্পূর্ণ ID
+  লিখতে।
+- পাসওয়ার্ড ছাড়া Student ID দিয়ে লগইন হয় না (আইডি পাসওয়ার্ড নয়)।
+- আইডি না-মিললেও ব্যর্থ পাসওয়ার্ড যাচাইয়ে কোনো অ্যাকাউন্ট কখনো বসানো হয় না,
+  এবং দুইজন আলাদা ব্যক্তি একই ID-তে এলে আগের মতোই conflict দেখায়।
+
+ছোট আইডি খুঁজতে এখন বড় স্ক্যান লাগে (Student ID কোনো key নয়), তাই এই পথটি
+মোবাইল-নম্বর লগইনের মতোই `studentAccounts` শাখাটি পড়ে — বড় ইনস্টলেশনে
+Student-ID হুবহু key হিসেবে রাখা বা একটি index node রাখাই ভালো হবে।
+
 ### Publishing and acceptance
 
 GitHub Pages currently publishes the repository's **main** branch at `/`.

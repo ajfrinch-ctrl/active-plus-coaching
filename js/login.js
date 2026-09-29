@@ -11,7 +11,8 @@
 
 import { defaultStudent } from './config.js';
 import { $, $$, setAuthMessage, scrollToTop } from './ui.js';
-import { contactNumber, isContactNumber, normalizeUsername } from './account-policy.js';
+import { contactNumber, normalizeUsername } from './account-policy.js';
+import { matchesLoginIdentifier, studentIdOf } from './sync-merge.js';
 import {
   loadAccount, saveStudent, persistSession, setTrustedDevice,
   isSecurityCheckDisabled, loadAppConfig, verifyAccountPassword, upgradeAccountSecrets
@@ -29,7 +30,7 @@ import { isPasswordRecord } from './password-hash.js';
 const STAFF_PANEL = Object.freeze({ admin: 'admin.html', manager: 'manager.html', teacher: 'teacher.html', payment: 'payment.html' });
 const STAFF_LABEL = Object.freeze({ admin: 'এডমিন প্যানেল', manager: 'ম্যানেজার প্যানেল', teacher: 'শিক্ষক প্যানেল', payment: 'পেমেন্ট রিসিভ প্যানেল' });
 const STAFF_ID_HINT = 'স্টাফ লগইন';
-const DEFAULT_ID_HINT = 'শিক্ষার্থী: ইউজারনেম বা মোবাইল নম্বর ও পাসওয়ার্ড। এডমিন, ম্যানেজার, শিক্ষক ও পেমেন্ট কাউন্টার: নিজের ইউজারনেম ও পাসওয়ার্ড দিয়ে এখানেই লগইন করুন।';
+const DEFAULT_ID_HINT = 'শিক্ষার্থী: ইউজারনেম, মোবাইল নম্বর অথবা প্রোফাইলের Student ID — সাথে নিজের পাসওয়ার্ড। এডমিন, ম্যানেজার, শিক্ষক ও পেমেন্ট কাউন্টার: নিজের ইউজারনেম ও পাসওয়ার্ড দিয়ে এখানেই লগইন করুন।';
 
 export function staffRoleFor(value) {
   const typed = normalizeStaffUsername(value);
@@ -220,6 +221,15 @@ async function hydrateUserIdentifiersOnline(what, identifier = '', password = ''
   }
 }
 
+/** The identifier belongs to this device's account: User ID, mobile, the full
+    Student ID, or its short prefix. */
+function isOwnIdentifier(account, identifier) {
+  if (matchesLoginIdentifier(account, identifier)) return true;
+  const typed = normalizeUsername(identifier);
+  const id = studentIdOf(account);
+  return /^s\d{6}/.test(typed) && Boolean(id) && id.startsWith(typed);
+}
+
 async function handleLogin(event, state, onAuthenticated) {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
@@ -249,6 +259,8 @@ async function handleLogin(event, state, onAuthenticated) {
     // A cloud copy whose password does not match must never block a valid
     // local credential: this device's account can be the newer one.
     onlineIdentities.cloudPasswordMismatch = Boolean(identities?.found && identities?.credentialMismatch);
+    // "s260929001" matched more than one student in the cloud.
+    onlineIdentities.ambiguous = Boolean(identities?.ambiguous);
   }
   // Staff usernames are reserved, so a match here can only be that panel.
   const staffRole = await resolveStaffRoleByUsername(typedId);
@@ -277,12 +289,14 @@ async function handleLogin(event, state, onAuthenticated) {
   const mobile = contactNumber(typedId);
   state.account = loadAccount() || state.account;
   if ((!username && !mobile) || pin.length < 4) {
-    setAuthMessage('ইউজারনেম বা মোবাইল নম্বর এবং ৪–৬ সংখ্যার পাসওয়ার্ড সঠিকভাবে দিন।');
+    setAuthMessage('ইউজারনেম, মোবাইল নম্বর বা Student ID এবং ৪–৬ সংখ্যার পাসওয়ার্ড সঠিকভাবে দিন।');
     return;
   }
   if (!state.account) {
-    if (onlineIdentities.cloudPasswordMismatch) {
-      setAuthMessage('ইউজারনেম/মোবাইল নম্বর অথবা পাসওয়ার্ড সঠিক নয়। আবার চেষ্টা করুন।');
+    if (onlineIdentities.ambiguous) {
+      setAuthMessage('এই সংক্ষিপ্ত Student ID দিয়ে একাধিক শিক্ষার্থী পাওয়া গেছে — সম্পূর্ণ Student ID লিখুন।');
+    } else if (onlineIdentities.cloudPasswordMismatch) {
+      setAuthMessage('ইউজারনেম, মোবাইল নম্বর বা Student ID অথবা পাসওয়ার্ড সঠিক নয়। আবার চেষ্টা করুন।');
     } else if (onlineIdentities.attempted && !onlineIdentities.synced) {
       // The cloud lookup itself failed (offline, timed out or refused — e.g.
       // App Check enforcement blocking the Realtime Database). An account that
@@ -295,11 +309,12 @@ async function handleLogin(event, state, onAuthenticated) {
     }
     return;
   }
-  const knownUsername = normalizeUsername(state.account.username || state.account.student?.username || '');
-  const byUsername = Boolean(username) && Boolean(knownUsername) && username === knownUsername;
-  const byMobile = isContactNumber(mobile) && mobile === (state.account.registrationMobile || state.account.mobile);
-  if (!byUsername && !byMobile) {
-    setAuthMessage('ইউজারনেম/মোবাইল নম্বর অথবা পাসওয়ার্ড সঠিক নয়। আবার চেষ্টা করুন।');
+  // What the student may type: the login User ID, the mobile number used at
+  // registration, or the permanent Student ID from the profile. A Student ID
+  // without its random suffix ("s260929001") is accepted for this device's own
+  // account, so nobody has to read out the long tail.
+  if (!isOwnIdentifier(state.account, typedId)) {
+    setAuthMessage('ইউজারনেম, মোবাইল নম্বর বা Student ID অথবা পাসওয়ার্ড সঠিক নয়। আবার চেষ্টা করুন।');
     return;
   }
   if (!(await verifyAccountPassword(state.account, pin))) {

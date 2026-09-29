@@ -255,14 +255,15 @@ const commands = {
     Object.defineProperty(ctx.window.navigator, 'onLine', { value: online, configurable: true });
     return { ok: true };
   },
-  async 'write-student-account'({ username, pin, fullName, mobile, updatedAt }) {
+  async 'write-student-account'({ username, pin, fullName, mobile, updatedAt, studentId }) {
     const { hashPassword } = await mod('password-hash.js');
     const pinHash = await hashPassword(pin);
     const account = {
       username,
+      studentId: studentId || undefined,
       registrationMobile: mobile,
       mobile,
-      student: { username, fullName },
+      student: { username, fullName, ...(studentId ? { id: studentId } : {}) },
       pinHash,
       createdAt: new Date().toISOString(),
       updatedAt: updatedAt || new Date().toISOString()
