@@ -910,3 +910,17 @@ body.admin-modal-open { overflow: hidden; }
 /* Notification settings: labelled switch rows above the message box. */
 .admin-check { display: flex; align-items: center; gap: 8px; padding: 8px 0 2px; color: var(--ink); font-size: 12.5px; }
 .admin-check input { width: 16px; height: 16px; accent-color: var(--forest); }
+
+
+/* Welcome message directly below the admin topbar. */
+.admin-welcome{
+  margin:10px 12px 0;
+  padding:11px 14px;
+  border:1px solid var(--apc-border,#e2e6ec);
+  border-radius:12px;
+  background:var(--apc-surface,#fff);
+  color:var(--apc-text,#18202a);
+  font-size:13px;
+  font-weight:700;
+}
+.admin-welcome[hidden]{display:none!important}
