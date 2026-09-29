@@ -137,7 +137,7 @@ test('the bottom bar renders one icon + label per permitted tab', () => {
   assert.equal(header.querySelectorAll('[data-theme-toggle], time, .student-date').length, 0, 'a control that belongs elsewhere is still in the topbar');
   // Dark mode stays reachable: it lives in System Settings as a switch row —
   // icon chip (sun in light, moon in dark), label and the app's toggle switch.
-  const themeSwitch = ctx.$('.theme-card .theme-switch');
+  const themeSwitch = ctx.$('.admin-view[data-view-panel="profile"] .theme-card .theme-switch');
   assert.ok(themeSwitch, 'dark mode has no home on the Admin panel');
   assert.ok(themeSwitch.querySelector('.theme-switch-icon use[href="#icon-sun"]'), 'the switch has no sun icon');
   assert.ok(themeSwitch.querySelector('.theme-switch-icon use[href="#icon-moon"]'), 'the switch has no moon icon');
