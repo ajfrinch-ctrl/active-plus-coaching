@@ -908,6 +908,14 @@ function routineTeacherNames() {
 
 function renderAppManagement() {
   const cfg = state.appConfig || loadAppConfig();
+  if ($('#cfgPushNotifications')) $('#cfgPushNotifications').checked = cfg.pushNotifications !== false;
+  if ($('#cfgBroadcastAlert')) $('#cfgBroadcastAlert').checked = Boolean(cfg.broadcastAlert);
+  if ($('#cfgBroadcastMessage')) $('#cfgBroadcastMessage').value = cfg.broadcastMessage || '';
+  if ($('#broadcastState')) {
+    $('#broadcastState').textContent = cfg.broadcastAlert && cfg.broadcastMessage
+      ? 'এখন চালু আছে — সব ডিভাইসে দেখা যাচ্ছে।'
+      : 'এখন বন্ধ আছে।';
+  }
   if ($('#cfgTagline')) $('#cfgTagline').value = cfg.tagline || 'শিখতে থাকো, এগিয়ে যাও';
   if ($('#cfgHelpline')) $('#cfgHelpline').value = cfg.helplineMobile || ADMIN_ID || '01819486966';
   if ($('#cfgWhatsapp')) $('#cfgWhatsapp').value = cfg.whatsappNumber || ADMIN_ID || '01819486966';
@@ -928,6 +936,21 @@ function saveAppSettingsFromForm() {
   saveAppConfig(state.appConfig);
   renderAppManagement();
   toast('ব্র্যান্ডিং ও যোগাযোগের তথ্য সংরক্ষিত হয়েছে');
+}
+
+/* Urgent announcement: one switch + one message that every device receives as
+   a notification. Clearing the message turns it off on every device too. */
+function saveBroadcastFromForm() {
+  const current = state.appConfig || loadAppConfig();
+  const message = $('#cfgBroadcastMessage')?.value.trim().slice(0, 500) || '';
+  const alert = Boolean($('#cfgBroadcastAlert')?.checked) && Boolean(message);
+  const pushOn = $('#cfgPushNotifications') ? Boolean($('#cfgPushNotifications').checked) : current.pushNotifications !== false;
+  state.appConfig = { ...current, pushNotifications: pushOn, broadcastAlert: alert, broadcastMessage: message };
+  saveAppConfig(state.appConfig);
+  renderAppManagement();
+  toast(!pushOn
+    ? 'নোটিফিকেশন বন্ধ করা হয়েছে — শুধু ইন-অ্যাপ নোটিশ তালিকা থাকবে'
+    : alert ? 'জরুরি ঘোষণা সব ডিভাইসে পাঠানো হয়েছে' : 'জরুরি ঘোষণা বন্ধ করা হয়েছে');
 }
 
 /* ---------- Roles & Permissions ----------
@@ -1420,6 +1443,7 @@ function onStaffChanged() {
 /* ---------- Wiring ---------- */
 
 $('#btnSaveAppSettings')?.addEventListener('click', saveAppSettingsFromForm);
+$('#btnSaveBroadcast')?.addEventListener('click', saveBroadcastFromForm);
 
 $('#bootstrapCredentialsDone')?.addEventListener('click', () => { $('#bootstrapCredentialsBackdrop').hidden = true; });
 $('#bootstrapCopyCredentials')?.addEventListener('click', async () => {

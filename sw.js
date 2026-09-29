@@ -1,4 +1,4 @@
-const CACHE_NAME = 'active-plus-student-v87-sync-audit';
+const CACHE_NAME = 'active-plus-student-v88-notifications';
 const APP_SHELL = [
   './js/record-sync.js',
   './js/sync-merge.js',
@@ -7,6 +7,9 @@ const APP_SHELL = [
   './js/student-search.js',
   './js/sync-status.js',
   './js/username-sync-codec.js',
+  './js/notification-rules.js',
+  './js/notifications.js',
+  './js/push-notifications.js',
   './offline-roles.html',
   './css/offline-roles.css',
   './js/offline-role-store.js',
@@ -211,4 +214,20 @@ self.addEventListener('fetch', event => {
       });
     })
   );
+});
+
+/* A tapped notification brings the app forward (notifications raised by the
+   page itself, e.g. a notice that arrived while a tab stayed open). */
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  event.waitUntil((async () => {
+    const clientList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const client of clientList) {
+      if ('focus' in client) {
+        client.postMessage({ type: 'apc-notification-click', data: event.notification?.data || {} });
+        return client.focus();
+      }
+    }
+    return self.clients.openWindow('./index.html');
+  })());
 });

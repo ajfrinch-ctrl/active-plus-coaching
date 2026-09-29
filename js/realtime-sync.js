@@ -112,7 +112,7 @@ function paintSyncStatus() {
   else setSyncStatus('online');
 }
 
-async function ensureCloudAuth() {
+export async function ensureCloudAuth() {
   if (authFlight) return authFlight;
   authFlight = (async () => {
     await appCheckReady;

@@ -1,7 +1,10 @@
 {
   "name": "active-plus-functions",
   "private": true,
-  "engines": { "node": "22" },
+  "type": "commonjs",
+  "engines": {
+    "node": "22"
+  },
   "main": "index.js",
   "scripts": {
     "emulate": "firebase emulators:start --only auth,firestore,functions",

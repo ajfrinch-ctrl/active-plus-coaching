@@ -12,6 +12,7 @@ import { rememberAccount, KEYS, nextSequence, recordNonce } from './database.js'
 import { hashPassword, verifyPassword, isPasswordRecord } from './password-hash.js';
 import { encryptValue, decryptValue, isEncryptedEnvelope } from './secure-store.js';
 import { buildSessionRecord, isSessionRecordValid, DAY_MS } from './session.js';
+import { LOCAL_WRITE_KEY, markLocalSource } from './notification-rules.js';
 
 const SESSION_DAYS_REMEMBER = 90;
 const TAB_SESSION_MARKER = '1';
@@ -271,7 +272,14 @@ export function loadAppConfig() {
 }
 
 export function saveAppConfig(config) {
-  return writeJSON(STORAGE_KEYS.appConfig, config);
+  const saved = writeJSON(STORAGE_KEYS.appConfig, config);
+  // The admin who typed the urgent announcement does not get their own push.
+  if (saved) {
+    try {
+      writeJSON(LOCAL_WRITE_KEY, markLocalSource(readJSON(LOCAL_WRITE_KEY, null), 'settings', 'broadcast'));
+    } catch { /* best effort */ }
+  }
+  return saved;
 }
 
 export function generateStudentId() {

@@ -34,6 +34,15 @@ export { firebaseConfig };
    --------------------------------------------------------------------------- */
 export const APP_CHECK_SITE_KEY = ''; // reCAPTCHA v3 site key — empty = App Check off here
 
+/* ---- Push notifications (FCM) ----------------------------------------------
+   Paste the Web Push certificate key here to turn on notifications for a
+   closed app: Firebase Console → Project settings → Cloud Messaging → Web Push
+   certificates → "Generate key pair" → copy the key pair value.
+
+   Empty (the default) keeps the app fully working: notices still arrive in the
+   app and on the phone while the app is open. See NOTIFICATIONS.md. */
+export const FCM_VAPID_KEY = '';
+
 async function initAppCheck() {
   if (!APP_CHECK_SITE_KEY) return; // no key → enforcement must be OFF in the console
   try {

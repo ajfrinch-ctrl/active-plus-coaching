@@ -27,7 +27,7 @@ async function bootRealtimeSync() {
     reportSyncError({ code: 'network-timeout' });
   }, 20000);
   try {
-    const { startRealtimeSync } = await import('./realtime-sync.js?v=20260929-sync-audit');
+    const { startRealtimeSync } = await import('./realtime-sync.js?v=20260929-notify');
     const result = await startRealtimeSync();
     if (!result?.ok) {
       reportSyncError(result?.error);
@@ -63,6 +63,14 @@ function mountStatus() {
   window.addEventListener('apc-sync-status', paint);
   paint();
   schedule();
+  mountNotifications();
+}
+
+/* The notification centre is optional: a failure there never delays sync. */
+function mountNotifications() {
+  import('./notifications.js')
+    .then(module => module.initNotifications())
+    .catch(error => console.warn('[Active Plus] notifications unavailable:', error?.name || 'unknown'));
 }
 if (document.readyState === 'loading') window.addEventListener('DOMContentLoaded', mountStatus, { once: true });
 else mountStatus();

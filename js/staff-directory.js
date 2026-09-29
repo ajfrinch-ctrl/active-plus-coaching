@@ -471,7 +471,7 @@ async function loginIdTakenInCloud(username) {
     new Promise((_, reject) => setTimeout(() => reject(new Error('lookup timed out')), 4000))
   ]);
   try {
-    const bridge = await bounded(import('./realtime-sync.js?v=20260929-sync-audit'));
+    const bridge = await bounded(import('./realtime-sync.js?v=20260929-notify'));
     return Boolean((await bounded(bridge.usernameTakenOnline(username)))?.taken);
   } catch (error) {
     console.warn('[Active Plus] cloud login-id check unavailable:', error.message);

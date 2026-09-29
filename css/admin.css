@@ -907,3 +907,7 @@ body.admin-modal-open { overflow: hidden; }
   [data-view-panel="students"] .student-toolbar{grid-template-columns:minmax(0,1fr) minmax(180px,.45fr);align-items:end}
   [data-view-panel="students"] #studentFilterChips{grid-column:1/-1}
 }
+
+/* Notification settings: labelled switch rows above the message box. */
+.admin-check { display: flex; align-items: center; gap: 8px; padding: 8px 0 2px; color: var(--ink); font-size: 12.5px; }
+.admin-check input { width: 16px; height: 16px; accent-color: var(--forest); }

@@ -3,6 +3,7 @@
    as fixtures for tests; they are not loaded here. */
 import { loadAccount, saveAccount, readJSON, writeJSON } from './storage.js';
 import { KEYS, listDocuments } from './database.js';
+import { LOCAL_WRITE_KEY, markLocalSource } from './notification-rules.js';
 
 export const ROSTER_KEY = KEYS.students;
 export const NOTICES_KEY = KEYS.notices;
@@ -119,8 +120,22 @@ export function loadNotices() {
   return listDocuments('notices');
 }
 
+/* A notice written here is not pushed back to the person who typed it. The
+   marker is local bookkeeping only and never syncs. */
+function stampWrittenHere(notices) {
+  try {
+    let record = readJSON(LOCAL_WRITE_KEY, null);
+    for (const notice of Array.isArray(notices) ? notices : []) {
+      if (notice?.id) record = markLocalSource(record, 'notices', notice.id);
+    }
+    if (record) writeJSON(LOCAL_WRITE_KEY, record);
+  } catch { /* best effort — a missing marker only means one extra notification */ }
+}
+
 export function saveNotices(notices) {
-  return writeJSON(NOTICES_KEY, notices);
+  const saved = writeJSON(NOTICES_KEY, notices);
+  if (saved) stampWrittenHere(notices);
+  return saved;
 }
 
 export function loadRoutine() {

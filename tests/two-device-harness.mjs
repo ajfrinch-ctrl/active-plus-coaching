@@ -271,7 +271,7 @@ export function onValue(node, callback) {
      query in each copied file (Node, unlike the browser, keys modules by URL). */
   for (const name of readdirSync(path.join(RUN_DIR, 'js'))) {
     if (!name.endsWith('.js') || name === 'realtime-sync.js') continue;
-    swap(name, [['./realtime-sync.js?v=20260929-sync-audit', './realtime-sync.js']]);
+    swap(name, [['./realtime-sync.js?v=20260929-notify', './realtime-sync.js']]);
   }
 }
 

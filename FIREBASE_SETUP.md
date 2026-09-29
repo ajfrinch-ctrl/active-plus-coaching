@@ -337,6 +337,25 @@ Student-ID হুবহু key হিসেবে রাখা বা একট�
 `studentAccounts` স্ক্যান হয়; startup-এ পুরো examDb পড়া হয়; নিরাপত্তার মূল সীমা
 (anonymous auth, পাসওয়ার্ড-হ্যাশ মিরর) আগের মতোই — প্রকৃত Firebase Auth মাইগ্রেশনই সমাধান।
 
+## নোটিফিকেশন (FCM) — পূর্ণ গাইড `NOTIFICATIONS.md`-এ
+
+অ্যাপে এখন নোটিফিকেশন সিস্টেম আছে (রাউন্ড ৫)। দুটি স্তর আজই কাজ করে:
+
+- নতুন নোটিশ সিঙ্ক হয়ে এলে ফোনে সিস্টেম নোটিফিকেশন (অ্যাপ খোলা/ব্যাকগ্রাউন্ডে থাকলে) —
+  প্রতিটি ডিভাইসে একবার "🔔 নোটিফিকেশন চালু করুন" চাপলেই যথেষ্ট।
+- Admin → সেটিংস → **জরুরি ঘোষণা**: সব ডিভাইসে সাথে সাথে ঘোষণা।
+
+অ্যাপ সম্পূর্ণ বন্ধ থাকলেও push পেতে দুটি কাজ বাকি (আপনার Firebase প্রজেক্টে):
+
+1. Console → Project settings → Cloud Messaging → Web Push certificates → key pair তৈরি করে
+   `js/firebase-config.js`-এর `FCM_VAPID_KEY`-এ পেস্ট করুন।
+2. `firebase deploy --only functions` চালান (Blaze plan লাগে) — এতে `pushNotice`,
+   `pushBroadcast`, `pushExam` ট্রিগার চালু হবে (RTDB `activePlusSync/v1/*` নোডে)।
+
+টোকেন রাখা হয় `activePlusSync/v1/pushTokens/...`-এ; সেখানে পাসওয়ার্ড বা সেশন টোকেন
+কখনো যায় না। নিয়ম এখনও `auth != null` (test bridge) — প্রকৃত owner-only নিয়ম আসবে
+Firebase Auth/UID মাইগ্রেশনের সাথে। বিস্তারিত: `NOTIFICATIONS.md`।
+
 ### Publishing and acceptance
 
 GitHub Pages currently publishes the repository's **main** branch at `/`.

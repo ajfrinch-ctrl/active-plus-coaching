@@ -492,6 +492,17 @@
             <div class="class-list" id="classList"></div>
           </article>
           <article class="admin-card">
+            <header class="admin-card-head"><div><p class="eyebrow">Urgent Announcement</p><h2>জরুরি ঘোষণা (নোটিফিকেশন)</h2></div></header>
+            <div class="app-setting-group">
+              <p class="finance-hint">চালু করলে এই লেখাটি সাথে সাথে সব ডিভাইসে নোটিফিকেশন ও নোটিশ তালিকার উপরে দেখা যাবে। যেকোনো সময় বন্ধ করা যাবে।</p>
+              <label class="admin-check"><input type="checkbox" id="cfgPushNotifications"> সব ডিভাইসে নোটিফিকেশন চালু রাখুন</label>
+              <label class="admin-check"><input type="checkbox" id="cfgBroadcastAlert"> জরুরি ঘোষণা চালু রাখুন</label>
+              <div class="app-field"><label for="cfgBroadcastMessage">ঘোষণার লেখা</label><textarea id="cfgBroadcastMessage" rows="3" maxlength="500" placeholder="যেমন: আজ বিকেল ৩টায় ক্লাস বন্ধ থাকবে।"></textarea></div>
+              <button class="admin-btn primary" type="button" id="btnSaveBroadcast">সব ডিভাইসে পাঠান</button>
+              <p class="finance-hint" id="broadcastState" role="status"></p>
+            </div>
+          </article>
+          <article class="admin-card">
             <header class="admin-card-head"><div><p class="eyebrow">Save</p><h2>সংরক্ষণ</h2></div></header>
             <div class="app-setting-group">
               <p class="finance-hint">ব্র্যান্ডিং তথ্য সংরক্ষণ করুন।</p>
