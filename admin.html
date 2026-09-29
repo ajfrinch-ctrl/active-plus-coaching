@@ -5,11 +5,12 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/; frame-src 'self' https://www.google.com/recaptcha/; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https: wss:; manifest-src 'self'; worker-src 'self'; base-uri 'self'; object-src 'none'">
   <meta name="referrer" content="no-referrer">
   <script src="js/sanitize-url.js"></script>
+  <script src="js/app-entry.js?v=109" data-entry="admin"></script>
   <script src="js/topbar-connectivity.js?v=20260929-topbar"></script>
   <script type="module" src="js/realtime-sync-entry.js"></script>
   <script src="js/appearance-boot.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
-  <meta name="theme-color" content="#000000">
+  <meta name="theme-color" content="#f7f9fc">
   <meta name="description" content="Active Plus Coaching এডমিন প্যানেল — ইউজারনেম ও পাসওয়ার্ড দিয়ে প্রবেশ।">
   <meta name="robots" content="noindex">
   <title>Active Plus | এডমিন প্যানেল</title>
@@ -17,19 +18,16 @@
   <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="assets/icons/favicon-16.png">
   <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
-  <link rel="stylesheet" href="css/aurora.css?v=20260929-panellock">
   <!-- Global glass design system. Presentation layer only; loaded last. -->
-  <link rel="stylesheet" href="css/aurora.css?v=20260929-panellock">
   <!-- Admin Panel shell: permission-driven navigation, icon grid and typography.
        Loaded last so the panel always speaks the shared design language. -->
-  <link rel="stylesheet" href="css/aurora.css?v=20260929-panellock">
   <link rel="preload" href="assets/fonts/NotoSansBengali-Variable.ttf" as="font" type="font/ttf" crossorigin>
-  <link rel="stylesheet" href="css/aurora.css?v=20260929-panellock">
   <!-- Icon geometry + staff management: loaded last so one fixed container
        per icon is the final word (no overlap, no double painting). -->
-  <link rel="stylesheet" href="css/aurora.css?v=20260929-panellock">
-  <!-- Appearance (light/dark). Loaded last so its dark patches win the cascade. -->
-  <link rel="stylesheet" href="css/aurora.css?v=20260929-panellock">
+
+  <link rel="stylesheet" href="css/design-system.css?v=109">
+  <script type="module" src="js/ui-accessibility.js"></script>
+  <script src="js/launch-screen.js" defer></script>
 </head>
 <body>
   <script>
@@ -74,7 +72,7 @@
        js/staff-auth.js refuses createInitialAdmin() once one Admin exists. -->
   <!-- Admin Login Screen -->
   <div class="admin-shell" id="adminShell" hidden>
-    <header class="app-topbar"><div class="app-topbar-inner"><div class="app-brand"><img class="app-brand-logo" src="assets/icons/logo-128.png" alt="Active Plus Coaching" width="38" height="38"><span class="app-brand-text"><strong class="app-brand-name">এডমিন প্যানেল</strong><small class="app-brand-slogan" data-fixed-tagline>শিখতে থাকো, এগিয়ে যাও</small></span></div><div class="app-topbar-actions"><button class="app-topbar-icon notification-button" id="notificationButton" type="button" aria-label="নোটিশ দেখুন" aria-haspopup="dialog"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-bell"></use></svg><span class="notification-dot" hidden aria-hidden="true"></span></button><button class="app-topbar-icon app-topbar-exit" id="adminExitButton" type="button" aria-label="লগআউট"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-logout"></use></svg></button></div></div></header>
+    <header class="app-topbar"><div class="app-topbar-inner"><div class="app-brand"><img class="app-brand-logo" src="assets/icons/logo-128.png" alt="Active Plus Coaching" width="38" height="38"><span class="app-brand-text"><strong class="app-brand-name">এডমিন প্যানেল</strong><small class="app-brand-slogan" data-fixed-tagline>শিখতে থাকো, এগিয়ে যাও</small></span></div><div class="app-topbar-actions"><button class="app-topbar-icon notification-button" id="notificationButton" type="button" aria-label="নোটিশ দেখুন" aria-haspopup="dialog"><svg class="" data-icon="bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M18 9a6 6 0 0 0-12 0v6l-2 3h16l-2-3zM10 21h4"/></svg><span class="notification-dot" hidden aria-hidden="true"></span></button><button class="app-topbar-icon app-topbar-exit" id="adminExitButton" type="button" aria-label="লগআউট"><svg class="" data-icon="logout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10 3H3v18h7M8 12h13M16 7l5 5-5 5"/></svg></button></div></div></header>
 
     <div class="admin-welcome" id="adminWelcome" hidden role="status" aria-live="polite"></div>
 
@@ -85,29 +83,29 @@
         <article class="admin-hero">
           <div class="admin-hero-head">
             <div class="admin-hero-title">
-              <span class="admin-hero-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-home"></use></svg></span>
+              <span class="admin-hero-icon" aria-hidden="true"><svg class="" data-icon="home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 10 12 3l9 7M5 9v12h5v-7h4v7h5V9"/></svg></span>
               <h1 id="dashTitle">সিস্টেম ড্যাশবোর্ড</h1>
             </div>
             <time class="admin-date-pill" id="adminTodayDate"></time>
           </div>
           <div class="admin-hero-stats">
             <div class="admin-stat-tile tone-mint">
-              <span class="tile-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-users"></use></svg></span>
+              <span class="tile-icon" aria-hidden="true"><svg class="" data-icon="users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M13 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0M3 21v-3a7 7 0 0 1 14 0v3M17 4a3 3 0 0 1 0 6M20 14a6 6 0 0 1 2 5v2"/></svg></span>
               <p class="tile-label">মোট শিক্ষার্থী</p>
               <p class="tile-value" id="dashStudentCount">—</p>
             </div>
             <div class="admin-stat-tile tone-blue">
-              <span class="tile-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-users"></use></svg></span>
+              <span class="tile-icon" aria-hidden="true"><svg class="" data-icon="users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M13 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0M3 21v-3a7 7 0 0 1 14 0v3M17 4a3 3 0 0 1 0 6M20 14a6 6 0 0 1 2 5v2"/></svg></span>
               <p class="tile-label">সক্রিয় স্টাফ</p>
               <p class="tile-value" id="dashStaffCount">—</p>
             </div>
             <div class="admin-stat-tile tone-amber">
-              <span class="tile-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-book"></use></svg></span>
+              <span class="tile-icon" aria-hidden="true"><svg class="" data-icon="book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 5Q7 2 3 4v16q4-2 9 1 5-3 9-1V4q-4-2-9 1v16"/></svg></span>
               <p class="tile-label">চলমান ক্লাস</p>
               <p class="tile-value" id="dashClassCount">—</p>
             </div>
             <div class="admin-stat-tile tone-lilac">
-              <span class="tile-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-shield"></use></svg></span>
+              <span class="tile-icon" aria-hidden="true"><svg class="" data-icon="shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m12 3 8 3v6q0 6-8 10-8-4-8-10V6zM8 12l3 3 5-6"/></svg></span>
               <p class="tile-label">সুরক্ষিত অ্যাকাউন্ট</p>
               <p class="tile-value" id="dashProtectedCount">—</p>
             </div>
@@ -163,10 +161,10 @@
         <div class="staff-stats" id="staffStats"></div>
         <div class="staff-toolbar">
           <label class="staff-search" for="staffSearch">
-            <span class="staff-search-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-search"></use></svg></span>
+            <span class="staff-search-icon" aria-hidden="true"><svg class="" data-icon="search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0M15 15l7 7"/></svg></span>
             <input id="staffSearch" type="search" placeholder="Staff ID, নাম, ইউজারনেম বা মোবাইল" autocomplete="off" aria-label="স্টাফ অনুসন্ধান">
             <button class="staff-search-clear" id="staffSearchClear" type="button" aria-label="অনুসন্ধান মুছুন" hidden>
-              <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-close"></use></svg>
+              <svg class="" data-icon="close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 5l14 14M19 5 5 19"/></svg>
             </button>
           </label>
           <div class="staff-filter-block">
@@ -201,21 +199,21 @@
         <div class="student-toolbar">
           <div class="student-search-box">
             <label class="student-search" for="studentSearch">
-              <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-search"></use></svg>
+              <svg class="" data-icon="search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0M15 15l7 7"/></svg>
               <input id="studentSearch" type="search" placeholder="স্টুডেন্ট আইডি, নাম বা মোবাইল নং দিয়ে খুঁজুন..." autocomplete="off">
               <button class="student-search-clear" id="studentSearchClear" type="button" aria-label="অনুসন্ধান মুছুন" hidden>
-                <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-close"></use></svg>
+                <svg class="" data-icon="close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 5l14 14M19 5 5 19"/></svg>
               </button>
             </label>
             <div class="student-search-meta">
               <span class="auto-hide-badge" title="টাইপ করার সাথে সাথে অমিল শিক্ষার্থী স্বয়ংক্রিয়ভাবে লুকাবে"><span class="auto-hide-dot"></span>অটো হাইড সক্রিয়</span>
-              <span class="auto-hide-badge privacy" title="গোপনীয়তা মোড: তালিকায় ব্যক্তিগত তথ্য লুকানো — তথ্য দেখুন চাপলেই দেখা যাবে"><svg aria-hidden="true" viewBox="0 0 24 24" style="width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:2;"><use href="#icon-lock"></use></svg>তথ্য গোপন মোড</span>
+              <span class="auto-hide-badge privacy" title="গোপনীয়তা মোড: তালিকায় ব্যক্তিগত তথ্য লুকানো — তথ্য দেখুন চাপলেই দেখা যাবে"><svg class="" data-icon="lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 10h14v11H5zM8 10V6a4 4 0 0 1 8 0v4"/></svg>তথ্য গোপন মোড</span>
               <span class="student-count-badge" id="studentCountBadge">৮ জন শিক্ষার্থী</span>
             </div>
           </div>
           <div class="student-class-filter">
             <label class="student-search" for="studentClassFilter">
-              <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-users"></use></svg>
+              <svg class="" data-icon="users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M13 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0M3 21v-3a7 7 0 0 1 14 0v3M17 4a3 3 0 0 1 0 6M20 14a6 6 0 0 1 2 5v2"/></svg>
               <select id="studentClassFilter" aria-label="শ্রেণি অনুযায়ী ফিল্টার">
                 <option value="all">সব শ্রেণির শিক্ষার্থী</option>
               </select>
@@ -234,7 +232,7 @@
       <!-- Report Center: every downloadable report lives here. -->
       <section class="admin-view" data-view-panel="reports" aria-labelledby="reportsTitle">
         <button class="admin-more-back" type="button" data-admin-view="more">
-          <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-left"></use></svg>
+          <svg class="" data-icon="arrow-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20 12H4M10 6l-6 6 6 6"/></svg>
           আরও-তে ফিরুন
         </button>
         <div class="page-intro">
@@ -255,19 +253,19 @@
         <h2 class="reports-group-title">আর্থিক সারাংশ (Finance Summary)</h2>
         <div class="admin-stats">
           <article class="admin-stat">
-            <span class="admin-stat-icon mint" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-wallet"></use></svg></span>
+            <span class="admin-stat-icon mint" aria-hidden="true"><svg class="" data-icon="wallet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 7V5h16v3M3 7h18v14H3zM21 12h-6v5h6M17 14h1"/></svg></span>
             <div><strong id="financeTotalCollected">৳০</strong><small>মোট ফি আদায়</small></div>
           </article>
           <article class="admin-stat">
-            <span class="admin-stat-icon blue" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-calendar"></use></svg></span>
+            <span class="admin-stat-icon blue" aria-hidden="true"><svg class="" data-icon="calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2M7 3v4M17 3v4M3 11h18M7 15h2M15 15h2"/></svg></span>
             <div><strong id="financeMonthCollected">৳০</strong><small>চলতি মাস</small></div>
           </article>
           <article class="admin-stat">
-            <span class="admin-stat-icon amber" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-clipboard"></use></svg></span>
+            <span class="admin-stat-icon amber" aria-hidden="true"><svg class="" data-icon="clipboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M8 4H5v17h14V4h-3M8 2h8v5H8zM8 11h8M8 15h5"/></svg></span>
             <div><strong id="financeTotalDue">৳০</strong><small>চলতি মাসের বকেয়া বেতন</small></div>
           </article>
           <article class="admin-stat">
-            <span class="admin-stat-icon lilac" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-receipt"></use></svg></span>
+            <span class="admin-stat-icon lilac" aria-hidden="true"><svg class="" data-icon="receipt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 3h14v19l-3-2-4 2-4-2-3 2zM8 7h8M8 11h8M8 15h5"/></svg></span>
             <div><strong id="financeTrxCount">০ টি</strong><small>মোট ট্রানজেকশন</small></div>
           </article>
         </div>
@@ -286,7 +284,7 @@
             <div class="finance-search-body">
               <label for="feeStudentSearch">নাম, মোবাইল নম্বর, Student ID অথবা অভিভাবকের মোবাইল</label>
               <div class="finance-search-input">
-                <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-search"></use></svg>
+                <svg class="" data-icon="search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0M15 15l7 7"/></svg>
                 <input id="feeStudentSearch" type="search" placeholder="নাম, মোবাইল বা Student ID" autocomplete="off" aria-controls="feeSearchResults" aria-describedby="feeSearchHint">
               </div>
               <p id="feeSearchHint" class="finance-hint">শিক্ষার্থী খুঁজুন → প্রোফাইল দেখুন → পেমেন্ট গ্রহণ করুন</p>
@@ -365,7 +363,7 @@
 
                 <p id="feeSaveError" class="finance-error" role="alert" hidden></p>
                 <button id="feeSaveButton" class="admin-btn primary" type="submit" style="margin-top: 14px;">
-                  <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-check-circle"></use></svg>
+                  <svg class="" data-icon="check-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0m-13 0 3 3 5-6"/></svg>
                   ফি গ্রহণ ও রসিদ তৈরি করুন
                 </button>
               </form>
@@ -394,7 +392,7 @@
             </header>
             <div class="ledger-search-wrap">
               <label class="student-search" for="ledgerSearch">
-                <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-search"></use></svg>
+                <svg class="" data-icon="search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0M15 15l7 7"/></svg>
                 <input id="ledgerSearch" type="search" placeholder="লেজারে নাম, আইডি বা মোবাইল দিয়ে খুঁজুন..." autocomplete="off">
               </label>
             </div>
@@ -483,7 +481,7 @@
       <!-- System Settings -->
       <section class="admin-view" data-view-panel="settings" aria-labelledby="appManagementTitle">
         <button class="admin-more-back" type="button" data-admin-view="more">
-          <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-left"></use></svg>
+          <svg class="" data-icon="arrow-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20 12H4M10 6l-6 6 6 6"/></svg>
           আরও-তে ফিরুন
         </button>
         <div class="page-intro">
@@ -537,7 +535,7 @@
           <div><p class="eyebrow">Admin Profile</p><h1 id="adminProfileTitle">আমার প্রোফাইল</h1></div>
         </div>
         <article class="admin-card" id="adminProfileCard" aria-live="polite"></article>
-        <article class="admin-card theme-card"><label class="settings-toggle theme-switch"><span class="settings-icon purple theme-switch-icon" aria-hidden="true"><svg class="icon-sun" viewBox="0 0 24 24"><use href="#icon-sun"></use></svg><svg class="icon-moon" viewBox="0 0 24 24"><use href="#icon-moon"></use></svg></span><span><strong>গাঢ় থিম</strong><small>চালু করলে রাতে চোখের আরাম</small></span><span class="toggle-switch"><input type="checkbox" id="darkModeToggle"><i></i></span></label></article>
+        <article class="admin-card theme-card"><label class="settings-toggle theme-switch"><span class="settings-icon purple theme-switch-icon" aria-hidden="true"><svg class="icon-sun" data-icon="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1 1M18 18l1 1M5 19l1-1M18 6l1-1"/></svg><svg class="icon-moon" data-icon="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20 15A9 9 0 0 1 9 4a9 9 0 1 0 11 11"/></svg></span><span><strong>গাঢ় থিম</strong><small>চালু করলে রাতে চোখের আরাম</small></span><span class="toggle-switch"><input type="checkbox" id="darkModeToggle"><i></i></span></label></article>
         <article class="admin-card">
           <header class="admin-card-head">
             <div><p class="eyebrow">Profile</p><h2>আমার তথ্য হালনাগাদ</h2></div>
@@ -601,37 +599,37 @@
           <button class="admin-more-item" type="button" data-admin-view="roles" data-admin-cap="roles.manage">
             <span class="admin-more-icon" aria-hidden="true"></span>
             <span class="admin-more-copy"><strong>Roles &amp; Permissions</strong><small>রোলভিত্তিক অনুমতির ম্যাট্রিক্স</small></span>
-            <svg class="admin-menu-arrow" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg>
+            <svg class="admin-menu-arrow" data-icon="arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 12h16M14 6l6 6-6 6"/></svg>
           </button>
           <button class="admin-more-item" type="button" data-admin-view="data" data-admin-cap="data.manage">
             <span class="admin-more-icon" aria-hidden="true"></span>
             <span class="admin-more-copy"><strong>Data Management</strong><small>ডেটা সংগ্রহ, পরিসংখ্যান ও পরিষ্কার</small></span>
-            <svg class="admin-menu-arrow" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg>
+            <svg class="admin-menu-arrow" data-icon="arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 12h16M14 6l6 6-6 6"/></svg>
           </button>
           <button class="admin-more-item" type="button" data-admin-view="backup" data-admin-cap="backup.manage">
             <span class="admin-more-icon" aria-hidden="true"></span>
             <span class="admin-more-copy"><strong>Backup &amp; Restore</strong><small>সম্পূর্ণ ব্যাকআপ নিন ও ফিরিয়ে আনুন</small></span>
-            <svg class="admin-menu-arrow" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg>
+            <svg class="admin-menu-arrow" data-icon="arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 12h16M14 6l6 6-6 6"/></svg>
           </button>
           <button class="admin-more-item" type="button" data-admin-view="security" data-admin-cap="security.manage">
             <span class="admin-more-icon" aria-hidden="true"></span>
             <span class="admin-more-copy"><strong>সিকিউরিটি</strong><small>সেশন, পাসওয়ার্ড নীতি ও সুরক্ষিত অ্যাকাউন্ট</small></span>
-            <svg class="admin-menu-arrow" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg>
+            <svg class="admin-menu-arrow" data-icon="arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 12h16M14 6l6 6-6 6"/></svg>
           </button>
           <button class="admin-more-item" type="button" data-admin-view="settings" data-admin-cap="settings.manage">
             <span class="admin-more-icon" aria-hidden="true"></span>
             <span class="admin-more-copy"><strong>সিস্টেম সেটিংস</strong><small>অ্যাপ কন্ট্রোল, ক্লাস ও ব্র্যান্ডিং</small></span>
-            <svg class="admin-menu-arrow" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg>
+            <svg class="admin-menu-arrow" data-icon="arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 12h16M14 6l6 6-6 6"/></svg>
           </button>
           <button class="admin-more-item" type="button" data-admin-view="profile" data-admin-cap="profile.view">
             <span class="admin-more-icon" aria-hidden="true"></span>
             <span class="admin-more-copy"><strong>Admin Profile</strong><small>নিজের পরিচয় ও পাসওয়ার্ড</small></span>
-            <svg class="admin-menu-arrow" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg>
+            <svg class="admin-menu-arrow" data-icon="arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 12h16M14 6l6 6-6 6"/></svg>
           </button>
           <button class="admin-more-item is-logout" type="button" id="adminMoreLogout">
             <span class="admin-more-icon" aria-hidden="true"></span>
             <span class="admin-more-copy"><strong>লগআউট</strong><small>সেশন শেষ করে লগইন পেইজে যান</small></span>
-            <svg class="admin-menu-arrow" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-logout"></use></svg>
+            <svg class="admin-menu-arrow" data-icon="logout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10 3H3v18h7M8 12h13M16 7l5 5-5 5"/></svg>
           </button>
         </nav>
       </section>
@@ -641,23 +639,23 @@
          icons, labels, order and visibility all come from the permission model. -->
     <nav class="admin-bottom" aria-label="এডমিন মোবাইল নেভিগেশন">
       <button class="admin-bottom-item active" type="button" data-admin-view="dashboard" data-admin-cap="dashboard.view" aria-current="page">
-        <span class="nav-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-home"></use></svg></span>
+        <span class="nav-chip"><svg class="" data-icon="home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 10 12 3l9 7M5 9v12h5v-7h4v7h5V9"/></svg></span>
         <span class="nav-label">ড্যাশবোর্ড</span>
       </button>
       <button class="admin-bottom-item" type="button" data-admin-view="staff" data-admin-cap="staff.manage">
-        <span class="nav-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-users"></use></svg></span>
+        <span class="nav-chip"><svg class="" data-icon="users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M13 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0M3 21v-3a7 7 0 0 1 14 0v3M17 4a3 3 0 0 1 0 6M20 14a6 6 0 0 1 2 5v2"/></svg></span>
         <span class="nav-label">স্টাফ</span>
       </button>
       <button class="admin-bottom-item" type="button" data-admin-view="students" data-admin-cap="students.view">
-        <span class="nav-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-users"></use></svg></span>
+        <span class="nav-chip"><svg class="" data-icon="users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M13 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0M3 21v-3a7 7 0 0 1 14 0v3M17 4a3 3 0 0 1 0 6M20 14a6 6 0 0 1 2 5v2"/></svg></span>
         <span class="nav-label">শিক্ষার্থী</span>
       </button>
       <button class="admin-bottom-item" type="button" data-admin-view="reports" data-admin-cap="reports.view">
-        <span class="nav-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-receipt"></use></svg></span>
+        <span class="nav-chip"><svg class="" data-icon="receipt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 3h14v19l-3-2-4 2-4-2-3 2zM8 7h8M8 11h8M8 15h5"/></svg></span>
         <span class="nav-label">রিপোর্ট</span>
       </button>
       <button class="admin-bottom-item" type="button" data-admin-view="more">
-        <span class="nav-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-more"></use></svg></span>
+        <span class="nav-chip"><svg class="" data-icon="more" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 11v2M12 11v2M19 11v2"/></svg></span>
         <span class="nav-label">আরও</span>
       </button>
     </nav>
@@ -674,37 +672,9 @@
     </section>
   </div>
 
-  <!-- Reusable SVG icon sprite. No external assets are required for offline use. -->
-  <svg class="icon-sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><symbol id="icon-bell" viewBox="0 0 24 24"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></symbol>
-    <symbol id="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"/></symbol>
-    <symbol id="icon-moon" viewBox="0 0 24 24"><path d="M20 15.5A8.5 8.5 0 0 1 8.5 4 8.5 8.5 0 1 0 20 15.5Z"/></symbol>
-    <symbol id="icon-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></symbol>
-    <symbol id="icon-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V10Z"/><path d="M9 21v-6h6v6"/></symbol>
-    <symbol id="icon-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.7a3.5 3.5 0 0 1 0 6.6M21.5 20a6.5 6.5 0 0 0-4.4-6.1"/></symbol>
-    <symbol id="icon-megaphone" viewBox="0 0 24 24"><path d="m3 11 13-5v12L3 14v-3ZM16 10h3a2 2 0 0 1 0 4h-3M6 15l1.5 5H11l-1.5-5"/></symbol>
-    <symbol id="icon-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></symbol>
-    <symbol id="icon-sliders" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16M8 4v4M15 10v4M11 16v4"/></symbol>
-    <symbol id="icon-book" viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5v-16Z"/><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M8 7h8M8 11h6"/></symbol>
-    <symbol id="icon-clipboard" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4.5V3h6v1.5M9 10h6M9 14h4"/></symbol>
-    <symbol id="icon-shield" viewBox="0 0 24 24"><path d="M12 3 5 6v5.2c0 4.8 3 8 7 9.8 4-1.8 7-5 7-9.8V6l-7-3Z"/><path d="m9 12 2 2 4-4.5"/></symbol>
-    <symbol id="icon-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
-    <symbol id="icon-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m16 16 5 5"/></symbol>
-    <symbol id="icon-close" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
-    <symbol id="icon-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
-    <symbol id="icon-trash" viewBox="0 0 24 24"><path d="M4 7h16M9.5 7V5h5v2M6.5 7l1 13.5h9l1-13.5M10 11v5.5M14 11v5.5"/></symbol>
-    <symbol id="icon-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
-    <symbol id="icon-arrow-left" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></symbol>
-    <symbol id="icon-smartphone" viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M10 18h4"/></symbol>
-    <symbol id="icon-logout" viewBox="0 0 24 24"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></symbol>
-    <symbol id="icon-wallet" viewBox="0 0 24 24"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h3v-4h-3z"/></symbol>
-    <symbol id="icon-receipt" viewBox="0 0 24 24"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M8 7h8M8 11h8M8 15h5"/></symbol>
-    <symbol id="icon-phone" viewBox="0 0 24 24"><path d="M6 3h3l2 5-2 1.5a12 12 0 0 0 5.5 5.5L16 13l5 2v3a2 2 0 0 1-2 2C10.7 20 4 13.3 4 5a2 2 0 0 1 2-2Z"/></symbol>
-    <symbol id="icon-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
-    <symbol id="icon-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 6.5 12 6.5 21.5 12 21.5 12 18 17.5 12 17.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="2.5"/></symbol>
-    <symbol id="icon-check-circle" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></symbol>
-  </svg>
+
+
   <script type="module" src="js/theme-entry.js"></script>
   <script type="module" src="js/pull-to-refresh.js"></script>
-  <script type="module" src="js/admin.js?v=20260929-panellock"></script>
 </body>
 </html>

@@ -1,3 +1,4 @@
+import { iconMarkup } from './icons.js';
 /* Standalone Payment Receive desk: username login → search → short profile
    → payment → receipt. The counter can sign in here or on the shared login
    page (index.html); logging out returns there. Students come from the office
@@ -337,7 +338,7 @@ function renderProfile() {
     </dl>
     <p class="finance-hint">${summary.month} • রসিদ পাঠানোর জন্য হোয়াটসঅ্যাপ নম্বর হবে ${bn(whatsappTarget(student) || '—')}</p>
     <button id="payProfileCollect" class="admin-btn primary fee-profile-collect" type="button" ${!state.ready || state.saving ? 'disabled' : ''}>
-      <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-bolt"></use></svg>
+      ${iconMarkup("bolt")}
       পেমেন্ট নিন
     </button>`;
   renderStickyBar();

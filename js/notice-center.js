@@ -1,3 +1,4 @@
+import { iconMarkup as minimalIcon } from './icons.js';
 /* The notification inbox behind the bell button — one design on every panel.
  *
  * The bell in the topbar is the same control for a student, the Admin, the
@@ -61,7 +62,7 @@ function iconId(kind) {
 
 function iconMarkup(kind) {
   const id = iconId(kind);
-  return id ? `<svg aria-hidden="true" viewBox="0 0 24 24"><use href="#${id}"></use></svg>` : '';
+  return id ? `${minimalIcon(id)}` : '';
 }
 
 /* ---- modal ------------------------------------------------------------------ */

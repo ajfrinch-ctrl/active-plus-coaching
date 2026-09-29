@@ -267,7 +267,7 @@ class ReportCenter {
       if (result.empty) {
         result.doc.blocks.push({
           type:'note',
-          text:'No data found for the selected filters.'
+          text:'এই filter অনুযায়ী কোনো data পাওয়া যায়নি।'
         });
       }
 

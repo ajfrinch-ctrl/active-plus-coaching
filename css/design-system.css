@@ -1,0 +1,10 @@
+/* Minimal Education • single application entry; no legacy visual imports. */
+@import url('./foundation.css');
+@import url('./ui-layout.css');
+@import url('./ui-components.css');
+@import url('./ui-forms.css');
+@import url('./ui-features.css');
+
+@import url("./ui-status.css");
+
+@import url("./ui-auth.css");

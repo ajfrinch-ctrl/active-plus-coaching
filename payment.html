@@ -5,11 +5,12 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/; frame-src 'self' https://www.google.com/recaptcha/; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https: wss:; manifest-src 'self'; worker-src 'self'; base-uri 'self'; object-src 'none'">
   <meta name="referrer" content="no-referrer">
   <script src="js/sanitize-url.js"></script>
+  <script src="js/app-entry.js?v=109" data-entry="payment"></script>
   <script src="js/topbar-connectivity.js?v=20260929-topbar"></script>
   <script type="module" src="js/realtime-sync-entry.js"></script>
   <script src="js/appearance-boot.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
-  <meta name="theme-color" content="#000000">
+  <meta name="theme-color" content="#f7f9fc">
   <meta name="description" content="Active Plus Coaching পেমেন্ট রিসিভ প্যানেল — শিক্ষার্থী খুঁজে দ্রুত ফি গ্রহণ, রসিদ PDF ডাউনলোড ও হোয়াটসঅ্যাপে ছবি পাঠানো।">
   <meta name="robots" content="noindex">
   <title>Active Plus | পেমেন্ট রিসিভ প্যানেল</title>
@@ -17,24 +18,23 @@
   <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="assets/icons/favicon-16.png">
   <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
-  <link rel="stylesheet" href="css/aurora.css?v=20260929-panellock">
   <!-- Global glass design system. Presentation layer only; loaded last. -->
-  <link rel="stylesheet" href="css/aurora.css?v=20260929-panellock">
   <link rel="preload" href="assets/fonts/NotoSansBengali-Variable.ttf" as="font" type="font/ttf" crossorigin>
-  <link rel="stylesheet" href="css/aurora.css?v=20260929-panellock">
-  <!-- Appearance (light/dark). Loaded last so its dark patches win the cascade. -->
-  <link rel="stylesheet" href="css/aurora.css?v=20260929-panellock">
+
+  <link rel="stylesheet" href="css/design-system.css?v=109">
+  <script type="module" src="js/ui-accessibility.js"></script>
+  <script src="js/launch-screen.js" defer></script>
 </head>
 <body class="pay-body">
   <!-- Entry screen: the login page can also sign in here, so this is a fallback, not a wall. -->
   <div class="pay-shell" id="payShell" hidden>
-    <header class="app-topbar"><div class="app-topbar-inner"><div class="app-brand"><img class="app-brand-logo" src="assets/icons/logo-128.png" alt="Active Plus Coaching" width="38" height="38"><span class="app-brand-text"><strong class="app-brand-name">পেমেন্ট রিসিভ</strong><small class="app-brand-slogan" data-fixed-tagline>শিখতে থাকো, এগিয়ে যাও</small></span></div><div class="app-topbar-actions"><button class="app-topbar-icon notification-button" id="notificationButton" type="button" aria-label="নোটিশ দেখুন" aria-haspopup="dialog"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-bell"></use></svg><span class="notification-dot" hidden aria-hidden="true"></span></button><button class="app-topbar-icon app-topbar-exit" id="payExitButton" type="button" title="লগআউট" aria-label="লগআউট"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-logout"></use></svg></button></div></div></header>
+    <header class="app-topbar"><div class="app-topbar-inner"><div class="app-brand"><img class="app-brand-logo" src="assets/icons/logo-128.png" alt="Active Plus Coaching" width="38" height="38"><span class="app-brand-text"><strong class="app-brand-name">পেমেন্ট রিসিভ</strong><small class="app-brand-slogan" data-fixed-tagline>শিখতে থাকো, এগিয়ে যাও</small></span></div><div class="app-topbar-actions"><button class="app-topbar-icon notification-button" id="notificationButton" type="button" aria-label="নোটিশ দেখুন" aria-haspopup="dialog"><svg class="" data-icon="bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M18 9a6 6 0 0 0-12 0v6l-2 3h16l-2-3zM10 21h4"/></svg><span class="notification-dot" hidden aria-hidden="true"></span></button><button class="app-topbar-icon app-topbar-exit" id="payExitButton" type="button" title="লগআউট" aria-label="লগআউট"><svg class="" data-icon="logout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10 3H3v18h7M8 12h13M16 7l5 5-5 5"/></svg></button></div></div></header>
 
     <main class="pay-main">
       <!-- Counter pulse: what this desk has collected, at a glance. -->
       <section class="pay-pulse" aria-label="আদায়ের সারাংশ">
         <div class="pay-pulse-tile is-today">
-          <span class="pay-pulse-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-wallet"></use></svg></span>
+          <span class="pay-pulse-icon"><svg class="" data-icon="wallet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 7V5h16v3M3 7h18v14H3zM21 12h-6v5h6M17 14h1"/></svg></span>
           <div>
             <p class="pay-pulse-label">আজকের অনুমোদিত আদায়</p>
             <p class="pay-pulse-value" id="payTodayAmount">৳০</p>
@@ -63,7 +63,7 @@
         <div class="finance-search-body">
           <label for="payStudentSearch">নাম, মোবাইল নম্বর, Student ID অথবা অভিভাবকের মোবাইল</label>
           <div class="finance-search-input pay-search-input">
-            <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-search"></use></svg>
+            <svg class="" data-icon="search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0M15 15l7 7"/></svg>
             <input id="payStudentSearch" type="search" placeholder="নাম, মোবাইল, Student ID বা অভিভাবকের নম্বর" autocomplete="off" aria-controls="paySearchResults" aria-describedby="paySearchHint">
             <button class="student-search-clear" type="button" id="paySearchClear" aria-label="সার্চ মুছুন" hidden>✕</button>
           </div>
@@ -154,7 +154,7 @@
           <div class="pay-form-actions">
             <button id="payCancelButton" class="admin-btn ghost" type="button">বাতিল</button>
             <button id="paySaveButton" class="admin-btn primary" type="submit">
-              <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-check-circle"></use></svg>
+              <svg class="" data-icon="check-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0m-13 0 3 3 5-6"/></svg>
               <span id="paySaveLabel">ফি গ্রহণ ও রসিদ তৈরি করুন</span>
             </button>
           </div>
@@ -173,7 +173,7 @@
         <header class="admin-card-head">
           <div><p class="eyebrow">Today</p><h2>আজকের লেনদেন</h2></div>
           <button class="pay-activity-refresh" type="button" id="payActivityRefresh" aria-label="তালিকা আবার লোড করুন">
-            <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-refresh"></use></svg>
+            <svg class="" data-icon="refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20 9a8 8 0 0 0-14-4L3 8M3 3v5h5M4 15a8 8 0 0 0 14 4l3-3M21 21v-5h-5"/></svg>
           </button>
         </header>
         <div id="payTodayList" class="pay-activity-list">
@@ -182,8 +182,8 @@
       </article>
       <section class="pay-card pay-desk-tools" aria-label="ডেস্ক সেটিংস">
         <strong>ডেস্ক সেটিংস</strong>
-        <label class="settings-toggle theme-switch"><span class="settings-icon purple theme-switch-icon" aria-hidden="true"><svg class="icon-sun" viewBox="0 0 24 24"><use href="#icon-sun"></use></svg><svg class="icon-moon" viewBox="0 0 24 24"><use href="#icon-moon"></use></svg></span><span><strong>গাঢ় থিম</strong><small>চালু করলে রাতে চোখের আরাম</small></span><span class="toggle-switch"><input type="checkbox" id="darkModeToggle"><i></i></span></label>
-        <button class="admin-btn" id="payPinButton" type="button" title="পাসওয়ার্ড পরিবর্তন" aria-label="পাসওয়ার্ড পরিবর্তন করুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg> পাসওয়ার্ড পরিবর্তন</button>
+        <label class="settings-toggle theme-switch"><span class="settings-icon purple theme-switch-icon" aria-hidden="true"><svg class="icon-sun" data-icon="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1 1M18 18l1 1M5 19l1-1M18 6l1-1"/></svg><svg class="icon-moon" data-icon="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20 15A9 9 0 0 1 9 4a9 9 0 1 0 11 11"/></svg></span><span><strong>গাঢ় থিম</strong><small>চালু করলে রাতে চোখের আরাম</small></span><span class="toggle-switch"><input type="checkbox" id="darkModeToggle"><i></i></span></label>
+        <button class="admin-btn" id="payPinButton" type="button" title="পাসওয়ার্ড পরিবর্তন" aria-label="পাসওয়ার্ড পরিবর্তন করুন"><svg class="" data-icon="lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 10h14v11H5zM8 10V6a4 4 0 0 1 8 0v4"/></svg> পাসওয়ার্ড পরিবর্তন</button>
       </section>
     </main>
 
@@ -194,7 +194,7 @@
         <small id="payStickyMeta">—</small>
       </div>
       <button class="admin-btn primary" type="button" id="payStickyCollect">
-        <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-bolt"></use></svg>
+        <svg class="" data-icon="bolt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m14 2-9 12h6l-1 8 9-12h-6z"/></svg>
         <span id="payStickyAction">টাকা নিন</span>
       </button>
     </div>
@@ -205,7 +205,7 @@
     <div class="admin-modal pay-receipt-modal" role="dialog" aria-modal="true" aria-labelledby="payReceiptTitle">
       <header class="admin-modal-header pay-receipt-head">
         <div class="pay-success">
-          <span class="pay-success-ring" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-check"></use></svg></span>
+          <span class="pay-success-ring" aria-hidden="true"><svg class="" data-icon="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m4 12 5 5L20 6"/></svg></span>
           <div>
             <p class="eyebrow">Money Receipt</p>
             <h2 id="payReceiptTitle">টাকা জমা হয়েছে</h2>
@@ -217,18 +217,18 @@
       <div class="admin-modal-body" id="payReceiptBody"></div>
       <div class="modal-actions receipt-actions">
         <button class="admin-btn primary" type="button" id="payReceiptWhatsApp">
-          <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-chat"></use></svg>
+          <svg class="" data-icon="chat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 3h18v14H9l-6 4zM7 8h10M7 12h6"/></svg>
           <span id="payReceiptWhatsAppLabel">হোয়াটসঅ্যাপে পাঠান</span>
         </button>
         <button class="admin-btn ghost" type="button" id="payReceiptDownload">রসিদ PDF ডাউনলোড</button>
       </div>
       <div class="modal-actions receipt-actions pay-receipt-extra">
         <button class="admin-btn ghost" type="button" id="payReceiptCopy">
-          <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-copy"></use></svg>
+          <svg class="" data-icon="copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M8 8h13v13H8zM16 8V3H3v13h5"/></svg>
           টেক্সট কপি
         </button>
         <button class="admin-btn ghost" type="button" id="payReceiptNew">
-          <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-plus"></use></svg>
+          <svg class="" data-icon="plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 4v16M4 12h16"/></svg>
           নতুন পেমেন্ট নিন
         </button>
       </div>
@@ -264,33 +264,10 @@
 
   <div class="pay-toast" id="payToast" role="status" aria-live="polite" hidden></div>
 
-  <!-- Inline icon sprite (same icons the admin panel uses). -->
-  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
-    <defs>
-      <g id="icon-search"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></g>
-      <g id="icon-arrow-right"><path d="M4 12h15"/><path d="m13 6 6 6-6 6"/></g>
-      <g id="icon-check-circle"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.4 2.4 4.6-5"/></g>
-      <g id="icon-check"><path d="m5 12.5 4.5 4.5L19 7.5"/></g>
-      <g id="icon-grid"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></g>
-      <g id="icon-chat"><path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.3 8.9 8.9 0 0 1-3.9-.9L3 20l1.2-4.4a8 8 0 0 1-.7-3.3A8.4 8.4 0 0 1 12 4a8.4 8.4 0 0 1 9 7.5Z"/></g>
-      <g id="icon-user"><circle cx="12" cy="8" r="4"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></g>
-      <g id="icon-lock"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/></g>
-      <g id="icon-eye"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="2.6"/></g>
-      <g id="icon-logout"><path d="M14 4h4.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H14"/><path d="M9 8l-4 4 4 4"/><path d="M5 12h10"/></g>
-      <g id="icon-wallet"><path d="M3 8.5A2.5 2.5 0 0 1 5.5 6H18a2 2 0 0 1 2 2v1"/><rect x="3" y="8.5" width="18" height="10.5" rx="2.5"/><path d="M16.5 14h2"/></g>
-      <g id="icon-bolt"><path d="M13 3 5.5 13.5H11L10 21l7.5-10.5H12L13 3Z"/></g>
-      <g id="icon-copy"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M15 5.5A1.5 1.5 0 0 0 13.5 4H6a2 2 0 0 0-2 2v7.5A1.5 1.5 0 0 0 5.5 15"/></g>
-      <g id="icon-plus"><path d="M12 5v14"/><path d="M5 12h14"/></g>
-      <g id="icon-refresh"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v4h-4"/></g>
-      <g id="icon-clock"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></g>
-      <g id="icon-bell"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></g>
-      <g id="icon-sun"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"/></g>
-      <g id="icon-moon"><path d="M20 15.5A8.5 8.5 0 0 1 8.5 4 8.5 8.5 0 1 0 20 15.5Z"/></g>
-    </defs>
-  </svg>
+
+
 
   <script type="module" src="js/theme-entry.js"></script>
   <script type="module" src="js/pull-to-refresh.js"></script>
-  <script type="module" src="js/payment.js"></script>
 </body>
 </html>

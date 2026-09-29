@@ -189,6 +189,16 @@ export async function ensureBootstrapStaffAccounts(ownerUsername = 'admin.apc') 
   return { ok: true, accounts: pending.map(({ role, username, password }) => ({ role, username, password })) };
 }
 
+// Read the identity actually saved on this device, not a newly generated/default ID.
+// Older cash-counter records used userId/pin; these aliases are read-only until
+// the existing password has been verified and the normal hash upgrade runs.
+function storedStaffUsername(account, role) {
+  return normalizeStaffUsername(account?.username || (role === 'payment' ? account?.userId : '') || '');
+}
+function storedStaffPassword(account, role) {
+  return account?.password ?? (role === 'payment' && account?.userId ? account.pin : undefined);
+}
+
 export async function resolveStaffRoleByUsername(value) {
   const username = normalizeStaffUsername(value);
   if (!username) return null;
@@ -199,7 +209,7 @@ export async function resolveStaffRoleByUsername(value) {
   for (const role of Object.keys(STAFF_ACCOUNTS)) {
     const account = await readStaffAccount(role);
     if (!account) continue;
-    const storedUsername = normalizeStaffUsername(account.username);
+    const storedUsername = storedStaffUsername(account, role);
     if (storedUsername && storedUsername === username && account.status !== 'inactive') {
       return role;
     }
@@ -304,27 +314,32 @@ export async function authenticateStaff(role, username, password) {
   const spec = staffSpec(role);
   if (!spec) return { ok: false, error: WRONG_CREDENTIALS };
   const account = await readStaffAccount(role);
-  const expectedUsername = role === 'admin' && account?.username
-    ? normalizeStaffUsername(account.username)
-    : normalizeStaffUsername(spec.username);
+  const expectedUsername = storedStaffUsername(account, role) || normalizeStaffUsername(spec.username);
+  if (account && ['inactive', 'suspended', 'rejected'].includes(account.status || account.accountStatus)) {
+    return { ok: false, error: WRONG_CREDENTIALS };
+  }
   if (normalizeStaffUsername(username) !== expectedUsername) {
     return { ok: false, error: WRONG_CREDENTIALS };
   }
-  if (!account || typeof account.password === 'undefined') {
+  if (!account && staffAccountRecordExists(role)) return { ok: false, error: PASSWORD_STORE_FAILED };
+  const credential = storedStaffPassword(account, role);
+  if (!account || typeof credential === 'undefined') {
     return { ok: true, needsSetup: true };
   }
-  if (isPasswordRecord(account.password)) {
-    const valid = await verifyPassword(password, account.password);
+  if (isPasswordRecord(credential)) {
+    const valid = await verifyPassword(password, credential);
     if (!valid) return { ok: false, error: WRONG_CREDENTIALS };
     return { ok: true, needsPasswordChange: Boolean(account.mustChangePassword) };
   }
   // Legacy plaintext record: verify, then hash it away on the spot.
-  const legacy = String(account.password ?? '');
+  const legacy = String(credential ?? '');
   if (!legacy || String(password ?? '') !== legacy) {
     return { ok: false, error: WRONG_CREDENTIALS };
   }
+  const { pin: _oldPin, ...profile } = account;
   const upgraded = await writeStaffAccount(role, {
-    username: spec.username,
+    ...profile,
+    username: account.username || account.userId || spec.username,
     password: await hashPassword(legacy),
     mustChangePassword: true,
     migratedAt: new Date().toISOString()

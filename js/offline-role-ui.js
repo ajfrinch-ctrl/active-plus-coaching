@@ -1,3 +1,4 @@
+import { iconElement } from './icons.js';
 import { registerServiceWorker } from './service-worker.js';
 registerServiceWorker();
 import { createRoleStore, ROLE_NAMES } from './offline-role-store.js';
@@ -122,7 +123,7 @@ function enter() {
   $('#menu').replaceChildren();
   for (const section of MENUS[actor.role]) {
     const b = button(SECTIONS[section][0], () => render(section), $('#menu')); b.dataset.section = section;
-    const img = document.createElement('img'); img.src = `assets/icons/admin/${SECTIONS[section][1]}.png`; img.alt = ''; b.prepend(img);
+    b.prepend(iconElement(SECTIONS[section][1]));
   }
   render(MENUS[actor.role][0]);
 }

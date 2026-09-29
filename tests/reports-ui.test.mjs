@@ -167,7 +167,7 @@ test('Generate builds a paged preview with a full-width download', async () => {
 });
 
 test('the stylesheet keeps every page A4 and the download out of the bottom nav', () => {
-  const css = readFileSync(new URL('../css/reports.css', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../css/ui-features.css', import.meta.url), 'utf8');
   const page = /\.rc-pdf-preview \.rp-page\s*\{([^}]*)\}/.exec(css);
   assert.ok(page, 'the page rule exists');
   assert.match(page[1], /width:\s*794px/);
@@ -209,6 +209,6 @@ test('a report with no matching records says so instead of printing blanks', asy
   generate();
   await ctx.waitFor(() => Boolean($('.rc-pdf-preview')), 20000);
   // The honest empty state travels inside the document, so the PDF says it too.
-  assert.match($('.rc-pdf-preview').textContent, /No data found/);
+  assert.match($('.rc-pdf-preview').textContent, /এই filter অনুযায়ী কোনো data পাওয়া যায়নি/);
   assert.equal(catalog.EMPTY_MESSAGE.length > 0, true);
 });

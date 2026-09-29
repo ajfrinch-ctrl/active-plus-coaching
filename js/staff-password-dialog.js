@@ -1,3 +1,4 @@
+import { iconMarkup } from './icons.js';
 /* Shared staff password dialog: first-use setup and forced password change.
    Rendered by JS so all four entry screens (index, admin, teacher, payment)
    get the same secure flow without duplicating markup. The plaintext password
@@ -33,13 +34,13 @@ function buildDom(role, mode) {
       <form class="staff-pw-form" novalidate>
         <label for="staffPwNew">নতুন পাসওয়ার্ড</label>
         <div class="input-wrap">
-          <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg>
+          ${iconMarkup("lock")}
           <input id="staffPwNew" name="newPassword" type="password" minlength="6" maxlength="32" autocomplete="new-password" placeholder="কমপক্ষে ৬ অক্ষর" required>
-          <button class="show-pin" type="button" data-staff-pw-toggle="staffPwNew" aria-label="পাসওয়ার্ড দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg></button>
+          <button class="show-pin" type="button" data-staff-pw-toggle="staffPwNew" aria-label="পাসওয়ার্ড দেখুন">${iconMarkup("eye")}</button>
         </div>
         <label for="staffPwConfirm">নতুন পাসওয়ার্ড আবার লিখুন</label>
         <div class="input-wrap">
-          <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg>
+          ${iconMarkup("lock")}
           <input id="staffPwConfirm" name="confirmPassword" type="password" minlength="6" maxlength="32" autocomplete="new-password" placeholder="একই পাসওয়ার্ড আবার" required>
         </div>
         <p class="staff-pw-error" role="alert" hidden></p>

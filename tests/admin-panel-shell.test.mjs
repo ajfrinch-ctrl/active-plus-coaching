@@ -126,21 +126,21 @@ test('the bottom bar renders one icon + label per permitted tab', () => {
   const bell = header.querySelector('#notificationButton');
   assert.ok(bell, 'the topbar has no notification button');
   assert.equal(bell.querySelectorAll('svg').length, 1, 'the bell paints more than one icon');
-  assert.ok(bell.querySelector('use[href="#icon-bell"]'));
+  assert.ok(bell.querySelector('svg[data-icon="bell"]'));
   assert.ok(bell.querySelector('.notification-dot'), 'the bell has no unread dot');
   const exit = header.querySelector('.app-topbar-exit');
   assert.ok(exit, 'the sign-out button is missing');
   assert.equal(exit.id, 'adminExitButton');
   assert.equal(exit.querySelectorAll('svg').length, 1, 'sign-out paints more than one icon');
-  assert.ok(exit.querySelector('use[href="#icon-logout"]'));
+  assert.ok(exit.querySelector('svg[data-icon="logout"]'));
   assert.equal(header.querySelectorAll('button').length, 2, 'the topbar holds more than notification + sign-out');
   assert.equal(header.querySelectorAll('[data-theme-toggle], time, .student-date').length, 0, 'a control that belongs elsewhere is still in the topbar');
   // Dark mode stays reachable: it lives in System Settings as a switch row —
   // icon chip (sun in light, moon in dark), label and the app's toggle switch.
   const themeSwitch = ctx.$('.admin-view[data-view-panel="profile"] .theme-card .theme-switch');
   assert.ok(themeSwitch, 'dark mode has no home on the Admin panel');
-  assert.ok(themeSwitch.querySelector('.theme-switch-icon use[href="#icon-sun"]'), 'the switch has no sun icon');
-  assert.ok(themeSwitch.querySelector('.theme-switch-icon use[href="#icon-moon"]'), 'the switch has no moon icon');
+  assert.ok(themeSwitch.querySelector('.theme-switch-icon svg[data-icon="sun"]'), 'the switch has no sun icon');
+  assert.ok(themeSwitch.querySelector('.theme-switch-icon svg[data-icon="moon"]'), 'the switch has no moon icon');
   assert.ok(themeSwitch.textContent.includes('গাঢ় থিম'), 'the switch lost its label');
   const checkbox = themeSwitch.querySelector('.toggle-switch input#darkModeToggle');
   assert.ok(checkbox, 'the switch is not connected to the theme checkbox');

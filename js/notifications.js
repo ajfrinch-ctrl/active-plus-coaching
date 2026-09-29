@@ -1,3 +1,4 @@
+import { mountStatusNotice } from './status-surface.js';
 /* Notification centre for every app page.
 
    Two layers, one list:
@@ -272,8 +273,8 @@ function paintPill() {
   if (state === 'default' && Date.now() < promptHiddenUntil()) return setVisible(false);
   setVisible(true);
   pill.textContent = state === 'denied'
-    ? '🔕 নোটিফিকেশন বন্ধ — চালু করার নিয়ম'
-    : '🔔 নোটিফিকেশন চালু করুন';
+    ? 'নোটিফিকেশন বন্ধ — চালু করার নিয়ম'
+    : 'নোটিফিকেশন চালু করুন';
 }
 
 function noteThenHide(message, ms = 5000) {
@@ -287,18 +288,15 @@ function mountPill() {
   if (pill || !document.body) return;
   const bar = document.createElement('div');
   bar.id = 'apcNotifyBar';
-  bar.style.cssText = 'position:fixed;left:12px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:999;display:flex;gap:6px;align-items:center;max-width:min(80vw,360px);';
   pill = document.createElement('button');
   pill.type = 'button';
   pill.id = 'apcNotifyToggle';
   pill.setAttribute('aria-live', 'polite');
-  pill.style.cssText = 'padding:7px 11px;border:1px solid #1d4ed8;border-radius:999px;background:#eff6ff;color:#1e3a8a;font:12px/1.5 sans-serif;box-shadow:0 2px 8px #0002;text-align:left;';
   // A one-time decision is allowed: the nudge can be put away for a week.
   pillDismiss = document.createElement('button');
   pillDismiss.type = 'button';
   pillDismiss.id = 'apcNotifyDismiss';
   pillDismiss.setAttribute('aria-label', 'নোটিফিকেশনের কথা পরে দেখাব');
-  pillDismiss.style.cssText = 'width:26px;height:26px;border:1px solid #93c5fd;border-radius:50%;background:#ffffff;color:#1e3a8a;font:14px/1 sans-serif;';
   pillDismiss.textContent = '×';
   pillDismiss.addEventListener('click', () => {
     writeJSON(PROMPT_HIDDEN_KEY, { version: 1, at: Date.now() });
@@ -315,7 +313,7 @@ function mountPill() {
     void enableNotifications();
   });
   bar.append(pill, pillDismiss);
-  document.body.append(bar);
+  mountStatusNotice(bar);
   paintPill();
 }
 

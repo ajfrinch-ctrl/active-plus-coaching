@@ -18,7 +18,7 @@
 import { enabledClasses } from './config.js';
 import { toBanglaNumber } from './ui.js';
 import { escapeHtml } from './sanitize.js';
-import { iconMarkup, paintIcon } from './admin-icons.js';
+import { iconMarkup, paintIcon } from './icons.js';
 import { generateLoginId, isAutoLoginId } from './user-id.js';
 import {
   CREATABLE_STAFF_ROLES,
