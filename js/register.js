@@ -8,7 +8,7 @@ import { contactNumber, isContactNumber, normalizeUsername, usernameError, sugge
 import {
   saveAccount, saveStudent, generateStudentId, generateClassRoll, persistSession, setTrustedDevice, usernameTaken, reserveUsername, releaseUsername, loadAccount
 } from './storage.js';
-import { upsertLocalAccount } from './office-data.js';
+import { upsertStudentRosterRow } from './office-data.js';
 import { listDocuments } from './database.js';
 import { switchAuthTab } from './login.js';
 
@@ -178,7 +178,7 @@ async function handleRegistration(event, state, onRegistered) {
   state.account = loadAccount() || account;
   state.student = { ...state.student, ...studentData };
   saveStudent(state.student);
-  upsertLocalAccount();
+  upsertStudentRosterRow();   // the exact personal fields, nothing the branch owns
   await persistSession(true);
   setTrustedDevice(true);
   formElement.reset();

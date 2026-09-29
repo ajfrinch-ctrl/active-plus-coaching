@@ -7,9 +7,15 @@ export function setSyncStatus(state, error = null) {
     pending: 'পরিবর্তন সিঙ্ক হচ্ছে…',
     online: 'ক্লাউড সিঙ্ক চালু',
     conflict: 'একই লগইন আইডি দুই ডিভাইসে — এডমিনকে জানান',
+    storage: 'ফোনের স্টোরেজ ভর্তি — পুরোনো ছবি/অ্যাপ ডেটা ফাঁকা করুন',
     error: 'সিঙ্ক হয়নি — আবার চেষ্টা করুন'
   }[state] || 'সিঙ্কের অপেক্ষায়';
-  if (typeof error?.publicMessage === 'string' && error.publicMessage) message = error.publicMessage;
+  if (/QuotaExceededError|quota/i.test(code) || /QuotaExceeded/i.test(String(error?.name || ''))) {
+    // localStorage is about 5 MB per origin: when it is full NOTHING can be
+    // saved locally, so the cloud has nothing to send either.
+    state = 'storage';
+    message = 'ফোনের স্টোরেজ ভর্তি — পুরোনো ছবি/অ্যাপ ডেটা ফাঁকা করুন';
+  } else if (typeof error?.publicMessage === 'string' && error.publicMessage) message = error.publicMessage;
   else if (/operation-not-allowed|admin-restricted-operation/.test(code)) message = 'Firebase Console-এ Anonymous sign-in চালু করুন';
   else if (/permission|denied/i.test(code)) message = 'Firebase Rules ও App Check পরীক্ষা করুন';
   else if (/network/.test(code)) message = 'ক্লাউডে পৌঁছানো যায়নি — ইন্টারনেট পরীক্ষা করুন';

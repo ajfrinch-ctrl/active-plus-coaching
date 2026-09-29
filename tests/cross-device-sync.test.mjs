@@ -484,6 +484,30 @@ test('a misspelled username is answered with what the cloud actually holds', asy
   } finally { await fresh.stop(); }
 });
 
+test('a change reaches the other device quickly, and the time is measured', async () => {
+  const { KEYS } = await import('../js/database.js');
+  // Independent of the other tests: make sure both devices have a live bridge.
+  await deviceA.run('boot');
+  await deviceB.run('boot');
+  const started = Date.now();
+  await deviceA.run('write-notice', { id: 'NOTICE-LATENCY', title: 'দ্রুত সিঙ্ক', body: 'সময় মাপা হচ্ছে', at: Date.now() });
+  await deviceB.run('wait-content', { key: KEYS.notices, id: 'NOTICE-LATENCY' });
+  const elapsed = Date.now() - started;
+  // The mock cloud sits on loopback, so this is the floor the bridge itself
+  // adds: write → push → other device's listener → local storage. Real networks
+  // add their own latency on top (see FIREBASE_SETUP.md).
+  assert.ok(elapsed < 5000, `A → B took ${elapsed}ms`);
+  console.log(`# [latency] device A write → device B visible: ${elapsed}ms`);
+
+  // The reverse direction, including the durable outbox path.
+  const back = Date.now();
+  await deviceB.run('write-notice', { id: 'NOTICE-LATENCY-2', title: 'ফিরতি', body: 'B → A', at: Date.now() });
+  await deviceA.run('wait-content', { key: KEYS.notices, id: 'NOTICE-LATENCY-2' });
+  const elapsedBack = Date.now() - back;
+  assert.ok(elapsedBack < 5000, `B → A took ${elapsedBack}ms`);
+  console.log(`# [latency] device B write → device A visible: ${elapsedBack}ms`);
+});
+
 test('package still declares the realtime bridge', async () => {
   const loginSource = readFileSync(new URL('../js/login.js', import.meta.url), 'utf8');
   assert.match(loginSource, /hydrateUserIdentifiers/, 'login.js hydrates synced user IDs');

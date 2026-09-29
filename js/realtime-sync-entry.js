@@ -5,9 +5,17 @@ let running = false;
 let timer;
 let attempt = 0;
 let slowTimer;
-function schedule(delay = 1200) {
+function schedule(delay = 0) {
   clearTimeout(timer);
-  timer = setTimeout(bootRealtimeSync, delay);
+  if (delay) { timer = setTimeout(bootRealtimeSync, delay); return; }
+  // Sync should start as soon as the UI is usable, but never block it: the
+  // first idle moment wins, with a hard cap so an idle-less browser still
+  // connects quickly.
+  if (typeof window.requestIdleCallback === 'function') {
+    timer = window.requestIdleCallback(bootRealtimeSync, { timeout: 600 });
+  } else {
+    timer = setTimeout(bootRealtimeSync, 250);
+  }
 }
 
 async function bootRealtimeSync() {

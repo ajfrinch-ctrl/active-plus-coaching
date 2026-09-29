@@ -43,7 +43,6 @@ const USERNAMES_ROOT = DB_ROOT + '/usernames';
 const STUDENT_ROOT = DB_ROOT + '/studentAccount'; // read-only legacy migration
 const STUDENTS_ROOT = DB_ROOT + '/studentAccounts';
 const EXAMDB_ROOT = DB_ROOT + '/examDb';
-const EXAMDB_SEEN = EXAMDB_ROOT + '/meta/seen';
 
 const rawSetItem = Storage.prototype.setItem;
 const subscriptions = new Set();
@@ -611,9 +610,8 @@ async function syncExamDb() {
   const node = ref(getDatabase(firebaseApp), EXAMDB_ROOT);
   const snap = await get(node);
   if (!snap.exists()) {
-    // Fresh cloud space: this device seeds it and marks the space managed.
+    // Fresh cloud space: this device seeds it.
     await pushExamDb();
-    try { await set(ref(getDatabase(firebaseApp), EXAMDB_SEEN), true); } catch {}
     return;
   }
   applyExamDbRemote(snap.val());
