@@ -17,9 +17,8 @@
    device-bound. The bridge signs in anonymously and every authenticated user
    of the project can read/write these nodes: it is a cross-device TEST bridge,
    not the final authentication or authorization architecture. */
-import { getAuth, signInAnonymously, setPersistence, browserLocalPersistence } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js';
-import { getDatabase, ref, get, set, runTransaction, onValue as firebaseOnValue } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js';
-import { firebaseApp, appCheckReady } from './firebase-config.js';
+import { firebaseApp, appCheckReady } from '../firebase/firebase-init.js';
+import { getAuth, signInAnonymously, setPersistence, browserLocalPersistence, getDatabase, ref, get, set, runTransaction, onValue as firebaseOnValue } from '../firebase/firebase-services.js';
 import { SYNCABLE, KEYS } from './database.js';
 import { STAFF_ACCOUNTS } from './staff-auth.js';
 import { encodeRealtimeRecords, decodeRealtimeRecords } from './realtime-value-codec.js';
