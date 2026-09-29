@@ -1,8 +1,8 @@
 // Active Plus — Firebase read-only diagnostic.
 // Does not clear, overwrite, or delete any LocalStorage/IndexedDB data.
-import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js';
-import { getDatabase, ref, get, onValue } from 'https://www.gstatic.com/firebasejs/12.2.1/firebase-database.js';
-import { firebaseApp, firebaseConfig, appCheckReady } from './firebase-config.js';
+import { firebaseApp, appCheckReady } from '../firebase/firebase-init.js';
+import { firebaseConfig } from '../firebase/firebase-config.js';
+import { getAuth, signInAnonymously, getDatabase, ref, get, onValue } from '../firebase/firebase-services.js';
 
 const waitForConnection = (db, timeoutMs = 8000) => new Promise(resolve => {
   let done = false;
