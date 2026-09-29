@@ -223,6 +223,17 @@ html[data-theme="dark"] .theme-switch .settings-icon {
   border-color: #28375a !important;
 }
 
+/* Typography and touch feedback for the row. Inside the student's compact
+   settings list the row matches its siblings; in a staff card it reads at the
+   card's own size. */
+.theme-switch strong { font-size: 13px; color: var(--ink); }
+.theme-switch small { margin-top: 2px; color: var(--muted); font-size: 11px; }
+.settings-list .theme-switch strong { font-size: 10px; }
+.settings-list .theme-switch small { font-size: 8px; }
+
+.theme-switch:active { transform: scale(.995); }
+.theme-switch:focus-within { outline: 2px solid rgba(37, 99, 235, .35); outline-offset: 2px; }
+
 html[data-theme="dark"] .theme-switch .toggle-switch input:checked + i { background: #a9bdff; }
 html[data-theme="dark"] .theme-switch .toggle-switch input:checked + i::after { background: #0a1020; }
 
