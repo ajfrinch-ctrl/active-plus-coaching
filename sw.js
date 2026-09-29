@@ -3,6 +3,8 @@ const APP_SHELL = [
   './js/panel-lockdown.js',
   './js/firebase-config.js',
   './js/firebase-online-test.js',
+  './js/firebase-diagnostic-ui.js',
+  './js/firebase-diagnostics.js',
   './js/firebase-diagnostics.js',
   './js/firebase-diagnostic-ui.js',
   './js/realtime-sync-entry.js',
