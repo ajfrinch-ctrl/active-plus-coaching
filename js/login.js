@@ -212,7 +212,7 @@ function withinBudget(promise, what, budget = ONLINE_BRIDGE_BUDGET_MS) {
 async function hydrateStaffAccountsOnline(what, budget = ONLINE_BRIDGE_BUDGET_MS) {
   if (!navigator.onLine) return;
   try {
-    const bridge = await withinBudget(import('./realtime-sync.js?v=20260929-fbaudit'), 'online bridge import', budget);
+    const bridge = await withinBudget(import('../sync/sync-core.js?v=20260929-protected'), 'online bridge import', budget);
     await withinBudget(bridge.hydrateStaffAccounts({ preserveLocalAdmin: staffAccountRecordExists('admin') }), 'online bridge hydrate', budget);
   } catch (error) {
     console.warn(`[Active Plus] staff account sync unavailable during ${what}:`, error.message);
@@ -228,7 +228,7 @@ async function hydrateStaffAccountsOnline(what, budget = ONLINE_BRIDGE_BUDGET_MS
 async function hydrateUserIdentifiersOnline(what, identifier = '', password = '', budget = LOGIN_IDENTITY_BUDGET_MS) {
   if (!navigator.onLine) return false;
   try {
-    const bridge = await withinBudget(import('./realtime-sync.js?v=20260929-fbaudit'), 'online identity import', budget);
+    const bridge = await withinBudget(import('../sync/sync-core.js?v=20260929-protected'), 'online identity import', budget);
     const result = await withinBudget(bridge.hydrateUserIdentifiers({ identifier, password }), 'online identity hydrate', budget);
     return result;
   } catch (error) {
