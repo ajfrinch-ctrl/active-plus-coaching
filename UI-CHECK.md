@@ -1,6 +1,6 @@
 # Active Plus — UI চেক রিপোর্ট
 
-তারিখ: ২০২৬-০৯-২৯ · ব্রাঞ্চ: `arena/01a0eacc-apc` (PR #31) · **এখনো লাইভ সাইটে যায়নি**
+তারিখ: ২০২৬-০৯-২৯ · ব্রাঞ্চ: `arena/01a0eacc-apc` · **PR #31 মার্জ হয়েছে — `main` = `024f72f`; লাইভ Pages সাইট (`ajfrinch-ctrl.github.io/apc`) এই সংস্করণই দেখাচ্ছে**
 
 প্রশ্ন ছিল: *“UI সব চেক করে দেখুন সব ফাংশান ঠিক মত কাজ করছে।”* — পাঁচটি পেজ, প্রতিটি
 সাইন-ইন অবস্থা ধরে প্রতিটি দৃশ্যের প্রতিটি নিয়ন্ত্রণ চালিয়ে দেখা হয়েছে।
@@ -15,7 +15,7 @@
 
 | ধাপ | কী | ফল |
 | --- | --- | --- |
-| ১ | `npm test` — আসল HTML পেজ + আসল JS মডিউল jsdom-এ চালানো ৪১১টি টেস্ট | সব পাস |
+| ১ | `npm test` — আসল HTML পেজ + আসল JS মডিউল jsdom-এ চালানো ৪১৭টি টেস্ট | সব পাস |
 | ২ | নতুন টুল `tests/ui-sweep.mjs` — প্রতিটি পেজ প্রতিটি সাইন-ইন অবস্থায় খুলে **প্রতিটি ফুটার-ভিউ ধরে প্রতিটি দৃশ্যমান নিয়ন্ত্রণ** চালায় (বাটন/লিংক ক্লিক, checkbox টগল, ইনপুট টাইপ, select বদল) এবং uncaught error / unhandled rejection ধরে | ৩১টি দৃশ্য, ৪৮০টি নিয়ন্ত্রণ, **০ ত্রুটি** (ফিক্সের পর) |
 | ৩ | থিম টগল যাচাই — পাঁচ পেজেই `#darkModeToggle` ক্লিক করে দেখা | সব পেজে `light → dark` এবং `active-plus-appearance-v2 = dark` সংরক্ষিত |
 | ৪ | লাইভ সার্ভার (পোর্ট ৮০০০) — হাতে ক্লিক করে দেখার জন্য পাঁচ পেজই | সব পেজ HTTP 200 |
@@ -130,8 +130,11 @@ node tests/ui-sweep.mjs admin.html admin
 node tests/ui-sweep.mjs manager.html manager
 node tests/ui-sweep.mjs teacher.html teacher
 node tests/ui-sweep.mjs payment.html payment
-npm test                                      # ৪১১টি টেস্ট
+npm test                                      # ৪১৭টি টেস্ট
 ```
+
+মার্জের পর লাইভ সাইটে যাচাই করা হয়েছে: `https://ajfrinch-ctrl.github.io/apc/js/rtdb-keys.js`
+ও `.../UI-CHECK.md` — দুটিই নতুন ফাইল হিসেবে ২০০ ফেরত দিচ্ছে, অর্থাৎ Pages এই সংস্করণই দেখাচ্ছে।
 
 লাইভ প্রিভিউ (স্যান্ডবক্স সার্ভার, পোর্ট ৮০০০): `/index.html`, `/admin.html`, `/manager.html`,
 `/teacher.html`, `/payment.html`। মনে রাখবেন — এটি আসল অ্যাপ: এখানে যা তৈরি করবেন তা
