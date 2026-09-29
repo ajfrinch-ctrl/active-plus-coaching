@@ -6,12 +6,12 @@
     const button = document.createElement('button');
     button.id = 'firebaseDiagnosticButton';
     button.type = 'button';
-    button.textContent = '☁ Firebase Sync Diagnostic';
-    button.style.cssText = 'display:block;width:100%;margin:14px 0 0;padding:11px 14px;border:1px solid #315efb;border-radius:14px;background:rgba(49,94,251,.08);color:#2146c7;font:600 13px/1.4 inherit;cursor:pointer;';
+    button.textContent = 'সিঙ্ক সংযোগ পরীক্ষা';
     const output = document.createElement('pre');
     output.id = 'firebaseDiagnosticOutput';
     output.hidden = true;
-    output.style.cssText = 'margin:10px 0 0;padding:12px;border:1px solid #dbe2ec;border-radius:14px;background:#f8faff;color:#18233d;font:12px/1.55 system-ui,sans-serif;white-space:pre-wrap;overflow:auto;';
+    output.setAttribute('role', 'status');
+    button.setAttribute('aria-controls', output.id);
     button.addEventListener('click', async () => {
       button.disabled = true;
       button.textContent = 'চেক হচ্ছে...';
@@ -33,7 +33,7 @@
         output.textContent = 'Diagnostic error: ' + (error?.message || error);
       } finally {
         button.disabled = false;
-        button.textContent = '☁ Firebase Sync Diagnostic';
+        button.textContent = 'সিঙ্ক সংযোগ পরীক্ষা';
       }
     });
     card.append(button, output);

@@ -1,3 +1,4 @@
+import { PRINT_COLORS } from './print-tokens.js';
 import { toBanglaNumber as bn } from './ui.js';
 import { loadAppConfig } from './storage.js';
 import { APP_TAGLINE, DEFAULT_APP_SETTINGS } from './config.js';
@@ -30,7 +31,7 @@ export function receiptMarkup(tx, logo = 'assets/icons/app-logo.png') {
       <div class="receipt-badge-title">${tx.status === 'pending' ? 'অস্থায়ী পেমেন্ট স্লিপ • অনুমোদন বাকি' : tx.status === 'rejected' ? 'বাতিল পেমেন্ট এন্ট্রি' : 'মানি রসিদ (PAID)'}</div>
     </div>
     <dl class="receipt-meta-grid">${fields.map(([label, value]) => `<div><dt>${label}</dt><dd>${escape(value)}</dd></div>`).join('')}</dl>
-    <div class="receipt-amount-block"><div><span>${tx.status === 'pending' ? 'Manager অনুমোদনাধীন টাকা' : tx.status === 'rejected' ? 'রেকর্ডকৃত এন্ট্রি (বাতিল)' : 'মোট পরিশোধিত টাকা'}</span><strong>৳${bn(Number(tx.amount).toLocaleString('en-US'))}</strong></div><span class="receipt-paid-seal">${tx.status === 'pending' ? '⏳ অনুমোদন বাকি' : tx.status === 'rejected' ? '✕ বাতিল' : '✓ পরিশোধিত'}</span></div>
+    <div class="receipt-amount-block"><div><span>${tx.status === 'pending' ? 'Manager অনুমোদনাধীন টাকা' : tx.status === 'rejected' ? 'রেকর্ডকৃত এন্ট্রি (বাতিল)' : 'মোট পরিশোধিত টাকা'}</span><strong>৳${bn(Number(tx.amount).toLocaleString('en-US'))}</strong></div><span class="receipt-paid-seal">${tx.status === 'pending' ? 'অনুমোদন বাকি' : tx.status === 'rejected' ? 'বাতিল' : 'পরিশোধিত'}</span></div>
     ${tx.reviewNote ? `<p class="receipt-note">Manager-এর কারণ: ${escape(tx.reviewNote)}</p>` : ''}
     <p class="receipt-note">নোট: ${escape(tx.note || (tx.status === 'pending' ? 'এন্ট্রি Manager-এর পর্যালোচনার অপেক্ষায়' : tx.status === 'rejected' ? 'এন্ট্রি অনুমোদিত হয়নি' : 'ফি পরিশোধ সম্পন্ন'))}</p>
     <div class="receipt-footer-sign"><div>আদায়কারী: ${escape(tx.collectedBy || 'এডমিন')}</div><div class="receipt-signature-line">কর্তৃপক্ষের স্বাক্ষর</div></div>
@@ -130,7 +131,7 @@ export async function renderReceiptCanvas(tx) {
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Receipt rendering unavailable');
   const width = 760, inset = 44, columnWidth = 320;
-  const forest = '#04795a', ink = '#20392e', muted = '#586e62';
+  const { forest, ink, muted } = PRINT_COLORS;
   // Measure first; allocate only as much canvas as the receipt needs (mobile memory).
   const fields = receiptFields(tx).map(([label, value]) => {
     ctx.font = '600 18px ReceiptBangla';
@@ -151,7 +152,7 @@ export async function renderReceiptCanvas(tx) {
   canvas.width = Math.ceil(width * scale);
   canvas.height = Math.ceil(height * scale);
   ctx.scale(scale, scale);
-  ctx.fillStyle = '#fff';
+  ctx.fillStyle = PRINT_COLORS.white;
   ctx.fillRect(0, 0, width, height);
   ctx.strokeStyle = forest;
   ctx.lineWidth = 2;
@@ -163,7 +164,7 @@ export async function renderReceiptCanvas(tx) {
     ctx.fillText(value, x, y);
   };
   const divider = y => {
-    ctx.strokeStyle = '#d5e2d9';
+    ctx.strokeStyle = PRINT_COLORS.line;
     ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(inset, y); ctx.lineTo(width - inset, y); ctx.stroke();
   };
@@ -183,7 +184,7 @@ export async function renderReceiptCanvas(tx) {
       if (index % 2) y += rowHeights[Math.floor(index / 2)];
     });
     y += 12;
-    ctx.fillStyle = '#eaf5ee';
+    ctx.fillStyle = PRINT_COLORS.mint;
     ctx.fillRect(inset, y, width - inset * 2, 94);
     text('মোট পরিশোধিত টাকা', inset + 20, y + 32, 17, forest, 500);
     text(`৳${bn(Number(tx.amount).toLocaleString('en-US'))}`, inset + 20, y + 72, 30, forest, 800);

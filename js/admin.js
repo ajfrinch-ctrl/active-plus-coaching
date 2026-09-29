@@ -1,3 +1,4 @@
+import { iconMarkup } from './icons.js';
 /* Admin panel — System Control + Staff Management + Permissions + Security +
    Data + Reports + Settings.
 
@@ -27,7 +28,7 @@ import { escapeHtml } from './sanitize.js';
 import { matchesStudentQuery } from './student-search.js';
 import { createAccess, CAPABILITIES, routeFromHash } from './admin-permissions.js';
 import { initAdminPanelShell } from './admin-panel-ui.js';
-import { paintIcon } from './admin-icons.js';
+import { paintIcon } from './icons.js';
 import { TEACHER_ASSIGNMENTS_KEY } from './teacher-assignments.js';
 import {
   BACKUP_STAMP_KEY,
@@ -306,7 +307,7 @@ function renderStudentOverviewStats() {
     ['শ্রেণি', classes, 'book']
   ].map(([label, value, iconName]) => `
     <div class="student-summary-card">
-      <span class="student-summary-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-${iconName}"></use></svg></span>
+      <span class="student-summary-icon" aria-hidden="true">${iconMarkup(`icon-${iconName}`)}</span>
       <div><small>${label}</small><strong>${bn(value)}</strong></div>
     </div>`).join('');
 }
@@ -334,7 +335,7 @@ function renderStudents() {
         return `
           <article class="student-row student-row-redesigned">
             <div class="student-row-main">
-              <span class="student-avatar" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-users"></use></svg></span>
+              <span class="student-avatar" aria-hidden="true">${iconMarkup("users")}</span>
               <div class="student-copy">
                 <div class="student-title-line">
                   <strong>${escapeHtml(student.name || 'নাম নেই')}</strong>
@@ -344,7 +345,7 @@ function renderStudents() {
                   <span class="audit-id-badge">ID: ${escapeHtml(student.id)}</span>
                   <span>${escapeHtml(student.className || 'শ্রেণি নেই')}${group}</span>
                 </div>
-                <small><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-phone"></use></svg>${escapeHtml(mobile)}</small>
+                <small>${iconMarkup("phone")}${escapeHtml(mobile)}</small>
               </div>
             </div>
             <div class="student-actions">
@@ -736,7 +737,7 @@ function renderRecentTransactions() {
       <div class="trx-item">
         <div class="trx-left">
           <span class="trx-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><use href="#icon-receipt"></use></svg>
+            ${iconMarkup("receipt")}
           </span>
           <div class="trx-info">
             <strong>${escapeHtml(tx.studentName)}</strong>

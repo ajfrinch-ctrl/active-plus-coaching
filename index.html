@@ -2,15 +2,15 @@
 <html lang="bn">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/; frame-src 'self' https://www.google.com/recaptcha/; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https: wss:; manifest-src 'self'; worker-src 'self'; base-uri 'self'; object-src 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/; frame-src 'self' https://www.google.com/recaptcha/; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https: wss:; manifest-src 'self'; worker-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'">
   <meta name="referrer" content="no-referrer">
   <script src="js/sanitize-url.js"></script>
+  <script src="js/app-entry.js?v=108" data-entry="student"></script>
   <script src="js/topbar-connectivity.js?v=20260929-topbar"></script>
   <script type="module" src="js/realtime-sync-entry.js"></script>
   <script src="js/appearance-boot.js"></script>
-  <script src="js/firebase-diagnostic-ui.js?v=20260929-login"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
-  <meta name="theme-color" content="#000000">
+  <meta name="theme-color" content="#f7f9fc">
   <meta name="description" content="Active Plus Coaching শিক্ষার্থী অ্যাপ — অফলাইনে রুটিন, ক্লাস, ফলাফল ও নোটিশ দেখুন।">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -23,16 +23,23 @@
   <link rel="icon" type="image/png" sizes="16x16" href="assets/icons/favicon-16.png">
   <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
   <link rel="preload" href="assets/fonts/NotoSansBengali-Variable.ttf" as="font" type="font/ttf" crossorigin>
-  <link rel="stylesheet" href="css/aurora.css?v=20260929-panelswitch">
+  <link rel="stylesheet" href="css/design-system.css?v=108">
+  <script type="module" src="js/ui-accessibility.js"></script>
+  <script src="js/launch-screen.js" defer></script>
 </head>
 <body>
   <!-- Authentication comes first. Credentials and registration data stay on this device. -->
   <section class="auth-screen" id="authScreen" aria-label="Active Plus লগইন">
-    <header class="app-topbar"><div class="app-topbar-inner"><div class="app-brand"><img class="app-brand-logo" src="assets/icons/logo-128.png" alt="Active Plus Coaching" width="38" height="38"><span class="app-brand-text"><strong class="app-brand-name">Active Plus Coaching</strong><small class="app-brand-slogan" data-fixed-tagline>শিখতে থাকো, এগিয়ে যাও</small></span></div></div></header>
+
     <div class="auth-card">
+      <div class="auth-brand">
+        <img src="assets/icons/logo-128.png" alt="Active Plus Coaching" width="88" height="88">
+        <h1>Active Plus Coaching</h1>
+        <p>শিখতে থাকো, এগিয়ে যাও</p>
+      </div>
       <div class="auth-tabs" role="tablist" aria-label="অ্যাকাউন্ট অপশন">
-        <button class="auth-tab active" type="button" data-auth-tab="login" role="tab" aria-selected="true">লগইন</button>
-        <button class="auth-tab" type="button" data-auth-tab="register" role="tab" aria-selected="false">রেজিস্ট্রেশন</button>
+        <button class="auth-tab active" type="button" data-auth-tab="login" role="tab" aria-controls="loginPanel" aria-selected="true">লগইন</button>
+        <button class="auth-tab" type="button" data-auth-tab="register" role="tab" aria-controls="registerPanel" aria-selected="false">রেজিস্ট্রেশন</button>
       </div>
       <p class="auth-message" id="authMessage" role="status" hidden></p>
 
@@ -40,11 +47,11 @@
         <div class="auth-panel-heading"><div><h2>লগইন</h2></div></div>
         <form id="loginForm" novalidate>
           <label for="loginMobile">ইউজারনেম, মোবাইল নম্বর অথবা Student ID</label>
-          <div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-user"></use></svg><input id="loginMobile" name="mobile" type="text" autocomplete="username" placeholder="ইউজারনেম / ০১XXXXXXXXX / Student ID" required></div>
+          <div class="input-wrap"><svg class="" data-icon="user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0M4 21v-2a8 8 0 0 1 16 0v2"/></svg><input id="loginMobile" name="mobile" type="text" autocomplete="username" placeholder="ইউজারনেম / ০১XXXXXXXXX / Student ID" required></div>
           <label for="loginPin">পাসওয়ার্ড</label>
-          <div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg><input id="loginPin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="32" autocomplete="current-password" placeholder="৪–৬ সংখ্যার পাসওয়ার্ড" required><button class="show-pin" type="button" data-toggle-pin="loginPin" aria-label="পাসওয়ার্ড দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg></button></div>
+          <div class="input-wrap"><svg class="" data-icon="lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 10h14v11H5zM8 10V6a4 4 0 0 1 8 0v4"/></svg><input id="loginPin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="32" autocomplete="current-password" placeholder="আপনার পাসওয়ার্ড" required><button class="show-pin" type="button" data-toggle-pin="loginPin" aria-label="পাসওয়ার্ড দেখুন"><svg class="" data-icon="eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M2 12q10-15 20 0-10 15-20 0M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0"/></svg></button></div>
           <div class="form-row"><label class="remember-label"><input type="checkbox" id="rememberMe" checked><span class="fake-check"></span>এই ডিভাইসে মনে রাখুন</label><button type="button" class="link-button" id="forgotPinButton">পাসওয়ার্ড ভুলে গেছেন?</button></div>
-          <button class="auth-submit" type="submit">লগইন করুন <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg></button>
+          <button class="auth-submit" type="submit" disabled>লগইন করুন <svg class="" data-icon="arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 12h16M14 6l6 6-6 6"/></svg></button>
         </form>
         <!-- First use only: shown by js/login.js while this device has no Admin
              record at all. Once the first Admin exists it is removed. -->
@@ -63,7 +70,7 @@
         <form id="firstAdminForm" novalidate autocomplete="off">
           <label for="firstAdminName">পূর্ণ নাম</label>
           <div class="input-wrap">
-            <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-user"></use></svg>
+            <svg class="" data-icon="user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0M4 21v-2a8 8 0 0 1 16 0v2"/></svg>
             <input id="firstAdminName" name="fullName" type="text" autocomplete="name" maxlength="100" placeholder="যেমন: Rasal Russell Chowdhury" required>
           </div>
 
@@ -73,32 +80,32 @@
 
           <label for="firstAdminMobile">মোবাইল নম্বর</label>
           <div class="input-wrap">
-            <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-phone"></use></svg>
+            <svg class="" data-icon="phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 3h5l2 5-3 2 6 6 2-3 5 2v5q-1 3-7 0Q4 16 3 7z"/></svg>
             <input id="firstAdminMobile" name="mobile" type="tel" inputmode="tel" autocomplete="tel" placeholder="01XXXXXXXXX" required>
           </div>
 
           <label for="firstAdminEmail">ইমেইল (ঐচ্ছিক)</label>
           <div class="input-wrap">
-            <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-mail"></use></svg>
+            <svg class="" data-icon="mail" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 5h18v14H3zM3 5l9 8 9-8"/></svg>
             <input id="firstAdminEmail" name="email" type="email" autocomplete="email" maxlength="254" placeholder="name@example.com">
           </div>
 
           <label for="firstAdminPassword">পাসওয়ার্ড</label>
           <div class="input-wrap">
-            <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg>
+            <svg class="" data-icon="lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 10h14v11H5zM8 10V6a4 4 0 0 1 8 0v4"/></svg>
             <input id="firstAdminPassword" name="password" type="password" autocomplete="new-password" minlength="6" maxlength="32" placeholder="৬–৩২ অক্ষর" required>
-            <button class="show-pin" type="button" data-toggle-pin="firstAdminPassword" aria-label="পাসওয়ার্ড দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg></button>
+            <button class="show-pin" type="button" data-toggle-pin="firstAdminPassword" aria-label="পাসওয়ার্ড দেখুন"><svg class="" data-icon="eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M2 12q10-15 20 0-10 15-20 0M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0"/></svg></button>
           </div>
 
           <label for="firstAdminConfirm">পাসওয়ার্ড নিশ্চিত করুন</label>
           <div class="input-wrap">
-            <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg>
+            <svg class="" data-icon="lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 10h14v11H5zM8 10V6a4 4 0 0 1 8 0v4"/></svg>
             <input id="firstAdminConfirm" name="confirmPassword" type="password" autocomplete="new-password" minlength="6" maxlength="32" placeholder="একই পাসওয়ার্ড আবার লিখুন" required>
-            <button class="show-pin" type="button" data-toggle-pin="firstAdminConfirm" aria-label="পাসওয়ার্ড দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg></button>
+            <button class="show-pin" type="button" data-toggle-pin="firstAdminConfirm" aria-label="পাসওয়ার্ড দেখুন"><svg class="" data-icon="eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M2 12q10-15 20 0-10 15-20 0M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0"/></svg></button>
           </div>
 
           <p class="auth-message" id="firstAdminError" role="alert" hidden></p>
-          <button class="auth-submit" type="submit">Admin Account তৈরি করুন <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-check-circle"></use></svg></button>
+          <button class="auth-submit" type="submit">Admin Account তৈরি করুন <svg class="" data-icon="check-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0m-13 0 3 3 5-6"/></svg></button>
           <p class="auth-footnote"><button type="button" class="inline-link" data-auth-tab="login">← লগইনে ফিরুন</button></p>
         </form>
       </div>
@@ -114,19 +121,19 @@
           <section class="registration-step active" data-registration-step="1" data-step-title="অ্যাকাউন্ট তথ্য" aria-labelledby="stepOneTitle">
             <div class="form-section-title"><span>০১</span><div><strong id="stepOneTitle">অ্যাকাউন্ট তথ্য</strong><small>লগইনের জন্য ব্যবহার হবে</small></div></div>
             <div class="field-grid">
-              <div class="field full"><label for="regMobile">মোবাইল নম্বর <i>*</i></label><div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-phone"></use></svg><input id="regMobile" name="mobile" type="tel" inputmode="numeric" autocomplete="tel" placeholder="০১XXXXXXXXX" required></div></div>
+              <div class="field full"><label for="regMobile">মোবাইল নম্বর <i>*</i></label><div class="input-wrap"><svg class="" data-icon="phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 3h5l2 5-3 2 6 6 2-3 5 2v5q-1 3-7 0Q4 16 3 7z"/></svg><input id="regMobile" name="mobile" type="tel" inputmode="numeric" autocomplete="tel" placeholder="০১XXXXXXXXX" required></div></div>
               <div class="field full">
                 <label for="regUsername">ইউজারনেম <i>*</i></label>
-                <div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-user"></use></svg><input id="regUsername" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" minlength="4" maxlength="20" placeholder="যেমন: raisa.islam" aria-describedby="regUsernameHint" required></div>
+                <div class="input-wrap"><svg class="" data-icon="user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0M4 21v-2a8 8 0 0 1 16 0v2"/></svg><input id="regUsername" name="username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" minlength="4" maxlength="20" placeholder="যেমন: raisa.islam" aria-describedby="regUsernameHint" required></div>
                 <div class="username-row">
                   <button class="link-button" type="button" id="regUsernameSuggest">নাম থেকে সাজেশন নিন</button>
-                  <span class="username-lock-note"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg> একবার সেট হলে আর বদলানো যাবে না</span>
+                  <span class="username-lock-note"><svg class="" data-icon="lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 10h14v11H5zM8 10V6a4 4 0 0 1 8 0v4"/></svg> একবার সেট হলে আর বদলানো যাবে না</span>
                 </div>
                 <p id="regUsernameStatus" class="username-status" role="status" aria-live="polite"></p>
                 <small id="regUsernameHint" class="fixed-field-note">৪–২০ অক্ষর; ইংরেজি অক্ষর দিয়ে শুরু, তারপর ছোট হাতের অক্ষর/সংখ্যা/ডট/আন্ডারস্কোর। লগইনে মোবাইল নম্বরের বদলে এটি ব্যবহার করা যাবে — নম্বর কাউকে বলতে হবে না।</small>
               </div>
-              <div class="field"><label for="regPin">পাসওয়ার্ড <i>*</i></label><div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg><input id="regPin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="6" placeholder="৪–৬ সংখ্যার পাসওয়ার্ড" required><button class="show-pin" type="button" data-toggle-pin="regPin" aria-label="পাসওয়ার্ড দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg></button></div></div>
-              <div class="field"><label for="regPinConfirm">পাসওয়ার্ড আবার দিন <i>*</i></label><div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg><input id="regPinConfirm" name="pinConfirm" type="password" inputmode="numeric" minlength="4" maxlength="6" placeholder="পাসওয়ার্ড মিলান" required><button class="show-pin" type="button" data-toggle-pin="regPinConfirm" aria-label="পাসওয়ার্ড দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg></button></div></div>
+              <div class="field"><label for="regPin">পাসওয়ার্ড <i>*</i></label><div class="input-wrap"><svg class="" data-icon="lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 10h14v11H5zM8 10V6a4 4 0 0 1 8 0v4"/></svg><input id="regPin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="6" placeholder="৪–৬ সংখ্যার পাসওয়ার্ড" required><button class="show-pin" type="button" data-toggle-pin="regPin" aria-label="পাসওয়ার্ড দেখুন"><svg class="" data-icon="eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M2 12q10-15 20 0-10 15-20 0M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0"/></svg></button></div></div>
+              <div class="field"><label for="regPinConfirm">পাসওয়ার্ড আবার দিন <i>*</i></label><div class="input-wrap"><svg class="" data-icon="lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 10h14v11H5zM8 10V6a4 4 0 0 1 8 0v4"/></svg><input id="regPinConfirm" name="pinConfirm" type="password" inputmode="numeric" minlength="4" maxlength="6" placeholder="পাসওয়ার্ড মিলান" required><button class="show-pin" type="button" data-toggle-pin="regPinConfirm" aria-label="পাসওয়ার্ড দেখুন"><svg class="" data-icon="eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M2 12q10-15 20 0-10 15-20 0M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0"/></svg></button></div></div>
             </div>
             <p class="fixed-field-note">৪–৬ সংখ্যার পাসওয়ার্ড দিন। প্রথম মোবাইল নম্বর আর পরিবর্তন করা যাবে না।</p><div class="step-actions"><span></span><button type="button" class="step-next" data-next-step>পরের অংশ <span>→</span></button></div>
           </section>
@@ -148,7 +155,7 @@
           <section class="registration-step" data-registration-step="3" data-step-title="যোগাযোগের তথ্য" aria-labelledby="stepThreeTitle" hidden>
             <div class="form-section-title"><span>০৩</span><div><strong id="stepThreeTitle">যোগাযোগের তথ্য</strong><small>প্রয়োজনে যোগাযোগের জন্য</small></div></div>
             <div class="field-grid">
-              <div class="field full"><label for="studentMobile">যোগাযোগের মোবাইল <i>*</i></label><div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-phone"></use></svg><input id="studentMobile" name="studentMobile" type="tel" inputmode="numeric" placeholder="প্রথম ধাপের মোবাইল নম্বর" readonly required></div><small class="fixed-field-note">প্রথম নিবন্ধনের নম্বর স্থায়ী থাকবে। পরে শুধু অতিরিক্ত নম্বর যোগ করা যাবে।</small></div>
+              <div class="field full"><label for="studentMobile">যোগাযোগের মোবাইল <i>*</i></label><div class="input-wrap"><svg class="" data-icon="phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 3h5l2 5-3 2 6 6 2-3 5 2v5q-1 3-7 0Q4 16 3 7z"/></svg><input id="studentMobile" name="studentMobile" type="tel" inputmode="numeric" placeholder="প্রথম ধাপের মোবাইল নম্বর" readonly required></div><small class="fixed-field-note">প্রথম নিবন্ধনের নম্বর স্থায়ী থাকবে। পরে শুধু অতিরিক্ত নম্বর যোগ করা যাবে।</small></div>
               <div class="field full"><label for="guardianMobile">অভিভাবকের মোবাইল <i>*</i></label><input id="guardianMobile" name="guardianMobile" type="tel" inputmode="numeric" placeholder="অভিভাবকের নম্বর" required></div>
               <div class="field full"><label for="address">সম্পূর্ণ ঠিকানা <i>*</i></label><textarea id="address" name="address" rows="3" placeholder="বাড়ি, গ্রাম/রোড, ডাকঘর, উপজেলা, জেলা" required></textarea></div>
             </div>
@@ -175,7 +182,7 @@
               <div class="field full"><label for="securityAnswer">নিরাপত্তা প্রশ্নের উত্তর <i>*</i></label><input id="securityAnswer" name="securityAnswer" type="text" placeholder="উত্তরটি লিখুন" required></div>
             </div>
             <label class="terms-label"><input type="checkbox" id="terms" name="terms" required><span class="fake-check"></span><span>আমি Active Plus Coaching-এর নিয়ম ও শর্তে সম্মত আছি। <i>*</i></span></label>
-            <div class="step-actions"><button type="button" class="step-back" data-previous-step>← আগের অংশ</button><button class="auth-submit step-submit" type="submit">রেজিস্ট্রেশন সম্পন্ন করুন <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg></button></div>
+            <div class="step-actions"><button type="button" class="step-back" data-previous-step>← আগের অংশ</button><button class="auth-submit step-submit" type="submit">রেজিস্ট্রেশন সম্পন্ন করুন <svg class="" data-icon="arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 12h16M14 6l6 6-6 6"/></svg></button></div>
           </section>
         </form>
       </div>
@@ -194,21 +201,21 @@
       <div class="pending-info"><span>✓</span><p>শিক্ষক বা এডমিন অনুমোদন দিলে এই মোবাইল নম্বর ও পাসওয়ার্ড দিয়ে আবার লগইন করো।</p></div>
       <button class="pending-logout" type="button" id="pendingLogout">লগইন পেইজে ফিরে যান</button>
     </section>
-    <header class="app-topbar" id="studentHeader"><div class="app-topbar-inner"><div class="app-brand"><img class="app-brand-logo" src="assets/icons/logo-128.png" alt="Active Plus Coaching" width="38" height="38"><span class="app-brand-text"><strong class="app-brand-name">শিক্ষার্থী অ্যাপ</strong><small class="app-brand-slogan" data-fixed-tagline>শিখতে থাকো, এগিয়ে যাও</small></span></div><div class="app-topbar-actions"><button class="app-topbar-icon notification-button" id="notificationButton" type="button" aria-label="নোটিশ দেখুন" aria-haspopup="dialog"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-bell"></use></svg><span class="notification-dot" hidden aria-hidden="true"></span></button><button class="app-topbar-icon app-topbar-exit" id="studentLogout" data-action="logout" type="button" title="লগআউট" aria-label="লগআউট"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-logout"></use></svg></button></div></div></header>
+    <header class="app-topbar" id="studentHeader"><div class="app-topbar-inner"><div class="app-brand"><img class="app-brand-logo" src="assets/icons/logo-128.png" alt="Active Plus Coaching" width="38" height="38"><span class="app-brand-text"><strong class="app-brand-name">শিক্ষার্থী অ্যাপ</strong><small class="app-brand-slogan" data-fixed-tagline>শিখতে থাকো, এগিয়ে যাও</small></span></div><div class="app-topbar-actions"><button class="app-topbar-icon notification-button" id="notificationButton" type="button" aria-label="নোটিশ দেখুন" aria-haspopup="dialog"><svg class="" data-icon="bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M18 9a6 6 0 0 0-12 0v6l-2 3h16l-2-3zM10 21h4"/></svg><span class="notification-dot" hidden aria-hidden="true"></span></button><button class="app-topbar-icon app-topbar-exit" id="studentLogout" data-action="logout" type="button" title="লগআউট" aria-label="লগআউট"><svg class="" data-icon="logout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10 3H3v18h7M8 12h13M16 7l5 5-5 5"/></svg></button></div></div></header>
 
     <main class="app-main" id="appMain">
-      <!-- HOME — ShopLedGer-style home: welcome card, today card, quick actions, list rows -->
+
       <section class="view active student-home-view" id="homeView" data-view-panel="home" aria-labelledby="homeTitle">
         <section class="study-progress-card" aria-labelledby="homeTitle">
           <div class="study-progress-top">
-            <span class="study-progress-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-trending"></use></svg></span>
+            <span class="study-progress-icon" aria-hidden="true"><svg class="" data-icon="trending" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 3v18h17M8 17v-6M13 17V6M18 17V9"/></svg></span>
             <div class="study-progress-heading"><p id="dayGreeting">শুভ সকাল</p><h1 id="homeTitle">পড়াশোনার অগ্রগতি</h1></div>
             <div class="progress-ring" id="studyProgressRing" role="img" aria-label="আজকের অগ্রগতি ০ শতাংশ"><div><strong id="studyProgressValue">০%</strong><small>সম্পন্ন</small></div></div>
           </div>
           <div class="study-progress-stats">
-            <div><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-book"></use></svg><span><strong id="dashboardDoneCount">০টি কাজ</strong><small>সম্পন্ন হয়েছে</small></span></div>
-            <div><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-clock"></use></svg><span><strong id="dashboardPendingCount">০টি কাজ</strong><small>বাকি আছে</small></span></div>
-            <div><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-clipboard"></use></svg><span><strong id="dashboardExamCount">০টি পরীক্ষা</strong><small>প্রকাশিত</small></span></div>
+            <div><svg class="" data-icon="book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 5Q7 2 3 4v16q4-2 9 1 5-3 9-1V4q-4-2-9 1v16"/></svg><span><strong id="dashboardDoneCount">০টি কাজ</strong><small>সম্পন্ন হয়েছে</small></span></div>
+            <div><svg class="" data-icon="clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0M12 6v6l4 2"/></svg><span><strong id="dashboardPendingCount">০টি কাজ</strong><small>বাকি আছে</small></span></div>
+            <div><svg class="" data-icon="clipboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M8 4H5v17h14V4h-3M8 2h8v5H8zM8 11h8M8 15h5"/></svg><span><strong id="dashboardExamCount">০টি পরীক্ষা</strong><small>প্রকাশিত</small></span></div>
           </div>
           <p class="study-progress-note" id="studyProgressNote">শিক্ষকের প্রকাশিত কাজের ভিত্তিতে অগ্রগতি দেখানো হবে।</p>
         </section>
@@ -219,7 +226,7 @@
         </section>
 
         <section class="dashboard-exam-card" id="dashboardExamCard" hidden>
-          <span class="dashboard-feature-icon exam-feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-clipboard"></use></svg></span>
+          <span class="dashboard-feature-icon exam-feature-icon" aria-hidden="true"><svg class="" data-icon="clipboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M8 4H5v17h14V4h-3M8 2h8v5H8zM8 11h8M8 15h5"/></svg></span>
           <div class="dashboard-feature-copy"><strong id="dashboardExamTitle">অনলাইন পরীক্ষা</strong><small id="dashboardExamMeta">প্রকাশিত পরীক্ষা ও ফলাফল দেখুন</small></div>
           <button type="button" class="dashboard-primary-action" data-view="exams">পরীক্ষায় যান <span aria-hidden="true">→</span></button>
         </section>
@@ -233,7 +240,7 @@
         <section class="dashboard-section daily-challenge-section" aria-labelledby="dailyChallengeTitle">
           <div class="dashboard-section-heading"><h2 id="dailyChallengeTitle"><span class="challenge-star" aria-hidden="true">★</span> আজকের পড়াশোনা</h2><button type="button" class="dashboard-text-link" data-view="courses">সব কাজ <span aria-hidden="true">›</span></button></div>
           <article class="challenge-card" id="dashboardChallengeCard">
-            <span class="challenge-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-award"></use></svg></span>
+            <span class="challenge-icon" aria-hidden="true"><svg class="" data-icon="award" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M17 8A5 5 0 1 1 7 8a5 5 0 0 1 10 0M8 13 6 22l6-3 6 3-2-9"/></svg></span>
             <div class="challenge-copy"><strong id="dashboardChallengeTitle">তোমার জন্য কাজ খুঁজছি…</strong><small id="dashboardChallengeMeta">শিক্ষকের দেওয়া কাজ ও উপকরণ</small><span class="challenge-progress-track"><i id="dashboardChallengeProgress"></i></span></div>
             <button type="button" class="challenge-open" data-view="courses" aria-label="পড়াশোনার কাজ খুলুন">›</button>
           </article>
@@ -244,7 +251,7 @@
       <section class="view" id="routineView" data-view-panel="routine" aria-labelledby="routineTitle">
         <div class="page-intro"><p class="eyebrow">সপ্তাহের পরিকল্পনা</p><h1 id="routineTitle">ক্লাস রুটিন</h1><p>তোমার ক্লাসগুলো এক জায়গায়, একদম সহজে।</p></div>
         <section class="teaching-board" id="teacherRoutineBoard" aria-labelledby="teacherRoutineTitle" hidden><h2 id="teacherRoutineTitle">শিক্ষকের নির্ধারিত ক্লাস</h2><p>তারিখ অনুযায়ী ক্লাস ও উপস্থিতি। অফিসের রুটিন এখানে দেখা যাবে।</p><div class="learning-list" id="teacherRoutineList"></div></section>
-        <div class="class-context"><span class="mini-avatar">দ</span><span><small>বর্তমান ক্লাস</small><strong id="routineClass">শ্রেণি এখনও যোগ হয়নি</strong></span><button type="button" data-view="profile" aria-label="ক্লাসের প্রোফাইল দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-chevron-right"></use></svg></button></div>
+        <div class="class-context"><span class="mini-avatar">দ</span><span><small>বর্তমান ক্লাস</small><strong id="routineClass">শ্রেণি এখনও যোগ হয়নি</strong></span><button type="button" data-view="profile" aria-label="ক্লাসের প্রোফাইল দেখুন"><svg class="" data-icon="chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 12h16M14 6l6 6-6 6"/></svg></button></div>
         <div class="day-tabs" role="tablist" aria-label="সপ্তাহের দিন">
           <button class="day-tab active" type="button" data-day="sat" role="tab"><small>শনি</small><strong>২১</strong></button>
           <button class="day-tab" type="button" data-day="sun" role="tab"><small>রবি</small><strong>২২</strong></button>
@@ -253,7 +260,7 @@
           <button class="day-tab" type="button" data-day="wed" role="tab"><small>বুধ</small><strong>২৫</strong></button>
           <button class="day-tab" type="button" data-day="thu" role="tab"><small>বৃহস্পতি</small><strong>২৬</strong></button>
         </div>
-        <div class="routine-date"><span class="calendar-dot"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-calendar"></use></svg></span><span id="routineDate">শনিবার, ২১ সেপ্টেম্বর ২০২৬</span><span class="class-count" id="classCount">০টি ক্লাস</span></div>
+        <div class="routine-date"><span class="calendar-dot"><svg class="" data-icon="calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2M7 3v4M17 3v4M3 11h18M7 15h2M15 15h2"/></svg></span><span id="routineDate">শনিবার, ২১ সেপ্টেম্বর ২০২৬</span><span class="class-count" id="classCount">০টি ক্লাস</span></div>
         <div class="routine-list" id="routineList"></div>
         <div class="empty-routine" id="emptyRoutine" hidden><span>☕</span><strong>আজ কোনো ক্লাস নেই</strong><p>এই দিনটি নিজের পড়াশোনার জন্য কাজে লাগাও।</p></div>
       </section>
@@ -263,7 +270,7 @@
         <div class="page-intro"><p class="eyebrow">চলমান পড়াশোনা</p><h1 id="coursesTitle">আমার কোর্স</h1><p>প্রতিটি বিষয়ে নিজের অগ্রগতি দেখে নাও।</p></div>
         <button class="exam-link" type="button" data-view="exams">পরীক্ষা দাও<small>MCQ, লিখিত ও সংক্ষিপ্ত পরীক্ষা • সবার ফলাফল</small></button>
         <section class="teaching-board" id="learningBoard" aria-labelledby="learningTitle">
-          <div class="learning-heading"><span class="learning-home-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-book"></use></svg></span><div><h2 id="learningTitle">শিক্ষকের দেওয়া কাজ</h2><p id="learningCount" role="status"></p></div></div>
+          <div class="learning-heading"><span class="learning-home-icon" aria-hidden="true"><svg class="" data-icon="book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 5Q7 2 3 4v16q4-2 9 1 5-3 9-1V4q-4-2-9 1v16"/></svg></span><div><h2 id="learningTitle">শিক্ষকের দেওয়া কাজ</h2><p id="learningCount" role="status"></p></div></div>
           <div class="learning-summary" id="learningSummary" aria-label="কাজের সারসংক্ষেপ"></div>
           <div class="learning-filter" id="learningFilters" aria-label="কাজের ধরন">
             <button type="button" data-learning-filter="all" aria-pressed="true">সব</button>
@@ -291,26 +298,26 @@
       <!-- PROFILE -->
       <section class="view" id="profileView" data-view-panel="profile" aria-labelledby="profileTitle">
         <div class="page-intro profile-intro"><p class="eyebrow">তোমার তথ্য</p><h1 id="profileTitle">প্রোফাইল</h1><p>তোমার শিক্ষার্থী অ্যাকাউন্টের তথ্য।</p></div>
-        <article class="profile-card"><div class="profile-avatar" id="profileAvatar">শি</div><div><h2 id="profileName">শিক্ষার্থী</h2><p id="profileMeta">শ্রেণি এখনও যোগ হয়নি</p><span class="student-id" data-copy-target="studentId" role="button" tabindex="0" title="ID কপি করতে চাপুন">ID: <b id="studentId">—</b></span><span class="student-id username-chip" id="profileUsernameWrap" data-copy-target="profileUsername" role="button" tabindex="0" title="ইউজারনেম কপি করতে চাপুন" hidden>@<b id="profileUsername"></b></span></div><button class="edit-button" type="button" data-action="edit-profile" aria-label="প্রোফাইল সম্পাদনা"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-edit"></use></svg></button></article>
-        <article class="contact-card"><div class="contact-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-phone"></use></svg></div><div class="contact-copy"><span>শিক্ষার্থীর মোবাইল</span><strong id="studentMobileValue">নম্বর নেই</strong><small>অভিভাবক · <b id="guardianMobileValue">নম্বর নেই</b></small><small id="studentAdditionalMobiles" hidden></small></div><button class="whatsapp-button" type="button" data-action="whatsapp-share" aria-label="WhatsApp-এ তথ্য শেয়ার করুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-whatsapp"></use></svg><span>WhatsApp</span></button></article>
-        <div class="profile-section"><p class="eyebrow">অ্যাকাউন্ট</p><div class="settings-list"><button type="button" data-action="edit-profile"><span class="settings-icon mint"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-user"></use></svg></span><span><strong>ব্যক্তিগত তথ্য</strong><small>নাম, ক্লাস ও বিভাগ</small></span><svg class="setting-arrow" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-chevron-right"></use></svg></button><button type="button" data-action="show-offline"><span class="settings-icon green"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-download"></use></svg></span><span><strong>অফলাইন ডেটা</strong><small>সব ডেটা এই ফোনেই সংরক্ষিত</small></span><span class="saved-tag">সংরক্ষিত</span></button><button type="button" data-action="install"><span class="settings-icon purple"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-smartphone"></use></svg></span><span><strong>অ্যাপ ইনস্টল করুন</strong><small>হোম স্ক্রিন থেকে দ্রুত খুলুন</small></span><svg class="setting-arrow" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-chevron-right"></use></svg></button><label class="settings-toggle theme-switch"><span class="settings-icon purple theme-switch-icon" aria-hidden="true"><svg class="icon-sun" viewBox="0 0 24 24"><use href="#icon-sun"></use></svg><svg class="icon-moon" viewBox="0 0 24 24"><use href="#icon-moon"></use></svg></span><span><strong>গাঢ় থিম</strong><small>চালু করলে রাতে চোখের আরাম</small></span><span class="toggle-switch"><input type="checkbox" id="darkModeToggle"><i></i></span></label></div></div>
+        <article class="profile-card"><div class="profile-avatar" id="profileAvatar">শি</div><div><h2 id="profileName">শিক্ষার্থী</h2><p id="profileMeta">শ্রেণি এখনও যোগ হয়নি</p><span class="student-id" data-copy-target="studentId" role="button" tabindex="0" title="ID কপি করতে চাপুন">ID: <b id="studentId">—</b></span><span class="student-id username-chip" id="profileUsernameWrap" data-copy-target="profileUsername" role="button" tabindex="0" title="ইউজারনেম কপি করতে চাপুন" hidden>@<b id="profileUsername"></b></span></div><button class="edit-button" type="button" data-action="edit-profile" aria-label="প্রোফাইল সম্পাদনা"><svg class="" data-icon="edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m4 16 12-12 4 4L8 20H4zM13 7l4 4"/></svg></button></article>
+        <article class="contact-card"><div class="contact-icon"><svg class="" data-icon="phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 3h5l2 5-3 2 6 6 2-3 5 2v5q-1 3-7 0Q4 16 3 7z"/></svg></div><div class="contact-copy"><span>শিক্ষার্থীর মোবাইল</span><strong id="studentMobileValue">নম্বর নেই</strong><small>অভিভাবক · <b id="guardianMobileValue">নম্বর নেই</b></small><small id="studentAdditionalMobiles" hidden></small></div><button class="whatsapp-button" type="button" data-action="whatsapp-share" aria-label="WhatsApp-এ তথ্য শেয়ার করুন"><svg class="" data-icon="whatsapp" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0M9 9a3 3 0 1 1 4 3l-1 1v1M12 17v1"/></svg><span>WhatsApp</span></button></article>
+        <div class="profile-section"><p class="eyebrow">অ্যাকাউন্ট</p><div class="settings-list"><button type="button" data-action="edit-profile"><span class="settings-icon mint"><svg class="" data-icon="user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0M4 21v-2a8 8 0 0 1 16 0v2"/></svg></span><span><strong>ব্যক্তিগত তথ্য</strong><small>নাম, ক্লাস ও বিভাগ</small></span><svg class="setting-arrow" data-icon="chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 12h16M14 6l6 6-6 6"/></svg></button><button type="button" data-action="show-offline"><span class="settings-icon green"><svg class="" data-icon="download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3v12M7 10l5 5 5-5M4 16v5h16v-5"/></svg></span><span><strong>অফলাইন ডেটা</strong><small>সব ডেটা এই ফোনেই সংরক্ষিত</small></span><span class="saved-tag">সংরক্ষিত</span></button><button type="button" data-action="install"><span class="settings-icon purple"><svg class="" data-icon="smartphone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 2h12v20H6zM10 18h4"/></svg></span><span><strong>অ্যাপ ইনস্টল করুন</strong><small>হোম স্ক্রিন থেকে দ্রুত খুলুন</small></span><svg class="setting-arrow" data-icon="chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 12h16M14 6l6 6-6 6"/></svg></button><label class="settings-toggle theme-switch"><span class="settings-icon purple theme-switch-icon" aria-hidden="true"><svg class="icon-sun" data-icon="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1 1M18 18l1 1M5 19l1-1M18 6l1-1"/></svg><svg class="icon-moon" data-icon="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20 15A9 9 0 0 1 9 4a9 9 0 1 0 11 11"/></svg></span><span><strong>গাঢ় থিম</strong><small>চালু করলে রাতে চোখের আরাম</small></span><span class="toggle-switch"><input type="checkbox" id="darkModeToggle"><i></i></span></label></div></div>
         <div class="profile-section"><p class="eyebrow">আমার রিপোর্ট</p><div id="studentReports" class="rp-mount"></div></div>
         <div class="profile-section"><p class="eyebrow">নিরাপত্তা</p><div class="settings-list">
-          <label class="settings-toggle"><span class="settings-icon mint"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-shield"></use></svg></span><span><strong>প্রতিবার পাসওয়ার্ড চেক বন্ধ রাখুন</strong><small>চালু করলে অ্যাপ খুলতে আর পাসওয়ার্ড লাগবে না</small></span><span class="toggle-switch"><input type="checkbox" id="skipSecurityToggle"><i></i></span></label>
-          <label class="settings-toggle"><span class="settings-icon green"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-smartphone"></use></svg></span><span><strong>এই ডিভাইস বিশ্বস্ত</strong><small>৯০ দিন পর্যন্ত লগইন মনে রাখবে</small></span><span class="toggle-switch"><input type="checkbox" id="trustedDeviceToggle" checked><i></i></span></label>
-          <button type="button" class="logout-button" data-action="logout"><span class="settings-icon danger"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-logout"></use></svg></span><span><strong>লগআউট</strong><small>এই ডিভাইস থেকে বের হয়ে যান</small></span></button>
+          <label class="settings-toggle"><span class="settings-icon mint"><svg class="" data-icon="shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m12 3 8 3v6q0 6-8 10-8-4-8-10V6zM8 12l3 3 5-6"/></svg></span><span><strong>প্রতিবার পাসওয়ার্ড চেক বন্ধ রাখুন</strong><small>চালু করলে অ্যাপ খুলতে আর পাসওয়ার্ড লাগবে না</small></span><span class="toggle-switch"><input type="checkbox" id="skipSecurityToggle"><i></i></span></label>
+          <label class="settings-toggle"><span class="settings-icon green"><svg class="" data-icon="smartphone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 2h12v20H6zM10 18h4"/></svg></span><span><strong>এই ডিভাইস বিশ্বস্ত</strong><small>৯০ দিন পর্যন্ত লগইন মনে রাখবে</small></span><span class="toggle-switch"><input type="checkbox" id="trustedDeviceToggle" checked><i></i></span></label>
+          <button type="button" class="logout-button" data-action="logout"><span class="settings-icon danger"><svg class="" data-icon="logout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10 3H3v18h7M8 12h13M16 7l5 5-5 5"/></svg></span><span><strong>লগআউট</strong><small>এই ডিভাইস থেকে বের হয়ে যান</small></span></button>
         </div></div>
-        <div class="profile-section"><p class="eyebrow">সহায়তা</p><div class="help-card"><span class="help-icon"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-help"></use></svg></span><div><strong>কিছু জানার আছে?</strong><p>তোমার শিক্ষক বা অফিসে যোগাযোগ করো।</p></div><button type="button" data-action="help" aria-label="সহায়তা"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-arrow-right"></use></svg></button></div></div>
+        <div class="profile-section"><p class="eyebrow">সহায়তা</p><div class="help-card"><span class="help-icon"><svg class="" data-icon="help" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0M9 9a3 3 0 1 1 4 3l-1 1v1M12 17v1"/></svg></span><div><strong>কিছু জানার আছে?</strong><p>তোমার শিক্ষক বা অফিসে যোগাযোগ করো।</p></div><button type="button" data-action="help" aria-label="সহায়তা"><svg class="" data-icon="arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 12h16M14 6l6 6-6 6"/></svg></button></div></div>
         <p class="app-version">Active Plus Coaching · v1.0.0 · <span>অফলাইন সংস্করণ</span></p>
       </section>
     </main>
 
     <nav class="bottom-nav" aria-label="প্রধান নেভিগেশন">
-      <button class="bottom-link active" type="button" data-view="home" aria-current="page"><span class="nav-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-home"></use></svg></span><span>হোম</span></button>
-      <button class="bottom-link" type="button" data-view="courses"><span class="nav-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-book"></use></svg></span><span>পড়াশোনা</span></button>
-      <button class="bottom-link" type="button" data-view="routine"><span class="nav-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-calendar"></use></svg></span><span>রুটিন</span></button>
-      <button class="bottom-link" type="button" data-view="results"><span class="nav-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-award"></use></svg></span><span>ফলাফল</span></button>
-      <button class="bottom-link" type="button" data-view="profile"><span class="nav-chip"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-user"></use></svg></span><span>আরও</span></button>
+      <button class="bottom-link active" type="button" data-view="home" aria-current="page"><span class="nav-chip"><svg class="" data-icon="home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 10 12 3l9 7M5 9v12h5v-7h4v7h5V9"/></svg></span><span>হোম</span></button>
+      <button class="bottom-link" type="button" data-view="courses"><span class="nav-chip"><svg class="" data-icon="book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 5Q7 2 3 4v16q4-2 9 1 5-3 9-1V4q-4-2-9 1v16"/></svg></span><span>পড়াশোনা</span></button>
+      <button class="bottom-link" type="button" data-view="routine"><span class="nav-chip"><svg class="" data-icon="calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2M7 3v4M17 3v4M3 11h18M7 15h2M15 15h2"/></svg></span><span>রুটিন</span></button>
+      <button class="bottom-link" type="button" data-view="results"><span class="nav-chip"><svg class="" data-icon="award" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M17 8A5 5 0 1 1 7 8a5 5 0 0 1 10 0M8 13 6 22l6-3 6 3-2-9"/></svg></span><span>ফলাফল</span></button>
+      <button class="bottom-link" type="button" data-view="profile"><span class="nav-chip"><svg class="" data-icon="user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0M4 21v-2a8 8 0 0 1 16 0v2"/></svg></span><span>আরও</span></button>
     </nav>
   </div>
 
@@ -331,7 +338,7 @@
 
   <div class="modal-backdrop" id="editModal" hidden>
     <section class="modal edit-modal" role="dialog" aria-modal="true" aria-labelledby="editModalTitle"><div class="modal-header"><div><p class="eyebrow">অফলাইনে সংরক্ষণ</p><h2 id="editModalTitle">প্রোফাইল সম্পাদনা</h2></div><button type="button" class="modal-close" data-close-modal="editModal" aria-label="বন্ধ করুন">×</button></div><form id="profileForm">
-      <div class="readonly-id"><label for="editStudentId">Student ID</label><div class="locked-input"><input id="editStudentId" type="text" readonly disabled><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg></div><small>Student ID পরিবর্তন করা যাবে না</small></div>
+      <div class="readonly-id"><label for="editStudentId">Student ID</label><div class="locked-input"><input id="editStudentId" type="text" readonly disabled><svg class="" data-icon="lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 10h14v11H5zM8 10V6a4 4 0 0 1 8 0v4"/></svg></div><small>Student ID পরিবর্তন করা যাবে না</small></div>
       <div class="field-grid edit-field-grid">
         <div class="field"><label for="editNameBn">নাম (বাংলা)</label><input id="editNameBn" name="nameBn" type="text" required></div>
         <div class="field"><label for="editNameEn">নাম (English)</label><input id="editNameEn" name="nameEn" type="text"></div>
@@ -341,7 +348,7 @@
         <div class="field"><label for="editBirthDate">জন্মতারিখ</label><input id="editBirthDate" name="birthDate" type="date"></div>
         <div class="field"><label for="editGender">লিঙ্গ</label><select id="editGender" name="gender"><option value="">নির্বাচন করুন</option><option>পুরুষ</option><option>নারী</option><option>অন্যান্য</option></select></div>
         <div class="field full"><label for="editStudentMobile">প্রথম নিবন্ধনের মোবাইল (স্থায়ী)</label><input id="editStudentMobile" name="studentMobile" type="tel" inputmode="numeric" readonly aria-describedby="primaryMobileNote"><small id="primaryMobileNote" class="fixed-field-note">এই নম্বর মুছতে বা বদলাতে পারবেন না। লগইনে এই নম্বরই ব্যবহার করুন।</small></div>
-        <div class="field full"><label for="editUsername">ইউজারনেম (স্থায়ী)</label><div class="locked-input"><input id="editUsername" name="username" type="text" autocomplete="off" readonly aria-describedby="editUsernameNote"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg></div><small id="editUsernameNote" class="fixed-field-note">ইউজারনেম স্থায়ী — বদলানো যাবে না। লগইনে এটি ব্যবহার করলে মোবাইল নম্বর দিতে হয় না।</small></div><div class="field full"><label for="editAdditionalMobile">নতুন মোবাইল নম্বর যোগ করুন</label><input id="editAdditionalMobile" name="additionalMobile" type="tel" inputmode="tel" placeholder="০১XXXXXXXXX" autocomplete="tel"><small class="fixed-field-note">আগের নম্বরগুলো থাকবে; নতুন নম্বর শুধু যোগাযোগের জন্য।</small><small id="editAdditionalMobiles"></small></div>
+        <div class="field full"><label for="editUsername">ইউজারনেম (স্থায়ী)</label><div class="locked-input"><input id="editUsername" name="username" type="text" autocomplete="off" readonly aria-describedby="editUsernameNote"><svg class="" data-icon="lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 10h14v11H5zM8 10V6a4 4 0 0 1 8 0v4"/></svg></div><small id="editUsernameNote" class="fixed-field-note">ইউজারনেম স্থায়ী — বদলানো যাবে না। লগইনে এটি ব্যবহার করলে মোবাইল নম্বর দিতে হয় না।</small></div><div class="field full"><label for="editAdditionalMobile">নতুন মোবাইল নম্বর যোগ করুন</label><input id="editAdditionalMobile" name="additionalMobile" type="tel" inputmode="tel" placeholder="০১XXXXXXXXX" autocomplete="tel"><small class="fixed-field-note">আগের নম্বরগুলো থাকবে; নতুন নম্বর শুধু যোগাযোগের জন্য।</small><small id="editAdditionalMobiles"></small></div>
         <div class="field"><label for="editGuardianMobile">অভিভাবকের মোবাইল</label><input id="editGuardianMobile" name="guardianMobile" type="tel" inputmode="numeric"></div>
         <div class="field full"><label for="editAddress">সম্পূর্ণ ঠিকানা</label><textarea id="editAddress" name="address" rows="3"></textarea></div>
         <div class="field"><label for="classInput">শ্রেণি / বর্ষ</label><select id="classInput" name="className" required></select></div>
@@ -349,51 +356,19 @@
         <div class="field full"><label for="editMajor">বিষয় / বিভাগ</label><input id="editMajor" name="major" type="text"></div>
         <div class="field"><label for="editInstitution">শিক্ষা প্রতিষ্ঠান</label><input id="editInstitution" name="institution" type="text"></div>
         <div class="field"><label for="editRoll">ক্লাস রোল (স্বয়ংক্রিয়)</label><input id="editRoll" name="roll" type="text" readonly><small class="fixed-field-note">শ্রেণি বদলালে ক্লাস রোল নতুন করে তৈরি হবে।</small></div>
-        <div class="field full"><label for="editRegistrationNo">রেজিস্ট্রেশন নম্বর</label><div class="locked-input"><input id="editRegistrationNo" name="registrationNo" type="text" readonly><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg></div></div>
+        <div class="field full"><label for="editRegistrationNo">রেজিস্ট্রেশন নম্বর</label><div class="locked-input"><input id="editRegistrationNo" name="registrationNo" type="text" readonly><svg class="" data-icon="lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 10h14v11H5zM8 10V6a4 4 0 0 1 8 0v4"/></svg></div></div>
       </div>
       <button class="modal-action" type="submit">তথ্য সংরক্ষণ করুন</button>
-    </form><p class="form-note"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg> Student ID সিস্টেম থেকে তৈরি হয়, তাই এটি অপরিবর্তনযোগ্য।</p></section>
+    </form><p class="form-note"><svg class="" data-icon="lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 10h14v11H5zM8 10V6a4 4 0 0 1 8 0v4"/></svg> Student ID সিস্টেম থেকে তৈরি হয়, তাই এটি অপরিবর্তনযোগ্য।</p></section>
   </div>
 
   <div class="modal-backdrop" id="recoveryModal" hidden>
-    <section class="modal edit-modal" role="dialog" aria-modal="true" aria-labelledby="recoveryModalTitle"><div class="modal-header"><div><p class="eyebrow">অ্যাকাউন্ট পুনরুদ্ধার</p><h2 id="recoveryModalTitle">পাসওয়ার্ড রিসেট করুন</h2></div><button type="button" class="modal-close" data-close-modal="recoveryModal" aria-label="বন্ধ করুন">×</button></div><p class="recovery-copy">রেজিস্ট্রেশনের সময় দেওয়া নিরাপত্তা প্রশ্নের উত্তর দিয়ে নতুন পাসওয়ার্ড সেট করুন।</p><form id="recoveryForm"><label for="recoveryMobile">ইউজারনেম অথবা মোবাইল নম্বর</label><input id="recoveryMobile" name="mobile" type="text" autocomplete="username" placeholder="ইউজারনেম / ০১XXXXXXXXX / Student ID" required><label for="recoveryQuestion">নিরাপত্তা প্রশ্ন</label><select id="recoveryQuestion" name="question" required><option value="">প্রশ্ন নির্বাচন করুন</option><option>তোমার শৈশবের ডাকনাম কী?</option><option>তোমার প্রিয় শিক্ষকের নাম কী?</option><option>তোমার জন্মস্থানের নাম কী?</option><option>তোমার প্রিয় বইয়ের নাম কী?</option></select><label for="recoveryAnswer">উত্তর</label><input id="recoveryAnswer" name="answer" type="text" required><label for="recoveryPin">নতুন পাসওয়ার্ড</label><div class="input-wrap"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-lock"></use></svg><input id="recoveryPin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="6" placeholder="৪–৬ সংখ্যা" required><button class="show-pin" type="button" data-toggle-pin="recoveryPin" aria-label="পাসওয়ার্ড দেখুন"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-eye"></use></svg></button></div><button class="modal-action" type="submit">নতুন পাসওয়ার্ড সংরক্ষণ করুন</button></form><div class="admin-reset-note"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-help"></use></svg><span>নিরাপত্তা প্রশ্নের উত্তর মনে না থাকলে এডমিন পাসওয়ার্ড রিসেট করে দিতে পারবেন।</span></div></section>
+    <section class="modal edit-modal" role="dialog" aria-modal="true" aria-labelledby="recoveryModalTitle"><div class="modal-header"><div><p class="eyebrow">অ্যাকাউন্ট পুনরুদ্ধার</p><h2 id="recoveryModalTitle">পাসওয়ার্ড রিসেট করুন</h2></div><button type="button" class="modal-close" data-close-modal="recoveryModal" aria-label="বন্ধ করুন">×</button></div><p class="recovery-copy">শিক্ষার্থী অ্যাকাউন্টের জন্য: রেজিস্ট্রেশনের সময় দেওয়া নিরাপত্তা প্রশ্নের উত্তর দিয়ে নতুন পাসওয়ার্ড সেট করুন।</p><form id="recoveryForm"><label for="recoveryMobile">ইউজারনেম অথবা মোবাইল নম্বর</label><input id="recoveryMobile" name="mobile" type="text" autocomplete="username" placeholder="ইউজারনেম / ০১XXXXXXXXX" required><label for="recoveryQuestion">নিরাপত্তা প্রশ্ন</label><select id="recoveryQuestion" name="question" required><option value="">প্রশ্ন নির্বাচন করুন</option><option>তোমার শৈশবের ডাকনাম কী?</option><option>তোমার প্রিয় শিক্ষকের নাম কী?</option><option>তোমার জন্মস্থানের নাম কী?</option><option>তোমার প্রিয় বইয়ের নাম কী?</option></select><label for="recoveryAnswer">উত্তর</label><input id="recoveryAnswer" name="answer" type="text" required><label for="recoveryPin">নতুন পাসওয়ার্ড</label><div class="input-wrap"><svg class="" data-icon="lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 10h14v11H5zM8 10V6a4 4 0 0 1 8 0v4"/></svg><input id="recoveryPin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="6" placeholder="৪–৬ সংখ্যা" required><button class="show-pin" type="button" data-toggle-pin="recoveryPin" aria-label="পাসওয়ার্ড দেখুন"><svg class="" data-icon="eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M2 12q10-15 20 0-10 15-20 0M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0"/></svg></button></div><button class="modal-action" type="submit">নতুন পাসওয়ার্ড সংরক্ষণ করুন</button></form><div class="admin-reset-note"><svg class="" data-icon="help" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0M9 9a3 3 0 1 1 4 3l-1 1v1M12 17v1"/></svg><span>নিরাপত্তা প্রশ্নের উত্তর মনে না থাকলে এডমিন পাসওয়ার্ড রিসেট করে দিতে পারবেন।</span></div></section>
   </div>
 
-  <!-- Reusable SVG icon sprite. No external fonts or assets are required for offline use. -->
-  <svg class="icon-sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
-    <symbol id="icon-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V10Z"/><path d="M9 21v-6h6v6"/></symbol>
-    <symbol id="icon-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
-    <symbol id="icon-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></symbol>
-    <symbol id="icon-book" viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5v-16Z"/><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M8 7h8M8 11h6"/></symbol>
-    <symbol id="icon-award" viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="m8.5 12.5-1 8 4.5-2.5 4.5 2.5-1-8M9.5 8 11 9.5 14.5 6"/></symbol>
-    <symbol id="icon-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
-    <symbol id="icon-bell" viewBox="0 0 24 24"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></symbol>
-    <symbol id="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"/></symbol>
-    <symbol id="icon-cloud" viewBox="0 0 24 24"><path d="M6.5 18h10a4 4 0 0 0 .5-8 5.5 5.5 0 0 0-10.6 1.5A3.3 3.3 0 0 0 6.5 18Z"/></symbol>
-    <symbol id="icon-rain" viewBox="0 0 24 24"><path d="M6.5 15h10a4 4 0 0 0 .5-8 5.5 5.5 0 0 0-10.6 1.5A3.3 3.3 0 0 0 6.5 15Z"/><path d="m8 18-1 2M12 18l-1 2M16 18l-1 2"/></symbol>
-    <symbol id="icon-moon" viewBox="0 0 24 24"><path d="M20 15.5A8.5 8.5 0 0 1 8.5 4 8.5 8.5 0 1 0 20 15.5Z"/></symbol>
-    <symbol id="icon-phone" viewBox="0 0 24 24"><path d="M6 3h3l2 5-2 1.5a12 12 0 0 0 5.5 5.5L16 13l5 2v3a2 2 0 0 1-2 2C10.7 20 4 13.3 4 5a2 2 0 0 1 2-2Z"/></symbol>
-    <symbol id="icon-whatsapp" viewBox="0 0 24 24"><path d="M20 11.5a8 8 0 0 1-11.9 7L4 20l1.5-4.1A8 8 0 1 1 20 11.5Z"/><path d="M8.5 8.2c.2-.4.4-.4.7-.4h.5c.2 0 .3.1.4.4l.6 1.4c.1.2.1.4-.1.6l-.5.6c.5 1 1.3 1.7 2.3 2.2l.6-.5c.2-.2.4-.2.6-.1l1.4.6c.3.1.4.3.3.6-.1.5-.4 1-.8 1.2-.4.2-1.2.1-2-.2-2.3-.9-4-2.5-4.9-4.8-.3-.8-.4-1.6-.1-2.1Z"/></symbol>
-    <symbol id="icon-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 6.5 12 6.5 21.5 12 21.5 12 18 17.5 12 17.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="2.5"/></symbol>
-    <symbol id="icon-wifi-off" viewBox="0 0 24 24"><path d="m1 1 22 22M5 9.5A11 11 0 0 1 12 7c1.8 0 3.5.4 5 1.2M8.5 13.5A6 6 0 0 1 12 12c1.1 0 2.1.3 3 .8M12 18h.01"/></symbol>
-    <symbol id="icon-check-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/></symbol>
-    <symbol id="icon-trending" viewBox="0 0 24 24"><path d="m4 16 5-5 4 3 6-7M14 7h5v5"/></symbol>
-    <symbol id="icon-clipboard" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4.5V3h6v1.5M9 10h6M9 14h4"/></symbol>
-    <symbol id="icon-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
-    <symbol id="icon-chevron-right" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
-    <symbol id="icon-megaphone" viewBox="0 0 24 24"><path d="m3 11 13-5v12L3 14v-3ZM16 10h3a2 2 0 0 1 0 4h-3M6 15l1.5 5H11l-1.5-5"/></symbol>
-    <symbol id="icon-sliders" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16M8 4v4M15 10v4M11 16v4"/></symbol>
-    <symbol id="icon-edit" viewBox="0 0 24 24"><path d="m4 16-.8 4.8L8 20l11-11a2.8 2.8 0 0 0-4-4L4 16Z"/><path d="m13.5 6.5 4 4"/></symbol>
-    <symbol id="icon-download" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4 20h16"/></symbol>
-    <symbol id="icon-smartphone" viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M10 18h4"/></symbol>
-    <symbol id="icon-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.6 2.6 0 1 1 4.2 2c-1.1.8-1.7 1.2-1.7 2.5M12 17h.01"/></symbol>
-    <symbol id="icon-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
-    <symbol id="icon-mail" viewBox="0 0 24 24"><path d="M4 6h16v12H4z"/><path d="m4 7 8 6 8-6"/></symbol><symbol id="icon-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
-    <symbol id="icon-logout" viewBox="0 0 24 24"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></symbol>
-    <symbol id="icon-shield" viewBox="0 0 24 24"><path d="M12 3 5 6v5.2c0 4.8 3 8 7 9.8 4-1.8 7-5 7-9.8V6l-7-3Z"/><path d="m9 12 2 2 4-4.5"/></symbol>
-  </svg>
-  
+
+
+
   <script type="module" src="js/pull-to-refresh.js"></script>
-  <script type="module" src="js/main.js?v=20260929-panelswitch"></script>
 </body>
 </html>

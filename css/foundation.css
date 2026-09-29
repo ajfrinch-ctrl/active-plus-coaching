@@ -1,0 +1,16 @@
+@font-face{font-family:'Noto Sans Bengali';src:url('../assets/fonts/NotoSansBengali-Variable.ttf') format('truetype');font-weight:100 900;font-display:swap}
+:root{
+ --color-bg:#f7f9fc;--color-surface:#fff;--color-surface-muted:#edf3fb;--color-border:#dce3ed;
+ --color-text:#202b3c;--color-text-secondary:#526176;--color-text-muted:#65748a;
+ --color-primary:#2864bd;--color-primary-hover:#194f9d;--color-success:#187346;--color-warning:#875b0c;--color-danger:#b83239;
+ --space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:24px;--space-6:32px;--space-7:48px;
+ --radius-sm:6px;--radius-md:10px;--radius-lg:14px;
+ --font-xs:12px;--font-sm:14px;--font-md:16px;--font-lg:20px;--font-xl:28px;--font-2xl:36px;
+ --shadow-sm:0 2px 6px #202b3c08;--shadow-dialog:0 12px 36px #202b3c18;
+ --safe-bottom:env(safe-area-inset-bottom,0px);
+ /* Compatibility for JS-rendered content, not a legacy stylesheet dependency. */
+ --ink:var(--color-text);--muted:var(--color-text-secondary);--muted-2:var(--color-text-muted);--surface:var(--color-surface);--white:var(--color-surface);--line:var(--color-border);--forest:var(--color-primary);--forest-text:var(--color-primary);--mint:var(--color-surface-muted);--cream:var(--color-bg);--coral:var(--color-danger);
+}
+html[data-theme=dark]{--color-bg:#141c29;--color-surface:#1c2838;--color-surface-muted:#25354b;--color-border:#3b4b61;--color-text:#edf2fa;--color-text-secondary:#bdc9da;--color-text-muted:#a8b9cf;--color-primary:#96bcff;--color-primary-hover:#b8d2ff;--color-success:#8fddb1;--color-warning:#f1ca7c;--color-danger:#ffa9ae}
+*{box-sizing:border-box}html{scroll-padding-block:90px}body{margin:0;background:var(--color-bg);color:var(--color-text);font:400 var(--font-md)/1.65 'Noto Sans Bengali',system-ui,sans-serif}h1,h2,h3,p{margin:0 0 var(--space-3)}h1{font-size:var(--font-xl);line-height:1.4;font-weight:650}h2{font-size:var(--font-lg);line-height:1.5;font-weight:600}h3{font-size:var(--font-md);font-weight:600}strong,b{font-weight:600}small,.eyebrow{font-size:var(--font-xs);color:var(--color-text-secondary)}.eyebrow{letter-spacing:.06em;margin-bottom:var(--space-2)}a{color:var(--color-primary)}img{max-width:100%;object-fit:contain}svg{width:22px;height:22px;flex-shrink:0;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}button,a,input,select,textarea{touch-action:manipulation}button{font:inherit;cursor:pointer}button:disabled{opacity:.55;cursor:not-allowed}:focus-visible{outline:3px solid var(--color-primary);outline-offset:3px}[hidden]{display:none!important}pre,code{white-space:pre-wrap;overflow-wrap:anywhere}p,small,strong,label{overflow-wrap:anywhere}::selection{background:var(--color-surface-muted)}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}

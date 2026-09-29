@@ -246,3 +246,39 @@ test('expired and unreadable sessions count as signed out, and storage errors ar
   assert.equal(await saveStaffSession('admin', true), false);
   clearStaffSession('admin'); // must not throw
 });
+
+test('existing role IDs, not fixed defaults, authenticate; wrong password changes nothing', async () => {
+  const { hashPassword } = await import('../js/password-hash.js');
+  for (const role of ROLES) {
+    const browser = freshBrowser();
+    const id = `previous.${role}.apc`;
+    const record = JSON.stringify({ username: id, role, fullName: 'Original Name', status: 'active', password: await hashPassword(PASSWORD) });
+    browser.localStorage.setItem(STAFF_ACCOUNTS[role].accountKey, record);
+    assert.equal(await resolveStaffRoleByUsername(id), role);
+    assert.equal((await authenticateStaff(role, id, 'bad')).ok, false);
+    assert.equal((await authenticateStaff(role, username(role), PASSWORD)).ok, false);
+    assert.equal(browser.localStorage.getItem(STAFF_ACCOUNTS[role].accountKey), record);
+    assert.equal((await authenticateStaff(role, id.toUpperCase(), PASSWORD)).ok, true);
+  }
+});
+
+test('plaintext upgrade preserves the existing Admin ID and all profile fields', async () => {
+  const browser = freshBrowser();
+  const profile = { username: 'original.admin.apc', fullName: 'Original Owner', staffId: 'STF-0098', role: 'admin', mobile: '01712345678', createdAt: '2024-01-01', password: 'Old-Password' };
+  browser.localStorage.setItem(STAFF_ACCOUNTS.admin.accountKey, JSON.stringify(profile));
+  assert.deepEqual(await authenticateStaff('admin', profile.username, profile.password), {ok:true, needsPasswordChange:true});
+  const migrated = await readStaffAccount('admin');
+  for (const [key,value] of Object.entries(profile)) if (key !== 'password') assert.equal(migrated[key],value,key);
+  assert.equal(isPasswordRecord(migrated.password),true);
+  await setStaffPassword('admin', PASSWORD, PASSWORD);
+  assert.equal(await verifyStaffCredentials('admin', profile.username, PASSWORD),true);
+});
+
+test('unreadable encrypted staff record cannot become a new setup account', async () => {
+  const browser = freshBrowser();
+  const original = JSON.stringify({v:1,iv:'bad',data:'bad'});
+  browser.localStorage.setItem(STAFF_ACCOUNTS.admin.accountKey, original);
+  const result = await authenticateStaff('admin','admin.apc',PASSWORD);
+  assert.equal(result.ok,false);assert.equal(result.needsSetup,undefined);
+  assert.equal(browser.localStorage.getItem(STAFF_ACCOUNTS.admin.accountKey), original);
+});

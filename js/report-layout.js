@@ -1,3 +1,4 @@
+import { PRINT_COLORS } from './print-tokens.js';
 import { loadAppConfig } from './storage.js';
 /* Report layout engine — one measured draw-list, two identical renderers.
 
@@ -41,18 +42,7 @@ export const TEXT_BASELINE = 0.78;
 const BRAND = 'Active Plus Coaching';
 const TAGLINE = 'শিখতে থাকো, এগিয়ে যাও • দিনাজপুর';
 
-export const COLORS = Object.freeze({
-  forest: '#04795a',
-  forestDark: '#056148',
-  ink: '#20392e',
-  muted: '#5f7469',
-  line: '#d7e5dc',
-  zebra: '#f6faf7',
-  white: '#ffffff',
-  mint: '#e8f5ee',
-  correct: '#0b6b4f',
-  wrong: '#b3261e'
-});
+export const COLORS = PRINT_COLORS;
 
 /* ---------- measurement ---------- */
 

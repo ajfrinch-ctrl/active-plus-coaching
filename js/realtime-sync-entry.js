@@ -1,3 +1,4 @@
+import { mountStatusNotice } from './status-surface.js';
 /* Deferred, retryable sync. No page reload and no deletion of local data. */
 import { reportSyncError, setSyncStatus } from '../sync/sync-status.js';
 import { assertSyncGuard } from '../sync/sync-guard.js';
@@ -29,7 +30,7 @@ async function bootRealtimeSync() {
     reportSyncError({ code: 'network-timeout' });
   }, 20000);
   try {
-    assertSyncGuard();
+    await assertSyncGuard();
     const { startRealtimeSync } = await import('../sync/sync-core.js?v=20260929-protected');
     const result = await startRealtimeSync();
     if (!result?.ok) {
@@ -54,9 +55,8 @@ function mountStatus() {
   banner.type = 'button';
   banner.id = 'cloudSyncStatus';
   banner.setAttribute('aria-label', 'ক্লাউড সিঙ্কের অবস্থা — আবার চেষ্টা করতে চাপুন');
-  banner.style.cssText = 'position:fixed;bottom:calc(76px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:1000;max-width:calc(100vw - 24px);padding:8px 12px;border:1px solid #b45309;border-radius:10px;background:#fffbeb;color:#78350f;font:13px/1.5 sans-serif;box-shadow:0 2px 8px #0002;';
   banner.hidden = true;
-  document.body.append(banner);
+  mountStatusNotice(banner);
   const paint = () => {
     const { realtimeSync: state, realtimeSyncMessage: message } = document.documentElement.dataset;
     banner.hidden = !['error', 'offline', 'pending', 'conflict'].includes(state);

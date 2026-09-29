@@ -1,3 +1,4 @@
+import { iconMarkup } from './icons.js';
 /* Data-driven student home dashboard. The UI only shows records already stored
    for this student; absent classes, results or fees are never filled with demo values. */
 import { loadRoutine, WEEK_DAYS, ROUTINE_KEY } from './office-data.js';
@@ -23,7 +24,7 @@ function routineCard(item, index, kind = 'class') {
   const subtitle = kind === 'teacher' ? `${item.subject} · ${item.teacherName}` : `${item.teacher || 'শিক্ষক নির্ধারিত'}${item.room ? ` · ${item.room}` : ''}`;
   const time = kind === 'teacher' ? item.time : `${item.period || ''} ${item.time || ''}`.trim();
   return `<article class="dashboard-routine-card" data-dashboard-class="${esc(item.id || index)}">
-    <span class="dashboard-routine-icon tone-${index % 3}" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#${iconFor(title)}"></use></svg></span>
+    <span class="dashboard-routine-icon tone-${index % 3}" aria-hidden="true">${iconMarkup(iconFor(title))}</span>
     <span class="dashboard-routine-main"><strong>${esc(title)}</strong><small>${esc(subtitle)}</small><span class="dashboard-time-pill">${esc(time || 'সময় দেওয়া হয়নি')}</span></span>
     <span class="dashboard-routine-status"><i></i>${kind === 'teacher' ? 'শিক্ষকের কাজ' : 'রুটিনে আছে'}</span>
   </article>`;
@@ -44,7 +45,7 @@ function renderRoutine(student, teachingActivities) {
   if (!root) return;
   root.innerHTML = cards.length
     ? cards.slice(0, 4).join('')
-    : '<article class="dashboard-empty-card"><span class="dashboard-empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#icon-calendar"></use></svg></span><span><strong>আজ কোনো ক্লাস যোগ করা নেই</strong><small>নতুন ক্লাসের জন্য রুটিন দেখুন।</small></span><button type="button" data-view="routine" aria-label="রুটিন খুলুন">›</button></article>';
+    : `<article class="dashboard-empty-card"><span class="dashboard-empty-icon" aria-hidden="true">${iconMarkup("calendar")}</span><span><strong>আজ কোনো ক্লাস যোগ করা নেই</strong><small>নতুন ক্লাসের জন্য রুটিন দেখুন।</small></span><button type="button" data-view="routine" aria-label="রুটিন খুলুন">›</button></article>`;
 }
 
 function renderProgress(activities, exams, studentId) {

@@ -9,10 +9,7 @@
      • the dashboard grid  (large icon + clear label)
      • the top bar         (student-app link + logout)
 
-   Every icon comes from js/admin-icons.js: one inline SVG, drawn on a 24×24
-   grid, inside a fixed-size glass container. The container owns the geometry
-   and clips (see css/admin-icon-system.css), so an icon can never overlap a
-   label, another icon, a card edge or the bottom bar.
+   Icons use js/icons.js and flat containers from css/ui-components.css.
 
    Entries whose capability is not granted are never rendered at all, and
    `enforceCapabilities()` drops the matching views from the DOM.
@@ -20,7 +17,7 @@
    Presentation only — no storage, no routing rules and no business logic. */
 
 import { ADMIN_BOTTOM_NAV, ADMIN_MORE_NAV, ADMIN_FEATURE_TILES, enforceCapabilities } from './admin-permissions.js';
-import { iconElement, paintIcon } from './admin-icons.js';
+import { iconElement, paintIcon } from './icons.js';
 
 /* The bottom bar and the "More" menu use the same icon language, so a section
    looks identical wherever it appears. */

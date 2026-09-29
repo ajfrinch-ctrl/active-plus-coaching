@@ -367,7 +367,10 @@ async function handleLogin(event, state, onAuthenticated) {
   state.student = { ...defaultStudent, ...(state.account.student || {}) };
   saveStudent(state.student);
   const remember = $('#rememberMe')?.checked !== false;
-  await persistSession(remember);
+  if (!(await persistSession(remember))) {
+    setAuthMessage('সেশন সংরক্ষণ করা যায়নি — স্টোরেজ পরীক্ষা করে আবার চেষ্টা করুন।');
+    return;
+  }
   if (remember) setTrustedDevice(true);
   // Lets the sync bridge fetch this student's exam/result data in the background.
   window.dispatchEvent(new Event('apc-student-login'));
@@ -398,7 +401,32 @@ export function initLogin({ state, onAuthenticated }) {
   }));
   $('#loginMobile')?.addEventListener('input', syncPasswordKeyboard);
   syncPasswordKeyboard();
-  $('#loginForm')?.addEventListener('submit', event => handleLogin(event, state, onAuthenticated));
+  const form = $('#loginForm');
+  let submitting = false;
+  form?.addEventListener('submit', async event => {
+    // Prevent native GET submission synchronously, even if async auth throws.
+    event.preventDefault();
+    if (submitting) return;
+    submitting = true;
+    const button = form.querySelector('[type=submit]');
+    const label = button?.innerHTML;
+    form.setAttribute('aria-busy', 'true');
+    if (button) { button.disabled = true; button.textContent = 'লগইন হচ্ছে…'; }
+    try { await handleLogin(event, state, onAuthenticated); }
+    catch (error) {
+      console.warn('[Active Plus] login unavailable:', error?.name || 'unknown');
+      setAuthMessage('লগইন সম্পন্ন হয়নি। আপনার সংরক্ষিত তথ্য মুছে যায়নি — আবার চেষ্টা করুন।');
+    } finally {
+      submitting = false;
+      form.removeAttribute('aria-busy');
+      if (button) { button.disabled = false; button.innerHTML = label; }
+    }
+  });
+  if (form) {
+    form.dataset.loginReady = 'true';
+    const submit = form.querySelector('[type=submit]');
+    if (submit) submit.disabled = false;
+  }
   initFirstAdminSetup();
 }
 

@@ -1,3 +1,4 @@
+import { iconMarkup } from './icons.js';
 /* Application composition root. Feature modules can be replaced independently.
    Updated: don't ask security check every time - auto-login for trusted devices. */
 import { runMigrations } from './storage/migration.js';
@@ -62,7 +63,7 @@ function applyAppConfig(cfg) {
     }
     authMaintBanner.innerHTML = `
       <div class="maint-icon">
-        <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-shield"></use></svg>
+        ${iconMarkup("shield")}
       </div>
       <div class="maint-body">
         <strong>⚠️ সিস্টেম রক্ষণাবেক্ষণ চলছে</strong>
@@ -84,7 +85,7 @@ function applyAppConfig(cfg) {
     }
     appMaintBanner.innerHTML = `
       <div class="maint-icon">
-        <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-shield"></use></svg>
+        ${iconMarkup("shield")}
       </div>
       <div class="maint-body">
         <strong>⚠️ সিস্টেম রক্ষণাবেক্ষণ চলছে</strong>
