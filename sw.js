@@ -2,6 +2,12 @@ const CACHE_NAME = 'active-plus-student-v94-firebasehardening';
 const APP_SHELL = [
   './js/panel-lockdown.js',
   './js/panel-switch.js',
+  './js/firebase-config.js',
+  './js/firebase-online-test.js',
+  './js/firebase-diagnostics.js',
+  './js/realtime-sync-entry.js',
+  './js/realtime-sync.js',
+  './js/sync-status.js',
   './js/record-sync.js',
   './js/sync-merge.js',
   './js/sync-collections.js',
