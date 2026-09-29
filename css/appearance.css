@@ -25,7 +25,7 @@ html,body,html[data-theme="dark"],html[data-theme="light"],html[data-theme="dark
   -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
 }
 body::before,body::after,.app-shell::before,.admin-shell::before,.auth-screen::before{background:none!important;box-shadow:none!important;animation:none!important}
-h1,h2,h3,h4,h5,strong,b{color:var(--apc-text)!important;letter-spacing:-.015em}p,small,label,.muted,.eyebrow{color:var(--apc-muted)!important}a{color:var(--apc-primary-dark)!important}button{font-family:inherit}
+h1,h2,h3,h4,h5,strong,b{color:var(--apc-text)!important;letter-spacing:0}p,small,label,.muted,.eyebrow{color:var(--apc-muted)!important}a{color:var(--apc-primary-dark)!important}button{font-family:inherit}
 
 .auth-card,.home-hero,.home-list-card,.quick-wrap,.teaching-board,.admin-card,.teacher-summary,.teacher-record-card,.pay-card,.payment-card,.settings-list,.admin-more-menu,.modal,.admin-modal,.rp-card,.rp-report,.rp-choose,.rp-preview-bar,.rp-empty,.rp-page,.study-progress-card,.dashboard-routine-card,.dashboard-empty-card,.challenge-card,.dashboard-empty,.contact-card,.help-card,.pending-id,.welcome-card,.admin-hero,.home-stat,.admin-stat-tile,.admin-dashboard-collect,.course-item,.result-row,.result-stats>div,.pending-info,.maintenance-alert-card{
   background:var(--apc-surface)!important;border:1px solid var(--apc-border)!important;border-radius:var(--apc-radius)!important;box-shadow:var(--apc-shadow)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
@@ -185,7 +185,7 @@ td{color:var(--apc-text)!important;border-color:#e3e8ef!important}
   font-size:15px!important;
   line-height:1.25!important;
   font-weight:850!important;
-  letter-spacing:-.2px!important;
+  letter-spacing:0!important;
   opacity:1!important;
   text-shadow:none!important;
 }

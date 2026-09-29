@@ -1,5 +1,6 @@
-/* Light + dark appearance: first run follows the system preference, a stored
-   device choice wins and survives, and the meta theme-color stays in sync.
+/* Light + dark appearance: dark is strictly opt-in — the app starts light no
+   matter what the device prefers, and only an explicit (stored) toggle turns
+   dark on and keeps it across reloads; the meta theme-color stays in sync.
    The last test pins js/appearance-boot.js to the same storage key so the
    pre-paint script can never drift from the module. */
 import test from 'node:test';
@@ -48,15 +49,16 @@ function freshBrowser({ systemDark = false } = {}) {
   return { store, meta, root };
 }
 
-test('the first run follows the system colour preference', () => {
+test('the first run is always light, even when the device prefers dark', () => {
   freshBrowser({ systemDark: false });
   assert.equal(getStoredTheme(), null);
   assert.equal(getTheme(), 'light');
   freshBrowser({ systemDark: true });
-  assert.equal(getTheme(), 'dark');
+  assert.equal(getStoredTheme(), null);
+  assert.equal(getTheme(), 'light', 'the system preference must never turn dark on');
 });
 
-test('an explicit device choice wins over the system preference and persists', () => {
+test('an explicit device choice is the only way dark applies, and it persists', () => {
   const env = freshBrowser({ systemDark: true });
   assert.equal(setTheme('light'), 'light');
   assert.equal(env.store.get(APPEARANCE_KEY), 'light');
@@ -64,6 +66,10 @@ test('an explicit device choice wins over the system preference and persists', (
   env.root.dataset = {};
   assert.equal(setTheme('dark'), 'dark');
   assert.equal(getTheme(), 'dark');
+  // A stored dark choice reopens dark even on a device that prefers light.
+  const revisit = freshBrowser({ systemDark: false });
+  revisit.store.set(APPEARANCE_KEY, 'dark');
+  assert.equal(getTheme(), 'dark', 'a stored dark choice is honoured on the next visit');
 });
 
 test('toggle flips the theme and keeps html + theme-color meta in sync', () => {

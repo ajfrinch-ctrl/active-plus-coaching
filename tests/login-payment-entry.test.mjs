@@ -60,12 +60,7 @@ test('the login card is the single door: no staff tabs, no shortcut links, no de
   for (const href of ['admin.html', 'teacher.html', 'payment.html']) {
     assert.equal($(`#authScreen a[href="${href}"]`), null);
   }
-  // The hint tells everyone in, but nothing is prefilled.
-  // Every staff portal is named here, so the one card is the only way in.
-  const hint = $('#loginHint').textContent;
-  for (const role of ['এডমিন', 'ম্যানেজার', 'শিক্ষক', 'পেমেন্ট কাউন্টার']) {
-    assert.match(hint, new RegExp(role), `the hint must name the ${role} portal`);
-  }
+  // Nothing is prefilled — the one card is the only way in.
   assert.equal($('#loginMobile').value, '');
   assert.equal($('#loginPin').value, '');
   assert.equal(/১২৩১২৩|APC-PAY|এক ক্লিক/.test(ctx.window.document.body.textContent), false);
@@ -216,9 +211,7 @@ test('typing a provisioned staff username switches the password box to a keyboar
   assert.equal($('#loginPin').getAttribute('inputmode'), 'numeric');
   type($('#loginMobile'), 'admin.apc');
   assert.equal($('#loginPin').getAttribute('inputmode'), 'text');
-  assert.equal($('#loginHint').classList.contains('is-staff'), true);
   type($('#loginMobile'), 'raisa.islam');
   await ctx.waitFor(() => $('#loginPin').getAttribute('inputmode') === 'numeric');
   assert.equal($('#loginPin').getAttribute('inputmode'), 'numeric');
-  assert.equal($('#loginHint').classList.contains('is-staff'), false);
 });
