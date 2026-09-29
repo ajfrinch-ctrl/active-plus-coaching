@@ -138,7 +138,11 @@ async function enterPanel() {
   // anything else falls back to the first permitted tab.
   const route = routeFromHash(window.location.hash);
   setView(route && access.allowsView(route) ? route : state.activeView);
-  toast('এডমিন প্যানেলে সফলভাবে প্রবেশ করা হয়েছে');
+  const welcome = $('#adminWelcome');
+  if (welcome) {
+    welcome.textContent = 'স্বাগতম, এডমিন';
+    welcome.hidden = false;
+  }
   readStaffAccount('admin')
     .then(account => ensureBootstrapStaffAccounts(account?.username || 'admin.apc'))
     .then(result => { if (result.ok && result.accounts.length) showBootstrapCredentials(result.accounts); });
