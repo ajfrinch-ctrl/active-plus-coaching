@@ -679,7 +679,6 @@ body.admin-modal-open { overflow: hidden; }
 .admin-dashboard-collect-icon { background: rgba(255,255,255,.16); color: var(--white); }
 .admin-bottom-item:focus-visible, .admin-more-item:focus-visible, .admin-more-back:focus-visible, .admin-dashboard-collect:focus-visible, .admin-hero-foot:focus-visible { outline: 3px solid var(--forest); outline-offset: 3px; }
 
-.teacher-panel-link { text-decoration: none; }
 
 /* ---------- Dashboard money summary (today + this month) ---------- */
 

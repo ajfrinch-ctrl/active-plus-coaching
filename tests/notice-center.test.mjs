@@ -80,14 +80,15 @@ test('every panel ships the identical topbar: logo, slogan, bell, sign-out only'
       assert.equal(bar.querySelectorAll('[data-theme-toggle], time, .student-date, .manager-top-actions, .topbar-chip').length, 0,
         `${page.file}: an extra control is back in the topbar`);
       assert.equal(bar.querySelectorAll('button').length, 2, `${page.file}: the topbar has an extra button`);
-      // Dark mode still has a home: the student switch in the profile, the
-      // staff switch in System Settings/Profile — never in the topbar.
-      const themeHome = document.querySelector('.theme-card .theme-quick-toggle[data-theme-toggle], .pay-desk-tools .theme-quick-toggle[data-theme-toggle]')
-        || document.querySelector('#darkModeToggle');
-      assert.ok(themeHome, `${page.file}: dark mode lost its switch`);
-      if (themeHome.classList.contains('theme-quick-toggle')) {
-        assert.ok(themeHome.querySelector('use[href="#icon-sun"]') && themeHome.querySelector('use[href="#icon-moon"]'));
-      }
+      // Dark mode still has a home on every panel: the same switch row the
+      // student profile uses — sun/moon chip + the app's toggle switch.
+      const themeSwitch = document.querySelector('.theme-switch');
+      assert.ok(themeSwitch, `${page.file}: dark mode lost its switch`);
+      assert.ok(themeSwitch.querySelector('.theme-switch-icon use[href="#icon-sun"]')
+        && themeSwitch.querySelector('.theme-switch-icon use[href="#icon-moon"]'), `${page.file}: the switch lost an icon`);
+      const checkbox = themeSwitch.querySelector('#darkModeToggle');
+      assert.ok(checkbox && checkbox.type === 'checkbox', `${page.file}: the switch is not wired to the theme checkbox`);
+      assert.ok(themeSwitch.querySelector('.toggle-switch i'), `${page.file}: the switch lost its track`);
       const shape = normalised(bar, page.name);
       shapes.set(page.file, shape);
     }
@@ -169,4 +170,21 @@ test('a receipt that cannot be saved keeps the message list honest', async () =>
   await ctx.waitFor(() => modal.querySelector('[data-apc-notice-push]').textContent.trim().length > 0);
   assert.equal(modal.querySelector('[data-apc-notice-push] button'), null);
   assert.match(modal.querySelector('[data-apc-notice-push]').textContent, /সিস্টেম নোটিফিকেশন নেই/);
+});
+
+test('the redesigned dark-mode switch really flips the theme', async () => {
+  const ctx = await loadPage('admin.html');
+  const { initAppearance, APPEARANCE_KEY } = await import('../js/appearance.js');
+  initAppearance();
+  const checkbox = ctx.$('.theme-switch #darkModeToggle');
+  assert.ok(checkbox, 'the switch has no checkbox to click');
+  const before = ctx.document.documentElement.dataset.theme;
+  checkbox.checked = before !== 'dark';
+  checkbox.dispatchEvent(new ctx.window.Event('change', { bubbles: true }));
+  const after = ctx.document.documentElement.dataset.theme;
+  assert.notEqual(after, before, 'flipping the switch did not change the theme');
+  assert.equal(ctx.window.localStorage.getItem(APPEARANCE_KEY), after, 'the choice was not stored for this device');
+  // The icon chip follows the theme: sun in light mode, moon in dark.
+  assert.ok(ctx.$('.theme-switch .theme-switch-icon .icon-sun'), 'the sun icon is missing');
+  assert.ok(ctx.$('.theme-switch .theme-switch-icon .icon-moon'), 'the moon icon is missing');
 });

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'active-plus-student-v89-topbar';
+const CACHE_NAME = 'active-plus-student-v90-theme';
 const APP_SHELL = [
   './js/record-sync.js',
   './js/sync-merge.js',

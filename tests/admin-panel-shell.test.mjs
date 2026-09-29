@@ -135,14 +135,19 @@ test('the bottom bar renders one icon + label per permitted tab', () => {
   assert.ok(exit.querySelector('use[href="#icon-logout"]'));
   assert.equal(header.querySelectorAll('button').length, 2, 'the topbar holds more than notification + sign-out');
   assert.equal(header.querySelectorAll('[data-theme-toggle], time, .student-date').length, 0, 'a control that belongs elsewhere is still in the topbar');
-  // Dark mode stays reachable: it lives in System Settings now, icon-only, with
-  // a sun for light mode and a moon for dark.
-  const themeToggle = ctx.$('.theme-card .theme-quick-toggle[data-theme-toggle]');
-  assert.ok(themeToggle, 'dark mode has no home on the Admin panel');
-  assert.equal(themeToggle.querySelectorAll('svg').length, 2);
-  assert.ok(themeToggle.querySelector('use[href="#icon-sun"]'));
-  assert.ok(themeToggle.querySelector('use[href="#icon-moon"]'));
-  assert.equal(themeToggle.getAttribute('aria-pressed'), 'true');
+  // Dark mode stays reachable: it lives in System Settings as a switch row —
+  // icon chip (sun in light, moon in dark), label and the app's toggle switch.
+  const themeSwitch = ctx.$('.theme-card .theme-switch');
+  assert.ok(themeSwitch, 'dark mode has no home on the Admin panel');
+  assert.ok(themeSwitch.querySelector('.theme-switch-icon use[href="#icon-sun"]'), 'the switch has no sun icon');
+  assert.ok(themeSwitch.querySelector('.theme-switch-icon use[href="#icon-moon"]'), 'the switch has no moon icon');
+  assert.ok(themeSwitch.textContent.includes('ডার্ক মোড'), 'the switch lost its label');
+  const checkbox = themeSwitch.querySelector('.toggle-switch input#darkModeToggle');
+  assert.ok(checkbox, 'the switch is not connected to the theme checkbox');
+  assert.equal(checkbox.type, 'checkbox');
+  // The theme switch is never in the topbar: the bar holds the bell and sign-out only.
+  assert.equal(header.querySelector('.theme-switch, #darkModeToggle, [data-theme-toggle]'), null,
+    'the theme switch is back in the topbar');
 });
 
 test('the dashboard grid is generated from the permission model', () => {
