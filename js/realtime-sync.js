@@ -26,7 +26,7 @@ import { encodeRealtimeRecords, decodeRealtimeRecords } from './realtime-value-c
 import { collectionPayload, remoteToLocal } from './sync-collections.js';
 import { createRecordSync, mergeRecordOperations } from './record-sync.js';
 import { chooseStaffCopy, chooseStudentCopy, sameStudentRecord, loginIdOf, matchesLoginIdentifier, findLoginMatches, suggestIdentifiers } from './sync-merge.js';
-import { reportSyncConflict, reportSyncError, setSyncStatus } from './sync-status.js';
+import { reportSyncConflict, reportSyncError, setSyncStatus, markSyncSuccess } from './sync-status.js';
 import { unsafeKeyPath, isRtdbKey } from './rtdb-keys.js';
 import { isPasswordRecord, verifyPassword } from './password-hash.js';
 import { normalizeUsername, contactNumber } from './account-policy.js';
@@ -664,6 +664,7 @@ function recordBridge(collection) {
         const decoded = decodeRealtimeRecords(current || {});
         return encodeRealtimeRecords(mergeRecordOperations(decoded, operations));
       }, { applyLocally: false });
+      markSyncSuccess('write');
       return normalizeCollectionSnapshot(collection, result.snapshot.val());
     }
   });
@@ -674,6 +675,7 @@ function recordBridge(collection) {
 async function syncCollection(collection) {
   const bridge = recordBridge(collection);
   const snapshot = await get(ref(getDatabase(firebaseApp), DB_ROOT + '/' + collection));
+  markSyncSuccess('read');
   bridge.receive(normalizeCollectionSnapshot(collection, snapshot.val()));
   await bridge.flush();
 }
@@ -879,6 +881,7 @@ export async function startRealtimeSync() {
       await ensureCloudAuth();
       onValue(ref(getDatabase(firebaseApp), '.info/connected'), snap => {
         connected = snap.val() === true;
+        document.documentElement.dataset.firebaseConnection = connected ? 'connected' : 'disconnected';
         paintSyncStatus();
       });
       const tasks = [
@@ -906,7 +909,8 @@ export async function startRealtimeSync() {
       started = true;
       schedulePendingFlush();
       paintSyncStatus();
-      return { ok: true, mode: 'realtime-test-sync' };
+      markSyncSuccess('read');
+    return { ok: true, mode: 'realtime-test-sync' };
     } catch (error) {
       started = false;
       syncError(error);
