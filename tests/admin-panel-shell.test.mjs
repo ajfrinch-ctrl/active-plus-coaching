@@ -141,7 +141,7 @@ test('the bottom bar renders one icon + label per permitted tab', () => {
   assert.ok(themeSwitch, 'dark mode has no home on the Admin panel');
   assert.ok(themeSwitch.querySelector('.theme-switch-icon use[href="#icon-sun"]'), 'the switch has no sun icon');
   assert.ok(themeSwitch.querySelector('.theme-switch-icon use[href="#icon-moon"]'), 'the switch has no moon icon');
-  assert.ok(themeSwitch.textContent.includes('ডার্ক মোড'), 'the switch lost its label');
+  assert.ok(themeSwitch.textContent.includes('গাঢ় থিম'), 'the switch lost its label');
   const checkbox = themeSwitch.querySelector('.toggle-switch input#darkModeToggle');
   assert.ok(checkbox, 'the switch is not connected to the theme checkbox');
   assert.equal(checkbox.type, 'checkbox');

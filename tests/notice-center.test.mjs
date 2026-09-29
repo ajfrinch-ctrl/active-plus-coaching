@@ -86,6 +86,7 @@ test('every panel ships the identical topbar: logo, slogan, bell, sign-out only'
       assert.ok(themeSwitch, `${page.file}: dark mode lost its switch`);
       assert.ok(themeSwitch.querySelector('.theme-switch-icon use[href="#icon-sun"]')
         && themeSwitch.querySelector('.theme-switch-icon use[href="#icon-moon"]'), `${page.file}: the switch lost an icon`);
+      assert.ok(themeSwitch.textContent.includes('গাঢ় থিম'), `${page.file}: the switch label changed`);
       const checkbox = themeSwitch.querySelector('#darkModeToggle');
       assert.ok(checkbox && checkbox.type === 'checkbox', `${page.file}: the switch is not wired to the theme checkbox`);
       assert.ok(themeSwitch.querySelector('.toggle-switch i'), `${page.file}: the switch lost its track`);
