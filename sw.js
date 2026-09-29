@@ -1,7 +1,16 @@
-const CACHE_NAME = 'active-plus-student-v102-firebase-sync-current';
+const CACHE_NAME = 'active-plus-student-v103-sync-protected';
 const APP_SHELL = [
   './js/panel-lockdown.js',
-  './js/firebase-config.js',
+  './firebase/firebase-config.js',
+  './firebase/firebase-init.js',
+  './firebase/firebase-services.js',
+  './sync/sync-core.js',
+  './sync/sync-config.js',
+  './sync/sync-auth.js',
+  './sync/sync-queue.js',
+  './sync/sync-retry.js',
+  './sync/sync-status.js',
+  './sync/sync-guard.js',
   './js/firebase-online-test.js',
   './js/firebase-diagnostic-ui.js',
   './js/firebase-diagnostics.js',
