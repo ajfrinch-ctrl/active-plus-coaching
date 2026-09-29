@@ -74,12 +74,14 @@
   font-weight:700;
 }
 .rc-preview{
-  display:grid;
-  grid-template-rows:auto minmax(0,1fr) auto;
+  display:flex;
+  flex-direction:column;
   gap:10px;
   width:100%;
   min-width:0;
-  height:min(82vh,900px);
+  min-height:0;
+  height:auto;
+  max-height:none;
 }
 .rc-preview-head{
   display:flex;
@@ -135,7 +137,7 @@
   .rc-dynamic-filters{grid-template-columns:1fr}
   .rc-dynamic-filters .rc-field[data-filter="period"]{grid-column:auto}
   .rc-period-extra{grid-column:1/-1;grid-template-columns:1fr}
-  .rc-preview{height:min(76vh,760px)}
+  .rc-preview{height:auto;max-height:none}
 }
 @media(max-width:380px){
   .rc-head{padding:12px}
@@ -148,13 +150,16 @@
    instead of depending on the platform PDF viewer. */
 .rc-pdf-preview{
   min-width:0;
+  min-height:0;
   overflow:auto;
-  display:grid;
+  display:flex;
+  flex-direction:column;
   gap:14px;
   padding:10px 4px 16px;
   border-radius:18px;
   background:#eef2f6;
   overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
 }
 .rc-pdf-preview .rp-page{
   position:relative;
@@ -201,4 +206,35 @@
 @media (max-width:820px){
   .rc-pdf-preview{overflow-x:hidden;padding-left:0;padding-right:0;}
   .rc-pdf-preview .rp-page{width:794px;height:1123px;margin-left:0;margin-right:0;transform-origin:top left;transform:scale(min(1, calc((100vw - 8px) / 794)));}
+}
+
+/* Final mobile PDF-preview layout fix:
+   the preview must scroll vertically and the Download PDF button must remain
+   below the preview instead of being trapped inside a fixed-height grid. */
+.rc-preview{
+  display:flex!important;
+  flex-direction:column!important;
+  height:auto!important;
+  max-height:none!important;
+  overflow:visible!important;
+}
+.rc-pdf-preview{
+  flex:none!important;
+  width:100%!important;
+  max-height:none!important;
+  overflow-y:visible!important;
+  overflow-x:hidden!important;
+}
+.rc-download{
+  flex:0 0 auto!important;
+  position:relative!important;
+  display:block!important;
+  visibility:visible!important;
+  margin:0!important;
+}
+@media(max-width:820px){
+  .rc-pdf-preview .rp-page{
+    transform:scale(min(1, calc((100vw - 8px) / 794)))!important;
+    margin-bottom:calc(-1123px * (1 - min(1, calc((100vw - 8px) / 794))))!important;
+  }
 }
