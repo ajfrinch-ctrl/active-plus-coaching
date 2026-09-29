@@ -83,7 +83,7 @@ test('the receipt image is saved alongside so it can be attached to that chat', 
   const { $, waitFor } = ctx;
   await waitFor(() => downloads.length > 0);
   assert.equal(downloads.length, 1);
-  assert.match(downloads[0], /^R\d{9}\.png$/);
+  assert.match(downloads[0], /^R\d{9}-[a-f0-9]{16}\.png$/);
   assert.match($('#payToast').textContent, new RegExp(bn(raisa.mobile)));
   assert.equal($('#payReceiptWhatsApp').disabled, false, 'the button is usable again');
 });

@@ -9,17 +9,21 @@
    password — or whose password is due for a change — gets the shared staff
    password dialog before the panel opens. */
 
-import { $, $$, setAuthMessage, scrollToTop } from './ui.js';
-import { contactNumber, isContactNumber, normalizeUsername } from './account-policy.js';
+import { defaultStudent } from './config.js';
+import { $, $$, setAuthMessage, scrollToTop, toBanglaNumber } from './ui.js';
+import { contactNumber, normalizeUsername } from './account-policy.js';
+import { matchesLoginIdentifier, studentIdOf } from './sync-merge.js';
 import {
   loadAccount, saveStudent, persistSession, setTrustedDevice,
   isSecurityCheckDisabled, loadAppConfig, verifyAccountPassword, upgradeAccountSecrets
 } from './storage.js';
 import {
   STAFF_ACCOUNTS, STAFF_USERNAMES, normalizeStaffUsername, authenticateStaff,
-  saveStaffSession, resolveStaffRoleByUsername, createInitialAdmin, staffAccountRecordExists
+  saveStaffSession, resolveStaffRoleByUsername, createInitialAdmin, staffAccountRecordExists,
+  activeStaffRoles
 } from './staff-auth.js';
 import { KEYS, readJSON } from './database.js';
+import { mountPanelSwitch } from './panel-switch.js';
 import { openStaffPasswordDialog } from './staff-password-dialog.js';
 import { authenticateDirectoryStaff, changeDirectoryStaffPassword, findDirectoryStaffByUsername } from './staff-directory.js';
 import { generateLoginId } from './user-id.js';
@@ -28,7 +32,7 @@ import { isPasswordRecord } from './password-hash.js';
 const STAFF_PANEL = Object.freeze({ admin: 'admin.html', manager: 'manager.html', teacher: 'teacher.html', payment: 'payment.html' });
 const STAFF_LABEL = Object.freeze({ admin: 'এডমিন প্যানেল', manager: 'ম্যানেজার প্যানেল', teacher: 'শিক্ষক প্যানেল', payment: 'পেমেন্ট রিসিভ প্যানেল' });
 const STAFF_ID_HINT = 'স্টাফ লগইন';
-const DEFAULT_ID_HINT = 'শিক্ষার্থী: ইউজারনেম বা মোবাইল নম্বর ও পাসওয়ার্ড। এডমিন, ম্যানেজার, শিক্ষক ও পেমেন্ট কাউন্টার: নিজের ইউজারনেম ও পাসওয়ার্ড দিয়ে এখানেই লগইন করুন।';
+const DEFAULT_ID_HINT = 'শিক্ষার্থী: লগইন সবসময় নিজের ইউজারনেম দিয়েই (চাইলে মোবাইল নম্বর বা প্রোফাইলের Student ID-ও চলবে) — সাথে নিজের পাসওয়ার্ড। এডমিন, ম্যানেজার, শিক্ষক ও পেমেন্ট কাউন্টার: নিজের ইউজারনেম ও পাসওয়ার্ড দিয়ে এখানেই লগইন করুন — একই ডিভাইসে প্যানেল বদলাতে আগে লগআউট করার দরকার নেই।';
 
 export function staffRoleFor(value) {
   const typed = normalizeStaffUsername(value);
@@ -101,12 +105,19 @@ function staffRolePanelOf(staff) {
   return null; // "other" staff have no panel of their own yet
 }
 
+/* Switching is deliberate and password-gated: the target role's own credentials
+   were just verified, and the session they replace is named out loud. No logout
+   step is needed, and no tap alone can move this device to another panel. */
 async function enterStaffPanel(role, remember) {
+  const previous = (await activeStaffRoles()).filter(name => name !== role);
   if (!(await saveStaffSession(role, remember))) {
     setAuthMessage('সেশন সংরক্ষণ করা যায়নি — ব্রাউজারের স্টোরেজ পরীক্ষা করে আবার চেষ্টা করুন।');
     return;
   }
-  setAuthMessage(`${STAFF_LABEL[role]}ে নেওয়া হচ্ছে…`, 'success');
+  const switched = previous.length
+    ? ` — এই ডিভাইসের আগের ${STAFF_LABEL[previous[0]] || 'প্যানেল'} সেশনটি বন্ধ হয়েছে`
+    : '';
+  setAuthMessage(`${STAFF_LABEL[role]}ে নেওয়া হচ্ছে…${switched}`, 'success');
   window.location.replace(staffPanelPath(role));
 }
 
@@ -194,8 +205,8 @@ function withinBudget(promise, what, budget = ONLINE_BRIDGE_BUDGET_MS) {
 async function hydrateStaffAccountsOnline(what) {
   if (!navigator.onLine) return;
   try {
-    const bridge = await withinBudget(import('./realtime-sync.js?v=20260929-1100'), 'online bridge import');
-    await withinBudget(bridge.hydrateStaffAccounts(), 'online bridge hydrate');
+    const bridge = await withinBudget(import('./realtime-sync.js?v=20260929-fbaudit'), 'online bridge import');
+    await withinBudget(bridge.hydrateStaffAccounts({ preserveLocalAdmin: staffAccountRecordExists('admin') }), 'online bridge hydrate');
   } catch (error) {
     console.warn(`[Active Plus] staff account sync unavailable during ${what}:`, error.message);
   }
@@ -207,16 +218,25 @@ async function hydrateStaffAccountsOnline(what) {
    untouched — they stay the authoritative credentials on it.
    Returns true only when the cloud lookup ran and finished; false when the
    device is offline, the budget ran out, or the cloud refused the request. */
-async function hydrateUserIdentifiersOnline(what) {
+async function hydrateUserIdentifiersOnline(what, identifier = '', password = '') {
   if (!navigator.onLine) return false;
   try {
-    const bridge = await withinBudget(import('./realtime-sync.js?v=20260929-1100'), 'online identity import', LOGIN_IDENTITY_BUDGET_MS);
-    const result = await withinBudget(bridge.hydrateUserIdentifiers(), 'online identity hydrate', LOGIN_IDENTITY_BUDGET_MS);
-    return Boolean(result?.ok);
+    const bridge = await withinBudget(import('./realtime-sync.js?v=20260929-fbaudit'), 'online identity import', LOGIN_IDENTITY_BUDGET_MS);
+    const result = await withinBudget(bridge.hydrateUserIdentifiers({ identifier, password }), 'online identity hydrate', LOGIN_IDENTITY_BUDGET_MS);
+    return result;
   } catch (error) {
     console.warn(`[Active Plus] user id sync unavailable during ${what}:`, error.message);
     return false;
   }
+}
+
+/** The identifier belongs to this device's account: User ID, mobile, the full
+    Student ID, or its short prefix. */
+function isOwnIdentifier(account, identifier) {
+  if (matchesLoginIdentifier(account, identifier)) return true;
+  const typed = normalizeUsername(identifier);
+  const id = studentIdOf(account);
+  return /^s\d{6}/.test(typed) && Boolean(id) && id.startsWith(typed);
 }
 
 async function handleLogin(event, state, onAuthenticated) {
@@ -229,18 +249,29 @@ async function handleLogin(event, state, onAuthenticated) {
   // Hydrate before resolving the role so a newly-created Admin can sign in on a second device.
   // `onlineIdentities` remembers whether that cloud lookup actually finished,
   // so a missing account later reports the real cause instead of blaming the device.
-  const onlineIdentities = { attempted: false, synced: true };
+  const onlineIdentities = { attempted: false, synced: true, cloudPasswordMismatch: false };
   if (navigator.onLine && typedId) {
     onlineIdentities.attempted = true;
-    // Never re-hydrate an existing local Admin record during a normal
-    // logout/login cycle. Logout removes only the session; the local account
-    // remains the authoritative credential on this device. Hydrate only when
-    // the device has no Admin record yet (the cross-device first-login case).
-    const hasLocalAdmin = staffAccountRecordExists('admin');
-    if (!hasLocalAdmin) await hydrateStaffAccountsOnline('login');
-    // Login IDs created on other devices: directory accounts, the claimed-id
-    // registry and the student login (missing records only — see above).
-    onlineIdentities.synced = await hydrateUserIdentifiersOnline('login');
+    // Staff accounts and student logins live on different cloud paths, so both
+    // lookups run together instead of one waiting for the other.
+    const [, identities] = await Promise.all([
+      // Never re-hydrate an existing local Admin record during a normal
+      // logout/login cycle. Logout removes only the session; the local account
+      // remains the authoritative credential on this device.
+      hydrateStaffAccountsOnline('login'),
+      // Login IDs created on other devices: directory accounts, the claimed-id
+      // registry and the student login (a verified password is required before
+      // anything is written to this device).
+      hydrateUserIdentifiersOnline('login', typedId, pin)
+    ]);
+    onlineIdentities.synced = Boolean(identities?.ok);
+    // A cloud copy whose password does not match must never block a valid
+    // local credential: this device's account can be the newer one.
+    onlineIdentities.cloudPasswordMismatch = Boolean(identities?.found && identities?.credentialMismatch);
+    // "s260929001" matched more than one student in the cloud.
+    onlineIdentities.ambiguous = Boolean(identities?.ambiguous);
+    onlineIdentities.cloudAccounts = identities?.cloudAccounts ?? null;
+    onlineIdentities.similar = Array.isArray(identities?.similar) ? identities.similar : [];
   }
   // Staff usernames are reserved, so a match here can only be that panel.
   const staffRole = await resolveStaffRoleByUsername(typedId);
@@ -269,25 +300,49 @@ async function handleLogin(event, state, onAuthenticated) {
   const mobile = contactNumber(typedId);
   state.account = loadAccount() || state.account;
   if ((!username && !mobile) || pin.length < 4) {
-    setAuthMessage('ইউজারনেম বা মোবাইল নম্বর এবং ৪–৬ সংখ্যার পাসওয়ার্ড সঠিকভাবে দিন।');
+    setAuthMessage('ইউজারনেম, মোবাইল নম্বর বা Student ID এবং ৪–৬ সংখ্যার পাসওয়ার্ড সঠিকভাবে দিন।');
     return;
   }
   if (!state.account) {
-    if (onlineIdentities.attempted && !onlineIdentities.synced) {
+    if (onlineIdentities.ambiguous) {
+      setAuthMessage('এই সংক্ষিপ্ত Student ID দিয়ে একাধিক শিক্ষার্থী পাওয়া গেছে — সম্পূর্ণ Student ID লিখুন।');
+    } else if (onlineIdentities.cloudPasswordMismatch) {
+      setAuthMessage('ইউজারনেম, মোবাইল নম্বর বা Student ID অথবা পাসওয়ার্ড সঠিক নয়। আবার চেষ্টা করুন।');
+    } else if (onlineIdentities.attempted && !onlineIdentities.synced) {
       // The cloud lookup itself failed (offline, timed out or refused — e.g.
       // App Check enforcement blocking the Realtime Database). An account that
       // lives on another phone would make "register first" a false message.
-      setAuthMessage('অন্য ডিভাইসে তৈরি অ্যাকাউন্ট এই ডিভাইসে আনা যায়নি। ইন্টারনেট সংযোগ পরীক্ষা করে আবার লগইন করুন — তবুও না হলে রেজিস্ট্রেশন করুন।');
+      setAuthMessage('ক্লাউড থেকে অ্যাকাউন্ট আনা যায়নি। ইন্টারনেট ও Firebase সিঙ্ক পরীক্ষা করে আবার লগইন করুন। আগে অ্যাকাউন্ট তৈরি করে থাকলে নতুন করে রেজিস্ট্রেশন করবেন না।');
+    } else if (!navigator.onLine) {
+      setAuthMessage('এই ডিভাইসে অ্যাকাউন্ট সংরক্ষিত নেই। অন্য ডিভাইসে তৈরি অ্যাকাউন্টে প্রথমবার লগইন করতে ইন্টারনেট চালু করুন।');
     } else {
-      setAuthMessage('এই ডিভাইসে কোনো অ্যাকাউন্ট নেই। আগে রেজিস্ট্রেশন করুন।');
+      // The username is the login ID: say so once, so a student who typed a
+      // name or a guardian's number knows exactly what to type.
+      const similar = onlineIdentities.similar.length
+        ? ` ক্লাউডে মিলে যেতে পারে: ${onlineIdentities.similar.join(', ')}।`
+        : '';
+      if (onlineIdentities.attempted && onlineIdentities.cloudAccounts === 0) {
+        // The cloud is reachable but holds no student login at all: the device
+        // that has the account never uploaded it.
+        setAuthMessage('ক্লাউডে এখনো কোনো শিক্ষার্থী অ্যাকাউন্ট ওঠেনি। যে ডিভাইসে অ্যাকাউন্টটি আছে সেখানে অ্যাপ অনলাইনে খুলে সিঙ্ক চালু করুন (উপরে সবুজ/নীল সিঙ্ক চিহ্ন), তারপর এখানে আবার চেষ্টা করুন।');
+      } else if (onlineIdentities.attempted && onlineIdentities.cloudAccounts > 0) {
+        setAuthMessage(`ক্লাউডে ${toBanglaNumber(onlineIdentities.cloudAccounts)}টি শিক্ষার্থী অ্যাকাউন্ট আছে, কিন্তু “${typedId}” দিয়ে কিছু পাওয়া যায়নি।${similar} নামের বানান মিলিয়ে দেখুন; না মিললে যে ডিভাইসে অ্যাকাউন্টটি আছে সেখানে অ্যাপ অনলাইনে খুলুন।`);
+      } else {
+        setAuthMessage('অ্যাকাউন্ট পাওয়া যায়নি। আগে অন্য ডিভাইসে তৈরি করে থাকলে সেই ডিভাইসে অ্যাপ অনলাইনে খুলে সিঙ্ক সম্পন্ন করুন, তারপর এখানে আবার চেষ্টা করুন।');
+      }
     }
     return;
   }
-  const knownUsername = normalizeUsername(state.account.username || state.account.student?.username || '');
-  const byUsername = Boolean(username) && Boolean(knownUsername) && username === knownUsername;
-  const byMobile = isContactNumber(mobile) && mobile === (state.account.registrationMobile || state.account.mobile);
-  if (!byUsername && !byMobile) {
-    setAuthMessage('ইউজারনেম/মোবাইল নম্বর অথবা পাসওয়ার্ড সঠিক নয়। আবার চেষ্টা করুন।');
+  // What the student may type: the login User ID, the mobile number used at
+  // registration, or the permanent Student ID from the profile. A Student ID
+  // without its random suffix ("s260929001") is accepted for this device's own
+  // account, so nobody has to read out the long tail.
+  if (!isOwnIdentifier(state.account, typedId)) {
+    // The record is here: naming it turns a typo into a one-second fix.
+    const knownId = state.account.username || state.account.student?.username || '';
+    const knownStudentId = studentIdOf(state.account);
+    const known = [knownId, knownStudentId].filter(Boolean).join(' / ');
+    setAuthMessage(`ইউজারনেম, মোবাইল নম্বর বা Student ID অথবা পাসওয়ার্ড সঠিক নয়। এই ডিভাইসের আইডি: ${known || '—'}`);
     return;
   }
   if (!(await verifyAccountPassword(state.account, pin))) {
@@ -299,11 +354,13 @@ async function handleLogin(event, state, onAuthenticated) {
   if (!isPasswordRecord(state.account.pinHash)) {
     state.account = await upgradeAccountSecrets(state.account, { pin }) || state.account;
   }
-  state.student = { ...state.student, ...(state.account.student || {}) };
+  state.student = { ...defaultStudent, ...(state.account.student || {}) };
   saveStudent(state.student);
   const remember = $('#rememberMe')?.checked !== false;
   await persistSession(remember);
   if (remember) setTrustedDevice(true);
+  // Lets the sync bridge fetch this student's exam/result data in the background.
+  window.dispatchEvent(new Event('apc-student-login'));
   onAuthenticated?.();
 }
 
@@ -326,6 +383,8 @@ function initSkipSecurityToggle() {
 export function initLogin({ state, onAuthenticated }) {
   initPinVisibility();
   initSkipSecurityToggle();
+  // The strip that lets this device change panels without a logout step.
+  void mountPanelSwitch();
   $$('[data-auth-tab]').forEach(trigger => trigger.addEventListener('click', () => {
     switchAuthTab(trigger.dataset.authTab);
   }));

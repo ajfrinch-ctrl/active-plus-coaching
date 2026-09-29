@@ -173,9 +173,11 @@ test('the Admin portal also refuses to offer the workflow', async () => {
   assert.equal(panel.$('#initialAdminSetup'), null);
   assert.equal(panel.$('#initialAdminForm'), null);
   assert.equal(panel.$('form input[name="username"][id*="initial"]'), null);
-  /* With no Admin session stored the panel never opens: it sends the visitor
-     to the shared login page, the only place first use is handled. */
-  await panel.waitFor(() => panel.jsdomErrors.some(error => /navigation/i.test(error)));
+  /* With no Admin session stored the panel never opens: it locks in place and
+     keeps the shared login page — the only place first use is handled — as a
+     button, without navigating there on its own. */
+  await panel.waitFor(() => Boolean(panel.$('#apcPanelLock')));
   assert.equal(panel.$('#adminShell').hidden, true, 'the Admin panel must stay closed');
+  assert.equal(panel.jsdomErrors.some(error => /navigation/i.test(error)), false, 'no automatic hand-off');
   panel.window.close();
 });

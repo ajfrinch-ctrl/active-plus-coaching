@@ -133,7 +133,7 @@ for (const viewport of [{ width: 320, height: 740 }, { width: 390, height: 844 }
     await expect(page.locator('#teacherRecent .teaching-card')).toHaveCount(5);
     await page.locator('#teacherMain').evaluate(el => { el.scrollTop = el.scrollHeight; });
     await expect.poll(() => page.evaluate(() => {
-      const top = document.querySelector('.admin-topbar').getBoundingClientRect(), foot = document.querySelector('.admin-bottom').getBoundingClientRect(), main = document.querySelector('#teacherMain').getBoundingClientRect();
+      const top = document.querySelector('.app-topbar').getBoundingClientRect(), foot = document.querySelector('.admin-bottom').getBoundingClientRect(), main = document.querySelector('#teacherMain').getBoundingClientRect();
       return Math.abs(top.top) < 1 && Math.abs(foot.bottom - innerHeight) < 1 && Math.abs(main.top - top.bottom) <= 1 && Math.abs(main.bottom - foot.top) <= 1 && document.documentElement.scrollWidth <= innerWidth && document.querySelector('#teacherShell').offsetWidth <= 480 && window.scrollY === 0;
     })).toBe(true);
     await page.locator('.admin-bottom [data-teacher-view=more]').click(); await page.locator('#teacherMore [data-teacher-view=homework]').click(); await expect.poll(() => page.locator('#teacherMain').evaluate(el => el.scrollTop)).toBe(0);

@@ -31,8 +31,22 @@ export { firebaseConfig };
      App Check with a reCAPTCHA v3 site key, paste the key into
      APP_CHECK_SITE_KEY below, and (for localhost testing) register the debug
      token the browser prints. App Check then attaches tokens automatically.
+     The pages' Content-Security-Policy already carries the reCAPTCHA sources
+     (`script-src`/`frame-src` → www.google.com/recaptcha/), because the SDK
+     injects reCAPTCHA from there; without them the page's own policy blocked
+     the script, no token was ever issued, and with enforcement ON every sync
+     read/write came back denied — with the reason visible only in the console.
    --------------------------------------------------------------------------- */
 export const APP_CHECK_SITE_KEY = ''; // reCAPTCHA v3 site key — empty = App Check off here
+
+/* ---- Push notifications (FCM) ----------------------------------------------
+   Paste the Web Push certificate key here to turn on notifications for a
+   closed app: Firebase Console → Project settings → Cloud Messaging → Web Push
+   certificates → "Generate key pair" → copy the key pair value.
+
+   Empty (the default) keeps the app fully working: notices still arrive in the
+   app and on the phone while the app is open. See NOTIFICATIONS.md. */
+export const FCM_VAPID_KEY = '';
 
 async function initAppCheck() {
   if (!APP_CHECK_SITE_KEY) return; // no key → enforcement must be OFF in the console
@@ -53,4 +67,4 @@ async function initAppCheck() {
   }
 }
 
-void initAppCheck();
+export const appCheckReady = initAppCheck();

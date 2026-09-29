@@ -1,7 +1,12 @@
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
+const { onValueWritten } = require('firebase-functions/v2/database');
 const { initializeApp } = require('firebase-admin/app');
 const { getAuth } = require('firebase-admin/auth');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
+const { getDatabase } = require('firebase-admin/database');
+const { getMessaging } = require('firebase-admin/messaging');
+const { noticePush, broadcastPush, examPushes, chunkTokens, tokensToPrune, messageFor } =
+  require('./notification-payload.js');
 const crypto = require('node:crypto');
 
 initializeApp();
@@ -248,4 +253,96 @@ exports.adminSetAccountStatus = onCall(async request => {
   await auth.setCustomUserClaims(uid, { ...user.customClaims, status });
   await auth.updateUser(uid, { disabled: status !== 'active' });
   return { ok: true, uid, status };
+});
+
+
+/* ---------------------------------------------------------------------------
+   Push notifications for the live (Realtime Database) sync bridge
+   ---------------------------------------------------------------------------
+   The app writes through activePlusSync/v1/* as an anonymous signed-in device.
+   These three triggers watch the same nodes the app syncs and send a web push
+   to every registered device:
+
+     • a published notice          → all devices
+     • the urgent announcement     → all devices, high priority
+     • a published exam / released
+       results                     → only that paper's participants
+
+   Devices register themselves in activePlusSync/v1/pushTokens/<device|person>
+   (js/push-notifications.js). The records hold a token, a role and an ID — no
+   password hash and no session token.
+
+   Deployment notes:
+     • the region must match the Realtime Database location (us-central1 for the
+       default database);
+     • sending web push from Cloud Functions needs the Blaze plan;
+     • nothing here is required for the in-app notification centre, which works
+       with no Cloud Functions at all. */
+
+const BRIDGE_ROOT = 'activePlusSync/v1';
+const PUSH_TOKENS_PATH = `${BRIDGE_ROOT}/pushTokens`;
+const DB_REGION = 'us-central1';
+
+async function tokenEntries() {
+  const snapshot = await getDatabase().ref(PUSH_TOKENS_PATH).get();
+  const value = snapshot.val() || {};
+  return Object.entries(value).filter(([, record]) =>
+    record && typeof record.token === 'string' && record.token.length > 20);
+}
+
+async function sendPayload(entries, payload) {
+  if (!entries.length) return { sent: 0, failed: 0 };
+  const { token, ...template } = messageFor('unused', payload);
+  const messaging = getMessaging();
+  const deadTokens = new Set();
+  let sent = 0;
+  let failed = 0;
+  for (const chunk of chunkTokens(entries, 500)) {
+    const live = chunk.filter(([, record]) => !deadTokens.has(record.token));
+    if (!live.length) continue;
+    const tokens = live.map(([, record]) => record.token);
+    const response = await messaging.sendEachForMulticast({ ...template, tokens });
+    sent += response.successCount;
+    failed += response.failureCount;
+    const dead = new Set(tokensToPrune(response, tokens));
+    if (!dead.size) continue;
+    for (const token of dead) deadTokens.add(token);
+    // A token for an uninstalled app would fail on every later push: drop it.
+    const updates = {};
+    for (const [key, record] of live) if (dead.has(record.token)) updates[`${PUSH_TOKENS_PATH}/${key}`] = null;
+    if (Object.keys(updates).length) await getDatabase().ref().update(updates);
+  }
+  return { sent, failed };
+}
+
+const sendToEveryone = async payload => sendPayload(await tokenEntries(), payload);
+
+const sendToStudents = async (payload) => {
+  const wanted = new Set(payload.studentIds || []);
+  if (!wanted.size) return { sent: 0, failed: 0 };
+  const entries = (await tokenEntries()).filter(([, record]) => wanted.has(String(record.studentId || '')));
+  return sendPayload(entries, payload);
+};
+
+exports.pushNotice = onValueWritten({ ref: `${BRIDGE_ROOT}/notices/{noticeId}`, region: DB_REGION }, async event => {
+  const after = event.data.after.val();
+  const payload = noticePush(event.data.before.val(), after);
+  if (!payload) return;
+  if (!payload.data.id) payload.data.id = String(event.params.noticeId || '');
+  await sendToEveryone(payload);
+});
+
+exports.pushBroadcast = onValueWritten({ ref: `${BRIDGE_ROOT}/settings`, region: DB_REGION }, async event => {
+  const payload = broadcastPush(event.data.before.val(), event.data.after.val());
+  if (!payload) return;
+  await sendToEveryone(payload);
+});
+
+exports.pushExam = onValueWritten({ ref: `${BRIDGE_ROOT}/examDb/exams/{examId}`, region: DB_REGION }, async event => {
+  const after = event.data.after.val();
+  const payloads = examPushes(event.data.before.val(), after);
+  for (const payload of payloads) {
+    if (!payload.data.id) payload.data.id = String(event.params.examId || '');
+    await sendToStudents(payload);
+  }
 });

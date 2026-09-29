@@ -8,7 +8,8 @@ import { contactNumber, isContactNumber, normalizeUsername, usernameError, sugge
 import {
   saveAccount, saveStudent, generateStudentId, generateClassRoll, persistSession, setTrustedDevice, usernameTaken, reserveUsername, releaseUsername, loadAccount
 } from './storage.js';
-import { upsertLocalAccount } from './office-data.js';
+import { upsertStudentRosterRow } from './office-data.js';
+import { listDocuments } from './database.js';
 import { switchAuthTab } from './login.js';
 
 function populateRegistrationClasses() {
@@ -78,6 +79,27 @@ function initUsernameField() {
   return check;
 }
 
+/* The claimed login IDs live in the cloud as well as here. A device that has
+   not synced yet must not take a name another student already owns, so the
+   cloud is asked before the local claim is written. Best effort: an offline or
+   failed lookup answers null and never blocks local-first registration (the
+   bridge's own merge guard still protects the other student's record). */
+async function checkUsernameOnline(username) {
+  if (!navigator.onLine) return null;
+  const budget = 4000;
+  const bounded = promise => Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('lookup timed out')), budget))
+  ]);
+  try {
+    const bridge = await bounded(import('./realtime-sync.js?v=20260929-fbaudit'));
+    return await bounded(bridge.usernameTakenOnline(username));
+  } catch (error) {
+    console.warn('[Active Plus] cloud login-id check unavailable:', error.message);
+    return null;
+  }
+}
+
 async function handleRegistration(event, state, onRegistered) {
   event.preventDefault();
   const formElement = event.currentTarget;
@@ -94,12 +116,22 @@ async function handleRegistration(event, state, onRegistered) {
   const usernameProblem = usernameError(username);
   if (usernameProblem) return setAuthMessage(usernameProblem);
   if (usernameTaken(username)) return setAuthMessage('এই ইউজারনেমটি আগেই নেওয়া হয়েছে। অন্য একটি বেছে নিন — এটি পরে বদলানো যাবে না।');
+  if ((await checkUsernameOnline(username))?.taken) {
+    return setAuthMessage('এই ইউজারনেমটি অন্য একটি ডিভাইসে আগেই নেওয়া হয়েছে। অন্য একটি বেছে নিন — এটি পরে বদলানো যাবে না।');
+  }
   if (!/^\d{4,6}$/.test(pin)) return setAuthMessage('পাসওয়ার্ড অবশ্যই ৪ থেকে ৬ সংখ্যার হতে হবে।');
   if (pin !== pinConfirm) return setAuthMessage('দুটি পাসওয়ার্ড এক নয়। আবার মিলিয়ে দিন।');
   if (state.account) return setAuthMessage('এই ডিভাইসে ইতিমধ্যে একটি অ্যাকাউন্ট আছে। লগইন করুন অথবা এডমিনের সাহায্য নিন।');
 
   const className = String(form.get('className') || '');
-  const studentId = generateStudentId();
+  // The Student ID is the permanent tracking key every panel searches by, so
+  // one that this device already holds is never handed out twice. (A new id
+  // ends with a random suffix, making a collision practically impossible —
+  // this is the belt to its braces.)
+  const issuedIds = new Set(listDocuments('students').map(student => student?.id).filter(Boolean));
+  if (loadAccount()?.student?.id) issuedIds.add(loadAccount().student.id);
+  let studentId = generateStudentId();
+  for (let guard = 0; guard < 5 && issuedIds.has(studentId); guard += 1) studentId = generateStudentId();
   const studentData = {
     name: String(form.get('nameBn') || '').trim(),
     nameBn: String(form.get('nameBn') || '').trim(),
@@ -146,7 +178,7 @@ async function handleRegistration(event, state, onRegistered) {
   state.account = loadAccount() || account;
   state.student = { ...state.student, ...studentData };
   saveStudent(state.student);
-  upsertLocalAccount();
+  upsertStudentRosterRow();   // the exact personal fields, nothing the branch owns
   await persistSession(true);
   setTrustedDevice(true);
   formElement.reset();

@@ -15,6 +15,7 @@ import { classCodes, feeCategories, paymentMethods } from './admin-data.js';
 import { loadAppConfig, saveAppConfig, loadAccount, saveAccount } from './storage.js';
 import { loadRoster, saveRoster, syncAccountStatus, loadNotices, loadRoutine } from './office-data.js';
 import { changeStaffPassword, updateStaffProfile, ensureBootstrapStaffAccounts, readStaffAccount, hasStaffSession, clearStaffSession, goToLoginPage, STAFF_SESSION_RULES, STAFF_KEYS_LIST } from './staff-auth.js';
+import { installPanelGuard, lockPanel, rememberPanelPage, watchOwnPanelSession } from './panel-lockdown.js';
 import { openStaffPasswordDialog } from './staff-password-dialog.js';
 import { financeRepository, monthLabel, dateLabel, searchStudents, studentFeeSummary, newestTransactions, stampTransaction, isFinalizedTransaction, TRANSACTIONS_KEY } from './finance-data.js';
 import { newId, KEYS, readJSON, writeJSON } from './database.js';
@@ -23,6 +24,7 @@ import { mountReports, refreshReports } from './reports.js';
 import { registerServiceWorker } from './service-worker.js';
 import { initFixedShell } from './fixed-shell.js';
 import { escapeHtml } from './sanitize.js';
+import { matchesStudentQuery } from './student-search.js';
 import { createAccess, CAPABILITIES, routeFromHash } from './admin-permissions.js';
 import { initAdminPanelShell } from './admin-panel-ui.js';
 import { paintIcon } from './admin-icons.js';
@@ -270,62 +272,18 @@ const statusMeta = Object.freeze({
 });
 
 function visibleStudents() {
-  const rawQuery = state.query.trim().toLowerCase();
-  const digitQuery = normalizeDigitsOnly(rawQuery);
+  const query = state.query.trim();
 
   return state.students.filter(student => {
     const matchesFilter = state.filter === 'all' || student.status === state.filter;
     if (!matchesFilter) return false;
     // Class filter (student management made easy: pick a class, see only that class).
     if (state.classFilter !== 'all' && student.className !== state.classFilter) return false;
-    if (!rawQuery) return true;
-
-    // 1. Check Student ID (ID string, numeric digits, Bangla numerals)
-    const idStr = String(student.id || '').toLowerCase();
-    const idDigits = normalizeDigitsOnly(student.id);
-    const idBn = toBanglaNumber(student.id).toLowerCase();
-
-    if (
-      idStr.includes(rawQuery) ||
-      (digitQuery && idDigits.includes(digitQuery)) ||
-      idBn.includes(rawQuery)
-    ) {
-      return true;
-    }
-
-    // 2. Check Name (Bangla & English) and Father's Name
-    const nameBn = (student.name || '').toLowerCase();
-    const nameEn = (student.nameEn || '').toLowerCase();
-    const fatherName = (student.fatherName || '').toLowerCase();
-    if (nameBn.includes(rawQuery) || nameEn.includes(rawQuery) || fatherName.includes(rawQuery)) {
-      return true;
-    }
-
-    // 3. Check Mobile and Guardian Mobile (both English digits & Bangla digits)
-    const mobileNorm = normalizeDigitsOnly(student.mobile);
-    const guardianMobileNorm = normalizeDigitsOnly(student.guardianMobile);
-    const mobileBn = toBanglaNumber(student.mobile);
-    const guardianMobileBn = toBanglaNumber(student.guardianMobile);
-
-    if (
-      (digitQuery && (mobileNorm.includes(digitQuery) || guardianMobileNorm.includes(digitQuery))) ||
-      (student.mobile && student.mobile.toLowerCase().includes(rawQuery)) ||
-      (student.guardianMobile && student.guardianMobile.toLowerCase().includes(rawQuery)) ||
-      mobileBn.includes(rawQuery) ||
-      guardianMobileBn.includes(rawQuery)
-    ) {
-      return true;
-    }
-
-    // 4. Check Class & Group
-    const className = (student.className || '').toLowerCase();
-    const group = (student.group || '').toLowerCase();
-    if (className.includes(rawQuery) || group.includes(rawQuery)) {
-      return true;
-    }
-
-    // Auto-hide non-matching students
-    return false;
+    if (!query) return true;
+    // One shared rule for every panel: the permanent Student ID is the tracking
+    // key (full, short, Bangla digits or without dashes), plus name, guardian
+    // name, mobiles, class and group. See js/student-search.js.
+    return matchesStudentQuery(student, query);
   });
 }
 
@@ -951,6 +909,14 @@ function routineTeacherNames() {
 
 function renderAppManagement() {
   const cfg = state.appConfig || loadAppConfig();
+  if ($('#cfgPushNotifications')) $('#cfgPushNotifications').checked = cfg.pushNotifications !== false;
+  if ($('#cfgBroadcastAlert')) $('#cfgBroadcastAlert').checked = Boolean(cfg.broadcastAlert);
+  if ($('#cfgBroadcastMessage')) $('#cfgBroadcastMessage').value = cfg.broadcastMessage || '';
+  if ($('#broadcastState')) {
+    $('#broadcastState').textContent = cfg.broadcastAlert && cfg.broadcastMessage
+      ? 'এখন চালু আছে — সব ডিভাইসে দেখা যাচ্ছে।'
+      : 'এখন বন্ধ আছে।';
+  }
   if ($('#cfgTagline')) $('#cfgTagline').value = cfg.tagline || 'শিখতে থাকো, এগিয়ে যাও';
   if ($('#cfgHelpline')) $('#cfgHelpline').value = cfg.helplineMobile || ADMIN_ID || '01819486966';
   if ($('#cfgWhatsapp')) $('#cfgWhatsapp').value = cfg.whatsappNumber || ADMIN_ID || '01819486966';
@@ -971,6 +937,21 @@ function saveAppSettingsFromForm() {
   saveAppConfig(state.appConfig);
   renderAppManagement();
   toast('ব্র্যান্ডিং ও যোগাযোগের তথ্য সংরক্ষিত হয়েছে');
+}
+
+/* Urgent announcement: one switch + one message that every device receives as
+   a notification. Clearing the message turns it off on every device too. */
+function saveBroadcastFromForm() {
+  const current = state.appConfig || loadAppConfig();
+  const message = $('#cfgBroadcastMessage')?.value.trim().slice(0, 500) || '';
+  const alert = Boolean($('#cfgBroadcastAlert')?.checked) && Boolean(message);
+  const pushOn = $('#cfgPushNotifications') ? Boolean($('#cfgPushNotifications').checked) : current.pushNotifications !== false;
+  state.appConfig = { ...current, pushNotifications: pushOn, broadcastAlert: alert, broadcastMessage: message };
+  saveAppConfig(state.appConfig);
+  renderAppManagement();
+  toast(!pushOn
+    ? 'নোটিফিকেশন বন্ধ করা হয়েছে — শুধু ইন-অ্যাপ নোটিশ তালিকা থাকবে'
+    : alert ? 'জরুরি ঘোষণা সব ডিভাইসে পাঠানো হয়েছে' : 'জরুরি ঘোষণা বন্ধ করা হয়েছে');
 }
 
 /* ---------- Roles & Permissions ----------
@@ -1189,9 +1170,11 @@ function resetAllLocalData() {
       toast('ডেটা রিসেট করা যায়নি।');
       return;
     }
-    toast('সকল লোকাল ডেটা মুছে ফেলা হয়েছে। অ্যাপ রিলোড হচ্ছে...');
+    toast('সকল লোকাল ডেটা মুছে ফেলা হয়েছে। আবার লগইন করতে হবে।');
     window.setTimeout(() => {
-      window.location.assign('index.html');
+      /* No jump to another page: the panel locks itself in place and the lock
+         card offers the login page as the one way onward. */
+      void lockPanel({ role: 'admin.html', reason: 'সব ডেটা মুছে ফেলা হয়েছে — নিরাপত্তার জন্য এডমিন প্যানেল বন্ধ করা হলো।' });
     }, 1200);
   });
 }
@@ -1463,6 +1446,7 @@ function onStaffChanged() {
 /* ---------- Wiring ---------- */
 
 $('#btnSaveAppSettings')?.addEventListener('click', saveAppSettingsFromForm);
+$('#btnSaveBroadcast')?.addEventListener('click', saveBroadcastFromForm);
 
 $('#bootstrapCredentialsDone')?.addEventListener('click', () => { $('#bootstrapCredentialsBackdrop').hidden = true; });
 $('#bootstrapCopyCredentials')?.addEventListener('click', async () => {
@@ -1724,35 +1708,56 @@ document.addEventListener('keydown', event => {
 $('#feeMonth').innerHTML = '';
 populateFinanceMonths();
 loadFinanceTransactions();
+let cloudRefreshTimer;
 window.addEventListener('storage', event => {
   if (!state.savingFee && (event.key === TRANSACTIONS_KEY || event.key === null)) loadFinanceTransactions();
+  if (!event.apcRemote) return;
+  clearTimeout(cloudRefreshTimer);
+  cloudRefreshTimer = setTimeout(async () => {
+    if ($('#adminShell').hidden) return;
+    try {
+      state.students = loadRoster();
+      state.notices = loadNotices();
+      state.routine = loadRoutine();
+      await refreshStaffSnapshot();
+      renderAll();
+      refreshReports($('#adminReports'));
+    } catch (error) {
+      console.warn('[Active Plus] cloud refresh failed:', error?.message);
+    }
+  }, 100);
 });
 
 // Every staff login starts at index.html. This page only restores an existing session.
+// One door per panel: no route of ours leaves admin.html for another panel.
+installPanelGuard();
+void rememberPanelPage();
+
 async function initAdminEntry() {
   try {
     if (!(await hasStaffSession('admin'))) {
-      goToLoginPage();
+      /* The panel stays shut and explains itself instead of jumping to another
+         page: the lock card holds the only two exits (login page / reload). */
+      await lockPanel({ role: 'admin.html', reason: 'এডমিন প্যানেল শুধু এডমিন ইউজারনেম ও পাসওয়ার্ড দিয়ে খোলে।' });
       return;
     }
     const account = await readStaffAccount('admin');
     if (!account) {
-      clearStaffSession('admin');
-      goToLoginPage();
+      await lockPanel({ role: 'admin.html', clear: 'admin', reason: 'এই ডিভাইসে এডমিন অ্যাকাউন্টের রেকর্ড নেই — লগইন পেজ থেকে আবার প্রবেশ করুন।' });
       return;
     }
     await enterPanel();
+    watchOwnPanelSession('admin');
   } catch (error) {
     /* Never leave admin.html blank when a stored session/account or optional
        panel initializer is corrupted. Clear only the invalid Admin session;
        application data is untouched. */
     console.error('[Active Plus] Admin panel startup failed:', error);
-    clearStaffSession('admin');
-    goToLoginPage();
+    await lockPanel({ role: 'admin.html', clear: 'admin', reason: 'প্যানেল চালু করা যায়নি — লগইন পেজ থেকে আবার চেষ্টা করুন।' });
   }
 }
 void initAdminEntry().catch(error => {
   console.error('[Active Plus] Admin entry failed:', error);
   clearStaffSession('admin');
-  goToLoginPage();
+  void lockPanel({ role: 'admin.html', reason: 'প্যানেল চালু করা যায়নি — লগইন পেজ থেকে আবার চেষ্টা করুন।' });
 });

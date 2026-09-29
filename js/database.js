@@ -136,12 +136,20 @@ export function nextSequence(scope, floor = 0) {
   return value;
 }
 
+// Date/sequence alone collides on two newly installed phones.
+export function recordNonce() {
+  const bytes = new Uint8Array(8);
+  if (globalThis.crypto?.getRandomValues) globalThis.crypto.getRandomValues(bytes);
+  else for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
+  return [...bytes].map(byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
 export function newId(prefix, now = new Date()) {
   const cleanPrefix = String(prefix || 'ID').replace(/[^A-Za-z]/g, '').toUpperCase();
   const yy = String(now.getFullYear()).slice(-2);
   const date = `${yy}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
   const sequence = nextSequence(`${cleanPrefix}:${date}`);
-  return `${cleanPrefix}${date}${String(sequence).padStart(3, '0')}`;
+  return `${cleanPrefix}${date}${String(sequence).padStart(3, '0')}-${recordNonce()}`;
 }
 
 /** Fields safe to sync. Secrets never leave the device account. */

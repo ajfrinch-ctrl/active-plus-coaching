@@ -67,3 +67,30 @@ test('Manager alone assigns Teacher class/batch scope through the Teachers workf
   assert.equal(saved[0].className, 'দশম শ্রেণি'); assert.equal(saved[0].group, 'বিজ্ঞান বিভাগ'); assert.equal(saved[0].subject, 'গণিত');
   assert.equal(ctx.$('#managerTeacherList').textContent.includes('দশম শ্রেণি'), true);
 });
+
+/* Tracking a student by the permanent Student ID in the Manager panel — the
+   same box staff already use for names and mobile numbers. Bangla digits are
+   what a Bangla keyboard produces, so they must find the student too. */
+test('the Manager student search finds a student by Student ID, including Bangla digits', async () => {
+  const box = ctx.$('#managerStudentSearch');
+  const rows = () => ctx.$$('#managerStudentList [data-manager-student]');
+  ctx.click(ctx.$('[data-manager-view="students"]'));
+  await ctx.waitFor(() => ctx.$('.manager-view[data-view-panel="students"]').classList.contains('active'));
+
+  ctx.type(box, 's-app');                        // a real Student ID prefix
+  await ctx.waitFor(() => rows().length === 1);
+  assert.equal(rows()[0].dataset.managerStudent, 'S-APPROVED');
+
+  ctx.type(box, '০১৭০০০০০০০১');                   // Bangla digits for the mobile number
+  await ctx.waitFor(() => rows().length === 1);
+  assert.equal(rows()[0].dataset.managerStudent, 'S-APPROVED');
+
+  ctx.type(box, 'S-PENDING');                     // the other student's id
+  await ctx.waitFor(() => rows().length === 1);
+  assert.equal(rows()[0].dataset.managerStudent, 'S-PENDING');
+
+  ctx.type(box, 's-rej');                         // an id nobody has
+  await ctx.waitFor(() => rows().length === 0);
+  ctx.type(box, '');
+  await ctx.waitFor(() => rows().length === 2);
+});

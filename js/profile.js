@@ -4,6 +4,7 @@ import { $, openModal, closeModal, showFeedback, normalizeMobile } from './ui.js
 import { enabledClasses } from './config.js';
 import { appendAccountMobile } from './account-policy.js';
 import { loadAccount, saveStudent, persistAccount, isSecurityCheckDisabled, setSecurityCheckDisabled, isTrustedDevice, setTrustedDevice, persistSession, generateClassRoll } from './storage.js';
+import { upsertStudentRosterRow } from './office-data.js';
 
 export function populateProfileClassOptions() {
   const select = $('#classInput');
@@ -143,6 +144,10 @@ export function initProfile({ state, onStudentChange }) {
     state.account = saved;
     state.student = state.account.student;
     saveStudent(state.student);
+    // The device profile is not shared; the roster row is. Without this the
+    // Admin / Manager / Cash Counter panels on other devices would keep the old
+    // name, class and mobile for this student.
+    upsertStudentRosterRow();
     onStudentChange?.(state.student);
     closeModal('editModal');
     showFeedback('প্রোফাইলের তথ্য সংরক্ষণ হয়েছে');

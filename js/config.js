@@ -34,6 +34,9 @@ export const DEFAULT_APP_SETTINGS = Object.freeze({
   broadcastAlert: false,
   broadcastMessage: '',
   broadcastTone: 'green',
+  /* Master switch for the notification centre and for push (Admin → Settings).
+     Off = no system notifications anywhere; the in-app notice list still works. */
+  pushNotifications: true,
   modules: {
     routine: true,
     courses: true,

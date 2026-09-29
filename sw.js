@@ -1,5 +1,18 @@
-const CACHE_NAME = 'active-plus-student-v83-exam-sync';
+const CACHE_NAME = 'active-plus-student-v94-firebasehardening';
 const APP_SHELL = [
+  './js/panel-lockdown.js',
+  './js/panel-switch.js',
+  './js/record-sync.js',
+  './js/sync-merge.js',
+  './js/sync-collections.js',
+  './js/realtime-value-codec.js',
+  './js/student-search.js',
+  './js/sync-status.js',
+  './js/rtdb-keys.js',
+  './js/username-sync-codec.js',
+  './js/notification-rules.js',
+  './js/notifications.js',
+  './js/push-notifications.js',
   './offline-roles.html',
   './css/offline-roles.css',
   './js/offline-role-store.js',
@@ -124,7 +137,7 @@ const APP_SHELL = [
   './js/recovery.js',
   './js/logout.js',
   './js/navigation.js',
-  './js/modals.js',
+  './js/notice-center.js',
   './js/install.js',
   './js/connectivity.js',
   './js/service-worker.js',
@@ -164,6 +177,52 @@ const APP_SHELL = [
   './js/storage/settings.js'
 ];
 
+/* Panel lockdown (js/panel-lockdown.js). This device's own panel is the only
+   page a tapped notification may open: with no window in sight the worker reads
+   the hint the panel left here. Never a hard-coded page, never another panel. */
+const PANEL_HINT_CACHE = 'apc-panel-hint';
+const PANEL_HINT_PATH = './__apc-last-panel';
+const PANEL_PAGES = ['admin.html', 'manager.html', 'teacher.html', 'payment.html'];
+const APP_ENTRY = './index.html';
+
+/* Served when an offline navigation is not in the cache. It stays on the page
+   the person asked for — the old fallback handed an offline Admin the student
+   app, which is exactly the cross-panel jump the panels now close. */
+const OFFLINE_DOCUMENT = `<!DOCTYPE html>
+<html lang="bn"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>অফলাইন — Active Plus</title>
+<style>body{margin:0;padding:24px;font:14px/1.8 'Noto Sans Bengali',system-ui,sans-serif;background:#f4f6fb;color:#14203c}
+.card{max-width:420px;margin:10vh auto 0;padding:20px;border:1px solid #dbe2ec;border-radius:18px;background:#fff;box-shadow:0 10px 30px rgba(9,22,51,.08)}
+h1{font-size:17px;margin:6px 0 8px}p{margin:0 0 12px}.eyebrow{margin:0;font-size:11px;letter-spacing:.04em;color:#7a869c}
+button{padding:11px 14px;border:1px solid #315efb;border-radius:12px;background:#315efb;color:#fff;font:inherit;font-size:13px}</style>
+</head><body><section class="card">
+<p class="eyebrow">সংযোগ নেই</p>
+<h1>এই পাতাটি এখন ক্যাশে নেই</h1>
+<p>ইন্টারনেট সংযোগ ফিরে এলে আবার চেষ্টা করুন। এই ডিভাইসের নিজের ডেটা নিরাপদে আছে।</p>
+<button onclick="location.reload()">আবার চেষ্টা করুন</button>
+</section></body></html>`;
+
+async function cachedResponse(request) {
+  const exact = await caches.match(request);
+  if (exact) return exact;
+  try {
+    const url = new URL(request.url);
+    if (url.origin !== self.location.origin) return null;
+    return (await caches.match(url.pathname)) || null;   // ignore a ?v= cache-buster
+  } catch { return null; }
+}
+
+async function panelHintTarget() {
+  try {
+    const cache = await caches.open(PANEL_HINT_CACHE);
+    const response = await cache.match(PANEL_HINT_PATH);
+    if (!response) return '';
+    const file = (await response.text()).trim().toLowerCase();
+    return PANEL_PAGES.includes(file) ? `./${file}` : '';
+  } catch { return ''; }
+}
+
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -196,12 +255,35 @@ self.addEventListener('fetch', event => {
         );
       }
       return response;
-    }).catch(() => {
-      return caches.match(event.request).then(cached => {
-        if (cached) return cached;
-        if (event.request.mode === 'navigate') return caches.match('./index.html');
-        return new Response('', { status: 503, statusText: 'Offline' });
-      });
+    }).catch(async () => {
+      const cached = await cachedResponse(event.request);
+      if (cached) return cached;
+      if (event.request.mode === 'navigate') {
+        return new Response(OFFLINE_DOCUMENT, {
+          status: 503, statusText: 'Offline',
+          headers: { 'content-type': 'text/html; charset=utf-8' }
+        });
+      }
+      return new Response('', { status: 503, statusText: 'Offline' });
     })
   );
+});
+
+/* A tapped notification brings the app forward (notifications raised by the
+   page itself, e.g. a notice that arrived while a tab stayed open). With no
+   window open it opens the device's own panel — the hint a panel left here —
+   and only falls back to the app door, never to a hard-coded page. */
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  event.waitUntil((async () => {
+    const clientList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const client of clientList) {
+      if ('focus' in client) {
+        client.postMessage({ type: 'apc-notification-click', data: event.notification?.data || {} });
+        return client.focus();
+      }
+    }
+    const target = (await panelHintTarget()) || APP_ENTRY;
+    return self.clients.openWindow(target);
+  })());
 });

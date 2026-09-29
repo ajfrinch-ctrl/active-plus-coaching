@@ -2,23 +2,16 @@
    Swap the database adapter for Firestore later; the payment UI awaits its save. */
 import { KEYS, listDocumentsStrict, replaceDocumentsStrict } from './database.js';
 import { hasStaffSession, readStaffAccount } from './staff-auth.js';
+import { latinDigits as sharedLatinDigits, searchStudentsByQuery } from './student-search.js';
 export const TRANSACTIONS_KEY = KEYS.transactions;
 export const DEFAULT_MONTHLY_FEE = 1500;
 export const MONTHS = ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'];
-export const latinDigits = value => String(value ?? '').replace(/[০-৯]/g, digit => '০১২৩৪৫৬৭৮৯'.indexOf(digit));
+export const latinDigits = sharedLatinDigits;   // one implementation, see js/student-search.js
 const banglaDigits = value => String(value).replace(/\d/g, digit => '০১২৩৪৫৬৭৮৯'[digit]);
 export const monthLabel = (date = new Date()) => `${MONTHS[date.getMonth()]} ${banglaDigits(date.getFullYear())}`;
 export const dateLabel = (date = new Date()) => `${banglaDigits(date.getDate())} ${monthLabel(date)}`;
 
-export function searchStudents(students, query) {
-  const text = latinDigits(query).normalize('NFC').trim().toLocaleLowerCase();
-  if (!text) return [];
-  const compact = text.replace(/[\s()+-]/g, '');
-  return students.filter(s => [s.name, s.nameEn, s.id, s.mobile, s.guardianMobile].some(value => {
-    const normalized = latinDigits(value).normalize('NFC').toLocaleLowerCase();
-    return normalized.includes(text) || (compact && normalized.replace(/[\s()+-]/g, '').includes(compact));
-  }));
-}
+export const searchStudents = searchStudentsByQuery;
 
 function paymentDate(value) {
   const text = latinDigits(value).trim();

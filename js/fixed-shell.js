@@ -4,9 +4,9 @@ export function initFixedShell() {
   const bars = [];
   for (const [shellSelector, headerSelector, footerSelector] of [
     ['#appShell', '#studentHeader', '.bottom-nav'],
-    ['#adminShell', '.admin-topbar', '.admin-bottom'],
-    ['#teacherShell', '.admin-topbar', '.admin-bottom'],
-    ['#managerShell', '.admin-topbar', '.admin-bottom']
+    ['#adminShell', '.app-topbar', '.admin-bottom'],
+    ['#teacherShell', '.app-topbar', '.admin-bottom'],
+    ['#managerShell', '.app-topbar', '.admin-bottom']
   ]) {
     const shell = document.querySelector(shellSelector);
     if (!shell) continue;

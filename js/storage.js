@@ -8,10 +8,11 @@
 import { protectAccountIdentity, normalizeUsername } from './account-policy.js';
 import { normalizeAnswer } from './ui.js';
 import { STORAGE_KEYS, defaultStudent, DEFAULT_APP_SETTINGS, DEFAULT_PIN } from './config.js';
-import { rememberAccount, KEYS, nextSequence } from './database.js';
+import { rememberAccount, KEYS, nextSequence, recordNonce } from './database.js';
 import { hashPassword, verifyPassword, isPasswordRecord } from './password-hash.js';
 import { encryptValue, decryptValue, isEncryptedEnvelope } from './secure-store.js';
 import { buildSessionRecord, isSessionRecordValid, DAY_MS } from './session.js';
+import { LOCAL_WRITE_KEY, markLocalSource } from './notification-rules.js';
 
 const SESSION_DAYS_REMEMBER = 90;
 const TAB_SESSION_MARKER = '1';
@@ -69,6 +70,9 @@ export async function persistAccount(account) {
   const previous = raw === null ? null : JSON.parse(raw);
   const value = protectAccountIdentity(account, previous);
   const stored = await hashSecrets(value, account);
+  // Cross-device merge tiebreak: the newest local change must not be replaced
+  // by an older cloud copy (e.g. a password changed while offline).
+  stored.updatedAt = new Date().toISOString();
   storage.setItem(STORAGE_KEYS.account, JSON.stringify(stored));
   rememberAccount(stored);
   return stored;
@@ -268,14 +272,21 @@ export function loadAppConfig() {
 }
 
 export function saveAppConfig(config) {
-  return writeJSON(STORAGE_KEYS.appConfig, config);
+  const saved = writeJSON(STORAGE_KEYS.appConfig, config);
+  // The admin who typed the urgent announcement does not get their own push.
+  if (saved) {
+    try {
+      writeJSON(LOCAL_WRITE_KEY, markLocalSource(readJSON(LOCAL_WRITE_KEY, null), 'settings', 'broadcast'));
+    } catch { /* best effort */ }
+  }
+  return saved;
 }
 
 export function generateStudentId() {
   const now = new Date();
   const date = `${String(now.getFullYear()).slice(-2)}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
   const sequence = nextSequence(`s:${date}`);
-  return `s${date}${String(sequence).padStart(3, '0')}`;
+  return `s${date}${String(sequence).padStart(3, '0')}-${recordNonce()}`;
 }
 
 const CLASS_ID_CODES = Object.freeze({
