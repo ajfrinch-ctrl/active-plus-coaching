@@ -50,3 +50,12 @@ test('undefined fields are dropped the way JSON.stringify drops them', () => {
   assert.equal(Object.hasOwn(encoded.a, 'gone'), false);
   assert.deepEqual(decodeRealtimeRecords(encoded), { a: { kept: 1 } });
 });
+
+test('a numeric-keyed map from the database is rebuilt as a list', () => {
+  // What the SDK returns for an array that lost a hole, or for hand-written data.
+  const stored = { exams: { 0: { id: 'E1' }, 1: { id: 'E2' } }, notes: { a: { id: 'N1' } } };
+  const decoded = decodeRealtimeRecords(stored);
+  assert.deepEqual(decoded.exams, [{ id: 'E1' }, { id: 'E2' }]);
+  assert.equal(Array.isArray(decoded.notes), false, 'a real map is left alone');
+  assert.equal(Array.isArray(decodeRealtimeRecords({ list: { 0: 'a', 2: 'c' } }).list), false, 'a gap stays a map');
+});

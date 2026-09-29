@@ -379,6 +379,72 @@ test('a fresh device reports a wrong password instead of adopting the cloud acco
   } finally { await fresh.stop(); }
 });
 
+test('a fresh device cannot register a login ID another student already owns', async () => {
+  const { KEYS } = await import('../js/database.js');
+  const original = SYNC_ROOT(cloud).studentAccounts.dolon;
+  assert.ok(original?.pinHash, 'the original student login is in the cloud');
+  const intruder = new Device('intruder', cloud.url);
+  intruder.start();
+  try {
+    // 1) The cloud is reachable: the claim itself is refused before anything is written.
+    const attempt = await intruder.run('register-student', { username: 'dolon', pin: '1122' });
+    assert.equal(attempt.registered, false, 'the duplicate registration is refused');
+    assert.match(String(attempt.message || ''), /ইউজারনেম/, 'and the user is told the ID is taken');
+    assert.equal(attempt.account, null, 'nothing is written locally');
+
+    // 2) The cloud is unreachable: local-first registration still works, but the
+    //    other student's cloud record must survive untouched.
+    await intruder.run('set-cloud', { blocked: true });
+    const offline = await intruder.run('register-student', { username: 'dolon', pin: '3344', mobile: '01799887766' });
+    assert.equal(offline.registered, true, 'an offline device can still register');
+    assert.equal(offline.account.username, 'dolon');
+
+    await intruder.run('set-cloud', { blocked: false });
+    await intruder.run('boot');
+    await intruder.run('wait-status', { state: 'conflict' });
+    const status = await intruder.run('sync-status');
+    assert.match(String(status.message || ''), /এডমিন/, 'the conflict asks for an admin');
+    assert.deepEqual(SYNC_ROOT(cloud).studentAccounts.dolon.pinHash, original.pinHash, 'the original password is not replaced');
+    assert.equal(SYNC_ROOT(cloud).studentAccounts.dolon.mobile, '01812345678');
+    assert.equal(offline.account.username, 'dolon', 'the local registration is kept, nothing is destroyed on this device');
+    const snapshot = await intruder.run('snapshot', { keys: [KEYS.account] });
+    assert.equal(snapshot.values[KEYS.account].registrationMobile, '01799887766');
+  } finally { await intruder.stop(); }
+});
+
+test('a second Admin created on an unsynced device cannot replace the real Admin', async () => {
+  const teacherPassword = SYNC_ROOT(cloud).staffAccounts.teacher.password;
+  const intruder = new Device('intruder-admin', cloud.url);
+  intruder.start();
+  try {
+    // No access to the cloud at all: the device believes it is the first use.
+    await intruder.run('set-cloud', { blocked: true });
+    const created = await intruder.run('create-first-admin', { fullName: 'Fake Admin', password: 'Fake-1234' });
+    assert.ok(created.account, `the one-time form still works offline (${created.formError || created.message})`);
+    assert.match(created.account.username, /^fake\.admin\.apc$/, 'a second Admin really was created here');
+
+    await intruder.run('set-cloud', { blocked: false });
+    await intruder.run('boot');
+    await intruder.run('wait-status', { state: 'conflict' });
+    const status = await intruder.run('sync-status');
+    assert.match(String(status.message || ''), /Admin/, 'the Admin conflict is spelled out');
+    assert.equal(SYNC_ROOT(cloud).staffAccounts.admin.username, adminUsername, 'the real Admin stays in the cloud');
+    const adopted = await intruder.run('snapshot', { keys: [Object.values((await import('../js/staff-auth.js')).STAFF_ACCOUNTS).find(a => a.role === 'admin').accountKey] });
+    const adminKey = Object.values((await import('../js/staff-auth.js')).STAFF_ACCOUNTS).find(a => a.role === 'admin').accountKey;
+    assert.equal(adopted.values[adminKey].username, adminUsername, 'and this device adopts it instead of its own');
+
+    // The default role accounts it bootstrapped must not overwrite the real ones.
+    assert.deepEqual(SYNC_ROOT(cloud).staffAccounts.teacher.password, teacherPassword, 'a fresh default never replaces a real credential');
+    const teacherKey = Object.values((await import('../js/staff-auth.js')).STAFF_ACCOUNTS).find(a => a.role === 'teacher').accountKey;
+    const teacher = await intruder.run('snapshot', { keys: [teacherKey] });
+    assert.deepEqual(teacher.values[teacherKey].password, teacherPassword, 'the device pulled the real teacher account');
+    // The real teacher password (changed earlier through the forced dialog,
+    // never the fresh default this device bootstrapped) still signs in here.
+    const login = await intruder.run('form-login', { username: teacherUsername, pin: 'Own-Pass-2026' });
+    assert.equal(login.teacherSession, true, login.message);
+  } finally { await intruder.stop(); }
+});
+
 test('package still declares the realtime bridge', async () => {
   const loginSource = readFileSync(new URL('../js/login.js', import.meta.url), 'utf8');
   assert.match(loginSource, /hydrateUserIdentifiers/, 'login.js hydrates synced user IDs');

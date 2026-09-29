@@ -19,7 +19,7 @@ async function bootRealtimeSync() {
     reportSyncError({ code: 'network-timeout' });
   }, 20000);
   try {
-    const { startRealtimeSync } = await import('./realtime-sync.js?v=20260929-sync-repair');
+    const { startRealtimeSync } = await import('./realtime-sync.js?v=20260929-sync-audit');
     const result = await startRealtimeSync();
     if (!result?.ok) {
       reportSyncError(result?.error);
@@ -48,7 +48,7 @@ function mountStatus() {
   document.body.append(banner);
   const paint = () => {
     const { realtimeSync: state, realtimeSyncMessage: message } = document.documentElement.dataset;
-    banner.hidden = !['error', 'offline', 'pending'].includes(state);
+    banner.hidden = !['error', 'offline', 'pending', 'conflict'].includes(state);
     banner.textContent = `${message || 'সিঙ্কের অপেক্ষায়'}${state === 'error' ? ' · আবার চেষ্টা' : ''}`;
   };
   banner.addEventListener('click', () => schedule(0));

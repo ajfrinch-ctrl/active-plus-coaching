@@ -1,4 +1,4 @@
-const CACHE_NAME = 'active-plus-student-v85-sync-audit';
+const CACHE_NAME = 'active-plus-student-v86-sync-audit';
 const APP_SHELL = [
   './js/record-sync.js',
   './js/sync-merge.js',

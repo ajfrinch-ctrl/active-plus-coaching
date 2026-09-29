@@ -461,6 +461,24 @@ function passwordProblem(nextPassword, confirmPassword) {
    CREATE
    ---------------------------------------------------------------------- */
 
+/* A generated staff Login User ID is checked against the cloud registry as
+   well, so an unsynced device cannot create a second account with an ID that
+   already belongs to somebody else. Offline/failed lookup = unknown = allow. */
+async function loginIdTakenInCloud(username) {
+  if (!navigator.onLine) return false;
+  const bounded = promise => Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('lookup timed out')), 4000))
+  ]);
+  try {
+    const bridge = await bounded(import('./realtime-sync.js?v=20260929-sync-audit'));
+    return Boolean((await bounded(bridge.usernameTakenOnline(username)))?.taken);
+  } catch (error) {
+    console.warn('[Active Plus] cloud login-id check unavailable:', error.message);
+    return false;
+  }
+}
+
 export async function createStaff(fields = {}) {
   return withAdmin(async actor => {
     const directory = await ensureDirectory();
@@ -503,6 +521,9 @@ export async function createStaff(fields = {}) {
     const index = usernameIndex();
     if (index[record.username] && index[record.username] !== `staff:${record.role}`) {
       return { ok: false, error: 'এই ইউজারনেম ইতিমধ্যে ব্যবহৃত — অন্য একটি বেছে নিন।', errors: { username: 'এই ইউজারনেম ইতিমধ্যে ব্যবহৃত।' } };
+    }
+    if (await loginIdTakenInCloud(record.username)) {
+      return { ok: false, error: 'এই ইউজারনেমটি অন্য একটি ডিভাইসে আগেই নেওয়া হয়েছে — অন্য একটি বেছে নিন।', errors: { username: 'এই ইউজারনেমটি অন্য ডিভাইসে ব্যবহৃত।' } };
     }
     const claimed = { ...index, [record.username]: `staff:${record.role}` };
     if (!writeJSON(KEYS.usernames, claimed)) {

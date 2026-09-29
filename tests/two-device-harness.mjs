@@ -10,7 +10,7 @@
 
 import http from 'node:http';
 import { spawn } from 'node:child_process';
-import { cpSync, mkdirSync, rmSync, writeFileSync, readFileSync } from 'node:fs';
+import { cpSync, mkdirSync, rmSync, writeFileSync, readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
@@ -86,6 +86,7 @@ export function startMockCloud() {
   const state = {};
   let revision = 0;
   let paused = false;
+  let blocked = false;   // everything refused: a device that cannot reach the cloud
   const subscribers = new Set();
   const send = (sub, nodePath) => {
     const val = getAt(state, nodePath);
@@ -100,6 +101,11 @@ export function startMockCloud() {
   };
   const server = http.createServer((req, res) => {
     const url = new URL(req.url, 'http://localhost');
+    if (blocked && url.pathname !== '/control') {
+      res.writeHead(503, { 'content-type': 'application/json' });
+      res.end('{"error":"offline"}');
+      return;
+    }
     if (req.method === 'GET' && url.pathname === '/db') {
       const val = url.searchParams.get('path') === '.info/connected' ? true : getAt(state, url.searchParams.get('path'));
       res.writeHead(200, { 'content-type': 'application/json' });
@@ -110,9 +116,11 @@ export function startMockCloud() {
       let body = '';
       req.on('data', chunk => { body += chunk; });
       req.on('end', () => {
-        paused = JSON.parse(body || '{}').paused === true;
+        const settings = JSON.parse(body || '{}');
+        paused = settings.paused === true;
+        blocked = settings.blocked === true;
         res.writeHead(200, { 'content-type': 'application/json' });
-        res.end(JSON.stringify({ paused }));
+        res.end(JSON.stringify({ paused, blocked }));
       });
       return;
     }
@@ -208,6 +216,11 @@ export async function runTransaction(node, change) {
   for (let attempt = 0; attempt < 100; attempt++) {
     const before = await fetch(BASE + '/db?path=' + enc(node.path)).then(res => res.json());
     const value = change(before.val);
+    // The SDK aborts a transaction whose update function returns undefined and
+    // leaves the stored value alone — the mock must not delete it instead.
+    if (value === undefined) {
+      return { committed: false, snapshot: { val: () => before.val, exists: () => before.val !== undefined } };
+    }
     const res = await fetch(BASE + '/db', {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ nodePath: node.path, value, expectedRevision: before.revision })
@@ -254,7 +267,12 @@ export function onValue(node, callback) {
   ]);
   /* The version query would create a second module instance inside one
      process; the browser deduplicates by URL+query, so make Node match. */
-  swap('login.js', [['./realtime-sync.js?v=20260929-sync-repair', './realtime-sync.js']]);
+  /* Every module must load ONE instance of the bridge: drop the cache-busting
+     query in each copied file (Node, unlike the browser, keys modules by URL). */
+  for (const name of readdirSync(path.join(RUN_DIR, 'js'))) {
+    if (!name.endsWith('.js') || name === 'realtime-sync.js') continue;
+    swap(name, [['./realtime-sync.js?v=20260929-sync-audit', './realtime-sync.js']]);
+  }
 }
 
 function pathToFileUrl(p) {

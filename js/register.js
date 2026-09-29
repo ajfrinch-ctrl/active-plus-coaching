@@ -78,6 +78,27 @@ function initUsernameField() {
   return check;
 }
 
+/* The claimed login IDs live in the cloud as well as here. A device that has
+   not synced yet must not take a name another student already owns, so the
+   cloud is asked before the local claim is written. Best effort: an offline or
+   failed lookup answers null and never blocks local-first registration (the
+   bridge's own merge guard still protects the other student's record). */
+async function checkUsernameOnline(username) {
+  if (!navigator.onLine) return null;
+  const budget = 4000;
+  const bounded = promise => Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('lookup timed out')), budget))
+  ]);
+  try {
+    const bridge = await bounded(import('./realtime-sync.js?v=20260929-sync-audit'));
+    return await bounded(bridge.usernameTakenOnline(username));
+  } catch (error) {
+    console.warn('[Active Plus] cloud login-id check unavailable:', error.message);
+    return null;
+  }
+}
+
 async function handleRegistration(event, state, onRegistered) {
   event.preventDefault();
   const formElement = event.currentTarget;
@@ -94,6 +115,9 @@ async function handleRegistration(event, state, onRegistered) {
   const usernameProblem = usernameError(username);
   if (usernameProblem) return setAuthMessage(usernameProblem);
   if (usernameTaken(username)) return setAuthMessage('এই ইউজারনেমটি আগেই নেওয়া হয়েছে। অন্য একটি বেছে নিন — এটি পরে বদলানো যাবে না।');
+  if ((await checkUsernameOnline(username))?.taken) {
+    return setAuthMessage('এই ইউজারনেমটি অন্য একটি ডিভাইসে আগেই নেওয়া হয়েছে। অন্য একটি বেছে নিন — এটি পরে বদলানো যাবে না।');
+  }
   if (!/^\d{4,6}$/.test(pin)) return setAuthMessage('পাসওয়ার্ড অবশ্যই ৪ থেকে ৬ সংখ্যার হতে হবে।');
   if (pin !== pinConfirm) return setAuthMessage('দুটি পাসওয়ার্ড এক নয়। আবার মিলিয়ে দিন।');
   if (state.account) return setAuthMessage('এই ডিভাইসে ইতিমধ্যে একটি অ্যাকাউন্ট আছে। লগইন করুন অথবা এডমিনের সাহায্য নিন।');

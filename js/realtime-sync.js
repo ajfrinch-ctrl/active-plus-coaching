@@ -25,8 +25,8 @@ import { STAFF_ACCOUNTS } from './staff-auth.js';
 import { encodeRealtimeRecords, decodeRealtimeRecords } from './realtime-value-codec.js';
 import { collectionPayload, remoteToLocal } from './sync-collections.js';
 import { createRecordSync, mergeRecordOperations } from './record-sync.js';
-import { preferLocalCopy } from './sync-merge.js';
-import { reportSyncError, setSyncStatus } from './sync-status.js';
+import { chooseStaffCopy, chooseStudentCopy, sameStudentRecord, loginIdOf } from './sync-merge.js';
+import { reportSyncConflict, reportSyncError, setSyncStatus } from './sync-status.js';
 import { isPasswordRecord, verifyPassword } from './password-hash.js';
 import { normalizeUsername, contactNumber } from './account-policy.js';
 import { TEACHER_ASSIGNMENTS_KEY } from './teacher-assignments.js';
@@ -76,6 +76,19 @@ function syncError(error) {
   reportSyncError(error);
 }
 
+/* A login ID claimed twice (two devices, one of them not synced yet) must stay
+   visible instead of being retried away: it needs a human decision. */
+let conflict = null;
+function reportConflict(code) {
+  conflict = { code };
+  reportSyncConflict(code);
+}
+function clearConflict(code) {
+  if (!conflict || (code && conflict.code !== code)) return;
+  conflict = null;
+  paintSyncStatus();
+}
+
 function onValue(node, callback) {
   const unsubscribe = firebaseOnValue(node, snapshot => {
     Promise.resolve().then(() => callback(snapshot)).catch(syncError);
@@ -93,7 +106,7 @@ async function flushPending() {
 
 function paintSyncStatus() {
   if (!navigator.onLine) setSyncStatus('offline');
-  else if (syncFailed) return;
+  else if (syncFailed || conflict) return;
   else if (!connected) setSyncStatus('connecting');
   else if (!ready) setSyncStatus('connecting');
   else if ([...recordBridges.values()].some(bridge => bridge.hasPending())) setSyncStatus('pending');
@@ -192,44 +205,40 @@ const isUsernamesRecord = value =>
 const isStudentAccountRecord = value =>
   Boolean(value) && typeof value === 'object' && isPasswordRecord(value.pinHash);
 
-async function syncStaffRole(role, { forcePush = false } = {}) {
-  const local = await readStaffLocal(role);
-  const node = ref(getDatabase(firebaseApp), STAFF_ROOT + '/' + role);
-  const snap = await get(node);
-  if (snap.exists() && !forcePush) {
-    const remote = snap.val();
-    if (remote && typeof remote === 'object' && remote.username && remote.password) {
-      // A password changed here while offline is newer than the cloud copy:
-      // upload it instead of silently restoring the old credential. On equal
-      // timestamps the cloud copy still wins (the long-standing bridge rule).
-      if (isPasswordRecord(local?.password) && preferLocalCopy(local, remote, { localWinsTie: false })) {
-        await set(node, local);
-        lastRemote.set('staff:' + role, JSON.stringify(local));
-        return;
-      }
-      // A valid remote staff account must contain both its identity and a
-      // password record. Never replace a working local account with an
-      // incomplete remote snapshot.
+const staffFlights = new Map();
+function syncStaffRole(role) {
+  if (staffFlights.has(role)) return staffFlights.get(role);
+  const flight = (async () => {
+    const local = await readStaffLocal(role);
+    const node = ref(getDatabase(firebaseApp), STAFF_ROOT + '/' + role);
+    const snap = await get(node);
+    const remote = snap.exists() ? snap.val() : null;
+    const decision = chooseStaffCopy(local, remote, { role });
+    if (decision === 'conflict') {
+      // Two different Admin usernames: the account the other devices already
+      // use wins, and the system created on this device is discarded.
       await writeStaffLocal(role, remote);
       lastRemote.set('staff:' + role, JSON.stringify(remote));
-      window.dispatchEvent(new CustomEvent('apc-sync-updated', { detail: { collection: 'staffAccounts', role } }));
+      reportConflict('admin-conflict');
       return;
     }
-  }
-  if (local && isPasswordRecord(local.password)) {
+    if (decision === 'remote') {
+      // The cloud copy (a real credential, or an account that was never
+      // personalised here) must not be replaced by this device's copy.
+      await writeStaffLocal(role, remote);
+      lastRemote.set('staff:' + role, JSON.stringify(remote));
+      return;
+    }
+    if (!local) return;
     await set(node, local);
     lastRemote.set('staff:' + role, JSON.stringify(local));
-  }
+    if (role === 'admin') clearConflict('admin-conflict');
+  })().finally(() => staffFlights.delete(role));
+  staffFlights.set(role, flight);
+  return flight;
 }
 
-async function pushStaffRole(role) {
-  const local = await readStaffLocal(role);
-  if (!local || !isPasswordRecord(local.password)) return;
-  const serialized = JSON.stringify(local);
-  if (lastRemote.get('staff:' + role) === serialized) return;
-  await set(ref(getDatabase(firebaseApp), STAFF_ROOT + '/' + role), local);
-  lastRemote.set('staff:' + role, serialized);
-}
+const pushStaffRole = role => syncStaffRole(role);
 
 /* Directory changes are merged by permanent record ID, not by replacing the
    entire staff list. The baseline only stores revision dates, never secrets. */
@@ -311,33 +320,60 @@ function studentMatches(account, identifier) {
   return (name && name === studentKey(account)) ||
     (phone && phone === (account?.registrationMobile || account?.mobile));
 }
-async function syncStudentAccount() {
-  const local = studentAccountPayload(readLocal(KEYS.account));
-  const key = studentKey(local);
-  if (!key || !isPasswordRecord(local?.pinHash)) return;
-  const node = ref(getDatabase(firebaseApp), STUDENTS_ROOT + '/' + encodeUsernameKey(key));
-  const result = await runTransaction(node, current => {
-    if (!current) return local;
-    // The key belongs to one login ID: never adopt a record for another one.
-    if (studentKey(current) !== key) return current;
-    // Newest wins, so a password changed offline is uploaded rather than lost.
-    return preferLocalCopy(local, current) ? local : current;
-  }, { applyLocally: false });
-  const remote = result.snapshot.val();
-  if (isStudentAccountRecord(remote) && studentKey(remote) === key) {
+let studentFlight = null;
+function syncStudentAccount() {
+  if (studentFlight) return studentFlight;
+  studentFlight = (async () => {
+    const local = studentAccountPayload(readLocal(KEYS.account));
+    const key = studentKey(local);
+    if (!key || !isPasswordRecord(local?.pinHash)) return;
+    const node = ref(getDatabase(firebaseApp), STUDENTS_ROOT + '/' + encodeUsernameKey(key));
+    const result = await runTransaction(node, current => {
+      // Only a write that really changes something is committed: 'remote'
+      // needs no write, and a duplicate login ID must abort untouched.
+      return chooseStudentCopy(local, current) === 'local' ? local : undefined;
+    }, { applyLocally: false });
+    const remote = result.snapshot.val();
+    if (!isStudentAccountRecord(remote) || studentKey(remote) !== key) return;
     lastRemote.set('student:' + key, JSON.stringify(remote));
-    remoteWrite(KEYS.account, remote, 'studentAccount');
-  }
+    if (sameStudentRecord(local, remote)) {
+      clearConflict('login-id-conflict');
+      // The cloud copy is what other devices use: adopt it when it is newer.
+      remoteWrite(KEYS.account, remote, 'studentAccount');
+    } else {
+      // Another student owns this login ID in the cloud. Keep both records —
+      // the local registration stays usable here, nothing is destroyed.
+      reportConflict('login-id-conflict');
+    }
+  })().finally(() => { studentFlight = null; });
+  return studentFlight;
 }
-async function pushStudentAccount() {
-  const local = studentAccountPayload(readLocal(KEYS.account));
-  const key = studentKey(local);
-  if (!key || !isPasswordRecord(local?.pinHash)) return;
-  const serialized = JSON.stringify(local);
-  if (lastRemote.get('student:' + key) === serialized) return;
-  await set(ref(getDatabase(firebaseApp), STUDENTS_ROOT + '/' + encodeUsernameKey(key)), local);
-  lastRemote.set('student:' + key, serialized);
-  if (ready) listenStudentAccount();
+
+const pushStudentAccount = () => syncStudentAccount();
+
+/** Is this login ID already claimed in the cloud (by any role)? Best effort:
+    a failed or offline lookup answers "unknown" and never blocks the caller. */
+export async function usernameTakenOnline(username) {
+  const name = loginIdOf({ username });
+  if (!name) return { ok: true, taken: false };
+  if (!navigator.onLine) return { ok: false, taken: false, offline: true };
+  try {
+    await ensureCloudAuth();
+    const db = getDatabase(firebaseApp);
+    const [claims, record, directory] = await Promise.all([
+      get(ref(db, USERNAMES_ROOT)),
+      get(ref(db, STUDENTS_ROOT + '/' + encodeUsernameKey(name))),
+      get(ref(db, DIRECTORY_ROOT))
+    ]);
+    const claimed = decodeUsernameRegistry(claims.val() || {});
+    const staff = Object.values(directory.val()?.records || {});
+    const taken = Boolean(claimed[name]) || Boolean(record.val()) ||
+      staff.some(employee => loginIdOf(employee) === name);
+    return { ok: true, taken };
+  } catch (error) {
+    console.warn('[Active Plus] login-id check unavailable:', error?.code || error?.name || 'unknown');
+    return { ok: false, taken: false, error };
+  }
 }
 async function hydrateStudent(identifier, password) {
   if (!identifier) return { found: false };
@@ -356,6 +392,9 @@ async function hydrateStudent(identifier, password) {
   if (!account || !isPasswordRecord(account.pinHash)) return { found: false };
   // Never replace the active local profile on a failed password attempt.
   if (!(await verifyPassword(password, account.pinHash))) return { found: true, credentialMismatch: true };
+  // The password was verified against this cloud record, so it is this person's
+  // account: a previous duplicate-ID warning is settled now.
+  clearConflict('login-id-conflict');
   remoteWrite(KEYS.account, account, 'studentAccount');
   await syncStudentAccount();
   if (ready) listenStudentAccount();
@@ -714,7 +753,14 @@ function listenStudentAccount() {
   if (!key) { stopStudent = null; return; }
   stopStudent = onValue(ref(getDatabase(firebaseApp), STUDENTS_ROOT + '/' + encodeUsernameKey(key)), snap => {
     const remote = snap.val();
-    if (studentKey(readLocal(KEYS.account)) !== key || !isStudentAccountRecord(remote)) return;
+    const local = readLocal(KEYS.account);
+    if (studentKey(local) !== key || !isStudentAccountRecord(remote)) return;
+    if (!sameStudentRecord(local, remote)) {
+      // Another student owns this login ID in the cloud: never adopt their
+      // record here (that would silently replace this device's account).
+      reportConflict('login-id-conflict');
+      return;
+    }
     lastRemote.set('student:' + key, JSON.stringify(remote));
     remoteWrite(KEYS.account, remote, 'studentAccount');
   });

@@ -213,6 +213,52 @@ Known limitations left in place (documented, not fixed):
 - The exam mirror is one global node, so a device uploading the exam database is
   effectively the leader until another device opens the exam panel.
 
+### Audit round 3 — 2026-09-29 (same branch, not deployed)
+
+A fresh pass over the *identity* flows (registration, first use, staff
+creation) and over real Realtime Database behaviour rather than the test mock.
+Three ways one device could silently destroy another device's account, plus
+smaller findings:
+
+- **A duplicate registration could overwrite another student's cloud login.**
+  Registration only checked this device's registry, so a phone that had not
+  synced yet could register an ID that already belonged to somebody else; the
+  mirror then treated the newer copy as the truth. Now
+  `chooseStudentCopy()` (`js/sync-merge.js`) refuses to merge two different
+  people: the cloud record is left untouched, the local registration stays
+  usable, and a visible conflict message asks for the Admin. The student
+  listener has the same guard, so a cloud record for another person is never
+  adopted on this device either (that would have replaced the active account).
+  Online registration and Staff Management now ask the cloud first
+  (`usernameTakenOnline()`), so the duplicate is refused before anything is
+  written.
+- **A second Admin created on an unsynced device could replace the real Admin.**
+  The one-time first-use form is per device: offline (or with App Check/rules
+  blocking sync) a device can believe it is the first use and create its own
+  Admin, whose newer timestamp then won the merge. `chooseStaffCopy()` now
+  treats two different Admin usernames as a conflict: the cloud Admin stays,
+  the device adopts it, and the banner explains what happened.
+- **A fresh default role account could replace a real credential.** A reset or
+  re-installed device bootstraps `manager.apc` / `teacher.apc` / `payment.apc`
+  with default passwords; those now never outrank a real cloud account — a
+  local record that was never personalised (`mustChangePassword`) always yields
+  to the cloud copy, while genuine newest-wins merging stays for real changes.
+- **The mock database now matches the SDK on aborted transactions.** Returning
+  `undefined` from a transaction update must abort without writing; the mock
+  deleted the node instead, which is exactly what the new guards rely on.
+- Numeric-keyed maps returned by the database are rebuilt as lists in the value
+  codec (for hand-written or gapped data), alongside the existing empty-node
+  and null handling.
+- `js/register.js`, `js/staff-directory.js` and `js/login.js` now load the
+  bridge through one identical versioned specifier, so a page never ends up
+  with two bridge instances (two anonymous sign-ins and duplicate listeners).
+
+Regressions: `tests/sync-merge.test.mjs` (staff/student copy rules) and two new
+two-device tests — *"a fresh device cannot register a login ID another student
+already owns"* and *"a second Admin created on an unsynced device cannot replace
+the real Admin"*. Both fail if any of the three guards is removed (verified by
+temporarily reverting each one).
+
 ### Publishing and acceptance
 
 GitHub Pages currently publishes the repository's **main** branch at `/`.

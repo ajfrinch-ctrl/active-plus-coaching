@@ -27,6 +27,8 @@ const staffAuth = await mod('staff-auth.js');
 const storageKeys = (await mod('config.js')).STORAGE_KEYS;
 
 let loginBound = false;
+let registerBound = false;
+let registered = 0;
 let studentAuthenticated = 0;
 async function bindLogin() {
   if (loginBound) return;
@@ -157,21 +159,95 @@ const commands = {
     return { ok: true };
   },
   async 'sync-status'() {
-    return { state: ctx.document.documentElement.dataset.realtimeSync };
+    return {
+      state: ctx.document.documentElement.dataset.realtimeSync,
+      message: ctx.document.documentElement.dataset.realtimeSyncMessage
+    };
   },
   async 'write-students'({ students }) {
     if (!db.writeJSON(db.KEYS.students, students)) throw new Error('students write failed');
     return { ok: true };
   },
 
-  async 'set-cloud'({ paused }) {
+  async 'set-cloud'({ paused = false, blocked = false }) {
     const response = await fetch(`${process.env.MOCK_CLOUD_URL}/control`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ paused })
+      body: JSON.stringify({ paused, blocked })
     });
     if (!response.ok) throw new Error('cloud control failed');
-    return { paused };
+    return { paused, blocked };
+  },
+
+  /* Fill every required field of the real registration form and submit it. */
+  async 'register-student'({ username, pin, mobile = '01711223344', nameBn = 'নতুন শিক্ষার্থী', nameEn = 'Test Student' }) {
+    if (!registerBound) {
+      const register = await mod('register.js');
+      register.initRegister({
+        state: { student: null, account: null },
+        onRegistered: () => { registered += 1; }
+      });
+      registerBound = true;
+    }
+    const form = ctx.$('#registrationForm');
+    const setValue = (field, value) => {
+      field.value = value;
+      field.dispatchEvent(new ctx.window.Event('input', { bubbles: true }));
+      field.dispatchEvent(new ctx.window.Event('change', { bubbles: true }));
+    };
+    const specials = {
+      mobile: mobile, username: username, pin: pin, pinConfirm: pin,
+      nameBn: nameBn, nameEn: nameEn, fatherName: 'পিতা', motherName: 'মাতা',
+      birthDate: '2012-01-01', guardianMobile: '01711223355',
+      address: 'ঢাকা', studentMobile: mobile, securityAnswer: 'uttor', securityQuestion: 'প্রশ্ন'
+    };
+    for (const field of form.querySelectorAll('[required]')) {
+      const name = field.name;
+      if (field.type === 'checkbox') { field.checked = true; continue; }
+      if (field.tagName === 'SELECT') {
+        const option = [...field.options].find(item => item.value && !item.disabled);
+        if (option) setValue(field, option.value ?? option.textContent);
+        continue;
+      }
+      if (specials[name] !== undefined) { setValue(field, specials[name]); continue; }
+      if (field.type === 'date') { setValue(field, '2012-01-01'); continue; }
+      if (['tel', 'number'].includes(field.type)) { setValue(field, '01711223366'); continue; }
+      setValue(field, field.type === 'password' ? pin : 'টেস্ট');
+    }
+    setValue(ctx.$('#studentMobile'), mobile);
+    if (ctx.$('#authMessage')) ctx.$('#authMessage').textContent = '';
+    ctx.submit(form);
+    await waitUntil(() =>
+      registered > 0 || Boolean(authMessage()) || hasSession(storageKeys.session), { timeout: 30000 });
+    return {
+      registered: registered > 0,
+      session: hasSession(storageKeys.session),
+      message: authMessage(),
+      account: readLocal(db.KEYS.account)
+    };
+  },
+
+  /* The one-time first-use Admin form, exactly as the login page runs it. */
+  async 'create-first-admin'({ fullName = 'Test Admin', mobile = '01711223344', password = 'Admin-1234' }) {
+    if (!loginBound) await bindLogin();
+    // The first-use panel is only wired once the background cloud lookups have
+    // finished; clicking before that would submit into nothing.
+    await waitUntil(() => ctx.$('#firstAdminFootnote')?.hidden === false, { timeout: 30000 });
+    ctx.$('#openFirstAdmin').click();
+    ctx.type(ctx.$('#firstAdminName'), fullName);
+    ctx.type(ctx.$('#firstAdminMobile'), mobile);
+    ctx.type(ctx.$('#firstAdminPassword'), password);
+    ctx.type(ctx.$('#firstAdminConfirm'), password);
+    ctx.submit(ctx.$('#firstAdminForm'));
+    await waitUntil(() =>
+      hasSession(staffAuth.STAFF_ACCOUNTS.admin.sessionKey) || Boolean(authMessage()) ||
+      Boolean(ctx.$('#firstAdminError')?.textContent?.trim()), { timeout: 30000 });
+    return {
+      adminSession: hasSession(staffAuth.STAFF_ACCOUNTS.admin.sessionKey),
+      message: authMessage(),
+      formError: ctx.$('#firstAdminError')?.textContent?.trim() || '',
+      account: await readPlain(staffAuth.STAFF_ACCOUNTS.admin.accountKey)
+    };
   },
   /* Flip navigator.onLine without firing the browser's online/offline events:
      the SDK-style reconnect a listener never hears about. */
@@ -317,6 +393,13 @@ const commands = {
       if (value && typeof value === 'object') return id in value;
       return false;
     });
+    return { ok: true };
+  },
+
+  async 'wait-status'({ state }) {
+    await waitUntil(() =>
+      ctx.document.documentElement.dataset.realtimeSync === state &&
+      Boolean(ctx.document.documentElement.dataset.realtimeSyncMessage), { timeout: 20000 });
     return { ok: true };
   },
 
