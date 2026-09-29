@@ -1,18 +1,21 @@
 // Active Plus — Sync Guard.
-// Read-only health validation. It never clears local data and never disables sync.
+// Validation never clears local data and never disables sync.
 import { firebaseConfig } from '../firebase/firebase-config.js';
-import { firebaseApp } from '../firebase/firebase-init.js';
 import { SyncService } from './sync-core.js';
 
-export function validateSyncGuard() {
+export async function validateSyncGuard() {
   const checks = {
     firebaseConfig: Boolean(firebaseConfig?.projectId && firebaseConfig?.appId && firebaseConfig?.databaseURL),
-    firebaseInitialized: Boolean(firebaseApp),
+    firebaseInitialized: false,
     syncService: typeof SyncService?.start === 'function' && typeof SyncService?.getStatus === 'function',
     localStorage: false,
     queue: false,
     retry: true
   };
+  try {
+    const { firebaseApp } = await import('../firebase/firebase-init.js');
+    checks.firebaseInitialized = Boolean(firebaseApp);
+  } catch {}
   try {
     localStorage.setItem('__apc_sync_guard__', '1');
     localStorage.removeItem('__apc_sync_guard__');
@@ -22,8 +25,8 @@ export function validateSyncGuard() {
   const critical = Object.values(checks).every(Boolean);
   return { ok: critical, checks, timestamp: new Date().toISOString() };
 }
-export function assertSyncGuard() {
-  const health = validateSyncGuard();
+export async function assertSyncGuard() {
+  const health = await validateSyncGuard();
   if (!health.ok) throw new Error('Active Plus Sync Guard failed: ' + JSON.stringify(health.checks));
   return health;
 }
