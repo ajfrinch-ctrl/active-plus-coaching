@@ -83,7 +83,7 @@ test('two login records are the same student by id, or by mobile for legacy reco
 });
 
 /* ---- login identifiers (added for the Student ID login) ---- */
-import { matchesLoginIdentifier, findLoginMatches, studentIdOf } from '../js/sync-merge.js';
+import { matchesLoginIdentifier, findLoginMatches, studentIdOf, suggestIdentifiers } from '../js/sync-merge.js';
 
 const rakib = {
   username: 'rakib', studentId: 's260929001-abcdef0123456789',
@@ -117,4 +117,13 @@ test('the short Student ID works while exactly one student matches it', () => {
   assert.deepEqual(findLoginMatches([rakib], '01755556666').map(item => item.username), ['rakib'], 'phone numbers are exact');
   assert.deepEqual(findLoginMatches(null, 'rakib'), []);
   assert.equal(studentIdOf({ studentId: 's1' }), 's1', 'both storage shapes are read');
+});
+
+test('a typo in a login ID suggests the close cloud IDs, never the whole list', () => {
+  assert.deepEqual(suggestIdentifiers([rakib, raisa], 'raki'), ['rakib']);
+  assert.deepEqual(suggestIdentifiers([rakib, raisa], 'rakib.hasan'), ['rakib']);
+  assert.deepEqual(suggestIdentifiers([rakib, raisa], 's2609'), [], 'a short id is not a suggestion source');
+  assert.deepEqual(suggestIdentifiers([rakib, raisa], 'dolan'), [], 'nothing close means no guess');
+  assert.deepEqual(suggestIdentifiers([rakib, raisa, { username: 'rakib2' }], 'rakib', 1), ['rakib2'], 'the limit is honoured');
+  assert.deepEqual(suggestIdentifiers(null, 'rakib'), []);
 });

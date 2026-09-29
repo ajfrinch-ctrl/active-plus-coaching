@@ -79,6 +79,18 @@ export function matchesLoginIdentifier(account, identifier) {
 
 const STUDENT_ID_PREFIX = /^s\d{6}/;
 
+/** Login IDs that look like what was typed (a typo is far more likely than a
+    missing account). Safe: only IDs sharing the first three characters. */
+export function suggestIdentifiers(accounts, identifier, limit = 2) {
+  const typed = normalizeUsername(identifier);
+  if (!typed || typed.length < 3) return [];
+  const prefix = typed.slice(0, 3);
+  return (Array.isArray(accounts) ? accounts : [])
+    .map(loginIdOf)
+    .filter(id => id && id !== typed && (id.startsWith(prefix) || typed.startsWith(id.slice(0, 3))))
+    .slice(0, limit);
+}
+
 /**
  * Every account a typed identifier could mean, most exact first: the direct
  * match, then Student IDs that start with the typed digits (the random suffix

@@ -25,7 +25,7 @@ import { STAFF_ACCOUNTS } from './staff-auth.js';
 import { encodeRealtimeRecords, decodeRealtimeRecords } from './realtime-value-codec.js';
 import { collectionPayload, remoteToLocal } from './sync-collections.js';
 import { createRecordSync, mergeRecordOperations } from './record-sync.js';
-import { chooseStaffCopy, chooseStudentCopy, sameStudentRecord, loginIdOf, matchesLoginIdentifier, findLoginMatches } from './sync-merge.js';
+import { chooseStaffCopy, chooseStudentCopy, sameStudentRecord, loginIdOf, matchesLoginIdentifier, findLoginMatches, suggestIdentifiers } from './sync-merge.js';
 import { reportSyncConflict, reportSyncError, setSyncStatus } from './sync-status.js';
 import { isPasswordRecord, verifyPassword } from './password-hash.js';
 import { normalizeUsername, contactNumber } from './account-policy.js';
@@ -377,21 +377,24 @@ async function hydrateStudent(identifier, password) {
   // Student ID is not a key: those need a lookup (see below).
   let account = (await get(ref(db, STUDENTS_ROOT + '/' + encodeUsernameKey(normalizeUsername(identifier))))).val();
   if (!studentMatches(account, identifier)) account = null;
+  // A miss is reported with what the cloud really holds, so "not found" can be
+  // told apart from "nothing was ever uploaded from the other device".
+  let cloudAccounts = 0;
+  let similar = [];
   if (!account) {
-    const phone = contactNumber(identifier);
-    const typed = normalizeUsername(identifier);
-    const needsScan = /^01[3-9]\d{8}$/.test(phone) || /^s\d{6}/.test(typed);
-    if (needsScan) {
-      const snapshot = await get(ref(db, STUDENTS_ROOT));
-      const matches = findLoginMatches(Object.values(snapshot.val() || {}), identifier);
-      // "s260929001" is only usable while exactly one student matches it.
-      if (matches.length > 1) return { found: true, ambiguous: true };
-      account = matches[0] || null;
-    }
+    const snapshot = await get(ref(db, STUDENTS_ROOT));
+    const records = Object.values(snapshot.val() || {}).filter(Boolean);
+    cloudAccounts = records.length;
+    const matches = findLoginMatches(records, identifier);
+    // "s260929001" is only usable while exactly one student matches it.
+    if (matches.length > 1) return { found: true, ambiguous: true };
+    account = matches[0] || null;
+    if (!account) similar = suggestIdentifiers(records, identifier);
   }
   if (!account) {
     const legacy = (await get(ref(db, STUDENT_ROOT))).val();
     if (studentMatches(legacy, identifier)) account = legacy;
+    else return { found: false, cloudAccounts, similar };
   }
   if (!account || !isPasswordRecord(account.pinHash)) return { found: false };
   // Never replace the active local profile on a failed password attempt.

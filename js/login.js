@@ -10,7 +10,7 @@
    password dialog before the panel opens. */
 
 import { defaultStudent } from './config.js';
-import { $, $$, setAuthMessage, scrollToTop } from './ui.js';
+import { $, $$, setAuthMessage, scrollToTop, toBanglaNumber } from './ui.js';
 import { contactNumber, normalizeUsername } from './account-policy.js';
 import { matchesLoginIdentifier, studentIdOf } from './sync-merge.js';
 import {
@@ -261,6 +261,8 @@ async function handleLogin(event, state, onAuthenticated) {
     onlineIdentities.cloudPasswordMismatch = Boolean(identities?.found && identities?.credentialMismatch);
     // "s260929001" matched more than one student in the cloud.
     onlineIdentities.ambiguous = Boolean(identities?.ambiguous);
+    onlineIdentities.cloudAccounts = identities?.cloudAccounts ?? null;
+    onlineIdentities.similar = Array.isArray(identities?.similar) ? identities.similar : [];
   }
   // Staff usernames are reserved, so a match here can only be that panel.
   const staffRole = await resolveStaffRoleByUsername(typedId);
@@ -305,7 +307,18 @@ async function handleLogin(event, state, onAuthenticated) {
     } else if (!navigator.onLine) {
       setAuthMessage('এই ডিভাইসে অ্যাকাউন্ট সংরক্ষিত নেই। অন্য ডিভাইসে তৈরি অ্যাকাউন্টে প্রথমবার লগইন করতে ইন্টারনেট চালু করুন।');
     } else {
-      setAuthMessage('অ্যাকাউন্ট পাওয়া যায়নি। আগে অন্য ডিভাইসে তৈরি করে থাকলে সেই ডিভাইসে অ্যাপ অনলাইনে খুলে সিঙ্ক সম্পন্ন করুন, তারপর এখানে আবার চেষ্টা করুন।');
+      const similar = onlineIdentities.similar.length
+        ? ` ক্লাউডে মিলে যেতে পারে: ${onlineIdentities.similar.join(', ')}।`
+        : '';
+      if (onlineIdentities.attempted && onlineIdentities.cloudAccounts === 0) {
+        // The cloud is reachable but holds no student login at all: the device
+        // that has the account never uploaded it.
+        setAuthMessage('ক্লাউডে এখনো কোনো শিক্ষার্থী অ্যাকাউন্ট ওঠেনি। যে ডিভাইসে অ্যাকাউন্টটি আছে সেখানে অ্যাপ অনলাইনে খুলে সিঙ্ক চালু করুন (উপরে সবুজ/নীল সিঙ্ক চিহ্ন), তারপর এখানে আবার চেষ্টা করুন।');
+      } else if (onlineIdentities.attempted && onlineIdentities.cloudAccounts > 0) {
+        setAuthMessage(`ক্লাউডে ${toBanglaNumber(onlineIdentities.cloudAccounts)}টি শিক্ষার্থী অ্যাকাউন্ট আছে, কিন্তু “${typedId}” দিয়ে কিছু পাওয়া যায়নি।${similar} নামের বানান মিলিয়ে দেখুন; না মিললে যে ডিভাইসে অ্যাকাউন্টটি আছে সেখানে অ্যাপ অনলাইনে খুলুন।`);
+      } else {
+        setAuthMessage('অ্যাকাউন্ট পাওয়া যায়নি। আগে অন্য ডিভাইসে তৈরি করে থাকলে সেই ডিভাইসে অ্যাপ অনলাইনে খুলে সিঙ্ক সম্পন্ন করুন, তারপর এখানে আবার চেষ্টা করুন।');
+      }
     }
     return;
   }
@@ -314,7 +327,11 @@ async function handleLogin(event, state, onAuthenticated) {
   // without its random suffix ("s260929001") is accepted for this device's own
   // account, so nobody has to read out the long tail.
   if (!isOwnIdentifier(state.account, typedId)) {
-    setAuthMessage('ইউজারনেম, মোবাইল নম্বর বা Student ID অথবা পাসওয়ার্ড সঠিক নয়। আবার চেষ্টা করুন।');
+    // The record is here: naming it turns a typo into a one-second fix.
+    const knownId = state.account.username || state.account.student?.username || '';
+    const knownStudentId = studentIdOf(state.account);
+    const known = [knownId, knownStudentId].filter(Boolean).join(' / ');
+    setAuthMessage(`ইউজারনেম, মোবাইল নম্বর বা Student ID অথবা পাসওয়ার্ড সঠিক নয়। এই ডিভাইসের আইডি: ${known || '—'}`);
     return;
   }
   if (!(await verifyAccountPassword(state.account, pin))) {

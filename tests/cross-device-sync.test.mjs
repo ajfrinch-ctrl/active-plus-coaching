@@ -70,7 +70,10 @@ after(async () => {
 test('an empty cloud explains the source-device sync step instead of requesting duplicate registration', async () => {
   const result = await deviceB.run('form-login', { username: 'missing.account.apc', pin: '4321' });
   assert.equal(result.studentSession, false);
-  assert.match(result.message, /সেই ডিভাইসে অ্যাপ অনলাইনে খুলে সিঙ্ক/);
+  // An empty cloud must be named as such: the account was never uploaded from
+  // the other device, and that is where the fix has to happen.
+  assert.match(result.message, /ক্লাউডে এখনো কোনো শিক্ষার্থী অ্যাকাউন্ট ওঠেনি/);
+  assert.match(result.message, /যে ডিভাইসে অ্যাকাউন্টটি আছে সেখানে অ্যাপ অনলাইনে খুলে সিঙ্ক চালু করুন/);
   assert.doesNotMatch(result.message, /আগে রেজিস্ট্রেশন করুন/);
 });
 
@@ -467,6 +470,17 @@ test('a student can log in with the permanent Student ID shown on the profile', 
     // A wrong password is still refused.
     const wrong = await fresh.run('form-login', { username: studentId, pin: '0000' });
     assert.equal(wrong.studentSession, false, 'the ID is not a password');
+  } finally { await fresh.stop(); }
+});
+
+test('a misspelled username is answered with what the cloud actually holds', async () => {
+  const fresh = new Device('typo-login', cloud.url);
+  fresh.start();
+  try {
+    const attempt = await fresh.run('form-login', { username: 'dolon.akter', pin: '4321' });
+    assert.equal(attempt.studentSession, false, 'not signed in');
+    assert.match(String(attempt.message || ''), /ক্লাউডে/, 'the cloud content is reported');
+    assert.match(String(attempt.message || ''), /dolon/, 'and the close ID is suggested for the typo');
   } finally { await fresh.stop(); }
 });
 
