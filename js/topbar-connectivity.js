@@ -1,10 +1,39 @@
 /* Active Plus — topbar network-state border indicator.
    লাল = ইন্টারনেট নেই · সবুজ = ইন্টারনেট আছে (সিঙ্ক এখনো যাচাই হয়নি)
-   · নীল = ইন্টারনেট + Firebase রিয়েলটাইম সিঙ্ক চালু। */
+   · নীল = ইন্টারনেট + Firebase রিয়েলটাইম সিঙ্ক চালু — নীল অবস্থায় টপবারে
+     "সিঙ্ক" লেখাটুকুও দেখায়, যাতে রং ছাড়াও অবস্থাটা পড়া যায়। */
 (() => {
   const selector = '.auth-topbar, .admin-topbar, .topbar, .teacher-topbar, .manager-topbar, .pay-topbar, header[class*="topbar"]';
+  const CHIP_CLASS = 'topbar-sync-chip';
+  const CHIP_LABEL = 'সিঙ্ক';
 
   const syncConfirmed = () => document.documentElement?.dataset?.realtimeSync === 'online';
+
+  /** The chip joins the header's right-hand tool cluster when the panel has one, so
+      the theme/exit/bell buttons keep their exact place. Without a cluster (login
+      screen) it goes last, and the stylesheet keeps it flush right. */
+  function chipSlot(topbar) {
+    const inner = topbar.querySelector(':scope > .admin-topbar-inner') || topbar;
+    const cluster = inner.querySelector('.admin-topbar-actions, .student-header-tools');
+    if (cluster) return { host: cluster, before: cluster.firstChild || null };
+    return { host: inner, before: null };
+  }
+
+  function syncChip(topbar, show) {
+    let chip = topbar.querySelector('.' + CHIP_CLASS);
+    if (!chip) {
+      if (!show) return; // nothing is added to the DOM until the bridge is live
+      chip = document.createElement('span');
+      chip.className = CHIP_CLASS;
+      chip.setAttribute('role', 'status');
+      chip.setAttribute('aria-label', 'রিয়েলটাইম সিঙ্ক চালু');
+      chip.textContent = CHIP_LABEL;
+      const { host, before } = chipSlot(topbar);
+      host.insertBefore(chip, before);
+      return;
+    }
+    chip.hidden = !show;
+  }
 
   function update() {
     const online = navigator.onLine;
@@ -14,6 +43,7 @@
       el.classList.toggle('connection-offline', !online);
       el.classList.toggle('connection-sync', syncing);
       el.setAttribute('data-connection-state', !online ? 'offline' : syncing ? 'sync' : 'online');
+      syncChip(el, syncing);
     });
   }
 
