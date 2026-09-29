@@ -698,3 +698,19 @@ html[data-theme="dark"] .admin-app-link { display:none !important; }
   border-left-color: #2563eb !important;
   border-right-color: #2563eb !important;
 }
+/* নীল = সিঙ্ক চালু — রং ছাড়াও শব্দের প্রমাণ: টপবারে "সিঙ্ক" চিপ।
+   চিপটা js/topbar-connectivity.js শুধু ব্রিজ লাইন থাকা অবস্থায় তৈরি করে,
+   অন্য সব সময় DOM-এ ওই নোডটাই আসে না (তাই সবুজ/লাল অবস্থায় হেডার অপরবর্তিত)। */
+:where(.auth-topbar,.admin-topbar,.topbar,.teacher-topbar,.manager-topbar,.pay-topbar,header[class*="topbar"]) .topbar-sync-chip{
+  display:inline-flex;align-items:center;flex:none;
+  padding:4px 9px;border-radius:999px;
+  border:1px solid rgba(37,99,235,.30);background:rgba(37,99,235,.10);
+  color:#1d4ed8;font-size:9px;font-weight:800;letter-spacing:.2px;
+  line-height:1;white-space:nowrap;
+}
+/* Direct child of the bar (login header) = no tool cluster to join, so snap right. */
+:where(.auth-topbar,.admin-topbar,.topbar,.teacher-topbar,.manager-topbar,.pay-topbar,header[class*="topbar"])>.topbar-sync-chip{margin-left:auto}
+.topbar-sync-chip[hidden]{display:none}
+html[data-theme="dark"] :is(.auth-topbar,.admin-topbar,.pay-topbar,.topbar) .topbar-sync-chip{
+  border-color:#31456f;background:rgba(59,130,246,.18);color:#a9c4ff;
+}
