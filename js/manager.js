@@ -383,7 +383,8 @@ async function enterManager() {
   managerAccount = await readStaffAccount('manager');
   if (!managerAccount) { clearStaffSession('manager'); goToLoginPage(); return; }
   $('#managerShell').hidden = false;
-  $('#managerNameShort').textContent = managerAccount.fullName || 'Manager Profile';
+  const shortName = $('#managerNameShort');
+  if (shortName) shortName.textContent = managerAccount.fullName || 'Manager Profile';
   if (!examStarted) { initExamManager('#managerExamWorkspace', 'manager'); examStarted = true; }
   renderView('dashboard'); await loadOperationalData();
   mountReports($('#managerReports'), { panel: 'manager' });

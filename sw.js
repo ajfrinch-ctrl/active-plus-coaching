@@ -1,4 +1,4 @@
-const CACHE_NAME = 'active-plus-student-v88-notifications';
+const CACHE_NAME = 'active-plus-student-v89-topbar';
 const APP_SHELL = [
   './js/record-sync.js',
   './js/sync-merge.js',
@@ -134,7 +134,7 @@ const APP_SHELL = [
   './js/recovery.js',
   './js/logout.js',
   './js/navigation.js',
-  './js/modals.js',
+  './js/notice-center.js',
   './js/install.js',
   './js/connectivity.js',
   './js/service-worker.js',

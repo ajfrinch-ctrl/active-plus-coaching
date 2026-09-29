@@ -46,7 +46,7 @@ for (const viewport of [{ width: 320, height: 740 }, { width: 390, height: 844 }
     await page.locator('.admin-bottom [data-admin-view=reports]').click();
     await expect(page.locator('.admin-view[data-view-panel=reports]')).toBeVisible();
     await page.locator('#reportMonth').selectOption('all');
-    const selectors = { header: '.admin-topbar', footer: '.admin-bottom', main: '#adminMain' };
+    const selectors = { header: '.app-topbar', footer: '.admin-bottom', main: '#adminMain' };
     await barsStayInPlace(page, selectors);
     await page.locator('#adminMain').evaluate(el => { el.scrollTop = el.scrollHeight; });
     await expect.poll(() => page.locator('#adminMain').evaluate(el => el.scrollTop)).toBeGreaterThan(300);
@@ -64,7 +64,7 @@ for (const viewport of [{ width: 320, height: 740 }, { width: 390, height: 844 }
     await barsStayInPlace(page, selectors);
     await page.setViewportSize({ width: 390, height: 520 });
     await barsStayInPlace(page, selectors);
-    await page.locator('.admin-topbar').evaluate(el => { el.style.height = '90px'; });
+    await page.locator('.app-topbar').evaluate(el => { el.style.height = '90px'; });
     await barsStayInPlace(page, selectors);
   });
 }
@@ -75,7 +75,7 @@ for (const entry of ['index.html', 'admin.html']) {
     await page.goto('/' + entry);
     await page.locator('.auth-screen').evaluate(el => { el.scrollTop = el.scrollHeight; });
     await expect.poll(() => page.locator('.auth-screen').evaluate(el => el.scrollTop)).toBeGreaterThan(0);
-    expect((await page.locator('.auth-screen .auth-topbar').boundingBox()).y).toBe(0);
+    expect((await page.locator('.auth-screen .app-topbar').boundingBox()).y).toBe(0);
     expect(await page.evaluate(() => window.scrollY)).toBe(0);
     if (entry === 'index.html') {
       await page.locator('.auth-tab[data-auth-tab=register]').click();
@@ -101,16 +101,20 @@ for (const width of [320, 390, 480]) {
   test(`student reuses login branding, with one bell and no legacy header (${width}px)`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
     await page.goto('/index.html');
-    const branding = await page.locator('#authScreen .auth-brand').innerHTML();
-    const loginHeight = (await page.locator('#authScreen .auth-topbar').boundingBox()).height;
+    // One bar for the whole app: the login screen and the student app paint the
+    // same logo, the same slogan and the same height.
+    await expect(page.locator('#authScreen .app-brand [data-fixed-tagline]')).toBeVisible();
+    const loginHeight = (await page.locator('#authScreen .app-topbar').boundingBox()).height;
     await page.locator('#demoLoginButton').click();
     await expect(page.locator('#studentHeader')).toBeVisible();
-    expect(await page.locator('#studentHeader .auth-brand').innerHTML()).toBe(branding);
     expect((await page.locator('#studentHeader').boundingBox()).height).toBe(loginHeight);
+    await expect(page.locator('#studentHeader .app-brand [data-fixed-tagline]')).toBeVisible();
     await expect(page.locator('#appShell .topbar, #topbarStudentName, #weatherStatus, #currentTime, .topbar-strip')).toHaveCount(0);
+    await expect(page.locator('#studentHeader .app-topbar-actions button')).toHaveCount(2);
     await expect(page.locator('#notificationButton')).toHaveCount(1);
     await expect(page.locator('#notificationButton')).toBeVisible();
-    expect(await page.locator('#studentHeader .auth-brand strong').evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+    await expect(page.locator('#studentLogout')).toBeVisible();
+    expect(await page.locator('#studentHeader .app-brand-name').evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.locator('#notificationButton').click();
     await expect(page.locator('#noticeModal')).toBeVisible();

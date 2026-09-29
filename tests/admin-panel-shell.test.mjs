@@ -113,17 +113,32 @@ test('the bottom bar renders one icon + label per permitted tab', () => {
   // The active tab is marked for both CSS and assistive tech.
   assert.equal(ctx.$$('.admin-bottom [aria-current="page"]').length, 1);
   assert.equal(ctx.$('.admin-bottom [aria-current="page"]').dataset.adminView, 'dashboard');
-  // Header actions: icon + label, one icon each, never an emoji or a stray PNG.
-  // The student-app shortcut was dropped from the topbar, so sign-out is the
-  // only labelled header action left.
-  const exit = ctx.$('.admin-exit');
-  assert.ok(exit, '.admin-exit is missing');
-  assert.equal(exit.querySelectorAll('svg.topbar-icon').length, 1, '.admin-exit paints more than one icon');
-  assert.ok(exit.textContent.trim().length > 1, '.admin-exit lost its label');
-  // The theme toggle is icon-only, but it is still on the Admin topbar like on
-  // every other portal: a sun for light mode, a moon for dark.
-  const themeToggle = ctx.$('.theme-quick-toggle[data-theme-toggle]');
-  assert.ok(themeToggle, 'the Admin topbar has no theme toggle');
+  // Header: the same bar as every other panel — brand and slogan on the left,
+  // the notification bell and sign-out on the right, and nothing else. The
+  // date, the theme switch and every shortcut moved out of the topbar.
+  const header = ctx.$('.app-topbar');
+  assert.ok(header, 'the Admin panel has no topbar');
+  assert.equal(ctx.$$('.app-topbar').length, 1, 'the Admin panel paints more than one topbar');
+  const brand = header.querySelector('.app-brand');
+  assert.ok(brand, 'the topbar has no brand');
+  assert.equal(brand.querySelectorAll('img').length, 1, 'the brand paints more than one logo');
+  assert.ok(brand.querySelector('[data-fixed-tagline]').textContent.trim().length > 1, 'the slogan is missing');
+  const bell = header.querySelector('#notificationButton');
+  assert.ok(bell, 'the topbar has no notification button');
+  assert.equal(bell.querySelectorAll('svg').length, 1, 'the bell paints more than one icon');
+  assert.ok(bell.querySelector('use[href="#icon-bell"]'));
+  assert.ok(bell.querySelector('.notification-dot'), 'the bell has no unread dot');
+  const exit = header.querySelector('.app-topbar-exit');
+  assert.ok(exit, 'the sign-out button is missing');
+  assert.equal(exit.id, 'adminExitButton');
+  assert.equal(exit.querySelectorAll('svg').length, 1, 'sign-out paints more than one icon');
+  assert.ok(exit.querySelector('use[href="#icon-logout"]'));
+  assert.equal(header.querySelectorAll('button').length, 2, 'the topbar holds more than notification + sign-out');
+  assert.equal(header.querySelectorAll('[data-theme-toggle], time, .student-date').length, 0, 'a control that belongs elsewhere is still in the topbar');
+  // Dark mode stays reachable: it lives in System Settings now, icon-only, with
+  // a sun for light mode and a moon for dark.
+  const themeToggle = ctx.$('.theme-card .theme-quick-toggle[data-theme-toggle]');
+  assert.ok(themeToggle, 'dark mode has no home on the Admin panel');
   assert.equal(themeToggle.querySelectorAll('svg').length, 2);
   assert.ok(themeToggle.querySelector('use[href="#icon-sun"]'));
   assert.ok(themeToggle.querySelector('use[href="#icon-moon"]'));

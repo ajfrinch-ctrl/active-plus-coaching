@@ -15,8 +15,8 @@
       the theme/exit/bell buttons keep their exact place. Without a cluster (login
       screen) it goes last, and the stylesheet keeps it flush right. */
   function chipSlot(topbar) {
-    const inner = topbar.querySelector(':scope > .admin-topbar-inner') || topbar;
-    const cluster = inner.querySelector('.admin-topbar-actions, .student-header-tools');
+    const inner = topbar.querySelector(':scope > .app-topbar-inner, :scope > .admin-topbar-inner') || topbar;
+    const cluster = inner.querySelector('.app-topbar-actions, .admin-topbar-actions, .student-header-tools');
     if (cluster) return { host: cluster, before: cluster.firstChild || null };
     return { host: inner, before: null };
   }

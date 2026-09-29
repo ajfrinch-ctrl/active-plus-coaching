@@ -1,6 +1,6 @@
 const { test, expect } = require('./fixtures.cjs');
 const { enterStudentApp } = require('./portal-session.cjs');
-const READ_KEY = 'activePlus.notices.read.v1:AP-1024';
+const READ_KEY = 'activePlus.notifications.seen.v1:student:AP-1024';
 const CONFIG_KEY = 'active-plus-app-config-v1';
 test.use({ viewport: { width: 390, height: 844 } });
 async function enter(page) {
@@ -17,7 +17,7 @@ test('only bell opens notices; read state survives closing, reload and offline',
   await expect(page.locator('#noticeModal')).toBeVisible();
   await expect(page.locator('.notification-dot')).toBeHidden();
   await expect(page.locator('#noticeListStudent .unread')).toHaveCount(0);
-  await expect(page.locator('#noticeReadStatus')).toContainText('সব নোটিশ পড়া হয়েছে');
+  await expect(page.locator('#noticeReadStatus')).toContainText('সব নোটিফিকেশন পড়া হয়েছে');
   await page.locator('#noticeModal .modal-action').click();
   await page.reload();
   await expect(page.locator('.notification-dot')).toBeHidden();
@@ -40,7 +40,7 @@ test('read receipts sync across tabs and edited broadcasts become unread without
   const message = '<img src=x onerror=alert(1)> নতুন ক্লাসের সময়';
   await other.evaluate(({ key, message }) => localStorage.setItem(key, JSON.stringify({ broadcastAlert: true, broadcastMessage: message })), { key: CONFIG_KEY, message });
   await expect(page.locator('.notification-dot')).toBeVisible();
-  await expect(page.locator('#notificationButton')).toHaveAttribute('aria-label', 'নোটিশ দেখুন — ১টি অপঠিত');
+  await expect(page.locator('#notificationButton')).toHaveAttribute('aria-label', 'নোটিফিকেশন — ১টি অপঠিত');
   await page.locator('#notificationButton').click();
   await expect(page.locator('#noticeListStudent')).toContainText(message);
   await expect(page.locator('#noticeListStudent img')).toHaveCount(0);
@@ -50,7 +50,7 @@ test('read receipts sync across tabs and edited broadcasts become unread without
 
 test('read state belongs to the student, not every account on the device', async ({ page }) => {
   await enter(page); await page.locator('#notificationButton').click();
-  expect(await page.evaluate(key => JSON.parse(localStorage.getItem(key)).length, READ_KEY)).toBe(3);
+  expect(await page.evaluate(key => JSON.parse(localStorage.getItem(key)).keys.length, READ_KEY)).toBe(3);
   await page.evaluate(() => {
     const key = 'active-plus-account-v1', account = JSON.parse(localStorage.getItem(key));
     account.student.id = 'ANOTHER-STUDENT'; localStorage.setItem(key, JSON.stringify(account));
@@ -62,7 +62,7 @@ test('unreadable receipt storage is preserved and failed persistence is explaine
   await enter(page);
   await page.evaluate(key => localStorage.setItem(key, '{broken'), READ_KEY);
   await page.reload(); await page.locator('#notificationButton').click();
-  await expect(page.locator('.feedback-toast')).toContainText('ডিভাইসে সংরক্ষণ হয়নি');
+  await expect(page.locator('#noticeReadStatus')).toContainText('ডিভাইসে সংরক্ষণ হয়নি');
   expect(await page.evaluate(key => localStorage.getItem(key), READ_KEY)).toBe('{broken');
   await expect(page.locator('.notification-dot')).toBeHidden();
   await page.reload(); await expect(page.locator('.notification-dot')).toBeVisible();

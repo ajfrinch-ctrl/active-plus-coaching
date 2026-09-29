@@ -15,7 +15,6 @@ import { initRegister } from './register.js';
 import { initRecovery } from './recovery.js';
 import { requestLogout, initLogout } from './logout.js';
 import { initNavigation } from './navigation.js';
-import { initModals } from './modals.js';
 import { initProfile, openProfileEditor, shareStudentOnWhatsApp } from './profile.js';
 import { initRoutine } from './routine.js';
 import { initInstallPrompt, installApp } from './install.js';
@@ -208,7 +207,9 @@ async function shouldAutoLogin() {
 
 renderStudent(state.student);
 initNavigation({ onAction: handleAction });
-const refreshNotices = initModals({ getStudent: () => state.student });
+/* The bell and its inbox are owned by the notification engine
+   (js/notifications.js) so every panel shares one receipt list. */
+const refreshNotices = () => window.apcNoticeCenter?.paint?.();
 initProfile({
   state,
   onStudentChange: student => { renderStudent(student); refreshTeaching(); refreshExams(); refreshReports($('#studentReports')); }

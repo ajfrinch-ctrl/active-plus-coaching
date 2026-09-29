@@ -5,7 +5,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https: wss:; manifest-src 'self'; worker-src 'self'; base-uri 'self'; object-src 'none'">
   <meta name="referrer" content="no-referrer">
   <script src="js/sanitize-url.js"></script>
-  <script src="js/topbar-connectivity.js?v=20260929-sync-chip"></script>
+  <script src="js/topbar-connectivity.js?v=20260929-topbar"></script>
   <script type="module" src="js/realtime-sync-entry.js"></script>
   <script src="js/appearance-boot.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
@@ -21,21 +21,18 @@
   <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="assets/icons/favicon-16.png">
   <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
-  <link rel="stylesheet" href="css/aurora.css?v=20260929-sync-chip">
+  <link rel="stylesheet" href="css/aurora.css?v=20260929-topbar">
   <!-- Global glass design system. Presentation layer only; loaded last. -->
-  <link rel="stylesheet" href="css/aurora.css?v=20260929-sync-chip">
+  <link rel="stylesheet" href="css/aurora.css?v=20260929-topbar">
   <link rel="preload" href="assets/fonts/NotoSansBengali-Variable.ttf" as="font" type="font/ttf" crossorigin>
-  <link rel="stylesheet" href="css/aurora.css?v=20260929-sync-chip">
+  <link rel="stylesheet" href="css/aurora.css?v=20260929-topbar">
   <!-- Appearance (light/dark). Loaded last so its dark patches win the cascade. -->
-  <link rel="stylesheet" href="css/aurora.css?v=20260929-sync-chip">
+  <link rel="stylesheet" href="css/aurora.css?v=20260929-topbar">
 </head>
 <body>
   <!-- Authentication comes first. Credentials and registration data stay on this device. -->
   <section class="auth-screen" id="authScreen" hidden aria-label="Active Plus লগইন" hidden>
-    <div class="auth-topbar">
-      <div class="auth-brand"><img src="assets/icons/logo-128.png" alt="Active Plus Coaching logo" width="38" height="38"><span><strong>Active Plus Coaching</strong><small data-fixed-tagline aria-label="শিখতে থাকো, এগিয়ে যাও">শিখতে থাকো, এগিয়ে যাও</small></span></div>
-      <button class="theme-quick-toggle" type="button" data-theme-toggle aria-label="ডার্ক মোড চালু করুন"><svg class="icon-sun" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-sun"></use></svg><svg class="icon-moon" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-moon"></use></svg></button>
-    </div>
+    <header class="app-topbar"><div class="app-topbar-inner"><div class="app-brand"><img class="app-brand-logo" src="assets/icons/logo-128.png" alt="Active Plus Coaching" width="38" height="38"><span class="app-brand-text"><strong class="app-brand-name">Active Plus Coaching</strong><small class="app-brand-slogan" data-fixed-tagline>শিখতে থাকো, এগিয়ে যাও</small></span></div></div></header>
     <div class="auth-card">
       <div class="auth-tabs" role="tablist" aria-label="অ্যাকাউন্ট অপশন">
         <button class="auth-tab active" type="button" data-auth-tab="login" role="tab" aria-selected="true">লগইন</button>
@@ -203,19 +200,7 @@
       <div class="pending-info"><span>✓</span><p>শিক্ষক বা এডমিন অনুমোদন দিলে এই মোবাইল নম্বর ও পাসওয়ার্ড দিয়ে আবার লগইন করো।</p></div>
       <button class="pending-logout" type="button" id="pendingLogout">লগইন পেইজে ফিরে যান</button>
     </section>
-    <header class="auth-topbar student-topbar" id="studentHeader">
-      <div class="auth-brand student-identity">
-        <img src="assets/icons/logo-128.png" alt="Active Plus Coaching" width="52" height="52">
-        <span><strong id="studentName">শিক্ষার্থী</strong><small id="studentHeaderMeta" data-fixed-tagline>শ্রেণি ও ব্যাচ</small></span>
-      </div>
-      <div class="student-header-tools">
-        <button class="theme-quick-toggle" type="button" data-theme-toggle aria-label="ডার্ক মোড চালু করুন" aria-pressed="true" title="থিম বদলান"><svg class="icon-sun" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-sun"></use></svg><svg class="icon-moon" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-moon"></use></svg></button>
-        <div class="student-date" aria-label="আজকের তারিখ"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-calendar"></use></svg><span><strong id="todayDay">আজ</strong><small id="todayDate">—</small></span></div>
-        <button class="icon-button notification-button" id="notificationButton" type="button" aria-label="নোটিশ দেখুন" aria-haspopup="dialog">
-          <svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-bell"></use></svg><span class="notification-dot" hidden aria-hidden="true"></span>
-        </button>
-      </div>
-    </header>
+    <header class="app-topbar" id="studentHeader"><div class="app-topbar-inner"><div class="app-brand"><img class="app-brand-logo" src="assets/icons/logo-128.png" alt="Active Plus Coaching" width="38" height="38"><span class="app-brand-text"><strong class="app-brand-name">শিক্ষার্থী অ্যাপ</strong><small class="app-brand-slogan" data-fixed-tagline>শিখতে থাকো, এগিয়ে যাও</small></span></div><div class="app-topbar-actions"><button class="app-topbar-icon notification-button" id="notificationButton" type="button" aria-label="নোটিশ দেখুন" aria-haspopup="dialog"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-bell"></use></svg><span class="notification-dot" hidden aria-hidden="true"></span></button><button class="app-topbar-icon app-topbar-exit" id="studentLogout" data-action="logout" type="button" title="লগআউট" aria-label="লগআউট"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-logout"></use></svg></button></div></div></header>
 
     <main class="app-main" id="appMain">
       <!-- HOME — ShopLedGer-style home: welcome card, today card, quick actions, list rows -->
@@ -414,6 +399,6 @@
     <symbol id="icon-shield" viewBox="0 0 24 24"><path d="M12 3 5 6v5.2c0 4.8 3 8 7 9.8 4-1.8 7-5 7-9.8V6l-7-3Z"/><path d="m9 12 2 2 4-4.5"/></symbol>
   </svg>
   <script type="module" src="js/pull-to-refresh.js"></script>
-  <script type="module" src="js/main.js?v=20260928-1549"></script>
+  <script type="module" src="js/main.js?v=20260929-topbar"></script>
 </body>
 </html>

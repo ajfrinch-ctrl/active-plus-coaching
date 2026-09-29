@@ -55,7 +55,7 @@ html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
   min-height: 0;
   overflow: hidden;
 }
-.admin-shell { --shell-header-height: calc(62px + env(safe-area-inset-top, 0px)); }
+.admin-shell { --shell-header-height: calc(64px + env(safe-area-inset-top, 0px)); }
 .app-shell:not([hidden]), .admin-shell:not([hidden]) {
   display: grid;
   grid-template-rows: var(--shell-header-height) minmax(0, 1fr) var(--shell-footer-height);

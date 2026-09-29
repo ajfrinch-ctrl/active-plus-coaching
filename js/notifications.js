@@ -116,6 +116,13 @@ function readSeen() {
 }
 
 function writeSeen(keys) {
+  // A receipt file that cannot be parsed is kept, never overwritten: the person
+  // is told the read state is only for this session instead of silently losing
+  // whatever was in there.
+  try {
+    const raw = window.localStorage.getItem(SEEN_KEY_PREFIX + viewerKey);
+    if (raw !== null) JSON.parse(raw);
+  } catch { return false; }
   return writeJSON(SEEN_KEY_PREFIX + viewerKey, seenRecord(keys));
 }
 
@@ -137,6 +144,20 @@ export function buildFeed() {
     viewer,
     localWrites: readJSON(LOCAL_WRITE_KEY, null)
   });
+}
+
+/** The receipt keys this device already knows about (inbox + tray agree). */
+export function seenKeys() {
+  return readSeen();
+}
+
+/** Everything in the feed is read: used when the inbox is opened. */
+export function markAllSeen() {
+  const feed = buildFeed();
+  const keys = [...new Set([...readSeen(), ...feed.map(item => item.key)])];
+  const saved = writeSeen(keys);
+  window.dispatchEvent(new CustomEvent('apc-notifications-updated', { detail: { read: keys.length, saved } }));
+  return { count: keys.length, saved };
 }
 
 function notificationsEnabled() {
@@ -204,6 +225,7 @@ export function refreshNotifications() {
     for (const item of plan.notify) { deliver(item); delivered += 1; }
   }
   paintPill();
+  window.dispatchEvent(new CustomEvent('apc-notifications-updated', { detail: { delivered } }));
   return { delivered, feed };
 }
 
@@ -349,6 +371,16 @@ export async function disableNotifications() {
 
 /* ---- Mount ------------------------------------------------------------------- */
 
+/** The bell and its inbox. Optional: if this import fails, notifications still
+    arrive in the tray and the pill still works. */
+function mountNoticeCenter() {
+  import('./notice-center.js')
+    .then(module => module.mountNoticeCenter(controller))
+    .catch(error => console.warn('[Active Plus] notification inbox unavailable:', error?.name || 'unknown'));
+}
+
+
+
 export function initNotifications() {
   if (controller) return controller;
   try {
@@ -380,8 +412,11 @@ export function initNotifications() {
     controller = {
       refresh: refreshNotifications,
       feed: buildFeed,
+      seen: seenKeys,
+      markAllSeen,
       enable: enableNotifications,
       disable: disableNotifications,
+      pushSupport: async () => (await import('./push-notifications.js')).pushSupport(),
       viewer: () => ({ ...viewer }),
       viewerKey: () => viewerKey,
       armed: () => armed,
@@ -389,6 +424,9 @@ export function initNotifications() {
       deviceId: getDeviceId
     };
     window.apcNotifications = controller;
+    // The bell/inbox needs the controller, so it is mounted after it exists.
+    if (document.body) mountNoticeCenter();
+    else window.addEventListener('DOMContentLoaded', mountNoticeCenter, { once: true });
     return controller;
   } catch (error) {
     console.warn('[Active Plus] notification centre failed to start:', error?.name || 'unknown');

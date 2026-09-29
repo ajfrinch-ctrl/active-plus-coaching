@@ -22,6 +22,8 @@
 @import url("./manager-panel.css");
 @import url("./receipt.css");
 @import url("./payment.css");
+/* Unified topbar (logo + slogan + notification + logout) for every panel. */
+@import url("./topbar.css");
 
 /* Aurora design tokens.
    These aliases intentionally point to the existing global appearance tokens,

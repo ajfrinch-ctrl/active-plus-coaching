@@ -5,7 +5,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https: wss:; manifest-src 'self'; worker-src 'self'; base-uri 'self'; object-src 'none'">
   <meta name="referrer" content="no-referrer">
   <script src="js/sanitize-url.js"></script>
-  <script src="js/topbar-connectivity.js?v=20260929-sync-chip"></script>
+  <script src="js/topbar-connectivity.js?v=20260929-topbar"></script>
   <script type="module" src="js/realtime-sync-entry.js"></script>
   <script src="js/appearance-boot.js"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
@@ -17,19 +17,19 @@
   <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="assets/icons/favicon-16.png">
   <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
-  <link rel="stylesheet" href="css/aurora.css?v=20260929-sync-chip">
+  <link rel="stylesheet" href="css/aurora.css?v=20260929-topbar">
   <!-- Global glass design system. Presentation layer only; loaded last. -->
-  <link rel="stylesheet" href="css/aurora.css?v=20260929-sync-chip">
+  <link rel="stylesheet" href="css/aurora.css?v=20260929-topbar">
   <!-- Admin Panel shell: permission-driven navigation, icon grid and typography.
        Loaded last so the panel always speaks the shared design language. -->
-  <link rel="stylesheet" href="css/aurora.css?v=20260929-sync-chip">
+  <link rel="stylesheet" href="css/aurora.css?v=20260929-topbar">
   <link rel="preload" href="assets/fonts/NotoSansBengali-Variable.ttf" as="font" type="font/ttf" crossorigin>
-  <link rel="stylesheet" href="css/aurora.css?v=20260929-sync-chip">
+  <link rel="stylesheet" href="css/aurora.css?v=20260929-topbar">
   <!-- Icon geometry + staff management: loaded last so one fixed container
        per icon is the final word (no overlap, no double painting). -->
-  <link rel="stylesheet" href="css/aurora.css?v=20260929-sync-chip">
+  <link rel="stylesheet" href="css/aurora.css?v=20260929-topbar">
   <!-- Appearance (light/dark). Loaded last so its dark patches win the cascade. -->
-  <link rel="stylesheet" href="css/aurora.css?v=20260929-sync-chip">
+  <link rel="stylesheet" href="css/aurora.css?v=20260929-topbar">
 </head>
 <body>
   <script>
@@ -44,21 +44,7 @@
        js/staff-auth.js refuses createInitialAdmin() once one Admin exists. -->
   <!-- Admin Login Screen -->
   <div class="admin-shell" id="adminShell" hidden>
-    <header class="admin-topbar">
-      <div class="admin-topbar-inner">
-        <a class="admin-brand" href="admin.html" aria-label="এডমিন প্যানেল">
-          <img src="assets/icons/logo-128.png" alt="" width="38" height="38">
-          <span><strong>এডমিন প্যানেল</strong><small>Active Plus Coaching</small></span>
-        </a>
-        <div class="admin-topbar-actions">
-          <button class="theme-quick-toggle" type="button" data-theme-toggle aria-label="ডার্ক মোড চালু করুন" aria-pressed="true" title="থিম বদলান"><svg class="icon-sun" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-sun"></use></svg><svg class="icon-moon" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-moon"></use></svg></button>
-          <button class="admin-exit" id="adminExitButton" type="button" aria-label="লগআউট">
-            <span class="topbar-icon" aria-hidden="true"></span>
-            <span>লগআউট</span>
-          </button>
-        </div>
-      </div>
-    </header>
+    <header class="app-topbar"><div class="app-topbar-inner"><div class="app-brand"><img class="app-brand-logo" src="assets/icons/logo-128.png" alt="Active Plus Coaching" width="38" height="38"><span class="app-brand-text"><strong class="app-brand-name">এডমিন প্যানেল</strong><small class="app-brand-slogan" data-fixed-tagline>শিখতে থাকো, এগিয়ে যাও</small></span></div><div class="app-topbar-actions"><button class="app-topbar-icon notification-button" id="notificationButton" type="button" aria-label="নোটিশ দেখুন" aria-haspopup="dialog"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-bell"></use></svg><span class="notification-dot" hidden aria-hidden="true"></span></button><button class="app-topbar-icon app-topbar-exit" id="adminExitButton" type="button" aria-label="লগআউট"><svg aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-logout"></use></svg></button></div></div></header>
 
     <main class="admin-main" id="adminMain">
       <!-- System overview: identity, staff, data and security snapshots.
@@ -472,6 +458,7 @@
         <div class="page-intro">
           <div><p class="eyebrow">System Settings</p><h1 id="appManagementTitle">সিস্টেম সেটিংস</h1></div>
         </div>
+        <article class="admin-card theme-card"><div class="theme-row"><span>থিম (ডার্ক / হালকা)</span><button class="theme-quick-toggle" type="button" data-theme-toggle aria-label="ডার্ক মোড চালু করুন" aria-pressed="true" title="থিম বদলান"><svg class="icon-sun" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-sun"></use></svg><svg class="icon-moon" aria-hidden="true" viewBox="0 0 24 24"><use href="#icon-moon"></use></svg></button></div></article>
         <div class="app-control-grid">
           <article class="admin-card">
             <header class="admin-card-head"><div><p class="eyebrow">Branding &amp; Contacts</p><h2>ব্র্যান্ডিং ও যোগাযোগ তথ্য</h2></div></header>
@@ -656,7 +643,7 @@
   </div>
 
   <!-- Reusable SVG icon sprite. No external assets are required for offline use. -->
-  <svg class="icon-sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+  <svg class="icon-sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><symbol id="icon-bell" viewBox="0 0 24 24"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></symbol>
     <symbol id="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"/></symbol>
     <symbol id="icon-moon" viewBox="0 0 24 24"><path d="M20 15.5A8.5 8.5 0 0 1 8.5 4 8.5 8.5 0 1 0 20 15.5Z"/></symbol>
     <symbol id="icon-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></symbol>
