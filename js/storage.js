@@ -8,7 +8,7 @@
 import { protectAccountIdentity, normalizeUsername } from './account-policy.js';
 import { normalizeAnswer } from './ui.js';
 import { STORAGE_KEYS, defaultStudent, DEFAULT_APP_SETTINGS, DEFAULT_PIN } from './config.js';
-import { rememberAccount, KEYS, nextSequence } from './database.js';
+import { rememberAccount, KEYS, nextSequence, recordNonce } from './database.js';
 import { hashPassword, verifyPassword, isPasswordRecord } from './password-hash.js';
 import { encryptValue, decryptValue, isEncryptedEnvelope } from './secure-store.js';
 import { buildSessionRecord, isSessionRecordValid, DAY_MS } from './session.js';
@@ -275,7 +275,7 @@ export function generateStudentId() {
   const now = new Date();
   const date = `${String(now.getFullYear()).slice(-2)}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
   const sequence = nextSequence(`s:${date}`);
-  return `s${date}${String(sequence).padStart(3, '0')}`;
+  return `s${date}${String(sequence).padStart(3, '0')}-${recordNonce()}`;
 }
 
 const CLASS_ID_CODES = Object.freeze({

@@ -668,7 +668,8 @@ document.addEventListener('keydown', event => {
 
 // Manager review in another same-origin tab updates provisional receipts/statuses.
 window.addEventListener('storage', event => {
-  if (event.key === TRANSACTIONS_KEY || event.key === null) void loadTransactions();
+  if (event.apcRemote) state.students = loadRoster();
+  if (event.apcRemote || event.key === TRANSACTIONS_KEY || event.key === null) void loadTransactions();
 });
 
 /* ---------- Returning session: a remembered device (or a sign-in from the

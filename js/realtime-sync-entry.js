@@ -1,28 +1,63 @@
-/* Active Plus — deferred Realtime Database test sync.
-   Firebase must never block the login/app startup path. */
+/* Deferred, retryable sync. No page reload and no deletion of local data. */
+import { reportSyncError, setSyncStatus } from './sync-status.js';
+
+let running = false;
+let timer;
+let attempt = 0;
+let slowTimer;
+function schedule(delay = 1200) {
+  clearTimeout(timer);
+  timer = setTimeout(bootRealtimeSync, delay);
+}
+
 async function bootRealtimeSync() {
-  if (!navigator.onLine) return;
+  if (!navigator.onLine) { setSyncStatus('offline'); return; }
+  if (running) return;
+  running = true;
+  setSyncStatus('connecting');
+  slowTimer = setTimeout(() => {
+    reportSyncError({ code: 'network-timeout' });
+  }, 20000);
   try {
-    const { startRealtimeSync } = await import('./realtime-sync.js?v=20260929-1100');
+    const { startRealtimeSync } = await import('./realtime-sync.js?v=20260929-sync-repair');
     const result = await startRealtimeSync();
-    if (result?.ok) {
-      document.documentElement.dataset.realtimeSync = 'online';
+    if (!result?.ok) {
+      reportSyncError(result?.error);
+      schedule(Math.min(30000, 1500 * 2 ** Math.min(attempt++, 5)));
+    } else {
+      attempt = 0;
+      // Check again after cancelled listeners or a rejected background write.
+      schedule(15000);
     }
   } catch (error) {
-    console.warn('[Active Plus] Realtime sync unavailable:', error);
+    reportSyncError(error);
+    schedule(Math.min(30000, 1500 * 2 ** Math.min(attempt++, 5)));
+  } finally {
+    clearTimeout(slowTimer);
+    running = false;
   }
 }
 
-function scheduleRealtimeSync() {
-  window.setTimeout(bootRealtimeSync, 1200);
+function mountStatus() {
+  const banner = document.createElement('button');
+  banner.type = 'button';
+  banner.id = 'cloudSyncStatus';
+  banner.setAttribute('aria-label', 'ক্লাউড সিঙ্কের অবস্থা — আবার চেষ্টা করতে চাপুন');
+  banner.style.cssText = 'position:fixed;bottom:calc(76px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:1000;max-width:calc(100vw - 24px);padding:8px 12px;border:1px solid #b45309;border-radius:10px;background:#fffbeb;color:#78350f;font:13px/1.5 sans-serif;box-shadow:0 2px 8px #0002;';
+  banner.hidden = true;
+  document.body.append(banner);
+  const paint = () => {
+    const { realtimeSync: state, realtimeSyncMessage: message } = document.documentElement.dataset;
+    banner.hidden = !['error', 'offline', 'pending'].includes(state);
+    banner.textContent = `${message || 'সিঙ্কের অপেক্ষায়'}${state === 'error' ? ' · আবার চেষ্টা' : ''}`;
+  };
+  banner.addEventListener('click', () => schedule(0));
+  window.addEventListener('apc-sync-status', paint);
+  paint();
+  schedule();
 }
-
-if (document.readyState === 'complete') {
-  scheduleRealtimeSync();
-} else {
-  window.addEventListener('load', scheduleRealtimeSync, { once: true });
-}
-
-window.addEventListener('online', () => {
-  window.setTimeout(bootRealtimeSync, 500);
-});
+if (document.readyState === 'loading') window.addEventListener('DOMContentLoaded', mountStatus, { once: true });
+else mountStatus();
+window.addEventListener('online', () => schedule(250));
+window.addEventListener('offline', () => { clearTimeout(timer); setSyncStatus('offline'); });
+window.addEventListener('apc-sync-retry', () => schedule(0));

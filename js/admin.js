@@ -1724,8 +1724,20 @@ document.addEventListener('keydown', event => {
 $('#feeMonth').innerHTML = '';
 populateFinanceMonths();
 loadFinanceTransactions();
+let cloudRefreshTimer;
 window.addEventListener('storage', event => {
   if (!state.savingFee && (event.key === TRANSACTIONS_KEY || event.key === null)) loadFinanceTransactions();
+  if (!event.apcRemote) return;
+  clearTimeout(cloudRefreshTimer);
+  cloudRefreshTimer = setTimeout(async () => {
+    if ($('#adminShell').hidden) return;
+    state.students = loadRoster();
+    state.notices = loadNotices();
+    state.routine = loadRoutine();
+    await refreshStaffSnapshot();
+    renderAll();
+    refreshReports($('#adminReports'));
+  }, 100);
 });
 
 // Every staff login starts at index.html. This page only restores an existing session.

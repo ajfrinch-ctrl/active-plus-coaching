@@ -112,7 +112,7 @@ test('keypad + method pill collect in a few taps and the save is durable', async
   assert.equal(added.collectedBy, 'পেমেন্ট কাউন্টার');
   assert.equal(added.note, 'কাউন্টার টেস্ট');
   // Sequential receipt numbers: prefix + YYMMDD (6 digits) + a 3-digit daily sequence.
-  assert.match(added.receiptNo, /^R\d{6}\d{3}$/);
+  assert.match(added.receiptNo, /^R\d{6}\d{3}-[a-f0-9]{16}$/);
 
   assert.match($('#payReceiptSub').textContent, /রসিদ নং: R\d{9}/);
   assert.match($('#payReceiptBody').textContent, /৳৮০০/);

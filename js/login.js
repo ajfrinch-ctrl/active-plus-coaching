@@ -9,6 +9,7 @@
    password — or whose password is due for a change — gets the shared staff
    password dialog before the panel opens. */
 
+import { defaultStudent } from './config.js';
 import { $, $$, setAuthMessage, scrollToTop } from './ui.js';
 import { contactNumber, isContactNumber, normalizeUsername } from './account-policy.js';
 import {
@@ -194,8 +195,8 @@ function withinBudget(promise, what, budget = ONLINE_BRIDGE_BUDGET_MS) {
 async function hydrateStaffAccountsOnline(what) {
   if (!navigator.onLine) return;
   try {
-    const bridge = await withinBudget(import('./realtime-sync.js?v=20260929-1100'), 'online bridge import');
-    await withinBudget(bridge.hydrateStaffAccounts(), 'online bridge hydrate');
+    const bridge = await withinBudget(import('./realtime-sync.js?v=20260929-sync-repair'), 'online bridge import');
+    await withinBudget(bridge.hydrateStaffAccounts({ preserveLocalAdmin: staffAccountRecordExists('admin') }), 'online bridge hydrate');
   } catch (error) {
     console.warn(`[Active Plus] staff account sync unavailable during ${what}:`, error.message);
   }
@@ -207,12 +208,12 @@ async function hydrateStaffAccountsOnline(what) {
    untouched — they stay the authoritative credentials on it.
    Returns true only when the cloud lookup ran and finished; false when the
    device is offline, the budget ran out, or the cloud refused the request. */
-async function hydrateUserIdentifiersOnline(what) {
+async function hydrateUserIdentifiersOnline(what, identifier = '', password = '') {
   if (!navigator.onLine) return false;
   try {
-    const bridge = await withinBudget(import('./realtime-sync.js?v=20260929-1100'), 'online identity import', LOGIN_IDENTITY_BUDGET_MS);
-    const result = await withinBudget(bridge.hydrateUserIdentifiers(), 'online identity hydrate', LOGIN_IDENTITY_BUDGET_MS);
-    return Boolean(result?.ok);
+    const bridge = await withinBudget(import('./realtime-sync.js?v=20260929-sync-repair'), 'online identity import', LOGIN_IDENTITY_BUDGET_MS);
+    const result = await withinBudget(bridge.hydrateUserIdentifiers({ identifier, password }), 'online identity hydrate', LOGIN_IDENTITY_BUDGET_MS);
+    return result;
   } catch (error) {
     console.warn(`[Active Plus] user id sync unavailable during ${what}:`, error.message);
     return false;
@@ -236,11 +237,15 @@ async function handleLogin(event, state, onAuthenticated) {
     // logout/login cycle. Logout removes only the session; the local account
     // remains the authoritative credential on this device. Hydrate only when
     // the device has no Admin record yet (the cross-device first-login case).
-    const hasLocalAdmin = staffAccountRecordExists('admin');
-    if (!hasLocalAdmin) await hydrateStaffAccountsOnline('login');
+    await hydrateStaffAccountsOnline('login');
     // Login IDs created on other devices: directory accounts, the claimed-id
     // registry and the student login (missing records only — see above).
-    onlineIdentities.synced = await hydrateUserIdentifiersOnline('login');
+    const result = await hydrateUserIdentifiersOnline('login', typedId, pin);
+    onlineIdentities.synced = Boolean(result?.ok);
+    if (result?.credentialMismatch) {
+      setAuthMessage('ইউজারনেম/মোবাইল নম্বর অথবা পাসওয়ার্ড সঠিক নয়। আবার চেষ্টা করুন।');
+      return;
+    }
   }
   // Staff usernames are reserved, so a match here can only be that panel.
   const staffRole = await resolveStaffRoleByUsername(typedId);
@@ -277,9 +282,11 @@ async function handleLogin(event, state, onAuthenticated) {
       // The cloud lookup itself failed (offline, timed out or refused — e.g.
       // App Check enforcement blocking the Realtime Database). An account that
       // lives on another phone would make "register first" a false message.
-      setAuthMessage('অন্য ডিভাইসে তৈরি অ্যাকাউন্ট এই ডিভাইসে আনা যায়নি। ইন্টারনেট সংযোগ পরীক্ষা করে আবার লগইন করুন — তবুও না হলে রেজিস্ট্রেশন করুন।');
+      setAuthMessage('ক্লাউড থেকে অ্যাকাউন্ট আনা যায়নি। ইন্টারনেট ও Firebase সিঙ্ক পরীক্ষা করে আবার লগইন করুন। আগে অ্যাকাউন্ট তৈরি করে থাকলে নতুন করে রেজিস্ট্রেশন করবেন না।');
+    } else if (!navigator.onLine) {
+      setAuthMessage('এই ডিভাইসে অ্যাকাউন্ট সংরক্ষিত নেই। অন্য ডিভাইসে তৈরি অ্যাকাউন্টে প্রথমবার লগইন করতে ইন্টারনেট চালু করুন।');
     } else {
-      setAuthMessage('এই ডিভাইসে কোনো অ্যাকাউন্ট নেই। আগে রেজিস্ট্রেশন করুন।');
+      setAuthMessage('অ্যাকাউন্ট পাওয়া যায়নি। আগে অন্য ডিভাইসে তৈরি করে থাকলে সেই ডিভাইসে অ্যাপ অনলাইনে খুলে সিঙ্ক সম্পন্ন করুন, তারপর এখানে আবার চেষ্টা করুন।');
     }
     return;
   }
@@ -299,7 +306,7 @@ async function handleLogin(event, state, onAuthenticated) {
   if (!isPasswordRecord(state.account.pinHash)) {
     state.account = await upgradeAccountSecrets(state.account, { pin }) || state.account;
   }
-  state.student = { ...state.student, ...(state.account.student || {}) };
+  state.student = { ...defaultStudent, ...(state.account.student || {}) };
   saveStudent(state.student);
   const remember = $('#rememberMe')?.checked !== false;
   await persistSession(remember);

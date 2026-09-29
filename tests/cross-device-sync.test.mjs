@@ -24,6 +24,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { startMockCloud, Device } from './two-device-harness.mjs';
+import { encodeUsernameKey } from '../js/username-sync-codec.js';
 
 const REPO = fileURLToPath(new URL('..', import.meta.url));
 const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
@@ -66,11 +67,17 @@ after(async () => {
   await new Promise(resolve => cloud?.server?.close(resolve));
 });
 
+test('an empty cloud explains the source-device sync step instead of requesting duplicate registration', async () => {
+  const result = await deviceB.run('form-login', { username: 'missing.account.apc', pin: '4321' });
+  assert.equal(result.studentSession, false);
+  assert.match(result.message, /সেই ডিভাইসে অ্যাপ অনলাইনে খুলে সিঙ্ক/);
+  assert.doesNotMatch(result.message, /আগে রেজিস্ট্রেশন করুন/);
+});
+
 test('login IDs and data created on device A work on device B', async () => {
   /* ---- Device A: first boot, create the Admin, sign in, create data ---- */
-  const bootA = await deviceA.run('boot');
-  assert.equal(bootA.ok, true, 'device A sync started');
-
+  // Existing devices can create IDs before the bridge ever connects. A dotted
+  // username must not abort startup before the student login is uploaded.
   const admin = await deviceA.run('create-admin', {
     fullName: 'Test admin',
     mobile: '01712345678',
@@ -79,6 +86,12 @@ test('login IDs and data created on device A work on device B', async () => {
   adminUsername = admin.username;
   assert.match(adminUsername, /^test\.admin\.apc$/, 'the generated Admin Login User ID');
   assert.deepEqual(admin.bootstrapRoles.sort(), ['manager', 'payment', 'teacher']);
+  await deviceA.run('write-student-account', {
+    username: 'dolon', pin: '4321', fullName: 'দোলন আক্তার', mobile: '01812345678'
+  });
+  const bootA = await deviceA.run('boot');
+  assert.equal(bootA.ok, true, 'existing local identities do not abort startup');
+  assert.equal(SYNC_ROOT(cloud).studentAccounts?.dolon?.username, 'dolon', 'startup reaches student upload after usernames');
 
   /* A → cloud: the role account, the bootstrap roles and the claimed id
      registry must all be on the bridge now. */
@@ -88,7 +101,7 @@ test('login IDs and data created on device A work on device B', async () => {
   await waitForCloud(
     () => ['manager', 'teacher', 'payment'].every(role => root().staffAccounts?.[role]?.username),
     'bootstrap role accounts pushed');
-  await waitForCloud(() => root().usernames?.[adminUsername] === 'staff:admin', 'claimed Login User ID registry pushed');
+  await waitForCloud(() => root().usernames?.[encodeUsernameKey(adminUsername)] === 'staff:admin', 'claimed Login User ID registry pushed');
 
   const loginA = await deviceA.run('form-login', { username: adminUsername, pin: ADMIN_PASSWORD });
   assert.equal(loginA.adminSession, true, 'device A admin signs in');
@@ -119,8 +132,8 @@ test('login IDs and data created on device A work on device B', async () => {
     fullName: 'দোলন আক্তার',
     mobile: '01812345678'
   });
-  await waitForCloud(() => root().studentAccount?.username === 'dolon', 'student login pushed');
-  const cloudStudent = root().studentAccount;
+  await waitForCloud(() => root().studentAccounts?.dolon?.username === 'dolon', 'student login pushed');
+  const cloudStudent = root().studentAccounts?.dolon;
   assert.ok(cloudStudent?.pinHash, 'student pin travels as a hash');
   assert.ok(!('pin' in (cloudStudent || {})), 'a plaintext pin never reaches the cloud');
 
@@ -137,7 +150,6 @@ test('login IDs and data created on device A work on device B', async () => {
     return {
       usernames: KEYS.usernames,
       students: KEYS.students,
-      studentAccount: KEYS.account,
       directory: STAFF_DIRECTORY_KEY,
       adminAccount: STAFF_ACCOUNTS.admin.accountKey
     };
@@ -147,6 +159,17 @@ test('login IDs and data created on device A work on device B', async () => {
   await deviceB.run('wait-keys', { keys: Object.values(dir) });
   const bStudents = await deviceB.run('snapshot', { keys: [KEYS.students] });
   assert.equal(bStudents.values[KEYS.students].length, 1, 'device B pulled the student list');
+
+  const localRegistry = await deviceB.run('snapshot', { keys: [KEYS.usernames] });
+  assert.equal(localRegistry.values[KEYS.usernames][adminUsername], 'staff:admin', 'wire keys decode to the original ID on device B');
+  assert.equal(localRegistry.values[KEYS.usernames][encodeUsernameKey(adminUsername)], undefined);
+
+  // Exercise the live registry writer and listener as well as startup reads.
+  const laterStaff = await deviceA.run('create-directory-staff', {
+    fullName: 'Karim Uddin', role: 'teacher', password: TEACHER_PASSWORD
+  });
+  await waitForCloud(() => Boolean(root().usernames?.[encodeUsernameKey(laterStaff.username)]), 'new dotted ID pushed live');
+  await deviceB.run('wait-content', { key: KEYS.usernames, id: laterStaff.username });
 
   /* Live A → B: a record written on A after B is already running. */
   await deviceA.run('write-students', { students });
@@ -208,6 +231,101 @@ test('login IDs and data created on device A work on device B', async () => {
   await waitForCloud(() => !SYNC_ROOT(cloud).examDb?.exams?.EXSYNC1, 'exam removal pushed');
   await waitForCloud(() => !SYNC_ROOT(cloud).examDb?.attempts?.ATSYNC1, 'attempt removal pushed');
   await deviceB.run('wait-exam-absent', { examId: 'EXSYNC1' });
+});
+
+test('fresh device can sign in through login hydration before background sync boots', async () => {
+  const fresh = new Device('login-only', cloud.url);
+  fresh.start();
+  try {
+    const login = await fresh.run('form-login', { username: 'dolon', pin: '4321' });
+    assert.equal(login.studentSession, true, login.message);
+    const { KEYS } = await import('../js/database.js');
+    const snapshot = await fresh.run('snapshot', { keys: [KEYS.usernames] });
+    assert.equal(snapshot.values[KEYS.usernames][adminUsername], 'staff:admin');
+  } finally { await fresh.stop(); }
+});
+
+test('multiple student logins remain separate and a wrong password cannot switch the local account', async () => {
+  const other = new Device('other-student', cloud.url);
+  other.start();
+  try {
+    await other.run('write-student-account', { username: 'raisa', pin: '5678', fullName: 'Raisa', mobile: '01912345678' });
+    await other.run('boot');
+    assert.equal(SYNC_ROOT(cloud).studentAccounts.raisa.username, 'raisa');
+    assert.equal(SYNC_ROOT(cloud).studentAccounts.dolon.username, 'dolon');
+    const wrong = await other.run('form-login', { username: 'dolon', pin: '0000' });
+    assert.equal(wrong.studentSession, false);
+    const { KEYS } = await import('../js/database.js');
+    let local = await other.run('snapshot', { keys: [KEYS.account] });
+    assert.equal(local.values[KEYS.account].username, 'raisa');
+    const login = await other.run('form-login', { username: 'dolon', pin: '4321' });
+    assert.equal(login.studentSession, true, login.message);
+    const byMobile = await other.run('form-login', { username: '01912345678', pin: '5678' });
+    assert.equal(byMobile.studentSession, true, byMobile.message);
+    local = await other.run('snapshot', { keys: [KEYS.account] });
+    assert.equal(local.values[KEYS.account].username, 'raisa');
+  } finally { await other.stop(); }
+});
+
+test('live record changes notify UI watchers, preserve concurrent inserts, and propagate the last deletion', async () => {
+  const { KEYS } = await import('../js/database.js');
+  await Promise.all([
+    deviceA.run('write-records', { key: KEYS.notices, value: [{ id: 'ROUTINE-A', subject: 'Math' }] }),
+    deviceB.run('write-records', { key: KEYS.notices, value: [{ id: 'ROUTINE-B', subject: 'English' }] })
+  ]);
+  const ids = ['ROUTINE-A', 'ROUTINE-B'];
+  const result = await deviceB.run('wait-records', { key: KEYS.notices, ids });
+  assert.equal(result.remoteEvent, true, 'same-window storage subscribers are notified');
+  await deviceA.run('wait-records', { key: KEYS.notices, ids });
+  await deviceA.run('write-records', { key: KEYS.notices, value: [] });
+  await deviceB.run('wait-records', { key: KEYS.notices, ids: [] });
+  await waitForCloud(() => Object.keys(SYNC_ROOT(cloud).notices || {}).length === 0, 'last record deletion');
+});
+
+test('teaching documents and teacher assignments keep their required shapes across devices', async () => {
+  const { KEYS } = await import('../js/database.js');
+  const { TEACHER_ASSIGNMENTS_KEY } = await import('../js/teacher-assignments.js');
+  const at = new Date().toISOString();
+  const activity = {
+    id: 'HOMEWORK-SYNC', teacherId: 'TCH-001', teacherName: 'Rahim',
+    type: 'homework', title: 'Practice', subject: 'Math', className: 'নবম শ্রেণি',
+    group: '', details: '', room: '', resourceURL: '', date: '2026-09-29', time: '10:00',
+    duration: 0, totalMarks: 0, status: 'published', progress: {}, createdAt: at, updatedAt: at
+  };
+  await deviceA.run('write-records', { key: KEYS.teaching, value: { version: 1, activities: [activity] } });
+  await deviceB.run('wait-records', { key: KEYS.teaching, ids: ['HOMEWORK-SYNC'] });
+  assert.deepEqual(await deviceB.run('teaching-readable'), { ok: true });
+  await deviceA.run('write-records', { key: TEACHER_ASSIGNMENTS_KEY, value: [
+    { id: 'ASSIGN-1', teacherUsername: 'teacher.apc', className: 'নবম শ্রেণি', group: '', subject: 'Math' }
+  ] });
+  await deviceB.run('wait-records', { key: TEACHER_ASSIGNMENTS_KEY, ids: ['ASSIGN-1'] });
+  await deviceA.run('write-records', { key: KEYS.teaching, value: { version: 1, activities: [] } });
+  await deviceB.run('wait-records', { key: KEYS.teaching, ids: [] });
+  assert.deepEqual(await deviceB.run('teaching-readable'), { ok: true });
+});
+
+test('offline edits survive a remote snapshot and are uploaded after reconnect', async () => {
+  const { KEYS } = await import('../js/database.js');
+  await deviceA.run('network', { online: false });
+  await deviceA.run('write-records', { key: KEYS.notices, value: [{ id: 'OFFLINE-A', subject: 'offline work' }] });
+  await deviceB.run('write-records', { key: KEYS.notices, value: [{ id: 'ONLINE-B', subject: 'online work' }] });
+  await waitForCloud(() => Boolean(SYNC_ROOT(cloud).notices?.['ONLINE-B']), 'online device uploaded');
+  assert.equal(SYNC_ROOT(cloud).notices?.['OFFLINE-A'], undefined);
+  await deviceA.run('network', { online: true });
+  await deviceB.run('wait-records', { key: KEYS.notices, ids: ['OFFLINE-A', 'ONLINE-B'] });
+  await deviceA.run('wait-records', { key: KEYS.notices, ids: ['OFFLINE-A', 'ONLINE-B'] });
+});
+
+test('real weekly routine schema updates the visible student routine without reload', async () => {
+  const { KEYS } = await import('../js/database.js');
+  await deviceB.run('watch-routine');
+  const lesson = { id: 'RTN-REAL', subject: 'সিঙ্ক গণিত', teacher: 'Rahim', room: 'A', time: '10:00', period: 'সকাল', className: 'নবম শ্রেণি' };
+  await deviceA.run('write-records', { key: KEYS.routine, value: { sat: { date: '2026-09-29', classes: [lesson] } } });
+  const result = await deviceB.run('wait-routine-ui', { text: lesson.subject, count: 1 });
+  assert.equal(result.routine.sat.classes[0].subject, lesson.subject);
+  assert.match(result.rendered, /সিঙ্ক গণিত/);
+  await deviceA.run('write-records', { key: KEYS.routine, value: { sat: { date: '2026-09-29', classes: [] } } });
+  await deviceB.run('wait-routine-ui', { count: 0 });
 });
 
 test('package still declares the realtime bridge', async () => {

@@ -1,7 +1,9 @@
 /* Application composition root. Feature modules can be replaced independently.
    Updated: don't ask security check every time - auto-login for trusted devices. */
 import { runMigrations } from './storage/migration.js';
-import { APP_TAGLINE } from './config.js';
+import { KEYS, listDocuments } from './database.js';
+import { syncAccountStatus } from './office-data.js';
+import { APP_TAGLINE, defaultStudent } from './config.js';
 import { loadStudent, loadAccount, hasSession, persistSession, saveStudent, clearSession, isSecurityCheckDisabled, loadAppConfig } from './storage.js';
 import { escapeHtml } from './sanitize.js';
 import { $, setAuthMessage, showFeedback } from './ui.js';
@@ -259,3 +261,32 @@ window.addEventListener('popstate', () => {
     switchAuthTab('login');
   }
 })();
+
+// Cloud writes occur in this window; native storage events alone never fire here.
+window.addEventListener('storage', async event => {
+  if (!event.apcRemote) return;
+  if (event.key === KEYS.students) {
+    const account = loadAccount();
+    const id = account?.student?.id || account?.studentId;
+    const roster = listDocuments('students').find(student => student.id === id);
+    const status = roster?.status === 'approved' ? 'active' : roster?.status;
+    if (roster && status !== account?.status) {
+      await syncAccountStatus(id, roster.status);
+      state.account = loadAccount();
+    }
+  }
+  if (event.key === KEYS.account) {
+    state.account = loadAccount();
+    if (state.account?.student) {
+      state.student = { ...defaultStudent, ...state.account.student };
+      saveStudent(state.student);
+      renderStudent(state.student);
+    }
+  }
+  if (!$('#appShell').hidden) openStudentApp(state);
+  refreshDashboard();
+  refreshTeaching();
+  refreshExams();
+  refreshNotices();
+  refreshReports($('#studentReports'));
+});

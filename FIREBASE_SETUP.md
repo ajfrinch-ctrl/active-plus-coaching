@@ -1,6 +1,17 @@
-# Firebase security foundation (not deployed)
+# Firebase sync bridge and backend security foundation
 
-This repository is local-first today: existing pages and repositories still use browser `localStorage`. The Firebase files here are a reviewed backend foundation for the later cross-device migration; they do not connect the current UI to Firebase until the project Web config and client adapter are added.
+The UI is local-first and now has a Realtime Database compatibility bridge.
+`functions/index.js` and `firestore.rules` describe a separate, server-authorized
+Firebase Auth/Firestore backend; the current login UI does **not** call it.
+
+**Security boundary:** the compatibility bridge uses anonymous Firebase Auth and
+mirrors local password hashes. The existing RTDB rule `auth != null` allows any
+anonymous project user to read/write that shared bridge. This is not owner/role
+isolation and is **not safe for real student, credential or financial data**.
+These repairs do not turn the bridge into production authentication. No rules
+have been opened or deployed. Production rollout needs verified account
+migration to the backend, removal of credential mirrors, and UID/role rules.
+Do not deploy blanket `true` rules to troubleshoot this code.
 
 ## Realtime sync (`activePlusSync`) — required console settings
 
@@ -11,21 +22,20 @@ must hold at once; if any one fails, the bridge is dead and a second device
 cannot see IDs created on the first.
 
 1. **Realtime Database instance** — the `databaseURL` in `js/firebase-config.js`
-   must match an existing instance (`active-plus.firebaseio.com` responds; the
-   `-default-rtdb` name does not exist for this project).
+   must match the actual instance shown in Firebase Console. The configured
+   value is `https://active-plus.firebaseio.com`; do not guess a different name.
 2. **Anonymous sign-in enabled** — Firebase Console → *Authentication →
-   Sign-in method → Anonymous → Enable*. The deployed rules require
+   Sign-in method → Anonymous → Enable*. The repository rules require
    `auth != null`, so without anonymous auth every read/write is refused.
 3. **Rules deployed** — `firebase deploy --only database` publishes
    `database.rules.json` (read/write on `activePlusSync` for signed-in users).
    Default locked rules refuse everything with `Permission denied`.
-4. **App Check enforcement OFF for Realtime Database** (or App Check
-   initialized in the client — see below). When the console enforces App Check
-   and the client sends no token, every request fails with
-   `{"error": "Missing appcheck token"}`. Verify with:
-   `curl https://active-plus.firebaseio.com/.json` — the answer must NOT be
-   `Missing appcheck token` (an unauthenticated `Permission denied` is the
-   expected, healthy response).
+4. **App Check configured** — when enforcement is enabled, initialize App
+   Check with the registered provider before starting Auth/database operations.
+   The bridge awaits `appCheckReady`. A missing token can still cause denied
+   requests even when database rules allow the path. Use the Console and the
+   visible sync-error message for diagnostics, not a public export of the
+   entire database. Only a separate test environment should run without App Check.
 
 To keep App Check enforcement ON instead, register this web app under
 *Firebase Console → App Check* with a reCAPTCHA v3 site key and paste that key
@@ -42,6 +52,25 @@ missing records, then try the second device again. The login page now also
 distinguishes this case: when the cloud lookup itself fails, it says so
 explicitly instead of asking the user to register.
 
+### Login ID key encoding fix (2026-09-29)
+
+Generated IDs such as `test.admin.apc` previously became object keys directly
+under `activePlusSync/v1/usernames`. Realtime Database rejects dots in keys,
+regardless of security rules. This could abort startup at the username registry
+before the existing student login was uploaded. The bridge now percent-encodes
+registry keys on every write and decodes them on reads/listener updates. The
+actual username and password do **not** change; existing plain valid keys are
+still readable. The two-device mock now enforces Firebase key restrictions.
+
+After deploying the updated static app, reopen/reload it online on the original
+device first (do not clear its site data), then retry login on the other device.
+If the original account never reached the cloud, a rule change on its own cannot
+recover it on another device. Login now distinguishes a failed cloud lookup,
+an offline first login, and a missing account without instructing existing
+users to register again. Console Auth/App Check/rules requirements above still
+apply; this fix does not bypass them or replace the test bridge with production
+Firebase Authentication.
+
 ### Verifying that realtime sync actually runs
 
 1. **Topbar border colour** (all panels + the login page): red = no internet,
@@ -56,7 +85,7 @@ explicitly instead of asking the user to register.
    then change a notice/student record and watch the event.
 4. **Firebase Console → Realtime Database → Data** — the `activePlusSync/v1`
    node should contain `staffAccounts`, `staffDirectory`, `usernames`,
-   `studentAccount`, `examDb` (the exam mirror: `examDb/exams/<id>`,
+   `studentAccounts/<encoded-username>`, `examDb` (the exam mirror: `examDb/exams/<id>`,
    `examDb/attempts/<id>`) and the mirrored collections. The console viewer
    shows the data regardless of rules.
 5. **End-to-end**: create a login on device A (online), wait ~10 seconds,
@@ -74,7 +103,7 @@ explicitly instead of asking the user to register.
 
 ## Offline review / Emulator check
 
-The app's `localStorage` adapter remains unchanged until a later client migration, so the current account form is device-local and must not be represented as globally unique. These rule/function files cannot enforce policy in the running app before Firebase is configured and deployed.
+The app still uses its `localStorage` login adapter with a compatibility cloud mirror; username reservations are not a production account-ownership guarantee. The Firestore/function role rules do not authorize operations in the RTDB bridge.
 
 To review the role rules with the Firebase Emulator Suite (after network access installs dependencies):
 
@@ -85,9 +114,81 @@ npm --prefix functions run test:rules
 
 This launches the Firestore emulator for a test proving Admin approval is denied, Manager approval succeeds, Manager finance/settings access is denied, and academic-report access is allowed.
 
-No Firebase project ID, Web config, service-account key, or credentials are committed. Before production, configure a Firebase project, App Check, Auth providers, emulator/rules tests, backups, and deploy the functions/rules. Keep service-account credentials in Firebase-managed environments only; never place them in this repository or browser code.
+The web Firebase config is in `js/firebase-config.js`; it is not an Admin credential. No service-account key is committed. Before production, configure a Firebase project, App Check, Auth providers, emulator/rules tests, backups, and deploy the functions/rules. Keep service-account credentials in Firebase-managed environments only; never place them in this repository or browser code.
 
 ## Current limitations
 
 - Existing local-only student, payment, teacher and exam workflows are not yet migrated to Firestore/Auth. Rules describe the target remote collections; they do not replace the current local behavior yet.
 - Manager-only approval becomes effective across devices only after the UI calls the Manager callables and the app reads/writes the remote collections. Do not deploy only the rules and expect the existing local panel to sync.
+
+## Sync repair — 2026-09-29
+
+Implemented and tested locally, **not deployed to Firebase or GitHub Pages**:
+
+- `record-sync.js`: persisted per-record outbox and last-applied view for students,
+  transactions, notices, routine, teaching, settings and teacher assignments.
+  Offline edits/deletions survive page reloads and failed writes. Transactions
+  merge changed IDs into current server state; different records are not lost
+  by whole-collection overwrites. Same-record concurrent edits remain last-write
+  wins; financial conflict resolution still belongs on the trusted backend.
+- `sync-collections.js`: teaching retains `{version, activities}`. Weekly routine
+  retains `{sat: {date, classes}, ...}` and transfers individual class IDs.
+- `realtime-value-codec.js`: preserves empty arrays/objects and encodes nested
+  Firebase-forbidden keys. `__apc_empty_*_v1__` nodes are transport markers, not
+  business records. Old plain records are still readable.
+- Cloud application writes use the unpatched storage setter and emit a marked
+  same-window storage notification, so existing UI subscriptions refresh without
+  echo writes or page reloads. Admin and payment roster state refresh too.
+- Student logins have separate `studentAccounts/<encoded-username>` records.
+  Login selects a cloud account only after verifying its password. Opening an
+  unrelated page no longer replaces the device's selected student account.
+  The legacy singleton is read only when it matches the requested login; local
+  records on original devices seed the new paths. Password hashes remain a
+  test-bridge limitation, not a substitute for Firebase Authentication.
+- Staff directory writes merge changed permanent record IDs; revision baselines
+  preserve local additions/deletions. Existing directories refresh during login.
+  Username claims merge transactionally instead of replacing other claims.
+- New document/student IDs include random suffixes to avoid fresh-device daily
+  sequence collisions. Existing IDs are not changed. Receipt filename tests
+  accept the new suffix.
+- Firebase Auth restoration is awaited and anonymous initialization is shared;
+  SDK local persistence is set before creating the bridge's anonymous session.
+  App login sessions remain device-bound; they are never copied between devices.
+- Sync startup isolates collection failures, deduplicates listeners, retries
+  failures and reports errors/pending/offline state. Blue status requires database
+  connection and successful startup; it is not a financial settlement receipt.
+
+### Publishing and acceptance
+
+GitHub Pages currently publishes the repository's **main** branch at `/`.
+Changes on the Arena branch are not automatically published there. Review/merge
+the pull request, wait for the Pages deployment, then:
+
+1. Back up existing data. Do **not** clear site storage on the original device.
+2. Reload the original device online on the updated static app; check the sync
+   status. Open every original device that holds an account not yet uploaded.
+3. Reload the other device and sign in with the same ID/password.
+4. Add a notice, routine class, teaching activity or teacher assignment. The
+   second device should update without reload. Delete the last item and verify
+   it disappears. Repeat in the opposite direction.
+5. Disconnect A, edit a record, edit a different record on B, reconnect A: both
+   changes must remain. Reopen A to check the durable collection outbox.
+6. A sync error requires fixing the stated Console/network issue and retrying;
+   changing rules to `true` cannot fix disabled anonymous Auth or App Check.
+
+### দুই ডিভাইসের ব্যাকআপ মেলানো (ঐচ্ছিক, ব্রাউজার-টুল)
+
+`tools/merge-backups.html` একটি সম্পূর্ণ অফলাইন পেজ: দুটি ব্যাকআপ JSON বাছাই করে
+`js/backup-merge.js` দিয়ে প্রতি-ID ইউনিয়ন করে, দ্বন্দ্বের তালিকা দেখায়, আর
+রিস্টোর-যোগ্য একটি মিলিত ব্যাকআপ ডাউনলোড দেয়। ব্যাকআপে ডিলিটের তথ্য থাকে না —
+তাই এটি মুছে ফেলা রেকর্ড ফিরিয়ে আনতে পারে এবং লেনদেনের দ্বন্দ্ব নিজে মেলাতে হয়।
+এই পেজটি সাইটের লিংক (http/https) থেকে খুলুন; ফাইল সরাসরি ডাবল-ক্লিক করলে
+ES module নিষিদ্ধ হতে পারে।
+
+`npm test` includes isolated multi-device integration tests using a local RTDB
+mock (key restrictions, empty-node removal, transaction retries and listeners)
+and pure outbox regression tests. These tests never write to the live project.
+They do not certify deployed Firebase rules, Console settings or real mobile
+network performance. Exam syncing retains its separate existing merge engine;
+its pending-write tracking and identity password changes do not yet have the
+same durable outbox guarantees as the listed application collections.

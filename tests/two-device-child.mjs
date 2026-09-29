@@ -14,6 +14,8 @@ if (!globalThis.Storage) {
 }
 
 const events = [];
+const remoteStorageKeys = [];
+ctx.window.addEventListener('storage', event => { if (event.apcRemote) remoteStorageKeys.push(event.key); });
 ctx.window.addEventListener('apc-sync-updated', event => {
   events.push({ collection: event.detail?.collection, role: event.detail?.role, at: Date.now() });
 });
@@ -121,6 +123,42 @@ const commands = {
     return { username: result.staff.username, staffId: result.staff.staffId };
   },
 
+  async 'write-records'({ key, value }) {
+    ctx.window.localStorage.setItem(key, JSON.stringify(value));
+    return { ok: true };
+  },
+  async 'wait-records'({ key, ids }) {
+    await waitUntil(() => {
+      const value = readLocal(key);
+      const records = Array.isArray(value) ? value : value?.activities;
+      return Array.isArray(records) && JSON.stringify(records.map(item => item.id).sort()) === JSON.stringify([...ids].sort());
+    });
+    return { ok: true, remoteEvent: remoteStorageKeys.includes(key) };
+  },
+  async 'watch-routine'() {
+    const { initRoutine } = await mod('routine.js');
+    initRoutine();
+    return { ok: true };
+  },
+  async 'wait-routine-ui'({ text, count }) {
+    const { loadRoutine } = await mod('office-data.js');
+    await waitUntil(() => loadRoutine().sat.classes.length === count &&
+      (count === 0 || ctx.$('#routineList').textContent.includes(text)));
+    return { routine: loadRoutine(), rendered: ctx.$('#routineList').textContent };
+  },
+  async 'teaching-readable'() {
+    const { teachingRepository } = await mod('teaching-data.js');
+    await teachingRepository.list();
+    return { ok: true };
+  },
+  async 'network'({ online }) {
+    Object.defineProperty(ctx.window.navigator, 'onLine', { value: online, configurable: true });
+    ctx.window.dispatchEvent(new ctx.window.Event(online ? 'online' : 'offline'));
+    return { ok: true };
+  },
+  async 'sync-status'() {
+    return { state: ctx.document.documentElement.dataset.realtimeSync };
+  },
   async 'write-students'({ students }) {
     if (!db.writeJSON(db.KEYS.students, students)) throw new Error('students write failed');
     return { ok: true };

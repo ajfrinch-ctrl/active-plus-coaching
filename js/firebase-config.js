@@ -53,4 +53,4 @@ async function initAppCheck() {
   }
 }
 
-void initAppCheck();
+export const appCheckReady = initAppCheck();

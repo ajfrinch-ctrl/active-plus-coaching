@@ -36,7 +36,33 @@ function getAt(tree, nodePath) {
   return node;
 }
 
+// Match RTDB's key restrictions; accepting arbitrary JSON hid production
+// failures for generated usernames such as test.admin.apc.
+function validateFirebaseKeys(value) {
+  if (!value || typeof value !== 'object') return;
+  for (const [key, child] of Object.entries(value)) {
+    if (/[.#$\[\]/\u0000-\u001f\u007f]/.test(key)) {
+      throw new Error('Invalid Firebase key: ' + key);
+    }
+    validateFirebaseKeys(child);
+  }
+}
+
+// Firebase does not preserve empty JSON objects/arrays or null children.
+function firebaseValue(value) {
+  if (!value || typeof value !== 'object') return value;
+  if (Array.isArray(value)) {
+    const items = value.map(firebaseValue);
+    while (items.length && items.at(-1) == null) items.pop();
+    return items.length ? items : null;
+  }
+  const entries = Object.entries(value).map(([key, child]) => [key, firebaseValue(child)]).filter(([, child]) => child != null);
+  return entries.length ? Object.fromEntries(entries) : null;
+}
+
 function setAt(tree, nodePath, value) {
+  validateFirebaseKeys(value);
+  value = firebaseValue(value);
   const keys = String(nodePath || '').split('/').filter(Boolean);
   if (!keys.length) throw new Error('mock rtdb: root writes are not supported');
   let node = tree;
@@ -58,6 +84,7 @@ const affects = (listenerPath, writtenPath) =>
 
 export function startMockCloud() {
   const state = {};
+  let revision = 0;
   const subscribers = new Set();
   const send = (sub, nodePath) => {
     const val = getAt(state, nodePath);
@@ -73,9 +100,9 @@ export function startMockCloud() {
   const server = http.createServer((req, res) => {
     const url = new URL(req.url, 'http://localhost');
     if (req.method === 'GET' && url.pathname === '/db') {
-      const val = getAt(state, url.searchParams.get('path'));
+      const val = url.searchParams.get('path') === '.info/connected' ? true : getAt(state, url.searchParams.get('path'));
       res.writeHead(200, { 'content-type': 'application/json' });
-      res.end(JSON.stringify({ exists: val !== undefined, val: val === undefined ? null : val }));
+      res.end(JSON.stringify({ revision, exists: val !== undefined, val: val === undefined ? null : val }));
       return;
     }
     if (req.method === 'POST' && url.pathname === '/db') {
@@ -83,7 +110,11 @@ export function startMockCloud() {
       req.on('data', chunk => { body += chunk; });
       req.on('end', () => {
         try {
-          const { nodePath, value } = JSON.parse(body);
+          const { nodePath, value, expectedRevision } = JSON.parse(body);
+          if (expectedRevision !== undefined && expectedRevision !== revision) {
+            res.writeHead(409); res.end(); return;
+          }
+          revision += 1;
           setAt(state, nodePath, value);
           broadcast(nodePath);
           res.writeHead(200, { 'content-type': 'application/json' });
@@ -99,6 +130,8 @@ export function startMockCloud() {
       const sub = { path: url.searchParams.get('path') || '', res };
       res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', connection: 'keep-alive' });
       subscribers.add(sub);
+      if (sub.path === '.info/connected') res.write('data: {"exists":true,"val":true}\n\n');
+      else send(sub, sub.path);
       req.on('close', () => subscribers.delete(sub));
       return;
     }
@@ -130,8 +163,10 @@ function buildAppCopy(cloudUrl) {
   writeFileSync(path.join(RUN_DIR, 'mock', 'firebase-app.mock.mjs'),
     "export const initializeApp = () => ({ mock: 'app' });\n");
   writeFileSync(path.join(RUN_DIR, 'mock', 'firebase-auth.mock.mjs'),
-    "export const getAuth = () => ({ mock: 'auth' });\n" +
-    "export async function signInAnonymously() { return { user: { uid: 'mock-anon' } }; }\n");
+    "const auth = { currentUser: null, authStateReady: async () => {} };\n" +
+    "export const getAuth = () => auth;\n" +
+    "export const browserLocalPersistence = {}; export async function setPersistence() {}\n" +
+    "export async function signInAnonymously() { auth.currentUser = { uid: 'mock-anon' }; return { user: auth.currentUser }; }\n");
   writeFileSync(path.join(RUN_DIR, 'mock', 'firebase-database.mock.mjs'), `
 /* Minimal RTDB client over loopback HTTP (see two-device-harness.mjs). */
 const BASE = ${JSON.stringify(cloudUrl)};
@@ -150,6 +185,20 @@ export async function set(node, value) {
     body: JSON.stringify({ nodePath: node.path, value })
   });
   if (!res.ok) throw new Error('mock rtdb set failed: ' + res.status);
+}
+export async function runTransaction(node, change) {
+  for (let attempt = 0; attempt < 100; attempt++) {
+    const before = await fetch(BASE + '/db?path=' + enc(node.path)).then(res => res.json());
+    const value = change(before.val);
+    const res = await fetch(BASE + '/db', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ nodePath: node.path, value, expectedRevision: before.revision })
+    });
+    if (res.status === 409) continue;
+    if (!res.ok) throw new Error('mock transaction failed: ' + res.status);
+    return { committed: true, snapshot: { val: () => value, exists: () => value !== null } };
+  }
+  throw new Error('mock transaction retry limit');
 }
 export function onValue(node, callback) {
   const controller = new AbortController();
@@ -187,7 +236,7 @@ export function onValue(node, callback) {
   ]);
   /* The version query would create a second module instance inside one
      process; the browser deduplicates by URL+query, so make Node match. */
-  swap('login.js', [['./realtime-sync.js?v=20260929-1100', './realtime-sync.js']]);
+  swap('login.js', [['./realtime-sync.js?v=20260929-sync-repair', './realtime-sync.js']]);
 }
 
 function pathToFileUrl(p) {

@@ -70,8 +70,8 @@ test('new ids do not collide and student ids are not a shared counter alone', ()
   const second = newId('NOT');
   assert.notEqual(first, second);
   // newId() is prefix + YYMMDD (6 digits) + a 3-digit daily sequence, so two
-  // calls on the same day can never collide and the date stays readable.
-  assert.match(first, /^NOT\d{9}$/);
+  // calls retain a readable date/sequence plus a cross-device random suffix.
+  assert.match(first, /^NOT\d{9}-[a-f0-9]{16}$/);
   setup();
   const now = new Date();
   const stamp = `${String(now.getFullYear()).slice(-2)}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
@@ -80,10 +80,10 @@ test('new ids do not collide and student ids are not a shared counter alone', ()
   const a = generateStudentId();
   const b = generateStudentId();
   assert.notEqual(a, b);
-  assert.match(a, new RegExp(`^s${stamp}\\d{3}$`));
+  assert.match(a, new RegExp(`^s${stamp}\\d{3}-[a-f0-9]{16}$`));
   // The sequence is shared by every student, so the second id must be exactly
   // one step on from the first — not a per-class counter restarting at 1.
-  assert.equal(Number(b.slice(-3)), Number(a.slice(-3)) + 1);
+  assert.equal(Number(b.split('-')[0].slice(-3)), Number(a.split('-')[0].slice(-3)) + 1);
 });
 
 test('stamped payments keep the exact saved fields plus a sortable time', () => {
