@@ -248,8 +248,12 @@ function showStudentEditor(card, student) {
   root.hidden = false;
   root.innerHTML = `<form class="manager-form manager-edit-form"><label>নাম<input name="name" maxlength="100" required value="${escapeHtml(student.name || '')}"></label><label>Student mobile<input name="mobile" maxlength="32" value="${escapeHtml(student.mobile || '')}"></label><label>Guardian mobile<input name="guardianMobile" maxlength="32" value="${escapeHtml(student.guardianMobile || '')}"></label><label>ক্লাস<select name="className">${enabledClasses.map(name => `<option value="${escapeHtml(name)}" ${name === student.className ? 'selected' : ''}>${escapeHtml(name)}</option>`).join('')}</select></label><label>Batch / Group<input name="group" maxlength="80" value="${escapeHtml(student.group || '')}"></label><label>মাসিক ফি<input name="monthlyFee" type="number" min="0" max="1000000" step="1" value="${Number(student.monthlyFee || 0)}"></label><button class="admin-btn primary" type="submit">পরিবর্তন সংরক্ষণ</button></form>`;
   root.querySelector('form').addEventListener('submit', async event => {
-    event.preventDefault(); if (!(await managerGuard())) return toast('Manager session যাচাই হয়নি।', true);
-    const fields = Object.fromEntries(new FormData(event.currentTarget));
+    event.preventDefault();
+    /* Captured now: an async handler resumes after the dispatch is over, when
+       event.currentTarget is already null (see tests/manager-forms.test.mjs). */
+    const form = event.currentTarget;
+    if (!(await managerGuard())) return toast('Manager session যাচাই হয়নি।', true);
+    const fields = Object.fromEntries(new FormData(form));
     const updated = { ...student, ...fields, monthlyFee: Number(fields.monthlyFee) };
     students = students.map(item => item.id === student.id ? updated : item);
     if (!saveRoster(students)) { students = loadRoster(); return toast('পরিবর্তন সংরক্ষণ হয়নি।', true); }
@@ -324,12 +328,14 @@ $('#managerResultList').addEventListener('click', async event => {
   }
 });
 $('#managerNoticeForm').addEventListener('submit', async event => {
-  event.preventDefault(); if (!(await managerGuard())) return toast('Manager session যাচাই হয়নি।', true);
-  const data = new FormData(event.currentTarget); const title = String(data.get('title') || '').trim(), body = String(data.get('body') || '').trim();
+  event.preventDefault();
+  const form = event.currentTarget;   // null again after the await below
+  if (!(await managerGuard())) return toast('Manager session যাচাই হয়নি।', true);
+  const data = new FormData(form); const title = String(data.get('title') || '').trim(), body = String(data.get('body') || '').trim();
   if (!title || !body) return;
   notices.unshift({ id: newId('NOT'), title: title.slice(0, 120), body: body.slice(0, 1000), audience: String(data.get('audience')), date: dateLabel(new Date()), createdAt: new Date().toISOString(), status: 'published', author: managerAccount?.username || 'manager' });
   if (!saveNotices(notices)) return toast('নোটিশ সংরক্ষণ হয়নি।', true);
-  event.currentTarget.reset(); await loadOperationalData(); renderNotices(); toast('নোটিশ প্রকাশিত হয়েছে।');
+  form.reset(); await loadOperationalData(); renderNotices(); toast('নোটিশ প্রকাশিত হয়েছে।');
 });
 $('#managerNoticeList').addEventListener('click', async event => {
   const button = event.target.closest('[data-manager-action]'); if (!button) return;
@@ -370,13 +376,15 @@ $('#managerTeacherList').addEventListener('click', async event => {
   catch (error) { toast(error.message || 'Assignment সরানো হয়নি।', true); }
 });
 $('#managerRoutineForm').addEventListener('submit', async event => {
-  event.preventDefault(); if (!(await managerGuard())) return toast('Manager session যাচাই হয়নি।', true);
-  const data = new FormData(event.currentTarget), time = String(data.get('time'));
+  event.preventDefault();
+  const form = event.currentTarget;   // null again after the await below
+  if (!(await managerGuard())) return toast('Manager session যাচাই হয়নি।', true);
+  const data = new FormData(form), time = String(data.get('time'));
   const [hour, minute] = time.split(':').map(Number), period = hour < 4 ? 'ভোর' : hour < 12 ? 'সকাল' : hour < 16 ? 'বিকেল' : 'সন্ধ্যা';
   const label = `${bn(hour % 12 || 12)}:${bn(String(minute).padStart(2, '0'))}`;
   routine[routineDay].classes.push({ id: newId('RTN'), className: String(data.get('className')), subject: String(data.get('subject')).trim(), teacher: String(data.get('teacher')).trim(), room: String(data.get('room')).trim(), time: label, period, tag: 'প্রকাশিত', tone: 'green', createdAt: new Date().toISOString(), status: 'published' });
   if (!saveRoutine(routine)) return toast('Routine সংরক্ষণ হয়নি।', true);
-  event.currentTarget.reset(); routineDay = routineDay; renderRoutine(); toast('Routine প্রকাশিত হয়েছে।');
+  form.reset(); routineDay = routineDay; renderRoutine(); toast('Routine প্রকাশিত হয়েছে।');
 });
 $('#managerChangePassword').addEventListener('click', () => openStaffPasswordDialog({ role: 'manager', mode: 'change' }));
 /* One door per panel: no route of ours leaves manager.html for another panel. */
