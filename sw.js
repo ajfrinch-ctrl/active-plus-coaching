@@ -1,4 +1,4 @@
-const CACHE_NAME = 'active-plus-student-v93-panelswitch';
+const CACHE_NAME = 'active-plus-student-v94-firebasehardening';
 const APP_SHELL = [
   './js/panel-lockdown.js',
   './js/panel-switch.js',
@@ -8,6 +8,7 @@ const APP_SHELL = [
   './js/realtime-value-codec.js',
   './js/student-search.js',
   './js/sync-status.js',
+  './js/rtdb-keys.js',
   './js/username-sync-codec.js',
   './js/notification-rules.js',
   './js/notifications.js',

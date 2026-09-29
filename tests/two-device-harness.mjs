@@ -64,6 +64,12 @@ function setAt(tree, nodePath, value) {
   validateFirebaseKeys(value);
   value = firebaseValue(value);
   const keys = String(nodePath || '').split('/').filter(Boolean);
+  // Real Realtime Database refuses the PATH too: `examDb/exams/EXAM.260929` is
+  // rejected before the value is looked at. The mock must be just as strict,
+  // otherwise an unsafe path silently "works" in tests and fails in production.
+  for (const key of keys) {
+    if (/[.#$/\[\]]/.test(key)) throw new Error('Invalid Firebase key: ' + key);
+  }
   if (!keys.length) throw new Error('mock rtdb: root writes are not supported');
   let node = tree;
   for (let i = 0; i < keys.length - 1; i += 1) {
@@ -271,7 +277,7 @@ export function onValue(node, callback) {
      query in each copied file (Node, unlike the browser, keys modules by URL). */
   for (const name of readdirSync(path.join(RUN_DIR, 'js'))) {
     if (!name.endsWith('.js') || name === 'realtime-sync.js') continue;
-    swap(name, [['./realtime-sync.js?v=20260929-notify', './realtime-sync.js']]);
+    swap(name, [['./realtime-sync.js?v=20260929-fbaudit', './realtime-sync.js']]);
   }
 }
 
@@ -283,7 +289,13 @@ function pathToFileUrl(p) {
    Device process control — spawn a child jsdom "phone" and talk JSON lines.
    ---------------------------------------------------------------------- */
 
-export function buildDevices() {
+/* Set only by the hardening test: a device that deliberately hits broken cloud
+   paths logs the failures, which would bury the test runner's own output. The
+   silencing happens inside the child process (tests/child-quiet-hook.mjs). */
+let quietChildren = false;
+
+export function buildDevices({ quietConsoleError = false } = {}) {
+  quietChildren = quietConsoleError === true;
   return { buildAppCopy };
 }
 
@@ -298,9 +310,17 @@ export class Device {
   }
 
   start() {
-    this.child = spawn(process.execPath, [path.join(TESTS_DIR, 'two-device-child.mjs')], {
+    this.child = spawn(process.execPath, [
+      '--import', pathToFileUrl(path.join(TESTS_DIR, 'child-quiet-hook.mjs')),
+      path.join(TESTS_DIR, 'two-device-child.mjs')
+    ], {
       cwd: REPO_DIR,
-      env: { ...process.env, MOCK_CLOUD_URL: this.cloudUrl, DEVICE: this.name },
+      env: {
+        ...process.env,
+        MOCK_CLOUD_URL: this.cloudUrl,
+        DEVICE: this.name,
+        ...(quietChildren ? { TWO_DEVICE_QUIET: '1' } : {})
+      },
       stdio: ['pipe', 'pipe', 'pipe']
     });
     this.child.stdout.setEncoding('utf8');

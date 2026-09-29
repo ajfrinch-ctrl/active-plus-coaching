@@ -169,6 +169,19 @@ const commands = {
     return { ok: true };
   },
 
+  /* Write the exam database straight into local storage — the shape an imported
+     or hand-edited record has, without going through the exam editor. */
+  async 'seed-exam-db'({ exams = [], attempts = [] }) {
+    // The app's own reader demands version 1, otherwise the document is
+    // treated as corrupt and nothing from this device may overwrite the cloud.
+    if (!db.writeJSON(db.KEYS.exams, { version: 1, exams, attempts })) throw new Error('exam db write failed');
+    return { ok: true };
+  },
+  async 'wait-sync-state'({ state }) {
+    await waitUntil(() => ctx.document.documentElement.dataset.realtimeSync === state);
+    return { state: ctx.document.documentElement.dataset.realtimeSync, message: ctx.document.documentElement.dataset.realtimeSyncMessage };
+  },
+
   async 'set-cloud'({ paused = false, blocked = false }) {
     const response = await fetch(`${process.env.MOCK_CLOUD_URL}/control`, {
       method: 'POST',
@@ -255,7 +268,7 @@ const commands = {
     Object.defineProperty(ctx.window.navigator, 'onLine', { value: online, configurable: true });
     return { ok: true };
   },
-  async 'write-student-account'({ username, pin, fullName, mobile, updatedAt, studentId }) {
+  async 'write-student-account'({ username, pin, fullName, mobile, updatedAt, studentId, extra = {} }) {
     const { hashPassword } = await mod('password-hash.js');
     const pinHash = await hashPassword(pin);
     const account = {
@@ -266,7 +279,10 @@ const commands = {
       student: { username, fullName, ...(studentId ? { id: studentId } : {}) },
       pinHash,
       createdAt: new Date().toISOString(),
-      updatedAt: updatedAt || new Date().toISOString()
+      updatedAt: updatedAt || new Date().toISOString(),
+      /* A hand-edited or imported record can carry extra maps (the probe found
+         result maps keyed by exam id). They travel to the cloud as they are. */
+      ...extra
     };
     if (!db.writeJSON(db.KEYS.account, account)) throw new Error('student account write failed');
     return { ok: true };

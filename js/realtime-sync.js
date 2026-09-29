@@ -27,6 +27,7 @@ import { collectionPayload, remoteToLocal } from './sync-collections.js';
 import { createRecordSync, mergeRecordOperations } from './record-sync.js';
 import { chooseStaffCopy, chooseStudentCopy, sameStudentRecord, loginIdOf, matchesLoginIdentifier, findLoginMatches, suggestIdentifiers } from './sync-merge.js';
 import { reportSyncConflict, reportSyncError, setSyncStatus } from './sync-status.js';
+import { unsafeKeyPath, isRtdbKey } from './rtdb-keys.js';
 import { isPasswordRecord, verifyPassword } from './password-hash.js';
 import { normalizeUsername, contactNumber } from './account-policy.js';
 import { TEACHER_ASSIGNMENTS_KEY } from './teacher-assignments.js';
@@ -229,6 +230,10 @@ function syncStaffRole(role) {
       return;
     }
     if (!local) return;
+    /* Never hand Realtime Database a key it will reject: the write would fail
+       and, before this guard, take the whole startup batch with it. */
+    const unsafe = unsafeKeyPath(local);
+    if (unsafe) { reportConflict('unsafe-record'); return; }
     await set(node, local);
     lastRemote.set('staff:' + role, JSON.stringify(local));
     if (role === 'admin') clearConflict('admin-conflict');
@@ -321,6 +326,8 @@ function syncStudentAccount() {
     const local = studentAccountPayload(readLocal(KEYS.account));
     const key = studentKey(local);
     if (!key || !isPasswordRecord(local?.pinHash)) return;
+    const unsafe = unsafeKeyPath(local);
+    if (unsafe) { reportConflict('unsafe-record'); return; }
     const node = ref(getDatabase(firebaseApp), STUDENTS_ROOT + '/' + encodeUsernameKey(key));
     const result = await runTransaction(node, current => {
       // Only a write that really changes something is committed: 'remote'
@@ -484,11 +491,17 @@ async function pushExamDb() {
   const { db, readable } = readExamDbLocal();
   if (!readable) return;
   const tasks = [];
+  const unsafeIds = [];
   for (const space of EXAM_SYNC_SPACES) {
     const valid = space === 'exams' ? examItemValid : attemptItemValid;
     const localIds = new Set();
     for (const item of db[space]) {
       if (!valid(item)) continue;
+      /* This mirror writes each record as it is, so a nested key Firebase
+         rejects (a hand-edited record, a future question id like `q1.2`) is
+         left on the device and reported — one bad record never stops the rest. */
+      const unsafe = !isRtdbKey(item.id) || unsafeKeyPath(item);
+      if (unsafe) { unsafeIds.push(`${space}/${item.id}`); continue; }
       localIds.add(item.id);
       const json = stableStringify(item);
       const key = `${space}/${item.id}`;
@@ -511,6 +524,8 @@ async function pushExamDb() {
       }));
     }
   }
+  if (unsafeIds.length) reportConflict('unsafe-record');
+  else clearConflict('unsafe-record');
   await Promise.all(tasks);
 }
 
@@ -871,10 +886,16 @@ export async function startRealtimeSync() {
         ...Object.keys(STAFF_ACCOUNTS).map(role => syncStaffRole(role)),
         syncDirectory(), syncUsernames(), syncStudentAccount(), syncExamDb()
       ];
-      // One failed collection must not prevent account hydration or other reads.
+      /* One failed collection must not prevent account hydration or other reads:
+         a single unreadable/refused node (a rejected write, an oversized
+         collection, a rules gap on one path) used to abort the whole startup,
+         which left the login bridge dead for every device. Only a TOTAL
+         failure — no task succeeded — means the bridge itself is unusable, and
+         that stays a hard stop with the error shown in the status bar. */
       const results = await Promise.allSettled(tasks);
-      const failure = results.find(result => result.status === 'rejected');
-      if (failure) throw failure.reason;
+      const failures = results.filter(result => result.status === 'rejected');
+      for (const failure of failures) reportSyncError(failure.reason);
+      if (failures.length === tasks.length) throw failures[0].reason;
       for (const collection of RECORD_COLLECTIONS) listenCollection(collection);
       for (const role of Object.keys(STAFF_ACCOUNTS)) listenStaffRole(role);
       listenDirectory();

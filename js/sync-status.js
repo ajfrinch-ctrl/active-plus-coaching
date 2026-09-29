@@ -30,7 +30,10 @@ export function setSyncStatus(state, error = null) {
 export function reportSyncConflict(code) {
   const message = {
     'admin-conflict': 'এই সিস্টেমে আগে থেকেই Admin আছে — ক্লাউডে থাকা ID দিয়ে লগইন করুন',
-    'login-id-conflict': 'এই ইউজারনেম অন্য ডিভাইসে আগেই ব্যবহার হচ্ছে — এডমিনকে জানান'
+    'login-id-conflict': 'এই ইউজারনেম অন্য ডিভাইসে আগেই ব্যবহার হচ্ছে — এডমিনকে জানান',
+    /* One record cannot travel: Realtime Database rejects a key holding
+       `.` `#` `$` `[` `]` or `/` (js/rtdb-keys.js). Everything else still syncs. */
+    'unsafe-record': 'একটি রেকর্ডে ফায়ারবেস-নিষিদ্ধ অক্ষর (. # $ [ ] /) আছে — সেটি বাদে বাকি সব সিঙ্ক হয়েছে'
   }[code] || 'একই লগইন আইডি দুই ডিভাইসে — এডমিনকে জানান';
   setSyncStatus('conflict', { code: 'conflict/' + code, publicMessage: message });
   console.warn('[Active Plus] Login ID conflict:', code);

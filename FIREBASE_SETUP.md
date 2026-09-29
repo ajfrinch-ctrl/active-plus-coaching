@@ -29,7 +29,9 @@ cannot see IDs created on the first.
    `auth != null`, so without anonymous auth every read/write is refused.
 3. **Rules deployed** — `firebase deploy --only database` publishes
    `database.rules.json` (read/write on `activePlusSync` for signed-in users).
-   Default locked rules refuse everything with `Permission denied`.
+   Default locked rules refuse everything with `Permission denied`. The project
+   is pinned by `.firebaserc` (`active-plus`); without that file the CLI falls
+   back to whatever `firebase use` last selected, or refuses to deploy.
 4. **App Check configured** — when enforcement is enabled, initialize App
    Check with the registered provider before starting Auth/database operations.
    The bridge awaits `appCheckReady`. A missing token can still cause denied
@@ -41,6 +43,48 @@ To keep App Check enforcement ON instead, register this web app under
 *Firebase Console → App Check* with a reCAPTCHA v3 site key and paste that key
 into `APP_CHECK_SITE_KEY` in `js/firebase-config.js` (debug-token instructions
 are in the same file).
+
+The five pages' `Content-Security-Policy` already allows the reCAPTCHA sources
+App Check needs (`script-src ... https://www.google.com/recaptcha/
+https://www.gstatic.com/recaptcha/` and `frame-src ... /recaptcha/`) — audit
+round of 2026-09-29. Before that the policy allowed only `www.gstatic.com`, so a
+reCAPTCHA-based App Check was blocked by the page itself: the SDK injects
+reCAPTCHA at runtime, the policy refused that script and its frame, no App Check
+token was ever issued, and with enforcement ON every sync read/write came back
+`Permission denied` — a "sync is broken" symptom whose cause sat in the page's
+own CSP. If the CSP is ever tightened again, keep those four sources, otherwise
+this same failure returns.
+
+### One unpushable record no longer takes the bridge down (2026-09-29)
+
+Realtime Database refuses a key containing `.` `#` `$` `[` `]` `/` or a control
+character — the *path* is checked too, so an id like `EXAM.260929` is rejected
+before the value is looked at. Most collections survive this because the bridge
+percent-encodes every record key (`js/realtime-value-codec.js`). Three paths
+write an app object as it is: the four staff role accounts, the student login
+record and the exam database (exams + attempts). An imported or hand-edited
+record with such a key used to do two bad things at once:
+
+1. the write threw, and because startup awaited the whole batch, **the bridge
+   aborted** — no staff account on that device, no cross-device login, and the
+   reason was only visible in the console;
+2. in the exam mirror the throw also stopped the *other* records in the same
+   push.
+
+Now (`js/rtdb-keys.js`, audit round of 2026-09-29):
+
+* every raw-path write is checked first; a record whose id or nested key is
+  refused is **left on the device**, and the status bar says
+  *"একটি রেকর্ডে ফায়ারবেস-নিষিদ্ধ অক্ষর (. # $ [ ] /) আছে — সেটি বাদে বাকি সব সিঙ্ক হয়েছে"*;
+* the other records in the same push still travel;
+* a startup task that fails no longer aborts the batch — only a *total* failure
+  (every task rejected: the cloud is unreachable) stops the bridge;
+* fixing the key on the device pushes the corrected record on the next write,
+  with no reload.
+
+Regression tests: `tests/firebase-hardening.test.mjs` (5 tests, real app code in
+two jsdom devices + the mock Realtime Database, which now rejects forbidden path
+segments exactly like the real service).
 
 ### Symptom checklist — "এই ডিভাইসে কোনো অ্যাকাউন্ট নেই। আগে রেজিস্ট্রেশন করুন।"
 

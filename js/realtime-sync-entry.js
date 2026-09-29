@@ -27,7 +27,7 @@ async function bootRealtimeSync() {
     reportSyncError({ code: 'network-timeout' });
   }, 20000);
   try {
-    const { startRealtimeSync } = await import('./realtime-sync.js?v=20260929-notify');
+    const { startRealtimeSync } = await import('./realtime-sync.js?v=20260929-fbaudit');
     const result = await startRealtimeSync();
     if (!result?.ok) {
       reportSyncError(result?.error);

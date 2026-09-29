@@ -99,12 +99,17 @@ test('seen receipts are a rolling window, not an archive', () => {
   assert.equal(seenRecord(plan.seen).version, 1);
 });
 
-test('viewer keys and token node keys are stable and RTDB-safe', () => {
+test('viewer keys and token node keys are stable, RTDB-safe and injective', () => {
   assert.equal(viewerKeyOf(student), 'student:s260929001');
   assert.equal(viewerKeyOf(manager), 'staff:manager.apc');
   const key = tokenPathKey('device.id[1]', student);
   assert.equal(/[.#$/[\]]/.test(key), false, 'RTDB forbids these characters in a key');
-  assert.ok(key.includes('student:s260929001'));
+  assert.equal(tokenPathKey('device.id[1]', student), key, 'the same device always gets the same slot');
+  /* Different devices must never share one slot: a lossy `-` replacement would
+     let `dev.1` overwrite `dev-1`'s push token. */
+  assert.notEqual(tokenPathKey('dev.1', manager), tokenPathKey('dev-1', manager));
+  assert.notEqual(tokenPathKey('a/b', manager), tokenPathKey('a b', manager));
+  assert.notEqual(key, tokenPathKey('device.id[1]', manager), 'one device, two roles: two records');
 });
 
 test('a push payload is short, tagged and carries no secret', () => {

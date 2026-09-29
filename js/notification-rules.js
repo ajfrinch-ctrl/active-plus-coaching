@@ -280,8 +280,13 @@ export function pushTokenRecord({ token, viewer, deviceId, at = Date.now(), plat
   };
 }
 
-/** One device may hold several roles: the node key is device + person. */
+/** One device may hold several roles: the node key is device + person.
+    The encoding must be injective — replacing a forbidden character with `-`
+    gave `dev.1` and `dev-1` the same slot, so one device's push token could
+    overwrite another's. Percent-encoding keeps every device separate, and the
+    `%` is folded to `~` so the node key stays readable in the console; dots are
+    encoded too because Realtime Database rejects `.` in a key. */
 export function tokenPathKey(deviceId, viewer) {
   const raw = `${text(deviceId) || 'device'}|${viewerKeyOf(viewer)}`;
-  return raw.replace(/[.#$/[\]]/g, '-').slice(0, 200);
+  return encodeURIComponent(raw).replace(/%/g, '~').replace(/\./g, '~2E').slice(0, 200);
 }

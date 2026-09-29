@@ -31,6 +31,11 @@ export { firebaseConfig };
      App Check with a reCAPTCHA v3 site key, paste the key into
      APP_CHECK_SITE_KEY below, and (for localhost testing) register the debug
      token the browser prints. App Check then attaches tokens automatically.
+     The pages' Content-Security-Policy already carries the reCAPTCHA sources
+     (`script-src`/`frame-src` → www.google.com/recaptcha/), because the SDK
+     injects reCAPTCHA from there; without them the page's own policy blocked
+     the script, no token was ever issued, and with enforcement ON every sync
+     read/write came back denied — with the reason visible only in the console.
    --------------------------------------------------------------------------- */
 export const APP_CHECK_SITE_KEY = ''; // reCAPTCHA v3 site key — empty = App Check off here
 

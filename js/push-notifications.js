@@ -24,7 +24,7 @@ export const PUSH_LOCAL_KEY = 'activePlus.push.device.v1';
 const TOKENS_ROOT = 'activePlusSync/v1/pushTokens';
 /* Same specifier as the entry point, so the browser reuses ONE sync module
    instance (two copies would install two write bridges). */
-const SYNC_MODULE = './realtime-sync.js?v=20260929-notify';
+const SYNC_MODULE = './realtime-sync.js?v=20260929-fbaudit';
 
 const SDK = 'https://www.gstatic.com/firebasejs/12.2.1';
 
