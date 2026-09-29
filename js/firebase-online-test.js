@@ -26,7 +26,7 @@ export async function testFirebaseOnlineConnection(timeout = 8000) {
       };
       stop = onValue(ref(db, '.info/connected'), snap => {
         if (snap.val() === true) finish(true);
-      }, error => finish(error));
+      }, () => finish(false));
       timer = setTimeout(() => finish(false), timeout);
     });
 
