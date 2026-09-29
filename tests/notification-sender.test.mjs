@@ -51,6 +51,29 @@ test('exam news goes only to that paper participants', () => {
   assert.deepEqual(examPushes(null, { ...exam, participants: [] }), [], 'nobody to tell');
 });
 
+/* Audit round 6: the sender must not announce a paper the app cannot list.
+   The client shows papers that are not over yet and results that are out
+   (js/notification-rules.js stillOpenExam), so the sender follows the same
+   rule — otherwise the phone shows a notification that leads nowhere. */
+test('an exam the app cannot list is never pushed', () => {
+  const now = 1_000_000;
+  const ended = {
+    id: 'E9', title: 'পুরোনো পরীক্ষা', subject: 'গণিত', status: 'published',
+    startAt: now - 7_200_000, endAt: now - 3_600_000, publishedAt: 5,
+    participants: [{ id: 's1' }]
+  };
+  assert.deepEqual(examPushes(null, ended, now), [], 'a paper that is over and has no results stays quiet');
+  assert.deepEqual(
+    examPushes(null, { ...ended, resultsPublished: true, resultsPublishedAt: now }, now),
+    [{ kind: 'result', title: 'ফলাফল প্রকাশিত হয়েছে', body: 'পুরোনো পরীক্ষা — গণিত পরীক্ষার ফলাফল এখন অ্যাপে দেখা যাচ্ছে।', studentIds: ['s1'], data: { collection: 'exams', id: 'E9', kind: 'result' } }],
+    'results are still announced, and only as results'
+  );
+
+  const running = { ...ended, id: 'E10', startAt: now - 600_000, endAt: now + 600_000, publishedAt: 7 };
+  assert.equal(examPushes({ ...running, status: 'draft' }, running, now).length, 1,
+    'a paper published after it started is still news while it runs');
+});
+
 test('recipients are batched at 500 and dead tokens are found', () => {
   assert.deepEqual(chunkTokens(Array.from({ length: 1200 }, (unused, index) => `t${index}`)).map(chunk => chunk.length), [500, 500, 200]);
   const tokens = ['a', 'b', 'c'];

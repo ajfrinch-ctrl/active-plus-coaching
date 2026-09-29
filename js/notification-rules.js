@@ -114,7 +114,18 @@ const participantIds = exam => (Array.isArray(exam?.participants) ? exam.partici
   .filter(Boolean);
 
 /**
- * Exam news for one student device: a published paper that has not started yet,
+ * A published paper is news until it is over. Sender
+ * (functions/notification-payload.js) and client share this rule, so a push
+ * always has a matching entry in the in-app notification list.
+ */
+export function stillOpenExam(exam, now = Date.now()) {
+  if (exam?.resultsPublished === true) return false;
+  const endsAt = Number(exam?.endAt) || Number(exam?.startAt) || 0;
+  return endsAt === 0 || endsAt > Number(now);
+}
+
+/**
+ * Exam news for one student device: a published paper that is not over yet,
  * and a result the office has released. Only participants are told.
  */
 export function examItems(examDb, viewer, now = Date.now()) {
@@ -138,14 +149,19 @@ export function examItems(examDb, viewer, now = Date.now()) {
         at: Number(exam.resultsPublishedAt) || Number(exam.updatedAt) || 0,
         audience: 'অংশগ্রহণকারী'
       });
-    } else if (exam.status === 'published' && Number(exam.startAt) > now) {
+    } else if (exam.status === 'published' && stillOpenExam(exam, now)) {
+      /* The sender pushes a paper the moment it is published. The app must be
+         able to show that same news, so the rule here is "not finished yet"
+         (a paper published after it started is still worth announcing), and a
+         finished paper without results stays quiet on both sides. */
+      const startsAt = Number(exam.startAt);
       items.push({
         key: `exam:${text(exam.id)}:${Number(exam.publishedAt) || Number(exam.updatedAt) || 0}`,
         source: 'exams',
         sourceId: text(exam.id),
         kind: 'exam',
         title: 'নতুন পরীক্ষা নির্ধারিত হয়েছে',
-        body: `${name}${subject ? ` — ${subject}` : ''} · শুরু ${bnWhen(exam.startAt)}`,
+        body: `${name}${subject ? ` — ${subject}` : ''} · ${startsAt > now ? `শুরু ${bnWhen(startsAt)}` : 'এখন চলছে'}`,
         at: Number(exam.publishedAt) || Number(exam.updatedAt) || 0,
         audience: 'অংশগ্রহণকারী'
       });

@@ -58,6 +58,28 @@ test('exam news reaches participants only', () => {
   assert.equal(examItems(published, student)[0].kind, 'result');
 });
 
+/* Audit round 6: an exam notification must always be findable in this list.
+   The sender (functions/notification-payload.js) announces a published paper
+   that is not over yet; the rule below is the client half of that contract. */
+test('a paper the sender would announce is listed, and a finished one is not', () => {
+  const now = 2_000_000;
+  const base = { id: 'E3', title: 'নতুন পরীক্ষা', subject: 'ইংরেজি', status: 'published', publishedAt: 5, participants: [{ id: student.studentId }] };
+  const view = exam => ({ exams: [exam] });
+
+  const running = { ...base, startAt: now - 600_000, endAt: now + 600_000 };
+  const runningItems = examItems(view(running), student, now);
+  assert.equal(runningItems.length, 1, 'published while it runs: still worth announcing');
+  assert.match(runningItems[0].body, /এখন চলছে/);
+
+  const upcoming = { ...base, startAt: now + 600_000, endAt: now + 1_200_000 };
+  assert.match(examItems(view(upcoming), student, now)[0].body, /শুরু/);
+
+  const over = { ...base, startAt: now - 7_200_000, endAt: now - 3_600_000 };
+  assert.deepEqual(examItems(view(over), student, now), [], 'a finished paper without results is not news');
+  assert.deepEqual(examItems(view({ ...over, resultsPublished: true, resultsPublishedAt: now }), student, now)
+    .map(item => item.kind), ['result'], 'but its results are');
+});
+
 test('a brand-new device records the existing list silently — no burst of old news', () => {
   const feed = notificationFeed({ notices: [notice(), notice({ id: 'N2', title: 'পুরোনো নোটিশ' })], viewer: student });
   const plan = planDeliveries({ feed, seen: [], firstRun: true });

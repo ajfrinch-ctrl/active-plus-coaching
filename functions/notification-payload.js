@@ -63,8 +63,18 @@ const participantIds = exam => (Array.isArray(exam?.participants) ? exam.partici
   .map(person => text(person?.id))
   .filter(Boolean);
 
-/** Exam news for the students of one paper: a new exam, or released results. */
-function examPushes(before, after) {
+/** Exam news for the students of one paper: a new exam, or released results.
+
+    Same "still news" rule as the client (js/notification-rules.js): a paper is
+    announced while it is not over yet and only until its results are out;
+    otherwise the phone would show a notification the app itself cannot list. */
+function stillOpenExam(exam, now) {
+  if (exam?.resultsPublished === true) return false;
+  const endsAt = Number(exam?.endAt) || Number(exam?.startAt) || 0;
+  return endsAt === 0 || endsAt > Number(now);
+}
+
+function examPushes(before, after, now = Date.now()) {
   if (!isObject(after)) return [];
   const studentIds = participantIds(after);
   if (!studentIds.length) return [];
@@ -75,7 +85,7 @@ function examPushes(before, after) {
   // already published paper must stay quiet — hence the explicit numbers.
   const wasPublished = isObject(before) && text(before.status) === 'published';
   const samePublication = wasPublished && Number(before.publishedAt || 0) === Number(after.publishedAt || 0);
-  const justPublished = text(after.status) === 'published' && !samePublication;
+  const justPublished = text(after.status) === 'published' && !samePublication && stillOpenExam(after, now);
   if (justPublished) {
     pushed.push({
       kind: 'exam',
