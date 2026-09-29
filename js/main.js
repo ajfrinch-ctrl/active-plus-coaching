@@ -217,7 +217,14 @@ initProfile({
 initRoutine();
 initConnectivity();
 // Firebase is optional during online testing; offline startup remains independent.
-if (navigator.onLine) import('./firebase-online-test.js?v=20260929-fbaudit').then(({ testFirebaseOnlineConnection }) => testFirebaseOnlineConnection());
+// The connection smoke test is diagnostic-only and costs an extra SDK download,
+// so it runs only when explicitly asked (index.html?fbtest=1) — never on a
+// normal boot, and never as an unhandled rejection that can take the page down.
+if (navigator.onLine && new URLSearchParams(location.search).get('fbtest') === '1') {
+  import('./firebase-online-test.js?v=20260929-fbaudit')
+    .then(({ testFirebaseOnlineConnection }) => testFirebaseOnlineConnection())
+    .catch(() => {});
+}
 initDynamicTheme();
 initAppearance();
 initCopyChips();

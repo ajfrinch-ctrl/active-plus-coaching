@@ -59,7 +59,7 @@
 }
 .pay-pulse-icon svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .pay-pulse-label { color: rgba(255, 255, 255, .82); font-size: 10.5px; font-weight: 800; letter-spacing: .2px; }
-.pay-pulse-value { margin-top: 2px; font-size: 27px; font-weight: 900; letter-spacing: -.6px; line-height: 1.15; }
+.pay-pulse-value { margin-top: 2px; font-size: 27px; font-weight: 900; letter-spacing:0; line-height: 1.15; }
 .pay-pulse-sub { margin-top: 2px; color: rgba(255, 255, 255, .8); font-size: 10.5px; font-weight: 700; }
 .pay-pulse-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .pay-pulse-mini {
@@ -126,7 +126,7 @@
 }
 .pay-due-hero.has-due { background: #fff4e8; }
 .pay-due-label { color: var(--muted); font-size: 10.5px; font-weight: 800; }
-.pay-due-value { margin-top: 3px; color: var(--forest-dark-text); font-size: 25px; font-weight: 900; letter-spacing: -.5px; }
+.pay-due-value { margin-top: 3px; color: var(--forest-dark-text); font-size: 25px; font-weight: 900; letter-spacing:0; }
 .pay-due-hero.has-due .pay-due-value { color: #a35a20; }
 .pay-due-note { max-width: 44%; color: var(--muted); font-size: 10.5px; font-weight: 700; line-height: 1.5; text-align: right; }
 .pay-quick-profile .fee-balance-grid > div { border-radius: 14px; }
@@ -165,7 +165,7 @@
   color: var(--ink);
   font-size: 30px;
   font-weight: 900;
-  letter-spacing: -.5px;
+  letter-spacing:0;
   text-align: left;
 }
 .pay-amount-field input#payFeeAmount:focus { outline: 0; box-shadow: none; }

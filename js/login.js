@@ -23,7 +23,6 @@ import {
   activeStaffRoles
 } from './staff-auth.js';
 import { KEYS, readJSON } from './database.js';
-import { mountPanelSwitch } from './panel-switch.js';
 import { openStaffPasswordDialog } from './staff-password-dialog.js';
 import { authenticateDirectoryStaff, changeDirectoryStaffPassword, findDirectoryStaffByUsername } from './staff-directory.js';
 import { generateLoginId } from './user-id.js';
@@ -31,8 +30,6 @@ import { isPasswordRecord } from './password-hash.js';
 
 const STAFF_PANEL = Object.freeze({ admin: 'admin.html', manager: 'manager.html', teacher: 'teacher.html', payment: 'payment.html' });
 const STAFF_LABEL = Object.freeze({ admin: 'এডমিন প্যানেল', manager: 'ম্যানেজার প্যানেল', teacher: 'শিক্ষক প্যানেল', payment: 'পেমেন্ট রিসিভ প্যানেল' });
-const STAFF_ID_HINT = 'স্টাফ লগইন';
-const DEFAULT_ID_HINT = 'শিক্ষার্থী: লগইন সবসময় নিজের ইউজারনেম দিয়েই (চাইলে মোবাইল নম্বর বা প্রোফাইলের Student ID-ও চলবে) — সাথে নিজের পাসওয়ার্ড। এডমিন, ম্যানেজার, শিক্ষক ও পেমেন্ট কাউন্টার: নিজের ইউজারনেম ও পাসওয়ার্ড দিয়ে এখানেই লগইন করুন — একই ডিভাইসে প্যানেল বদলাতে আগে লগআউট করার দরকার নেই।';
 
 export function staffRoleFor(value) {
   const typed = normalizeStaffUsername(value);
@@ -61,23 +58,18 @@ export function switchAuthTab(tab) {
 }
 
 /* The same box takes a 4–6 digit student password or a staff password, so the
-   keyboard and the hint follow what is being typed. */
-let loginHintSequence = 0;
-function syncLoginHints() {
+   keyboard follows what is being typed. */
+let keyboardSequence = 0;
+function syncPasswordKeyboard() {
   const idInput = $('#loginMobile');
   const pinInput = $('#loginPin');
   if (!idInput || !pinInput) return;
   const value = idInput.value;
-  const sequence = ++loginHintSequence;
+  const sequence = ++keyboardSequence;
   const paint = role => {
-    if (sequence !== loginHintSequence || idInput.value !== value) return;
+    if (sequence !== keyboardSequence || idInput.value !== value) return;
     pinInput.setAttribute('inputmode', role ? 'text' : 'numeric');
     pinInput.setAttribute('placeholder', role ? 'পাসওয়ার্ড' : '৪–৬ সংখ্যার পাসওয়ার্ড');
-    const hint = $('#loginHint');
-    if (hint) {
-      hint.textContent = role ? `${STAFF_ID_HINT} — ${STAFF_LABEL[role]}। নিজের পাসওয়ার্ড দিয়ে প্রবেশ করুন।` : DEFAULT_ID_HINT;
-      hint.classList.toggle('is-staff', Boolean(role));
-    }
   };
   const known = staffRoleFor(value);
   if (known) { paint(known); return; }
@@ -191,6 +183,21 @@ const ONLINE_BRIDGE_BUDGET_MS = 2500;
    reported as "not on this device". A wider budget only extends this one wait;
    login still proceeds either way. */
 const LOGIN_IDENTITY_BUDGET_MS = 8000;
+/* When the background sync bridge has already reported itself dead
+   (data-realtime-sync="error" — unreachable Firebase, blocked CDN, locked
+   school network), the SAME endpoint cannot answer the login hydrate either.
+   Waiting the full budget for it would hold the login button hostage for
+   seconds on every attempt ("লোডিং" with a dead sync). In that state both
+   waits collapse to a short grace: a reachable corner still gets a chance,
+   and the device's own records decide immediately otherwise. The background
+   bridge keeps retrying on its own and resumes syncing when it can. */
+const BRIDGE_DOWN_BUDGET_MS = 1200;
+
+function onlineLoginBudget() {
+  return document.documentElement?.dataset?.realtimeSync === 'error'
+    ? BRIDGE_DOWN_BUDGET_MS
+    : 0;
+}
 
 function withinBudget(promise, what, budget = ONLINE_BRIDGE_BUDGET_MS) {
   let timer;
@@ -202,11 +209,11 @@ function withinBudget(promise, what, budget = ONLINE_BRIDGE_BUDGET_MS) {
   ]).finally(() => clearTimeout(timer));
 }
 
-async function hydrateStaffAccountsOnline(what) {
+async function hydrateStaffAccountsOnline(what, budget = ONLINE_BRIDGE_BUDGET_MS) {
   if (!navigator.onLine) return;
   try {
-    const bridge = await withinBudget(import('./realtime-sync.js?v=20260929-fbaudit'), 'online bridge import');
-    await withinBudget(bridge.hydrateStaffAccounts({ preserveLocalAdmin: staffAccountRecordExists('admin') }), 'online bridge hydrate');
+    const bridge = await withinBudget(import('./realtime-sync.js?v=20260929-fbaudit'), 'online bridge import', budget);
+    await withinBudget(bridge.hydrateStaffAccounts({ preserveLocalAdmin: staffAccountRecordExists('admin') }), 'online bridge hydrate', budget);
   } catch (error) {
     console.warn(`[Active Plus] staff account sync unavailable during ${what}:`, error.message);
   }
@@ -218,11 +225,11 @@ async function hydrateStaffAccountsOnline(what) {
    untouched — they stay the authoritative credentials on it.
    Returns true only when the cloud lookup ran and finished; false when the
    device is offline, the budget ran out, or the cloud refused the request. */
-async function hydrateUserIdentifiersOnline(what, identifier = '', password = '') {
+async function hydrateUserIdentifiersOnline(what, identifier = '', password = '', budget = LOGIN_IDENTITY_BUDGET_MS) {
   if (!navigator.onLine) return false;
   try {
-    const bridge = await withinBudget(import('./realtime-sync.js?v=20260929-fbaudit'), 'online identity import', LOGIN_IDENTITY_BUDGET_MS);
-    const result = await withinBudget(bridge.hydrateUserIdentifiers({ identifier, password }), 'online identity hydrate', LOGIN_IDENTITY_BUDGET_MS);
+    const bridge = await withinBudget(import('./realtime-sync.js?v=20260929-fbaudit'), 'online identity import', budget);
+    const result = await withinBudget(bridge.hydrateUserIdentifiers({ identifier, password }), 'online identity hydrate', budget);
     return result;
   } catch (error) {
     console.warn(`[Active Plus] user id sync unavailable during ${what}:`, error.message);
@@ -252,17 +259,20 @@ async function handleLogin(event, state, onAuthenticated) {
   const onlineIdentities = { attempted: false, synced: true, cloudPasswordMismatch: false };
   if (navigator.onLine && typedId) {
     onlineIdentities.attempted = true;
+    // A bridge that just pronounced itself dead must not stall this button:
+    // the full budget drops to a short grace for this one attempt.
+    const down = onlineLoginBudget();
     // Staff accounts and student logins live on different cloud paths, so both
     // lookups run together instead of one waiting for the other.
     const [, identities] = await Promise.all([
       // Never re-hydrate an existing local Admin record during a normal
       // logout/login cycle. Logout removes only the session; the local account
       // remains the authoritative credential on this device.
-      hydrateStaffAccountsOnline('login'),
+      hydrateStaffAccountsOnline('login', down || ONLINE_BRIDGE_BUDGET_MS),
       // Login IDs created on other devices: directory accounts, the claimed-id
       // registry and the student login (a verified password is required before
       // anything is written to this device).
-      hydrateUserIdentifiersOnline('login', typedId, pin)
+      hydrateUserIdentifiersOnline('login', typedId, pin, down || LOGIN_IDENTITY_BUDGET_MS)
     ]);
     onlineIdentities.synced = Boolean(identities?.ok);
     // A cloud copy whose password does not match must never block a valid
@@ -383,13 +393,11 @@ function initSkipSecurityToggle() {
 export function initLogin({ state, onAuthenticated }) {
   initPinVisibility();
   initSkipSecurityToggle();
-  // The strip that lets this device change panels without a logout step.
-  void mountPanelSwitch();
   $$('[data-auth-tab]').forEach(trigger => trigger.addEventListener('click', () => {
     switchAuthTab(trigger.dataset.authTab);
   }));
-  $('#loginMobile')?.addEventListener('input', syncLoginHints);
-  syncLoginHints();
+  $('#loginMobile')?.addEventListener('input', syncPasswordKeyboard);
+  syncPasswordKeyboard();
   $('#loginForm')?.addEventListener('submit', event => handleLogin(event, state, onAuthenticated));
   initFirstAdminSetup();
 }

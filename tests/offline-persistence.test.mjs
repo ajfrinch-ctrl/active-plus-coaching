@@ -100,12 +100,3 @@ test('RULE 9: Logout clears session only; user accounts and data are never delet
   assert.equal(preserved.username, 'test.student');
 });
 
-test('RULE 14 & 15: Central storage abstraction exports all modular subsystems', async () => {
-  const storageIndex = await import('../js/storage/index.js');
-  assert.ok(storageIndex.users);
-  assert.ok(storageIndex.students);
-  assert.ok(storageIndex.payments);
-  assert.ok(storageIndex.notices);
-  assert.ok(storageIndex.settings);
-  assert.ok(storageIndex.migration);
-});

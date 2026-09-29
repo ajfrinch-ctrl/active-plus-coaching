@@ -1,7 +1,7 @@
 /* Routine feature */
 /* Shared inner-page elements */
 .page-intro { margin-bottom: 20px; }
-.page-intro h1 { margin: 4px 0 3px; color: var(--ink); font-size: 27px; line-height: 1.2; letter-spacing: -.7px; }
+.page-intro h1 { margin: 4px 0 3px; color: var(--ink); font-size: 27px; line-height: 1.2; letter-spacing:0; }
 .page-intro > p:last-child { font-size: 12px; }
 .class-context { display: flex; align-items: center; gap: 9px; padding: 11px; border: 1px solid #edf1ec; border-radius: 15px; background: var(--surface); box-shadow: var(--soft-shadow); }
 .mini-avatar { display: grid; place-items: center; flex: 0 0 32px; width: 32px; height: 32px; border-radius: 10px; color: #a15e40; background: #ffe8d8; font-size: 13px; font-weight: 800; }

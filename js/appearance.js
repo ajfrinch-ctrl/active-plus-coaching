@@ -1,9 +1,11 @@
 /* Light + dark appearance, stored per device.
    Pattern: html[data-theme] + CSS `color-scheme` + theme-color meta stay in
-   sync, the first run follows the system preference, and every later change is
-   an explicit choice that survives reloads. The pre-paint half that stops a
-   dark theme from flashing light lives in js/appearance-boot.js and must keep
-   using the exact same storage key (guarded by tests/appearance.test.mjs). */
+   sync. Dark is strictly opt-in — the app always starts light and only an
+   explicit toggle turns dark on; the choice then survives reloads. The system
+   colour preference is never followed automatically. The pre-paint half that
+   stops a dark theme from flashing light lives in js/appearance-boot.js and
+   must keep using the exact same storage key (guarded by
+   tests/appearance.test.mjs). */
 
 export const APPEARANCE_KEY = 'active-plus-appearance-v2';
 export const THEME_COLOR = Object.freeze({ light: '#04795a', dark: '#000000' });
@@ -16,21 +18,13 @@ export function getStoredTheme() {
   try {
     const value = window.localStorage.getItem(APPEARANCE_KEY);
     if (value === 'light' || value === 'dark') return value;
-  } catch { /* private mode — fall back to the system preference */ }
+  } catch { /* private mode — stay light until the user toggles */ }
   return null;
 }
 
-export function systemPrefersDark() {
-  try {
-    return typeof window.matchMedia === 'function'
-      && window.matchMedia('(prefers-color-scheme: dark)').matches === true;
-  } catch { return false; }
-}
-
 export function getTheme() {
-  // No stored choice yet: follow the device's own setting, the same way the
-  // pre-paint boot script does, so the two never disagree.
-  return getStoredTheme() || (systemPrefersDark() ? 'dark' : 'light');
+  // Only an explicit, stored choice turns dark on; the default is light.
+  return getStoredTheme() || 'light';
 }
 
 export function themeColorFor(theme) {
@@ -89,14 +83,4 @@ export function initAppearance() {
       setTheme(checkbox.checked ? 'dark' : 'light');
     });
   }
-
-  // While this device has no stored choice, keep following the system setting.
-  try {
-    const query = window.matchMedia('(prefers-color-scheme: dark)');
-    const followSystem = event => {
-      if (!getStoredTheme()) applyTheme(event.matches ? 'dark' : 'light');
-    };
-    if (typeof query.addEventListener === 'function') query.addEventListener('change', followSystem);
-    else if (typeof query.addListener === 'function') query.addListener(followSystem);
-  } catch { /* matchMedia missing — the stored theme is enough */ }
 }

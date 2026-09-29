@@ -978,7 +978,7 @@
   font-size:22px;
   line-height:1.25;
   font-weight:900;
-  letter-spacing:-.3px;
+  letter-spacing:0;
 }
 .admin-shell [data-view-panel="staff"]>.finance-hint{
   margin:0 0 16px;

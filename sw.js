@@ -1,11 +1,8 @@
-const CACHE_NAME = 'active-plus-student-v96-firebase-diagnostic-ui';
+const CACHE_NAME = 'active-plus-student-v98-fastload';
 const APP_SHELL = [
   './js/panel-lockdown.js',
-  './js/panel-switch.js',
   './js/firebase-config.js',
   './js/firebase-online-test.js',
-  './js/firebase-diagnostics.js',
-  './js/firebase-diagnostic-ui.js',
   './js/realtime-sync-entry.js',
   './js/realtime-sync.js',
   './js/sync-status.js',
@@ -120,7 +117,6 @@ const APP_SHELL = [
   './js/sanitize.js',
   './js/sanitize-url.js',
   './js/staff-password-dialog.js',
-  './js/demo-data.js',
   './js/exam-data.js',
   './js/exam-ui.js',
   './js/exam-manager.js',
@@ -175,13 +171,7 @@ const APP_SHELL = [
   './js/staff-management.js',
   './js/user-id.js',
   './js/admin-panel-ui.js',
-  './js/storage/index.js',
-  './js/storage/migration.js',
-  './js/storage/users.js',
-  './js/storage/students.js',
-  './js/storage/payments.js',
-  './js/storage/notices.js',
-  './js/storage/settings.js'
+  './js/storage/migration.js'
 ];
 
 /* Panel lockdown (js/panel-lockdown.js). This device's own panel is the only
@@ -248,31 +238,91 @@ self.addEventListener('activate', event => {
   );
 });
 
-// Network-first keeps installed users on the latest deployed theme/code when online,
-// while retaining the cached app shell for reliable offline use.
+// Load-speed strategy (the old network-first for EVERYTHING meant a slow
+// network throttled even a fully cached app):
+//   • navigations — network-first with a hard ceiling: fresh HTML when the
+//     network answers quickly, the cached page instead of a hanging white
+//     screen when it crawls, the offline card only when neither exists.
+//   • static assets WITHOUT a query string — cache-first. One CACHE_NAME is
+//     always one consistent file set (the name bumps with every change set
+//     and activate() deletes the rest), so the cached copy is instant AND
+//     coherent — no mixed old/new modules.
+//   • URLs WITH a ?v= query (version-pinned module imports) — network-first
+//     as before: a new build must never receive last build's file under a
+//     new name.
+//   • cross-origin CORS GETs (the immutable Firebase SDK on gstatic) — also
+//     cache-first, so repeat visits skip that download entirely.
+const NAV_TIMEOUT_MS = 2500;
+
+function timedFetch(request) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('nav-timeout')), NAV_TIMEOUT_MS);
+    // The real fetch keeps running past the ceiling; its result simply lands
+    // too late to be used, so nothing half-written is ever cached here.
+    fetch(request).then(
+      response => { clearTimeout(timer); resolve(response); },
+      error => { clearTimeout(timer); reject(error); }
+    );
+  });
+}
+
+function cacheable(response) {
+  return response && response.status === 200
+    && (response.type === 'basic' || response.type === 'cors');
+}
+
+function remember(request, response) {
+  const copy = response.clone();
+  caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
+}
+
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
 
-  event.respondWith(
-    fetch(event.request).then(response => {
-      if (response && response.status === 200 && response.type === 'basic') {
-        const copy = response.clone();
-        event.waitUntil(
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy))
-        );
-      }
-      return response;
-    }).catch(async () => {
-      const cached = await cachedResponse(event.request);
-      if (cached) return cached;
-      if (event.request.mode === 'navigate') {
+  if (event.request.mode === 'navigate') {
+    event.respondWith((async () => {
+      try {
+        const response = await timedFetch(event.request);
+        if (cacheable(response)) remember(event.request, response);
+        return response;
+      } catch (error) {
+        const cached = await cachedResponse(event.request);
+        if (cached) return cached;
         return new Response(OFFLINE_DOCUMENT, {
           status: 503, statusText: 'Offline',
           headers: { 'content-type': 'text/html; charset=utf-8' }
         });
       }
-      return new Response('', { status: 503, statusText: 'Offline' });
-    })
+    })());
+    return;
+  }
+
+  let hasQuery = false;
+  try { hasQuery = new URL(event.request.url).search.length > 0; } catch { /* treat as plain */ }
+
+  if (!hasQuery) {
+    event.respondWith((async () => {
+      const cached = await caches.match(event.request);
+      if (cached) return cached;
+      try {
+        const response = await fetch(event.request);
+        if (cacheable(response)) remember(event.request, response);
+        return response;
+      } catch (error) {
+        return (await cachedResponse(event.request))
+          || new Response('', { status: 503, statusText: 'Offline' });
+      }
+    })());
+    return;
+  }
+
+  event.respondWith(
+    fetch(event.request).then(response => {
+      if (cacheable(response)) remember(event.request, response);
+      return response;
+    }).catch(async () =>
+      (await cachedResponse(event.request))
+      || new Response('', { status: 503, statusText: 'Offline' }))
   );
 });
 

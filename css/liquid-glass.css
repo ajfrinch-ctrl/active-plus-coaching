@@ -504,7 +504,7 @@ body,
 .admin-bottom-item span {
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: -.1px;
+  letter-spacing:0;
 }
 
 /* Toasts must clear the floating bar. */

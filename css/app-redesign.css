@@ -17,7 +17,7 @@ body { color:var(--ink); background:radial-gradient(ellipse at 8% 4%,rgba(189,23
 .app-main::-webkit-scrollbar-thumb,.admin-main::-webkit-scrollbar-thumb { border-radius:9px; background:rgba(8,123,102,.2); }
 .topbar,.admin-topbar,.bottom-nav,.admin-bottom { border-color:rgba(215,232,224,.84); background:rgba(250,253,251,.9); box-shadow:0 7px 25px rgba(12,58,47,.075); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); }
 .brand-mark img,.auth-brand img { box-shadow:0 5px 16px rgba(7,93,82,.16); }
-.brand-copy strong,.admin-brand strong { letter-spacing:-.35px; }
+.brand-copy strong,.admin-brand strong { letter-spacing:0; }
 .welcome-card,.admin-hero {
   position:relative; overflow:hidden; border:1px solid rgba(255,255,255,.22); border-radius:27px;
   color:#fff; background:linear-gradient(135deg,#087b66 0%,#086954 58%,#064e52 100%);
@@ -40,7 +40,7 @@ body { color:var(--ink); background:radial-gradient(ellipse at 8% 4%,rgba(189,23
 .home-stat-icon,.home-hero-icon,.home-hero-foot-icon { border:1px solid rgba(255,255,255,.85); box-shadow:0 5px 13px rgba(10,82,65,.11),inset 0 1px 0 #fff; }
 .home-hero-foot { background:linear-gradient(100deg,#eff9f4,#f7fbf8); }
 .home-section-head { margin-bottom:12px; }
-.home-section-head h3,.section-heading h2,.teacher-section-heading h2 { letter-spacing:-.28px; }
+.home-section-head h3,.section-heading h2,.teacher-section-heading h2 { letter-spacing:0; }
 .quick-wrap { padding:16px 10px; }
 .home-row,.settings-list>button,.admin-more-item { transition:background-color .18s ease,transform .18s ease; }
 .home-row:active,.settings-list>button:active,.admin-more-item:active { background:rgba(226,245,236,.7); }
@@ -50,7 +50,7 @@ body { color:var(--ink); background:radial-gradient(ellipse at 8% 4%,rgba(189,23
 .settings-list,.admin-more-menu { overflow:hidden; border:1px solid rgba(255,255,255,.92); border-radius:20px; background:rgba(255,255,255,.9); box-shadow:var(--soft-shadow); }
 .settings-list>button { min-height:68px; }
 .page-intro { margin-bottom:18px; }
-.page-intro h1,.view h1 { letter-spacing:-.5px; }
+.page-intro h1,.view h1 { letter-spacing:0; }
 .eyebrow { color:var(--forest); }
 .admin-hero { padding:18px; }
 .admin-hero-head { margin-bottom:15px; }
