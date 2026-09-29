@@ -41,7 +41,12 @@ export function chooseStaffCopy(local, remote, { role = '' } = {}) {
   if (!staffRecordValid(local)) return 'remote';
   if (role === 'admin' && local.username !== remote.username) return 'conflict';
   const personalised = !local.mustChangePassword;
-  return personalised && preferLocalCopy(local, remote, { localWinsTie: false }) ? 'local' : 'remote';
+  // If both copies are from an older schema without `updatedAt`, preserve the
+  // already-personalised local credential. A stale cloud copy must never make
+  // an existing password stop working during background sync. Any deliberate
+  // password/profile change writes `updatedAt`, so a newer remote copy still
+  // wins normally on a real update.
+  return personalised && preferLocalCopy(local, remote, { localWinsTie: true }) ? 'local' : 'remote';
 }
 
 /** Two login records describe the same student only when the person matches. */
