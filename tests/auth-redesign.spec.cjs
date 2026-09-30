@@ -7,7 +7,7 @@ for(const width of [320,390,768])test(`header-free login, registration and recov
  await page.locator('[data-auth-tab=register]').first().click();await expect(page.locator('#registerPanel')).toBeVisible();await expect(page.locator('#loginPanel')).toBeHidden();
  await expect(page.locator('[data-registration-step="1"]')).toBeVisible();
  await page.locator('[data-auth-tab=login]').first().click();await page.locator('#forgotPinButton').click();await expect(page.locator('#recoveryModal')).toBeVisible();
- await page.locator('#recoveryMobile').fill('student.name');await page.locator('#recoveryQuestion').selectOption({index:1});await page.locator('#recoveryAnswer').fill('পরীক্ষা');await page.locator('#recoveryPin').fill('654321');
+ await page.locator('#recoveryMobile').fill('student.name');await page.locator('#recoveryQuestion').selectOption({index:1});await page.locator('#recoveryAnswer').fill('পরীক্ষা');
  await page.locator('#recoveryForm button[type=submit]').click();await expect(page.locator('#authMessage')).toContainText('অ্যাকাউন্ট');
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });
@@ -26,7 +26,9 @@ test('existing student can reset with security answer then sign in with new pass
   await persistAccount({username:'recovery.student',mobile:'01712345678',registrationMobile:'01712345678',pin:'123456',securityQuestion:'তোমার শৈশবের ডাকনাম কী?',securityAnswer:'রাইসা',status:'active',student:{id:'QA-RECOVERY',name:'রাইসা',className:'দশম শ্রেণি'}});
  });
  await page.reload();await page.locator('#forgotPinButton').click();
- await page.locator('#recoveryMobile').fill('recovery.student');await page.locator('#recoveryQuestion').selectOption({label:'তোমার শৈশবের ডাকনাম কী?'});await page.locator('#recoveryAnswer').fill('রাইসা');await page.locator('#recoveryPin').fill('654321');await page.locator('#recoveryForm button[type=submit]').click();
+ await page.locator('#recoveryMobile').fill('recovery.student');await page.locator('#recoveryQuestion').selectOption({label:'তোমার শৈশবের ডাকনাম কী?'});await page.locator('#recoveryAnswer').fill('রাইসা');await page.locator('#recoveryForm button[type=submit]').click();
+ await expect(page.locator('#recoveryPasswordStep')).toBeVisible();await expect(page.locator('#recoveryStudentSummary')).toContainText('রাইসা');
+ await page.locator('#recoveryPin').fill('654321');await page.locator('#recoveryPinConfirm').fill('654321');await page.locator('#recoveryPasswordForm button[type=submit]').click();
  await expect(page.locator('#authMessage')).toContainText('নতুন পাসওয়ার্ড সংরক্ষণ');
  await page.locator('#loginPin').fill('654321');await page.locator('#loginForm button[type=submit]').click();await expect(page.locator('#appShell')).toBeVisible();
 });

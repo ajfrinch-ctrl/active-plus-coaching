@@ -362,7 +362,41 @@
   </div>
 
   <div class="modal-backdrop" id="recoveryModal" hidden>
-    <section class="modal edit-modal" role="dialog" aria-modal="true" aria-labelledby="recoveryModalTitle"><div class="modal-header"><div><p class="eyebrow">অ্যাকাউন্ট পুনরুদ্ধার</p><h2 id="recoveryModalTitle">পাসওয়ার্ড রিসেট করুন</h2></div><button type="button" class="modal-close" data-close-modal="recoveryModal" aria-label="বন্ধ করুন">×</button></div><p class="recovery-copy">শিক্ষার্থী অ্যাকাউন্টের জন্য: রেজিস্ট্রেশনের সময় দেওয়া নিরাপত্তা প্রশ্নের উত্তর দিয়ে নতুন পাসওয়ার্ড সেট করুন।</p><form id="recoveryForm"><label for="recoveryMobile">ইউজারনেম অথবা মোবাইল নম্বর</label><input id="recoveryMobile" name="mobile" type="text" autocomplete="username" placeholder="ইউজারনেম / ০১XXXXXXXXX" required><label for="recoveryQuestion">নিরাপত্তা প্রশ্ন</label><select id="recoveryQuestion" name="question" required><option value="">প্রশ্ন নির্বাচন করুন</option><option>তোমার শৈশবের ডাকনাম কী?</option><option>তোমার প্রিয় শিক্ষকের নাম কী?</option><option>তোমার জন্মস্থানের নাম কী?</option><option>তোমার প্রিয় বইয়ের নাম কী?</option></select><label for="recoveryAnswer">উত্তর</label><input id="recoveryAnswer" name="answer" type="text" required><label for="recoveryPin">নতুন পাসওয়ার্ড</label><div class="input-wrap"><svg class="" data-icon="lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 10h14v11H5zM8 10V6a4 4 0 0 1 8 0v4"/></svg><input id="recoveryPin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="6" placeholder="৪–৬ সংখ্যা" required><button class="show-pin" type="button" data-toggle-pin="recoveryPin" aria-label="পাসওয়ার্ড দেখুন"><svg class="" data-icon="eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M2 12q10-15 20 0-10 15-20 0M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0"/></svg></button></div><button class="modal-action" type="submit">নতুন পাসওয়ার্ড সংরক্ষণ করুন</button></form><div class="admin-reset-note"><svg class="" data-icon="help" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0M9 9a3 3 0 1 1 4 3l-1 1v1M12 17v1"/></svg><span>নিরাপত্তা প্রশ্নের উত্তর মনে না থাকলে এডমিন পাসওয়ার্ড রিসেট করে দিতে পারবেন।</span></div></section>
+    <section class="modal edit-modal" role="dialog" aria-modal="true" aria-labelledby="recoveryModalTitle">
+      <div class="modal-header"><div><p class="eyebrow">অ্যাকাউন্ট পুনরুদ্ধার</p><h2 id="recoveryModalTitle">পাসওয়ার্ড রিসেট করুন</h2></div><button class="modal-close" type="button" data-close-modal="recoveryModal" aria-label="বন্ধ করুন">×</button></div>
+
+      <!-- ধাপ ১ — শিক্ষার্থী যাচাই: ইউজারনেম/মোবাইল নম্বর ও নিরাপত্তা প্রশ্নের উত্তর মিললে তবেই পরের ধাপ খোলে। -->
+      <section class="recovery-step" id="recoveryVerifyStep" aria-labelledby="recoveryVerifyTitle">
+        <p class="recovery-step-title" id="recoveryVerifyTitle"><span class="recovery-step-number">১</span> শিক্ষার্থী যাচাই</p>
+        <p class="recovery-copy">রেজিস্ট্রেশনের সময় দেওয়া ইউজারনেম অথবা মোবাইল নম্বর, নিরাপত্তা প্রশ্ন ও তার উত্তর দিন। তথ্য মিললে আপনার সংক্ষিপ্ত তথ্য দেখানো হবে।</p>
+        <form id="recoveryForm">
+          <label for="recoveryMobile">ইউজারনেম অথবা মোবাইল নম্বর</label>
+          <input id="recoveryMobile" name="mobile" type="text" autocomplete="username" placeholder="ইউজারনেম / ০১XXXXXXXXX" required>
+          <label for="recoveryQuestion">নিরাপত্তা প্রশ্ন</label>
+          <select id="recoveryQuestion" name="question" required><option value="">প্রশ্ন নির্বাচন করুন</option><option>তোমার শৈশবের ডাকনাম কী?</option><option>তোমার প্রিয় শিক্ষকের নাম কী?</option><option>তোমার জন্মস্থানের নাম কী?</option><option>তোমার প্রিয় বইয়ের নাম কী?</option></select>
+          <label for="recoveryAnswer">উত্তর</label>
+          <input id="recoveryAnswer" name="answer" type="text" autocomplete="off" required>
+          <p class="finance-error" id="recoveryVerifyError" role="alert" hidden></p>
+          <div class="modal-actions"><button class="modal-action" type="submit">যাচাই করুন</button></div>
+        </form>
+      </section>
+
+      <!-- ধাপ ২ — যাচাই শেষে সংক্ষিপ্ত তথ্য দেখে নতুন পাসওয়ার্ড দুইবার দিয়ে পরিবর্তন। -->
+      <section class="recovery-step" id="recoveryPasswordStep" aria-labelledby="recoveryPasswordTitle" hidden>
+        <p class="recovery-step-title" id="recoveryPasswordTitle"><span class="recovery-step-number">২</span> নতুন পাসওয়ার্ড</p>
+        <article class="recovery-summary" id="recoveryStudentSummary" aria-live="polite"></article>
+        <form id="recoveryPasswordForm">
+          <label for="recoveryPin">নতুন পাসওয়ার্ড</label>
+          <div class="input-wrap"><svg class="" data-icon="lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 10h14v11H5zM8 10V6a4 4 0 0 1 8 0v4"/></svg><input id="recoveryPin" name="pin" type="password" inputmode="numeric" minlength="4" maxlength="6" autocomplete="new-password" placeholder="৪–৬ সংখ্যা" required><button class="show-pin" type="button" data-toggle-pin="recoveryPin" aria-label="পাসওয়ার্ড দেখুন"><svg class="" data-icon="eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M2 12q10-15 20 0-10 15-20 0M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0"/></svg></button></div>
+          <label for="recoveryPinConfirm">নতুন পাসওয়ার্ড আবার দিন</label>
+          <div class="input-wrap"><svg class="" data-icon="lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 10h14v11H5zM8 10V6a4 4 0 0 1 8 0v4"/></svg><input id="recoveryPinConfirm" name="pinConfirm" type="password" inputmode="numeric" minlength="4" maxlength="6" autocomplete="new-password" placeholder="একই পাসওয়ার্ড আবার" required><button class="show-pin" type="button" data-toggle-pin="recoveryPinConfirm" aria-label="পাসওয়ার্ড দেখুন"><svg class="" data-icon="eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M2 12q10-15 20 0-10 15-20 0M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0"/></svg></button></div>
+          <p class="finance-error" id="recoveryPasswordError" role="alert" hidden></p>
+          <div class="modal-actions"><button class="admin-btn ghost" type="button" id="recoveryBack">আবার যাচাই</button><button class="modal-action" type="submit">পাসওয়ার্ড পরিবর্তন করুন</button></div>
+        </form>
+      </section>
+
+      <div class="admin-reset-note"><svg class="" data-icon="help" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0M9 9a3 3 0 1 1 4 3l-1 1v1M12 17v1"/></svg><span>নিরাপত্তা প্রশ্নের উত্তর মনে না থাকলে এডমিন পাসওয়ার্ড রিসেট করে দিতে পারবেন।</span></div>
+    </section>
   </div>
 
 
