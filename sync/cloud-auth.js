@@ -5,7 +5,7 @@
 import { firebaseApp, appCheckReady } from '../firebase/firebase-init.js';
 import {
   getAuth, signInWithEmailAndPassword, setPersistence, browserLocalPersistence,
-  getFirestore, doc, getDoc
+  getFirestore, doc, getDoc, getFunctions, httpsCallable
 } from '../firebase/firebase-services.js';
 
 const DOMAIN = 'accounts.activeplus.app';
@@ -54,4 +54,16 @@ export async function currentCloudUser() {
 
 export async function signOutCloud() {
   return getAuth(firebaseApp).signOut();
+}
+
+
+export async function callCloudFunction(name, data = {}) {
+  await appCheckReady;
+  const callable = httpsCallable(getFunctions(firebaseApp), name);
+  const result = await callable(data);
+  return result.data;
+}
+
+export async function createFirstAdminCloud(profile) {
+  return callCloudFunction('createFirstAdmin', profile);
 }
