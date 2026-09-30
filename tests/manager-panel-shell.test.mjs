@@ -127,4 +127,20 @@ test('the আরও page lists every module as a real page, not a floating drawe
   // A row opens its module, and the page is reachable after a reload.
   ctx.click(rows[0]);
   await ctx.waitFor(() => ctx.$('.manager-view.active')?.dataset.viewPanel === 'classes');
+  assert.equal(ctx.window.location.hash, '#classes');
+});
+
+test('every আরও row opens its own page without an error', async () => {
+  ctx.click(ctx.$('.manager-bottom [data-manager-view="more"]'));
+  await ctx.flush();
+  for (const row of ctx.$$('#managerMoreMenu .admin-more-item')) {
+    if (row.classList.contains('is-logout')) continue;
+    const view = row.dataset.managerView;
+    ctx.click(row);
+    await ctx.waitFor(() => ctx.$('.manager-view.active')?.dataset.viewPanel === view);
+    assert.equal(ctx.$('.manager-view.active').hidden, false, `${view} is visible`);
+    assert.equal(ctx.window.location.hash, `#${view}`, `${view} is remembered in the URL`);
+    if (view !== 'more') { ctx.click(ctx.$('.manager-bottom [data-manager-view="more"]')); await ctx.flush(); }
+  }
+  assert.deepEqual(ctx.jsdomErrors, [], 'no page raised an error while opening');
 });

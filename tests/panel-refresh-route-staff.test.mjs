@@ -2,7 +2,8 @@
    One panel per test file (and per process): the app modules read the window
    globals of the page that loaded them, so two live panels in one process would
    fight over them. The Teacher case lives in
-   tests/panel-refresh-route-teacher.test.mjs. */
+   tests/panel-refresh-route-teacher.test.mjs and Manager Reports in
+   tests/panel-refresh-route-reports.test.mjs. */
 
 import test from 'node:test';
 import assert from 'node:assert/strict';

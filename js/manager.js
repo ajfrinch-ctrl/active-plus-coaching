@@ -63,6 +63,10 @@ function renderView(view) {
     button.classList.toggle('active', active);
     if (active) button.setAttribute('aria-current', 'page'); else button.removeAttribute('aria-current');
   });
+  // Refresh reopens this page: the open view lives in the URL. It is remembered
+  // before the panels render, so a renderer that ever fails can still not send
+  // the next refresh back to the dashboard.
+  rememberRoute(view);
   if (view === 'dashboard') renderDashboard();
   if (view === 'students') renderStudents();
   if (view === 'approvals') renderApprovals();
@@ -73,11 +77,9 @@ function renderView(view) {
   if (view === 'notices') renderNotices();
   if (view === 'routine') renderRoutine();
   if (view === 'results') renderResults();
-  if (view === 'reports') renderReportPreview();
+  if (view === 'reports') void refreshReports($('#managerReports'));
   if (view === 'profile') renderProfile();
   $('#managerMain')?.scrollTo({ top: 0, behavior: 'smooth' });
-  // Refresh reopens this page: the open view lives in the URL.
-  rememberRoute(view);
   return true;
 }
 function compactRow(text, meta = '') { return `<div class="manager-compact-row"><strong>${escapeHtml(text)}</strong>${meta ? `<br><small>${escapeHtml(meta)}</small>` : ''}</div>`; }
