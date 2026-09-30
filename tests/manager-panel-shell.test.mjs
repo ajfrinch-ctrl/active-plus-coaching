@@ -71,6 +71,11 @@ test('Manager alone assigns Teacher class/batch scope through the Teachers workf
 /* Tracking a student by the permanent Student ID in the Manager panel — the
    same box staff already use for names and mobile numbers. Bangla digits are
    what a Bangla keyboard produces, so they must find the student too. */
+test('the running Manager panel shows no offline-workspace notice', () => {
+  assert.equal(ctx.$('.manager-local-notice'), null, 'no notice element');
+  assert.ok(!ctx.$('#managerMain').textContent.includes('Offline workspace'), 'no notice text');
+});
+
 test('the Manager student search finds a student by Student ID, including Bangla digits', async () => {
   const box = ctx.$('#managerStudentSearch');
   const rows = () => ctx.$$('#managerStudentList [data-manager-student]');
