@@ -1000,7 +1000,12 @@ export async function startRealtimeSync() {
       // Capture local changes even if authentication later fails.
       for (const collection of RECORD_COLLECTIONS) recordBridge(collection);
       installLocalWriteBridge();
-      await ensureCloudAuth();
+      const cloudUser = await ensureCloudAuth();
+      if (!cloudUser) {
+        stopRealtimeSync();
+        setSyncStatus('error');
+        return { ok: false, reason: 'authentication-required' };
+      }
       if (!syncEnabled || generation !== syncGeneration) return { ok: false, reason: 'session-ended' };
       onValue(ref(getDatabase(firebaseApp), '.info/connected'), snap => {
         const wasConnected = connected;
@@ -1019,8 +1024,7 @@ export async function startRealtimeSync() {
       });
       const tasks = [
         ...RECORD_COLLECTIONS.map(collection => () => syncCollection(collection)),
-        ...Object.keys(STAFF_ACCOUNTS).map(role => () => syncStaffRole(role)),
-        () => syncDirectory(), () => syncUsernames(), () => syncStudentAccount(), () => syncExamDb()
+        () => syncExamDb()
       ];
       // Keep failed collections separate. An independent node's rejection must
       // neither discard working listeners nor be falsely painted "synced".
@@ -1034,10 +1038,6 @@ export async function startRealtimeSync() {
         reportSyncError(partialFailures[0].error);
       }
       for (const collection of RECORD_COLLECTIONS) listenCollection(collection);
-      for (const role of Object.keys(STAFF_ACCOUNTS)) listenStaffRole(role);
-      listenDirectory();
-      listenUsernames();
-      listenStudentAccount();
       listenExamDb();
       ready = true;
       started = true;
