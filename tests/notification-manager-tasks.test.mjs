@@ -30,6 +30,7 @@ before(async () => {
   store.setItem(KEYS.transactions, JSON.stringify([
     { id: 'OLD1', studentName: 'পুরোনো', studentId: 's1', feeType: 'মাসিক বেতন', month: 'সেপ্টেম্বর', amount: 1000, status: 'pending', recordedAt: Date.now() - 86400000 }
   ]));
+  ctx.$('#managerShell').hidden = false;      // a signed-in Manager
   for (const button of ctx.$$('[data-manager-view]')) button.addEventListener('click', () => clicks.push(button.dataset.managerView));
   controller = (await import('../js/notifications.js')).initNotifications();
   await ctx.flush();
@@ -73,6 +74,20 @@ test('tapping a task in the bell opens its view and clears it', async () => {
   const paper = controller.feed().find(item => item.kind === 'exam-review');
   await controller.openItem(paper);
   assert.equal(clicks.at(-1), 'exams');
+});
+
+test('a tray tap while the panel is still starting waits for it, and is not overwritten by its dashboard', async () => {
+  const module = await import('../js/notifications.js');
+  ctx.$('#managerShell').hidden = true;        // cold start: login still being verified
+  clicks.length = 0;
+  const opened = module.openNotificationTarget({ kind: 'payment-review', key: 'payment-review:none', id: 'none' });
+  await new Promise(resolve => setTimeout(resolve, 300));
+  assert.deepEqual(clicks, [], 'nothing happens behind the lock');
+  // The panel unlocks and shows its own first view in the same task.
+  ctx.$('#managerShell').hidden = false;
+  ctx.$('[data-manager-view="dashboard"]').click();
+  assert.equal(await opened, true);
+  assert.deepEqual(clicks, ['dashboard', 'cash-counter'], 'the notification’s view wins');
 });
 
 test('a decided fee entry leaves the list by itself', async () => {

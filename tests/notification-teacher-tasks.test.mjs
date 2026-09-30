@@ -29,6 +29,7 @@ before(async () => {
       { id: 'P1', title: 'রসায়ন', status: 'pending', teacherId: 'T', startAt: Date.now() + 86400000, updatedAt: 1, submittedAt: 2, participants: [] }
     ] }));
   });
+  ctx.$('#teacherShell').hidden = false;      // a signed-in teacher
   for (const button of ctx.$$('[data-teacher-view]')) button.addEventListener('click', () => clicks.push(button.dataset.teacherView));
 });
 

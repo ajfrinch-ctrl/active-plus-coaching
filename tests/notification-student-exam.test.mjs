@@ -37,6 +37,7 @@ before(async () => {
   store.setItem(KEYS.students, JSON.stringify([{ id: STUDENT_ID, name: 'রহিম', status: 'pending' }]));
   store.setItem(`activePlus.notifications.boot.v1:${VIEWER}`, JSON.stringify({ version: 1, at: Date.now() - 60000 }));
   store.setItem(`activePlus.notifications.rules.v1:${VIEWER}`, JSON.stringify({ version: 2, at: Date.now() - 60000 }));
+  ctx.$('#appShell').hidden = false;          // a signed-in student
   for (const button of ctx.$$('[data-view]')) button.addEventListener('click', () => clicks.push(button.dataset.view));
   controller = (await import('../js/notifications.js')).initNotifications();
   await ctx.flush();

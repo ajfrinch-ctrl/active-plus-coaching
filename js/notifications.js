@@ -75,6 +75,13 @@ const NAV_ATTRIBUTE = Object.freeze({
   student: 'data-view', manager: 'data-manager-view', teacher: 'data-teacher-view', admin: 'data-admin-view'
 });
 const MAX_TIMER_MS = 60 * 60 * 1000;
+/* The part of each panel that appears only once its login is verified. A panel
+   shows its own first view (dashboard/home) at that moment, so a tapped
+   notification waits for it instead of being overwritten by it. */
+const PANEL_SHELL = Object.freeze({
+  student: '#appShell', manager: '#managerShell', teacher: '#teacherShell', admin: '#adminShell', payment: '#payShell'
+});
+const PANEL_READY_TIMEOUT_MS = 20000;
 /* Kinds added on 2026-09-30. The first refresh after the update records them
    silently: old approvals/payments must not buzz a phone as if they were new.
    Their list entries still appear; only the system notification is skipped. */
@@ -250,6 +257,7 @@ export function restoreNotification(key) {
 export async function openRegistration(studentId) {
   const id = String(studentId || '').trim();
   if (!id || !reviewsRegistrations()) return false;
+  if (!(await whenPanelReady())) return false;
   const key = `registration:${id}`;
   clearNotifications([key]);
   try {
@@ -266,6 +274,24 @@ export async function openRegistration(studentId) {
     restoreNotification(key);
     return false;
   }
+}
+
+function panelVisible() {
+  const shell = document.querySelector(PANEL_SHELL[viewer?.kind === 'staff' ? viewer.role : 'student'] || '');
+  return Boolean(shell && !shell.hidden);
+}
+
+/** Resolves once the signed-in panel is on screen (false if it never shows). */
+export async function whenPanelReady(timeout = PANEL_READY_TIMEOUT_MS) {
+  if (panelVisible()) return true;
+  const started = Date.now();
+  while (!panelVisible()) {
+    if (Date.now() - started > timeout) return false;
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  // Let the panel finish its own first render (same task as un-hiding).
+  await new Promise(resolve => setTimeout(resolve, 50));
+  return true;
 }
 
 /** Open the panel view a notification belongs to (bottom-bar button). */
@@ -291,7 +317,9 @@ export function openNotificationTarget(data) {
   const item = key ? rawFeed(null).find(entry => entry.key === key) : null;
   const target = data?.target || item?.target || KIND_TARGET[data?.kind] || '';
   if (key && item) clearNotifications([key]);
-  return Promise.resolve(navigateTo(target));
+  if (panelVisible()) return Promise.resolve(navigateTo(target));
+  // Tapped in the tray while the app was starting: go there once it is open.
+  return whenPanelReady().then(ready => ready && navigateTo(target));
 }
 
 async function takePendingClick() {
