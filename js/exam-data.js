@@ -258,9 +258,41 @@ export const MCQ_SAMPLE_TEMPLATES = Object.freeze([
   ['জীবনদক্ষতা', 'প্রশ্ন: পরীক্ষার প্রস্তুতিতে কোন পদ্ধতিটি বেশি সহায়ক?\nA: শেষ রাতে সব পড়া\nB: নিয়মিত পরিকল্পিত অনুশীলন\nC: পড়া বাদ দেওয়া\nD: শুধু অনুমান করা\nউত্তর: B'],
   ['পরিবেশ', 'প্রশ্ন: পরিবেশ রক্ষায় কোন কাজটি সহায়ক?\nA: বৃক্ষরোপণ\nB: প্লাস্টিক পোড়ানো\nC: নদীতে বর্জ্য ফেলা\nD: অযথা পানি অপচয়\nউত্তর: A']
 ]);
-export const examTemplate = type => type === 'mcq'
-  ? 'প্রশ্ন: বাংলাদেশের রাজধানী কোনটি?\nA: ঢাকা\nB: চট্টগ্রাম\nC: খুলনা\nD: রাজশাহী\nউত্তর: A\n---\nপ্রশ্ন: ৫ + ৩ = কত?\nA: ৬\nB: ৭\nC: ৮\nD: ৯\nউত্তর: C'
-  : 'প্রশ্ন: পরিবেশ রক্ষায় গাছের গুরুত্ব লেখো।\nনম্বর: ৫\n---\nপ্রশ্ন: পানি দূষণ রোধের তিনটি উপায় লেখো।\nনম্বর: ৩';
+/* Sample questions for the other two exam types, in the same shape the teacher
+   pastes: a question line, a marks line, and `---` between questions. */
+export const WRITTEN_SAMPLE_TEMPLATES = Object.freeze([
+  ['বাংলা — প্রবন্ধ', 'প্রশ্ন: “দেশপ্রেম” শিরোনামে একটি প্রবন্ধ লেখো।\nনম্বর: ১০\n---\nপ্রশ্ন: “সোনার তরী” কবিতার মূলভাব নিজের ভাষায় লেখো।\nনম্বর: ৫'],
+  ['English — Paragraph', 'প্রশ্ন: Write a paragraph on “Our National Flag”.\nনম্বর: ১০\n---\nপ্রশ্ন: Write a short composition on “Your Daily Routine”.\nনম্বর: ৫'],
+  ['গণিত — সমাধান', 'প্রশ্ন: সমাধান করো: ৩x + ৫ = ২০।\nনম্বর: ৫\n---\nপ্রশ্ন: একটি আয়তাকার বাগানের দৈর্ঘ্য ১২ মিটার ও প্রস্থ ৮ মিটার হলে ক্ষেত্রফল নির্ণয় করো।\nনম্বর: ১০'],
+  ['বিজ্ঞান — ব্যাখ্যা', 'প্রশ্ন: সালোকসংশ্লেষণ প্রক্রিয়া ধাপে ধাপে ব্যাখ্যা করো।\nনম্বর: ১০\n---\nপ্রশ্ন: পানির তিনটি অবস্থার পরিবর্তন উদাহরণসহ লেখো।\nনম্বর: ৫'],
+  ['বাংলাদেশ — মুক্তিযুদ্ধ', 'প্রশ্ন: মুক্তিযুদ্ধে বাংলাদেশের জনগণের ভূমিকা আলোচনা করো।\nনম্বর: ১০\n---\nপ্রশ্ন: ৭ মার্চের ভাষণের তাৎপর্য লেখো।\nনম্বর: ৫'],
+  ['ICT — ব্যবহার', 'প্রশ্ন: কম্পিউটারের প্রধান অংশগুলো চিত্রসহ বর্ণনা করো।\nনম্বর: ১০\n---\nপ্রশ্ন: ইন্টারনেট ব্যবহারে নিরাপত্তার পাঁচটি নিয়ম লেখো।\nনম্বর: ৫']
+]);
+
+export const SHORT_SAMPLE_TEMPLATES = Object.freeze([
+  ['বাংলা — সংক্ষিপ্ত', 'প্রশ্ন: “বিদ্যালয়” শব্দের সন্ধিবিচ্ছেদ কী?\nনম্বর: ১\n---\nপ্রশ্ন: এক কথায় প্রকাশ করো: যা বলা হয়নি।\nনম্বর: ২'],
+  ['English — Short answer', 'প্রশ্ন: What is the past form of “go”?\nনম্বর: ১\n---\nপ্রশ্ন: Write two uses of a dictionary.\nনম্বর: ২'],
+  ['গণিত — সংক্ষিপ্ত', 'প্রশ্ন: ২০০-এর ২৫% কত?\nনম্বর: ১\n---\nপ্রশ্ন: ৪৮ ও ৬০-এর গসাগু নির্ণয় করো।\nনম্বর: ২'],
+  ['বিজ্ঞান — সংক্ষিপ্ত', 'প্রশ্ন: বলের SI একক কী?\nনম্বর: ১\n---\nপ্রশ্ন: মরিচা পড়ার দুইটি কারণ লেখো।\nনম্বর: ২'],
+  ['বাংলাদেশ — সংক্ষিপ্ত', 'প্রশ্ন: বাংলাদেশের স্বাধীনতা দিবস কবে?\nনম্বর: ১\n---\nপ্রশ্ন: ভাষা আন্দোলনের তাৎপর্য দুই বাক্যে লেখো।\nনম্বর: ২'],
+  ['ICT — সংক্ষিপ্ত', 'প্রশ্ন: CPU-এর পূর্ণরূপ কী?\nনম্বর: ১\n---\nপ্রশ্ন: ইমেইল ব্যবহারের দুইটি সুবিধা লেখো।\nনম্বর: ২']
+]);
+
+/** The sample question sets the teacher picks from, one list per exam type. */
+export const EXAM_SAMPLE_TEMPLATES = Object.freeze({
+  mcq: MCQ_SAMPLE_TEMPLATES,
+  written: WRITTEN_SAMPLE_TEMPLATES,
+  short: SHORT_SAMPLE_TEMPLATES
+});
+
+/* One ready-made template per exam type: what the teacher copies, pastes and
+   edits. Each type keeps its own shape — MCQ has no marks line (the mark is
+   fixed at 1), the written and short-answer templates show their own marks. */
+export const examTemplate = type => ({
+  mcq: 'প্রশ্ন: বাংলাদেশের রাজধানী কোনটি?\nA: ঢাকা\nB: চট্টগ্রাম\nC: খুলনা\nD: রাজশাহী\nউত্তর: A\n---\nপ্রশ্ন: ৫ + ৩ = কত?\nA: ৬\nB: ৭\nC: ৮\nD: ৯\nউত্তর: C',
+  written: 'প্রশ্ন: “দেশপ্রেম” শিরোনামে একটি প্রবন্ধ লেখো।\nনম্বর: ১০\n---\nপ্রশ্ন: পরিবেশ রক্ষায় গাছের গুরুত্ব লেখো।\nনম্বর: ৫',
+  short: 'প্রশ্ন: ২০০-এর ২৫% কত?\nনম্বর: ১\n---\nপ্রশ্ন: বলের SI একক কী?\nনম্বর: ২'
+})[type];
 
 export function parseQuestions(text, type) {
   if (!Object.hasOwn(EXAM_TYPES, type)) fail('পরীক্ষার ধরন নির্বাচন করুন।');

@@ -58,10 +58,17 @@ test('recovery defaults to 123123, requires original number and persists only af
   await demo(page);
   await page.evaluate(key => { const a=JSON.parse(localStorage.getItem(key)); a.pin='789789'; a.additionalMobiles=['01811223344']; a.securityQuestion='তোমার শৈশবের ডাকনাম কী?'; a.securityAnswer='raisa'; localStorage.setItem(key,JSON.stringify(a)); }, KEY);
   await page.locator('.bottom-nav [data-view=profile]').click(); await logout(page); await page.locator('#forgotPinButton').click();
-  await expect(page.locator('#recoveryPin')).toHaveValue('123123');
+  // Step 1 verifies the student; the new password is only asked after that.
+  await expect(page.locator('#recoveryPasswordStep')).toBeHidden();
   await page.locator('#recoveryMobile').fill('01811223344'); await page.locator('#recoveryQuestion').selectOption({index:1}); await page.locator('#recoveryAnswer').fill('raisa');
-  await page.locator('#recoveryForm [type=submit]').click(); await expect(page.locator('.feedback-toast')).toContainText('সঠিক নয়'); expect((await saved(page)).pin).toBe('789789');
+  await page.locator('#recoveryForm [type=submit]').click(); await expect(page.locator('#recoveryVerifyError')).toContainText('সঠিক নয়');
+  await expect(page.locator('#recoveryPasswordStep')).toBeHidden(); expect((await saved(page)).pin).toBe('789789');
   await page.locator('#recoveryMobile').fill('01700000000'); await page.locator('#recoveryForm [type=submit]').click();
+  await expect(page.locator('#recoveryPasswordStep')).toBeVisible();
+  await expect(page.locator('#recoveryStudentSummary')).toContainText('Student ID');
+  const held=await saved(page); expect(held.pin).toBe('789789');
+  await page.locator('#recoveryPin').fill('123123'); await page.locator('#recoveryPinConfirm').fill('123123');
+  await page.locator('#recoveryPasswordForm [type=submit]').click();
   await expect(page.locator('#recoveryModal')).toBeHidden(); const account=await saved(page); expect(account.pin).toBe('123123'); expect(account.registrationMobile).toBe('01700000000'); expect(account.additionalMobiles).toEqual(['01811223344']);
 });
 

@@ -9,12 +9,27 @@ import { readJSON, writeJSON } from '../storage.js';
 export const CURRENT_DATA_VERSION = 2;
 export const DATA_VERSION_KEY = 'activePlus.dataVersion.v1';
 
+/* Fields the student schema guarantees. A record that already has all of them
+   is returned untouched. */
+const STUDENT_FIELDS = Object.freeze([
+  'id', 'name', 'nameEn', 'fatherName', 'className', 'group', 'mobile',
+  'guardianMobile', 'address', 'email', 'status', 'attendance', 'average',
+  'monthlyFee', 'enrolledAt', 'lastActive'
+]);
+
 /**
  * Migrate any single student record: ensure missing fields are populated safely
  * without dropping existing fields.
+ *
+ * A schema-complete record is returned as the SAME object, never a rebuilt copy.
+ * The roster is synced record-by-record: rewriting a row that needs no change
+ * (a new key order, an added empty field) would look like a fresh local edit to
+ * the cloud bridge and let a stale phone overwrite a newer decision made by the
+ * office — an approved registration, for example.
  */
 export function migrateStudentRecord(raw) {
   if (!raw || typeof raw !== 'object') return raw;
+  if (STUDENT_FIELDS.every(field => Object.hasOwn(raw, field))) return raw;
   return {
     id: raw.id || '',
     name: raw.name || raw.nameBn || '',
@@ -49,9 +64,10 @@ export function runMigrations() {
     let modified = false;
     const migrated = rawStudents.map(student => {
       const fixed = migrateStudentRecord(student);
-      if (JSON.stringify(fixed) !== JSON.stringify(student)) {
-        modified = true;
-      }
+      // Only a record that really gained a field is written back; the
+      // comparison is by identity, so an untouched collection is never
+      // rewritten (which would broadcast it to every other device).
+      if (fixed !== student) modified = true;
       return fixed;
     });
     if (modified) {

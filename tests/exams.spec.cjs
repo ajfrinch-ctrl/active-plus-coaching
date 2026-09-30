@@ -17,7 +17,7 @@ async function manager(context) {
   });
   await page.locator('#managerUsername').fill('manager.apc'); await page.locator('#managerPassword').fill('Apc-Test-2026'); await page.locator('#managerLoginForm [type=submit]').click();
   await page.locator('.manager-bottom [data-manager-view=more]').click();
-  await page.locator('#managerMoreDrawer [data-manager-view=exams]').click(); return page;
+  await page.locator('#managerMoreMenu [data-manager-view=exams]').click(); return page;
 }
 async function student(context) {
   const page = await context.newPage(); await page.clock.setFixedTime(start); await page.goto('/index.html'); if (await page.locator('#authScreen').isVisible()) await page.locator('#demoLoginButton').click(); await page.locator('#homeView [data-view=exams]').click(); return page;
@@ -39,7 +39,7 @@ async function publishUI(page) {
 async function releaseResults(office, pupil) {
   await office.clock.setFixedTime(new Date(end.getTime() + 60_000));
   await office.locator('.manager-bottom [data-manager-view=more]').click();
-  await office.locator('#managerMoreDrawer [data-manager-view=results]').click();
+  await office.locator('#managerMoreMenu [data-manager-view=results]').click();
   await office.locator('[data-manager-action=publish-results]').click();
   await expect(office.locator('#managerResultList')).toContainText('ফলাফল প্রকাশিত');
   await pupil.clock.setFixedTime(new Date(end.getTime() + 60_000));
@@ -141,7 +141,7 @@ for (const width of [320,390,844,1280]) {
 }
 
 test('copyable templates and long Bengali exam PDFs paginate without print dialogs', async ({ page, context }) => {
-  await context.grantPermissions(['clipboard-read','clipboard-write']); await teacher(page); const root=page.locator('#teacherExamWorkspace'); await root.locator('[data-exam-action=new-mcq]').click(); await root.locator('summary').click(); await root.locator('[data-exam-action=copy-template]').click(); expect(await page.evaluate(()=>navigator.clipboard.readText())).toContain('উত্তর: A');
+  await context.grantPermissions(['clipboard-read','clipboard-write']); await teacher(page); const root=page.locator('#teacherExamWorkspace'); await root.locator('[data-exam-action=new-mcq]').click(); await root.locator('[data-exam-action=copy-template]').click(); expect(await page.evaluate(()=>navigator.clipboard.readText())).toContain('উত্তর: A');
   await root.locator('[data-exam-action=list]').click();
   const longTemplate=Array.from({length:14},(_,i)=>template.split('\n---\n')[0].replace('বাংলাদেশের রাজধানী কোনটি?',`প্রশ্ন ${i+1}: বাংলাদেশের রাজধানী ও প্রশাসনিক বিভাগ সম্পর্কে তোমার জানা তথ্য অনুযায়ী সঠিক উত্তরটি নির্বাচন করো।`)).join('\n---\n');
   await seed(page,{template:longTemplate}); await root.locator('[data-exam-action=detail]').click();

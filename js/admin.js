@@ -28,6 +28,7 @@ import { initFixedShell } from './fixed-shell.js';
 import { escapeHtml } from './sanitize.js';
 import { matchesStudentQuery } from './student-search.js';
 import { createAccess, CAPABILITIES, routeFromHash } from './admin-permissions.js';
+import { rememberRoute, onRouteChange } from './panel-route.js';
 import { openRegistrationReview, DECIDED_EVENT } from './registration-review.js';
 import { initAdminPanelShell } from './admin-panel-ui.js';
 import { paintIcon } from './icons.js';
@@ -183,6 +184,9 @@ function setView(view) {
     else item.removeAttribute('aria-current');
   });
   $('#adminMain').scrollTo({ top: 0, behavior: 'instant' });
+  // The open page is remembered in the URL: a refresh reopens it, not the
+  // first permitted tab.
+  rememberRoute(target);
   return true;
 }
 
@@ -246,6 +250,7 @@ function renderDashboard() {
 
 /* System-level finance overview: aggregate records only, no daily cash workflow. */
 function renderFinanceSummary() {
+  if (!$('#dashMonthAmount') && !$('#dashTotalAmount')) return;
   const money = value => '৳' + bn(Math.round(value).toLocaleString('en-US'));
   const month = monthLabel();
   const finalized = state.transactions.filter(isFinalizedTransaction);
@@ -332,8 +337,9 @@ function renderStudents() {
   $('#studentList').innerHTML = list.length
     ? list.map(student => {
         const status = statusMeta[student.status] || statusMeta.pending;
-        const mobile = student.mobile ? bn(student.mobile) : 'মোবাইল নেই';
-        const group = student.group ? ` • ${escapeHtml(student.group)}` : '';
+        // The row stays deliberately bare: name, Student ID and status. Class,
+        // guardian, address and phone numbers are personal data and appear only
+        // after "তথ্য দেখুন" — never in the open list.
         return `
           <article class="student-row student-row-redesigned">
             <div class="student-row-main">
@@ -345,9 +351,7 @@ function renderStudents() {
                 </div>
                 <div class="student-meta-line">
                   <span class="audit-id-badge">ID: ${escapeHtml(student.id)}</span>
-                  <span>${escapeHtml(student.className || 'শ্রেণি নেই')}${group}</span>
                 </div>
-                <small>${iconMarkup("phone")}${escapeHtml(mobile)}</small>
               </div>
             </div>
             <div class="student-actions">
@@ -362,7 +366,7 @@ function renderStudents() {
       }).join('')
     : state.query.trim()
       ? `<div class="admin-empty-search"><p>🔍 "${escapeHtml(state.query.trim())}" দিয়ে কোনো শিক্ষার্থী পাওয়া যায়নি</p><small>Student ID, নাম, পিতার নাম, শ্রেণি বা মোবাইল নম্বর দিয়ে খুঁজে দেখুন।</small></div>`
-      : '<p class="admin-empty">কোনো শিক্ষার্থী পাওয়া যায়নি।</p>';
+      : '<p class="admin-empty">এই ফিল্টারে কোনো শিক্ষার্থী নেই। সার্চ বা ফিল্টার বদলে দেখুন।</p>';
 }
 function findStudent(id) {
   return state.students.find(student => student.id === id);
@@ -578,6 +582,7 @@ function toggleClass(event) {
 
 function setFinanceTab(tab) {
   state.activeFinanceTab = tab;
+  if (!$('#financeSubNav')) return; // Tabs left with the finance block.
   $$('#financeSubNav .chip').forEach(btn =>
     btn.classList.toggle('active', btn.dataset.financeTab === tab)
   );
@@ -590,20 +595,24 @@ async function loadFinanceTransactions() {
   try {
     state.transactions = await financeRepository.listTransactions();
     state.financeReady = true;
-    $('#financeLoadError').hidden = true;
+    if ($('#financeLoadError')) $('#financeLoadError').hidden = true;
     populateFinanceMonths();
     renderFinance();
     renderDashboard();
   } catch {
     state.financeReady = false;
-    $('#financeLoadError').textContent = 'লেনদেনের ডেটা পড়া যায়নি। ব্রাউজারের স্টোরেজ চালু করে পেজ রিফ্রেশ করুন। ডেটা নিরাপদ রাখতে পেমেন্ট বন্ধ আছে।';
-    $('#financeLoadError').hidden = false;
+    if ($('#financeLoadError')) {
+      $('#financeLoadError').textContent = 'লেনদেনের ডেটা পড়া যায়নি। ব্রাউজারের স্টোরেজ চালু করে পেজ রিফ্রেশ করুন। ডেটা নিরাপদ রাখতে পেমেন্ট বন্ধ আছে।';
+      $('#financeLoadError').hidden = false;
+    }
     renderFeeProfile();
   }
 }
 
 function populateFinanceMonths() {
-  const selectedMonth = $('#feeMonth').value;
+  const monthNode = $('#feeMonth');
+  if (!monthNode) return; // No month picker without the collection form.
+  const selectedMonth = monthNode.value;
   const now = new Date();
   const months = new Set();
   for (let offset = 1; offset >= -12; offset--) {
@@ -611,11 +620,12 @@ function populateFinanceMonths() {
   }
   state.transactions.forEach(tx => months.add(tx.month));
   const options = [...months].map(month => `<option value="${escapeHtml(month)}">${escapeHtml(month)}</option>`).join('');
-  $('#feeMonth').innerHTML = options;
-  $('#feeMonth').value = months.has(selectedMonth) ? selectedMonth : monthLabel();
+  monthNode.innerHTML = options;
+  monthNode.value = months.has(selectedMonth) ? selectedMonth : monthLabel();
 }
 
 function renderFinanceStats() {
+  if (!$('#financeTotalCollected')) return; // Finance Summary is gone from Reports.
   const finalized = state.transactions.filter(isFinalizedTransaction);
   const totalCollected = finalized.reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
   const monthCollected = finalized.filter(tx => tx.month === monthLabel())
@@ -632,7 +642,7 @@ function renderFinanceStats() {
 
 function renderFeeSearch() {
   const searchInput = $('#feeStudentSearch');
-  if (!searchInput) return; // Finance collection UI is removed for read-only roles.
+  if (!searchInput) return; // Collection search is not part of this page.
   const query = searchInput.value.trim();
   const matches = searchStudents(state.students, query);
   $('#feeSearchStatus').textContent = !query ? '' : matches.length ? `${bn(matches.length)} জন শিক্ষার্থী পাওয়া গেছে` : 'কোনো শিক্ষার্থী পাওয়া যায়নি';
@@ -644,6 +654,7 @@ function renderFeeSearch() {
 }
 
 function selectFeeStudent(id) {
+  if (!$('#feeQuickProfile')) return; // No collection UI on this page.
   if (!access.has(CAPABILITIES.FINANCE_COLLECT) || state.savingFee || !$('#feeCollectionForm')) return;
   state.feeStudentId = id;
   $('#feeCollectionForm').reset();
@@ -703,6 +714,7 @@ function beginFeePayment() {
 }
 
 function renderRecentTransactions() {
+  if (!$('#recentTrxList')) return; // Recent Payments block was removed.
   const listEl = $('#recentTrxList');
   if (!listEl) return;
 
@@ -730,6 +742,7 @@ function renderRecentTransactions() {
 }
 
 function renderStudentLedger() {
+  if (!$('#studentLedgerList')) return; // Ledger sub-panel was removed.
   const listEl = $('#studentLedgerList');
   if (!listEl) return;
 
@@ -1403,12 +1416,15 @@ $$('[data-admin-view]').forEach(button => {
   button.addEventListener('click', () => navigate(button.dataset.adminView, button));
 });
 
-// Deep links: admin.html#finance opens Finance, an unauthorised or unknown
-// #route is refused and the panel stays on the first permitted tab.
-window.addEventListener('hashchange', () => {
-  if ($('#adminShell')?.hidden !== false) return; // panel closed → nothing to open
-  const route = routeFromHash(window.location.hash);
-  if (!route) return;
+/* Deep links: admin.html#finance opens Finance, an unauthorised or unknown
+   #route is refused and the panel stays on the first permitted tab. An entry
+   that arrived after the panel was already open — a shared link typed into the
+   address bar, or the browser's Back into a page of this panel — still moves
+   the panel (js/panel-route.js listens for that one event). */
+onRouteChange(name => {
+  if ($('#adminShell')?.hidden !== false) return;
+  const route = routeFromHash('#' + name);
+  if (!route || route === state.activeView) return;
   navigate(route, null);
 });
 
@@ -1428,6 +1444,28 @@ $('#studentSearchClear')?.addEventListener('click', () => {
     input.focus();
   }
 });
+
+/* The optional filters stay folded away until they are asked for. */
+(function initStudentFilterPanel() {
+  const toggle = $('#studentFilterToggle');
+  const panel = $('#studentFilterPanel');
+  if (!toggle || !panel) return;
+  const setOpen = open => {
+    panel.hidden = !open;
+    toggle.classList.toggle('active', open);
+    toggle.setAttribute('aria-expanded', String(open));
+  };
+  toggle.addEventListener('click', () => setOpen(panel.hidden));
+  $('#studentFilterReset')?.addEventListener('click', () => {
+    state.filter = 'all';
+    state.classFilter = 'all';
+    state.query = '';
+    if ($('#studentSearch')) $('#studentSearch').value = '';
+    if ($('#studentClassFilter')) $('#studentClassFilter').value = 'all';
+    $$('#studentFilterChips .chip').forEach(chip => chip.classList.toggle('active', chip.dataset.studentFilter === 'all'));
+    renderStudents();
+  });
+})();
 
 $('#studentFilterChips').addEventListener('click', event => {
   const chip = event.target.closest('[data-student-filter]');
@@ -1574,18 +1612,18 @@ $('#feeCollectionForm')?.addEventListener('click', event => {
   else if (chip.dataset.feeQuick === 'monthly') $('#feeAmount').value = summary.monthlyFee || '';
   else if (chip.dataset.feeQuick === 'half') $('#feeAmount').value = base ? Math.max(1, Math.round(base / 2)) : '';
 });
-$('#feeStudentSearch').addEventListener('input', () => {
+$('#feeStudentSearch')?.addEventListener('input', () => {
   state.feeStudentId = null;
   $('#feeCollectionForm').hidden = true;
   $('#feeStudent').value = '';
   renderFeeSearch();
   renderFeeProfile();
 });
-$('#feeSearchResults').addEventListener('click', event => {
+$('#feeSearchResults')?.addEventListener('click', event => {
   const button = event.target.closest('[data-fee-student]');
   if (button) selectFeeStudent(button.dataset.feeStudent);
 });
-$('#feeQuickProfile').addEventListener('click', event => {
+$('#feeQuickProfile')?.addEventListener('click', event => {
   if (event.target.closest('#feeProfileCollect')) beginFeePayment();
 });
 
@@ -1646,7 +1684,7 @@ document.addEventListener('keydown', event => {
   if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
   if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
 });
-$('#feeMonth').innerHTML = '';
+if ($('#feeMonth')) $('#feeMonth').innerHTML = '';
 populateFinanceMonths();
 loadFinanceTransactions();
 let cloudRefreshTimer;

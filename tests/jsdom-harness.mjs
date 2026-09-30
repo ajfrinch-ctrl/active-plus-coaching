@@ -17,12 +17,14 @@ const GLOBAL_KEYS = [
   'Option', 'Text', 'Comment', 'DocumentFragment'
 ];
 
-export async function loadPage(file, { seed = {} } = {}) {
+export async function loadPage(file, { seed = {}, hash = '' } = {}) {
   const html = readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
   const virtualConsole = new VirtualConsole();
   const jsdomErrors = [];
   virtualConsole.on('jsdomError', error => jsdomErrors.push(String(error.message)));
-  const dom = new JSDOM(html, { url: 'http://localhost/', pretendToBeVisual: true, virtualConsole });
+  // `hash` lets a test open a deep link (admin.html#students) exactly like a
+  // refresh of that page does.
+  const dom = new JSDOM(html, { url: `http://localhost/${hash || ''}`, pretendToBeVisual: true, virtualConsole });
   const { window } = dom;
 
   Object.entries(seed).forEach(([key, value]) => window.localStorage.setItem(key, value));

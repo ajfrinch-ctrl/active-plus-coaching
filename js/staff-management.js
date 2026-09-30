@@ -242,8 +242,12 @@ function filteredStaff() {
     if (state.role !== 'all' && record.role !== state.role) return false;
     if (state.status !== 'all' && record.status !== state.status) return false;
     if (!text) return true;
-    const haystack = [record.staffId, record.fullName, record.username, record.mobile]
-      .map(value => String(value ?? '').toLocaleLowerCase());
+    const meta = STAFF_ROLE_META[record.role] || {};
+    const haystack = [
+      record.staffId, record.fullName, record.username, record.mobile,
+      meta.labelBn, meta.label, record.assignment?.designation,
+      ...(record.assignment?.classes || []), ...(record.assignment?.subjects || [])
+    ].map(value => String(value ?? '').toLocaleLowerCase());
     return haystack.some(value => value.includes(text))
       || (compact ? haystack.some(value => value.replace(/[\s-]/g, '').includes(compact)) : false);
   });
@@ -308,7 +312,7 @@ function renderList() {
       : 'কোনো স্টাফ পাওয়া যায়নি';
   }
   if (!state.staff.length) {
-    host.innerHTML = '<p class="admin-empty">এখনো কোনো স্টাফ অ্যাকাউন্ট নেই। “নতুন স্টাফ” চেপে প্রথম স্টাফ যোগ করুন।</p>';
+    host.innerHTML = '<p class="admin-empty">এখনো কোনো স্টাফ অ্যাকাউন্ট নেই। নিচের “স্টাফ ক্রিয়েট” বাটনে চেপে প্রথম স্টাফ যোগ করুন।</p>';
     return;
   }
   host.innerHTML = rows.length

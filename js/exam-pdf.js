@@ -1,8 +1,9 @@
 /* Offline, directly downloaded, paginated PDFs. Canvas shapes Bengali text using
    the bundled font. No print dialog or external PDF service.
-   MCQ papers look like a real exam paper: a compact OMR-style option grid
-   (two columns: A B / C D), page numbers in the footer, and the answer key on
-   separate pages after the question pages. */
+   An MCQ question paper looks like a real exam paper: the questions run down the
+   left column and then the right one, each with its own A/B/C/D options (the same
+   letters the student sees in the app), and the footer carries the page number.
+   The answer key keeps its own pages after the question pages. */
 import { toBanglaNumber as bn } from './ui.js';
 import { EXAM_TYPES, totalMarks, classExamDate } from './exam-data.js';
 let assets;
@@ -53,6 +54,23 @@ export function wrapText(ctx, text, width) {
   return lines;
 }
 
+/* The MCQ option letters, exactly as the student sees them in the app
+   ('ABCD'[index] in js/student-exams.js): A, B, C, D … so the printed paper and
+   the on-screen exam never disagree about an option. */
+export function optionLetter(index) {
+  return 'ABCDEFGH'[index] || String(index + 1);
+}
+
+/* Where the next question goes in a two-column paper. `top`/`bottom` are the
+   column bounds, `y` the current cursor and `blockHeight` the question plus its
+   options. A block that fits in a column but not in what is left of this one
+   moves to the next column, so options are never split from their question; a
+   block taller than a whole column has nowhere better to go and continues. */
+export function columnAdvance({ y, top, bottom, blockHeight }) {
+  if (blockHeight > bottom - top) return 'stay';
+  return y + blockHeight > bottom ? 'next-column' : 'stay';
+}
+
 /* Shared A4 canvas renderer. Each page: branded header (no page number — it
    lives in the footer), content area, footer with paper label and page number. */
 export async function downloadExamPDF(exam, { solutions = false, attempt = null, authorPreview = false } = {}) {
@@ -62,6 +80,11 @@ export async function downloadExamPDF(exam, { solutions = false, attempt = null,
   const ctx = canvas.getContext('2d'), pages = [];
   const W = canvas.width, LEFT = 62, RIGHT = W - 62, CONTENT_W = RIGHT - LEFT;
   const FOOT_Y = 1690, BOTTOM = 1652;
+  /* Two-column flow for MCQ question papers: the left column fills first, then
+     the right one on the same page, then the next page starts a new left column. */
+  const GUTTER = 46, COL_W = (CONTENT_W - GUTTER) / 2;
+  let colIndex = 0, colTop = 190, columnMode = false;
+  const columnX = () => LEFT + colIndex * (COL_W + GUTTER);
 
   const beginPage = ({ part = null } = {}) => {
     pageNo++;
@@ -112,6 +135,63 @@ export async function downloadExamPDF(exam, { solutions = false, attempt = null,
     y += 10;
   };
 
+  /* Move on in a two-column part: left → right on the same page, right → a new
+     page. The vertical cursor returns to the top of the target column. */
+  const nextColumn = async () => {
+    if (columnMode && colIndex === 0) { colIndex = 1; y = colTop; return; }
+    await finishPage();
+    y = beginPage({ part: partSolutions ? 'উত্তরপত্র' : 'প্রশ্নপত্র' });
+    colTop = y; colIndex = 0;
+  };
+  const ensureRoom = async height => { if (y + height > BOTTOM) await nextColumn(); };
+
+  /* One MCQ in a column: the question and its own options, kept together with at
+     least the first option row. Short options share a line in pairs, like a
+     printed paper; long ones take a full line instead of being cut off. */
+  const drawColumnQuestion = async (number, question, options) => {
+    const letterGap = 32;
+    ctx.font = '700 24px ExamBangla';
+    const headLines = wrapText(ctx, `${bn(number)}. ${question.text} [${bn(question.marks)}]`, COL_W);
+    ctx.font = '24px ExamBangla';
+    const pairsFit = options.length > 1
+      && options.every(option => ctx.measureText(option.text).width <= (COL_W - 20) / 2 - letterGap);
+    const perRow = pairsFit ? 2 : 1;
+    const cellW = (COL_W - (perRow === 2 ? 20 : 0)) / perRow;
+    const rows = [];
+    for (let index = 0; index < options.length; index += perRow) {
+      const cells = options.slice(index, index + perRow).map((option, offset) => ({
+        letter: optionLetter(index + offset),
+        lines: wrapText(ctx, option.text, cellW - letterGap)
+      }));
+      rows.push({ cells, height: Math.max(32, ...cells.map(cell => cell.lines.length * 31)) });
+    }
+    const headHeight = headLines.length * 32;
+    const blockHeight = headHeight + rows.reduce((sum, row) => sum + row.height + 6, 0) + 14;
+    /* A question and its options move together: a printed paper never leaves half
+       an answer set at the foot of one column. Only a block taller than a whole
+       column (a very long question) is allowed to continue over. */
+    if (columnAdvance({ y, top: colTop, bottom: BOTTOM, blockHeight }) === 'next-column') await nextColumn();
+    for (const line of headLines) {
+      await ensureRoom(32);
+      ctx.fillStyle = '#143b30'; ctx.font = '700 24px ExamBangla';
+      ctx.fillText(line, columnX(), y); y += 32;
+    }
+    for (const row of rows) {
+      await ensureRoom(row.height + 6);
+      row.cells.forEach((cell, index) => {
+        const x = columnX() + index * cellW;
+        ctx.fillStyle = '#04795a'; ctx.beginPath();
+        ctx.arc(x + 11.5, y - 8, 11.5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.font = '700 14px ExamBangla'; ctx.textAlign = 'center';
+        ctx.fillText(cell.letter, x + 11.5, y - 3); ctx.textAlign = 'left';
+        ctx.fillStyle = '#1e2f28'; ctx.font = '24px ExamBangla';
+        cell.lines.forEach((line, lineIndex) => ctx.fillText(line, x + letterGap, y + lineIndex * 31));
+      });
+      y += row.height + 6;
+    }
+    y += 14;
+  };
+
   const drawOptionGrid = async (question, options) => {
     const qid = question.id;
     const columnWidth = (CONTENT_W - 34) / 2;
@@ -150,7 +230,7 @@ export async function downloadExamPDF(exam, { solutions = false, attempt = null,
   };
 
   const drawHead = async () => {
-    await drawParagraph(exam.title, { bold: true, color: '#143b30' });
+    await drawParagraph(`পরীক্ষার নাম: ${exam.title}`, { bold: true, color: '#143b30' });
     await drawParagraph(`${EXAM_TYPES[exam.type]} • বিষয়: ${exam.subject} • সব শ্রেণি • পূর্ণমান: ${bn(totalMarks(exam))}`);
     await drawParagraph(`শুরু: ${new Date(exam.startAt).toLocaleString('bn-BD')} • শেষ: ${new Date(exam.endAt).toLocaleString('bn-BD')}`);
     await drawParagraph(exam.type !== 'mcq'
@@ -169,20 +249,31 @@ export async function downloadExamPDF(exam, { solutions = false, attempt = null,
   /* ---------- Page bodies (rendered twice: dry pass counts, real pass draws) ---------- */
   const renderQuestionPart = async () => {
     partSolutions = false;
+    // A real exam paper runs an MCQ paper in two columns; written answers need
+    // the full width, so they keep the single-column flow.
+    columnMode = exam.type === 'mcq';
+    colIndex = 0;
     y = beginPage({ part: 'প্রশ্নপত্র' });
     await drawHead();
+    colTop = y;   // the columns start under the heading block
     for (const [i, q] of questions.entries()) {
+      if (q.options) { await drawColumnQuestion(i + 1, q, optionsFor(q)); continue; }
+      // Written questions need the full width; an option-less question inside a
+      // two-column paper (an older record) still stays inside its column.
       if (y + 120 > BOTTOM) { await finishPage(); y = beginPage({ part: 'প্রশ্নপত্র' }); }
-      await drawParagraph(`${bn(i + 1)}. ${q.text} [${bn(q.marks)} নম্বর]`, { bold: true, color: '#143b30' });
-      if (q.options) await drawOptionGrid(q, optionsFor(q));
-      else y += 4;
+      await drawParagraph(`${bn(i + 1)}. ${q.text} [${bn(q.marks)} নম্বর]`, columnMode
+        ? { bold: true, color: '#143b30', width: COL_W, x: columnX() }
+        : { bold: true, color: '#143b30' });
+      y += 4;
     }
     await finishPage();
   };
 
   const renderAnswerPart = async () => {
-    // উত্তরপত্র: a compact answer-key grid first, then per-question details.
+    // উত্তরপত্র: a compact answer-key grid first, then per-question details,
+    // all single-column so the chosen/right option highlighting stays readable.
     partSolutions = true;
+    columnMode = false;
     y = beginPage({ part: 'উত্তরপত্র' });
     ctx.font = '700 28px ExamBangla'; ctx.fillStyle = '#143b30';
     ctx.fillText(exam.title, LEFT, y); y += 32;

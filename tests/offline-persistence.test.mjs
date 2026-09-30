@@ -100,3 +100,34 @@ test('RULE 9: Logout clears session only; user accounts and data are never delet
   assert.equal(preserved.username, 'test.student');
 });
 
+
+test('a schema-complete student row is left untouched by the boot migration', () => {
+  /* The roster syncs record-by-record. Rewriting a row that needs no change
+     looks like a fresh local edit to the cloud bridge, and a phone that was
+     closed while the office approved a registration would then push its stale
+     "pending" copy back over the approval. */
+  const row = {
+    id: 's260930001-abcd', name: 'রহিম', nameEn: 'Rahim', fatherName: 'পিতা',
+    className: 'নবম শ্রেণি', group: 'বিজ্ঞান', mobile: '01711223344',
+    guardianMobile: '01811223344', address: 'ঢাকা', email: '', status: 'approved',
+    attendance: 0, average: 0, monthlyFee: null, enrolledAt: '৩০/৯/২০২৬',
+    lastActive: 'এই ডিভাইস', registeredAt: '2026-09-30T04:00:00.000Z',
+    reviewedAt: '2026-09-30T05:00:00.000Z'
+  };
+  const same = migrateStudentRecord(row);
+  assert.equal(same, row, 'the very same object comes back');
+  assert.equal(same.status, 'approved');
+
+  const store = setupStorage({ [KEYS.students]: JSON.stringify([row]) });
+  runMigrations();
+  assert.deepEqual(JSON.parse(store.get(KEYS.students)), [row], 'nothing was rewritten');
+});
+
+test('a legacy student row is still filled in, keeping the real status', () => {
+  const legacy = { id: 'STD-9', name: 'পুরাতন', mobile: '01711223344', status: 'approved' };
+  const migrated = migrateStudentRecord(legacy);
+  assert.notEqual(migrated, legacy, 'a record that gained fields is rebuilt');
+  assert.equal(migrated.status, 'approved', 'the office decision is preserved');
+  assert.equal(migrated.email, '');
+  assert.equal(migrated.guardianMobile, '');
+});

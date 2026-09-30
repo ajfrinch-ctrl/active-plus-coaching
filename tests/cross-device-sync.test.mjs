@@ -511,6 +511,42 @@ test('a change reaches the other device quickly, and the time is measured', asyn
   console.log(`# [latency] device B write → device A visible: ${elapsedBack}ms`);
 });
 
+test('a phone that was closed during the approval cannot undo the decision', async () => {
+  /* Reported defect (2026-09-30): the Admin approves a registration, but the
+     student's phone still holds the old pending row (it was closed while the
+     decision was made, and its next boot rewrites that row through the schema
+     migration). Coming back online, the phone pushed the stale row over the
+     approval — the student stayed locked out forever. */
+  const { KEYS } = await import('../js/database.js');
+  const id = 's260930099-stale';
+  const stored = extra => ({
+    id, name: 'স্থবির শিক্ষার্থী', className: 'নবম শ্রেণি', status: 'pending',
+    registeredAt: '2026-09-30T04:00:00.000Z', ...extra
+  });
+  const approved = stored({ status: 'approved', reviewedAt: '2026-09-30T05:00:00.000Z', updatedAt: '2026-09-30T05:00:00.000Z' });
+
+  // Device B knows the pending row (it pushed it earlier), then goes offline.
+  await deviceB.run('boot');
+  await deviceB.run('write-students', { students: [stored()] });
+  await waitForCloud(() => SYNC_ROOT(cloud).students?.[id]?.status === 'pending', 'pending row uploaded');
+  await deviceB.run('network', { online: false });
+
+  // The office decides on device A while B is offline.
+  await deviceA.run('boot');
+  await deviceA.run('write-students', { students: [approved] });
+  await waitForCloud(() => SYNC_ROOT(cloud).students?.[id]?.status === 'approved', 'approval written');
+
+  // B boots again: the schema migration rewrites its stored row (a field is
+  // added) while the status is still the stale "pending" one.
+  await deviceB.run('write-students', { students: [stored({ email: '' })] });
+  await deviceB.run('network', { online: true });
+
+  // The phone must adopt the newer decision instead of broadcasting its stale copy.
+  await deviceB.run('wait-record-status', { key: KEYS.students, id, status: 'approved' });
+  await waitForCloud(() => SYNC_ROOT(cloud).students?.[id]?.status === 'approved', 'the decision was not reverted');
+  await deviceA.run('wait-record-status', { key: KEYS.students, id, status: 'approved' });
+});
+
 test('package still declares the realtime bridge', async () => {
   const loginSource = readFileSync(new URL('../js/login.js', import.meta.url), 'utf8');
   assert.match(loginSource, /hydrateUserIdentifiers/, 'login.js hydrates synced user IDs');

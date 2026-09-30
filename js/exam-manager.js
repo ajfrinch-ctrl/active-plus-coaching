@@ -1,4 +1,4 @@
-import { examRepository as repo, EXAM_TYPES, TEACHER_ACTOR, ADMIN_ACTOR, MANAGER_ACTOR, examTemplate, MCQ_SAMPLE_TEMPLATES, MCQ_30_SAMPLE, parseQuestions, totalMarks, watchExams } from './exam-data.js';
+import { examRepository as repo, EXAM_TYPES, TEACHER_ACTOR, ADMIN_ACTOR, MANAGER_ACTOR, examTemplate, EXAM_SAMPLE_TEMPLATES, MCQ_30_SAMPLE, parseQuestions, totalMarks, watchExams } from './exam-data.js';
 import { examMeta, questionPreview, resultMarkup, downloadResults, esc, num } from './exam-ui.js';
 import { downloadExamPDF } from './exam-pdf.js';
 import { enabledClasses } from './config.js';
@@ -37,6 +37,24 @@ export function initExamManager(container, role) {
     catch (e) { error(e instanceof DOMException ? 'সংরক্ষণ/ডাউনলোড হয়নি। ব্রাউজারের স্টোরেজ পরীক্ষা করে আবার চেষ্টা করুন।' : e.message || 'সংরক্ষণ হয়নি। আবার চেষ্টা করুন।'); }
     finally { busy = false; root.removeAttribute('aria-busy'); controls.forEach(el => { el.disabled = false; }); }
   }
+  /* What the teacher sees after asking to copy or to insert a template. */
+  const COPY_DONE = 'টেমপ্লেট কপি হয়েছে। এখন নিচের ঘরে পেস্ট করে নিজের প্রশ্ন লিখুন।';
+  const COPY_MANUAL = 'টেমপ্লেট নির্বাচন করা হয়েছে। মোবাইলের কপি অপশন চাপুন।';
+  const COPY_DONE_INSERT = 'নির্বাচিত টেমপ্লেট বসানো হয়েছে। নিচে নিজের প্রশ্ন লিখুন।';
+
+  /* The teacher copies the sample that is on screen; the picker chooses it.
+     The open editor names its own type on the panel, which is what the click
+     handler reads — it does not know which editor is open. */
+  function currentExamType() {
+    return $('.exam-template-panel')?.dataset.examType || '';
+  }
+  function selectedTemplate() {
+    const type = currentExamType();
+    const list = EXAM_SAMPLE_TEMPLATES[type] || [];
+    const index = Number($('[data-template-index]')?.value || 0);
+    return (list[index] || list[0] || [null, examTemplate(type)])[1];
+  }
+
   function editor(type, e = null) {
     view = 'edit'; selected = e?.id;
     const nextDay = new Date(Date.now() + 86400000); nextDay.setHours(18, 0, 0, 0);
@@ -55,7 +73,13 @@ export function initExamManager(container, role) {
       ${field('passPercent', 'পাস নম্বরের হার (%)', 'number', 'min="1" max="100" required')}
       <label>নির্দেশনা<textarea name="instructions" maxlength="2000">${esc(data.instructions)}</textarea></label>
 
-      <details><summary>প্রশ্নের টেমপ্লেট ও ৩০টি নমুনা দেখুন</summary>${type === 'mcq' ? `<label class="mcq-template-picker">নমুনা টেমপ্লেট নির্বাচন করুন<select data-mcq-template-index>${MCQ_SAMPLE_TEMPLATES.map(([name], index) => `<option value="${index}">${index + 1}. ${esc(name)}</option>`).join('')}</select></label><div class="exam-actions">${button('use-mcq-template', 'নির্বাচিত টেমপ্লেট বসান')}${button('copy-template', 'টেমপ্লেট কপি করুন')}${button('sample-30', '৩০টি নমুনা বসান')}${button('copy-sample-30', '৩০টি নমুনা কপি করুন')}</div>` : `<div class="exam-actions">${button('copy-template', 'টেমপ্লেট কপি করুন')}${button('sample', 'উদাহরণ বসান')}</div>`}<textarea data-copy-template readonly aria-label="কপি করার টেমপ্লেট">${esc(examTemplate(type))}</textarea><p class="exam-note">MCQ-তে ৩০টি নমুনা টেমপ্লেট থেকে একটি বেছে নিয়ে কপি/বসাতে পারবেন। প্রশ্ন আলাদা করতে --- দিন। সর্বোচ্চ ১০০ প্রশ্ন।</p></details>
+      <section class="exam-template-panel" data-exam-type="${type}" aria-labelledby="examTemplateTitle">
+        <h3 id="examTemplateTitle">${EXAM_TYPES[type]} প্রশ্নের টেমপ্লেট — কপি করে পেস্ট করুন</h3>
+        <p class="exam-note">নমুনা বেছে নিন, <strong>টেমপ্লেট কপি করুন</strong>, তারপর নিচের ঘরে পেস্ট করে বিষয় অনুযায়ী প্রশ্ন লিখুন। প্রশ্ন আলাদা করতে <strong>---</strong> দিন।${type === 'mcq' ? '' : ' প্রতি প্রশ্নের নম্বর আলাদা লাইনে লিখুন।'}</p>
+        <label class="exam-template-picker">নমুনা টেমপ্লেট নির্বাচন করুন<select data-template-index>${EXAM_SAMPLE_TEMPLATES[type].map(([name], index) => `<option value="${index}">${index + 1}. ${esc(name)}</option>`).join('')}</select></label>
+        <div class="exam-actions">${button('copy-template', 'টেমপ্লেট কপি করুন', '', 'primary')}${button('use-template', 'টেমপ্লেট বসান')}${type === 'mcq' ? button('sample-30', '৩০টি নমুনা বসান') + button('copy-sample-30', '৩০টি নমুনা কপি করুন') : ''}</div>
+        <textarea data-copy-template readonly aria-label="কপি করার টেমপ্লেট">${esc(EXAM_SAMPLE_TEMPLATES[type][0][1])}</textarea>
+      </section>
 
       <label>টেমপ্লেট অনুযায়ী প্রশ্ন পেস্ট করুন *<textarea name="template" data-question-source rows="12" required maxlength="150000" placeholder="${type === 'mcq' ? 'প্রশ্ন: …\nA: …\nB: …\nC: …\nD: …\nউত্তর: A' : 'প্রশ্ন: …\nনম্বর: …'}">${esc(data.template)}</textarea><small class="exam-note">${type === 'mcq' ? 'MCQ-তে প্রতি প্রশ্নের নম্বর ১ নির্ধারিত — “নম্বর:” লাইন লিখতে হবে না। মোট নম্বর = প্রশ্ন সংখ্যা।' : 'প্রতি প্রশ্নের নম্বর আলাদা করে লিখুন।'}</small></label>
       <div class="exam-preview" data-parsed-preview aria-live="polite"></div>
@@ -70,6 +94,10 @@ export function initExamManager(container, role) {
         $('[data-parsed-preview]').textContent = e.message;
       }
     }
+    $('[data-template-index]')?.addEventListener('change', () => {
+      const sample = selectedTemplate();
+      if (sample) $('[data-copy-template]').value = sample;
+    });
     $('[name=template]').addEventListener('input', preview); preview();
     $('[data-exam-form]').addEventListener('submit', event => {
       event.preventDefault(); const values = Object.fromEntries(new FormData(event.currentTarget));
@@ -106,9 +134,8 @@ export function initExamManager(container, role) {
     else if (action === 'grade') { try { await grade(e); } catch (e) { error(e.message); } }
     else if (action === 'csv') downloadResults(db, e);
     else if (action === 'paper' || action === 'solutions') run(() => downloadExamPDF(e, { authorPreview: true, solutions: action === 'solutions' }), 'PDF ডাউনলোড শুরু হয়েছে।', () => {});
-    else if (action === 'use-mcq-template') { const index = Number($('[data-mcq-template-index]')?.value || 0); const sample = MCQ_SAMPLE_TEMPLATES[index]?.[1]; if (sample) { $('[name=template]').value = sample; $('[name=template]').dispatchEvent(new Event('input')); message('নির্বাচিত MCQ টেমপ্লেট বসানো হয়েছে।'); } }
-    else if (action === 'copy-template') { try { await navigator.clipboard.writeText($('[data-copy-template]').value); message('টেমপ্লেট কপি হয়েছে।'); } catch { $('[data-copy-template]').select(); message('টেমপ্লেট নির্বাচন করা হয়েছে। মোবাইলের কপি অপশন চাপুন।'); } }
-    else if (action === 'sample') { $('[name=template]').value = $('[data-copy-template]').value; $('[name=template]').dispatchEvent(new Event('input')); }
+    else if (action === 'use-template') { const sample = selectedTemplate(); if (sample) { $('[name=template]').value = sample; $('[name=template]').dispatchEvent(new Event('input')); message(COPY_DONE_INSERT); } }
+    else if (action === 'copy-template') { try { await navigator.clipboard.writeText($('[data-copy-template]').value); message(COPY_DONE); } catch { $('[data-copy-template]').select(); message(COPY_MANUAL); } }
     else if (action === 'copy-sample-30') { try { await navigator.clipboard.writeText(MCQ_30_SAMPLE); message('৩০টি MCQ নমুনা কপি হয়েছে।'); } catch { $('[name=template]').value = MCQ_30_SAMPLE; $('[name=template]').select(); message('৩০টি নমুনা নির্বাচন করা হয়েছে। মোবাইলের কপি অপশন চাপুন।'); } }
     else if (action === 'sample-30') { $('[name=template]').value = MCQ_30_SAMPLE; $('[name=template]').dispatchEvent(new Event('input')); }
   });

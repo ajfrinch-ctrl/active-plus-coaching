@@ -114,10 +114,13 @@ test('offline queue survives reload; deadline locks; later sync grades exactly o
 });
 test('written/short next-day physical grading and explicit absence; invalid score cannot overwrite', async () => {
   setup(); const e = await publish({ type: 'short', template: examTemplate('short') }); assert.equal(classExamDate(start), '2026-10-02');
-  await assert.rejects(repo.startAttempt(e.id, one)); await assert.rejects(repo.saveWrittenScore(e.id, one, { q1: 4, q2: 2 }));
+  /* The marks come from the exam's own questions, so a template change (the
+     short-answer template is ১ + ২ now) cannot silently invalidate this test. */
+  const [q1, q2] = (await repo.list()).exams[0].questions.map(q => q.marks);
+  await assert.rejects(repo.startAttempt(e.id, one)); await assert.rejects(repo.saveWrittenScore(e.id, one, { q1, q2 }));
   clock = new Date('2026-10-02T00:00:00+06:00').getTime(); await repo.markWrittenAbsent(e.id, one);
-  let db = await repo.saveWrittenScore(e.id, one, { q1: 4, q2: 2 }); assert.equal(db.attempts[0].score, 6); assert.deepEqual(db.exams[0].absentIds, []);
-  await assert.rejects(repo.saveWrittenScore(e.id, one, { q1: 8, q2: 2 })); await assert.rejects(repo.markWrittenAbsent(e.id, one));
+  let db = await repo.saveWrittenScore(e.id, one, { q1, q2 }); assert.equal(db.attempts[0].score, q1 + q2); assert.deepEqual(db.exams[0].absentIds, []);
+  await assert.rejects(repo.saveWrittenScore(e.id, one, { q1: q1 + 3, q2 })); await assert.rejects(repo.markWrittenAbsent(e.id, one));
   await assert.rejects(repo.publishResults(e.id), /সব অংশগ্রহণকারীর/);
   await repo.markWrittenAbsent(e.id, two);
   db = await repo.publishResults(e.id, MANAGER_ACTOR); assert.equal(db.exams[0].resultsPublished, true);

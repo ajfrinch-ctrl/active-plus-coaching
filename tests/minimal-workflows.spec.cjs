@@ -30,9 +30,9 @@ test('teacher: all 30 MCQ templates render, apply and copy without changing acad
  await context.grantPermissions(['clipboard-read','clipboard-write']);
  await page.addInitScript(()=>localStorage.setItem('activePlus.manager.teacherAssignments.v1',JSON.stringify([{id:'QA-AS',teacherUsername:'teacher.apc',teacherName:'QA Teacher',className:'দশম শ্রেণি',group:'',subject:'গণিত'}])));
  await enterPortal(page,'teacher');await page.locator('.admin-bottom [data-teacher-view=online-exams]').click();
- await page.locator('[data-exam-action=new-mcq]').click();await page.locator('.exam-workspace summary').click();
- await expect(page.locator('[data-mcq-template-index] option')).toHaveCount(30);
- for(let i=0;i<30;i++){await page.locator('[data-mcq-template-index]').selectOption(String(i));await page.locator('[data-exam-action=use-mcq-template]').click();await expect(page.locator('[name=template]')).not.toHaveValue('');}
+ await page.locator('[data-exam-action=new-mcq]').click();
+ await expect(page.locator('[data-template-index] option')).toHaveCount(30);
+ for(let i=0;i<30;i++){await page.locator('[data-template-index]').selectOption(String(i));await page.locator('[data-exam-action=use-template]').click();await expect(page.locator('[name=template]')).not.toHaveValue('');}
  await page.locator('[data-exam-action=copy-template]').click();expect(await page.evaluate(()=>navigator.clipboard.readText())).toContain('প্রশ্ন');
  await page.locator('[data-exam-action=sample-30]').click();const text=await page.locator('[name=template]').inputValue();expect(text.split('---').length).toBe(30);
 });

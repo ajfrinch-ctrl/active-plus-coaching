@@ -32,12 +32,36 @@ const copy = value => JSON.parse(JSON.stringify(value));
 const same = (a, b) => stableJSON(a) === stableJSON(b);
 const own = (obj, key) => Object.hasOwn(obj, key);
 
+/* A record's own wall-clock. Records written by the app carry `updatedAt`; a
+   student roster row is stamped with `registeredAt` the moment it is created,
+   and the office adds `updatedAt` when it decides on it. */
+const recordTime = record =>
+  Date.parse(record?.updatedAt || record?.registeredAt || record?.createdAt || '') || 0;
+
+/**
+ * True when the cloud already holds a strictly newer copy of this record.
+ *
+ * A queued local copy that is older than the cloud copy is stale, and writing
+ * it back would undo work done on another device — an approved registration, a
+ * corrected payment entry — just because this phone was offline (or closed)
+ * while the decision was made. Records without a usable timestamp keep the
+ * original local-wins behaviour, so an ordinary offline edit still arrives.
+ */
+function cloudCopyIsNewer(candidate, current) {
+  if (!candidate || !current || typeof current !== 'object') return false;
+  const localTime = recordTime(candidate);
+  const cloudTime = recordTime(current);
+  return localTime > 0 && cloudTime > localTime;
+}
+
 export function mergeRecordOperations(remote, operations) {
   const next = { ...(remote || {}) };
   for (const [id, op] of Object.entries(operations)) {
     if (op.seed && own(next, id)) continue; // first sync must not replace cloud data
-    if (op.value === null) delete next[id];
-    else Object.defineProperty(next, id, { value: op.value, enumerable: true, configurable: true, writable: true });
+    if (op.value === null) delete next[id];  // a deletion is a deliberate action
+    else if (!cloudCopyIsNewer(op.value, next[id])) {
+      Object.defineProperty(next, id, { value: op.value, enumerable: true, configurable: true, writable: true });
+    }
   }
   return next;
 }

@@ -25,12 +25,30 @@ export function showFeedback(message) {
   window.setTimeout(() => toast.remove(), 2600);
 }
 
+/**
+ * Show (or clear) the message line above the auth form. Every message carries a
+ * small dismiss control: a status line such as "লগআউট হয়েছে…" must never stay
+ * fixed on screen after the reader has seen it.
+ */
 export function setAuthMessage(message, success = false) {
   const element = $('#authMessage');
   if (!element) return;
-  element.textContent = message;
+  const text = String(message || '');
+  element.textContent = '';
   element.classList.toggle('success', success);
-  element.hidden = !message;
+  if (!text) { element.hidden = true; return; }
+  const copy = document.createElement('span');
+  copy.className = 'auth-message-text';
+  copy.textContent = text;
+  const dismiss = document.createElement('button');
+  dismiss.type = 'button';
+  dismiss.className = 'auth-message-close';
+  dismiss.setAttribute('aria-label', 'বার্তাটি সরান');
+  dismiss.title = 'বার্তাটি সরান';
+  dismiss.textContent = '✕';
+  dismiss.addEventListener('click', () => setAuthMessage(''));
+  element.append(copy, dismiss);
+  element.hidden = false;
 }
 
 export function openModal(id) {

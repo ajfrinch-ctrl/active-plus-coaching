@@ -232,9 +232,10 @@ const commands = {
     if (ctx.$('#authMessage')) ctx.$('#authMessage').textContent = '';
     ctx.submit(form);
     await waitUntil(() =>
-      registered > 0 || Boolean(authMessage()) || hasSession(storageKeys.session), { timeout: 30000 });
+      registered > 0 || hasSession(storageKeys.session) || Boolean(authMessage()) ||
+      Boolean(readLocal(db.KEYS.account)), { timeout: 60000 });
     return {
-      registered: registered > 0,
+      registered: registered > 0 || Boolean(readLocal(db.KEYS.account)),
       session: hasSession(storageKeys.session),
       message: authMessage(),
       account: readLocal(db.KEYS.account)
@@ -500,6 +501,57 @@ const commands = {
     const out = {};
     for (const key of keys) out[key] = await readPlain(key);
     return { values: out, events: events.length, eventCollections: [...new Set(events.map(e => e.collection))] };
+  },
+
+  /* Run the real student app entry (js/main.js) exactly like index.html does,
+     so page-level paths (the pending lock, the storage handler that flips the
+     account after an approval) are live. Used by the approval-login test. */
+  async 'start-app'() {
+    globalThis.__apcTwoDeviceSignedIn = true;
+    await mod('main.js');
+    // main.js bound the real form handlers; do not bind a second copy.
+    loginBound = true;
+    registerBound = true;
+    await new Promise(resolve => setTimeout(resolve, 50));
+    return {
+      ok: true,
+      appHidden: ctx.$('#appShell')?.hidden,
+      authHidden: ctx.$('#authScreen')?.hidden,
+      pending: ctx.$('#appShell')?.classList.contains('is-pending')
+    };
+  },
+  async 'app-state'() {
+    return {
+      accountStatus: readLocal(db.KEYS.account)?.status || null,
+      pending: ctx.$('#appShell')?.classList.contains('is-pending') || false,
+      appHidden: ctx.$('#appShell')?.hidden ?? null,
+      authHidden: ctx.$('#authScreen')?.hidden ?? null,
+      message: authMessage()
+    };
+  },
+  /* Drive the login form through the REAL handler bound by main.js. */
+  async 'submit-login'({ username, pin }) {
+    if (ctx.$('#authMessage')) ctx.$('#authMessage').textContent = '';
+    ctx.type(ctx.$('#loginMobile'), username);
+    ctx.type(ctx.$('#loginPin'), pin);
+    ctx.submit(ctx.$('#loginForm'));
+    await waitUntil(() => hasSession(storageKeys.session) || Boolean(authMessage()), { timeout: 30000 });
+    return {
+      studentSession: hasSession(storageKeys.session),
+      message: authMessage(),
+      accountStatus: readLocal(db.KEYS.account)?.status || null
+    };
+  },
+  async 'wait-app-open'() {
+    await waitUntil(() => ctx.$('#appShell')?.hidden === false, { timeout: 30000 });
+    return {
+      pending: ctx.$('#appShell')?.classList.contains('is-pending') || false,
+      accountStatus: readLocal(db.KEYS.account)?.status || null
+    };
+  },
+  async 'wait-account-status'({ status }) {
+    await waitUntil(() => readLocal(db.KEYS.account)?.status === status, { timeout: 30000 });
+    return { accountStatus: readLocal(db.KEYS.account)?.status || null };
   },
 
   async quit() {

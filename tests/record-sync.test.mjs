@@ -111,3 +111,120 @@ test('the persisted outbox stores fingerprints, not a second copy of every recor
   await d.bridge.flush();
   assert.equal(cloud.value.A.body, 'changed');
 });
+
+/* ---- A stale phone copy must never undo a newer decision ----------------------
+   The reported defect (2026-09-30): the Admin approves a registration, but the
+   student's phone — which was closed (or offline) while the decision was made —
+   still holds the old "pending" row. On the next boot that stale row was pushed
+   back over the approval, so the student stayed locked out of the app. A queued
+   local copy now loses to a strictly newer cloud copy. */
+
+test('a stale local copy never overwrites a newer cloud record', async () => {
+  const pendingRow = {
+    id: 's260930001-abcd', name: 'নতুন শিক্ষার্থী', status: 'pending',
+    registeredAt: '2026-09-30T04:00:00.000Z'
+  };
+  const approvedRow = {
+    ...pendingRow, status: 'approved', reviewedAt: '2026-09-30T05:00:00.000Z',
+    reviewedBy: 'office.admin.apc', reviewedRole: 'admin', updatedAt: '2026-09-30T05:00:00.000Z'
+  };
+  const cloud = { value: { [pendingRow.id]: pendingRow } };
+  // The phone already synced the pending row, so its outbox knows that state.
+  const phone = device(cloud, { [pendingRow.id]: pendingRow });
+  phone.bridge.receive(cloud.value);
+  await phone.bridge.flush();
+  assert.equal(cloud.value[pendingRow.id].status, 'pending');
+
+  // The office decides on another device…
+  cloud.value = { [pendingRow.id]: approvedRow };
+  // …while this phone is closed. On its next boot the schema migration rewrites
+  // the stored row (a new field appears), which looks like a local change.
+  const rebooted = device(cloud, { [pendingRow.id]: { ...pendingRow, email: '' } }, phone.disk);
+  rebooted.bridge.receive(cloud.value);
+  await rebooted.bridge.flush();
+
+  assert.equal(cloud.value[pendingRow.id].status, 'approved', 'the decision survives the stale phone');
+  assert.equal(rebooted.local()[pendingRow.id].status, 'approved', 'and the phone adopts it');
+  assert.equal(rebooted.bridge.hasPending(), false, 'the stale queued copy is dropped');
+});
+
+test('a genuinely newer local edit still wins over an older cloud copy', async () => {
+  const cloud = { value: { t1: { id: 't1', amount: 500, updatedAt: '2026-09-30T04:00:00.000Z' } } };
+  const d = device(cloud, { t1: { id: 't1', amount: 500, updatedAt: '2026-09-30T04:00:00.000Z' } });
+  d.bridge.receive(cloud.value);
+  await d.bridge.flush();
+  d.edit({ t1: { id: 't1', amount: 900, updatedAt: '2026-09-30T06:00:00.000Z' } });
+  await d.bridge.flush();
+  assert.equal(cloud.value.t1.amount, 900, 'an offline edit made after the cloud copy is kept');
+});
+
+test('an explicit local deletion is still applied', async () => {
+  const cloud = { value: { t1: { id: 't1', amount: 500, updatedAt: '2026-09-30T04:00:00.000Z' } } };
+  const d = device(cloud, { t1: { id: 't1', amount: 500, updatedAt: '2026-09-30T04:00:00.000Z' } });
+  d.bridge.receive(cloud.value);
+  await d.bridge.flush();
+  cloud.value = { t1: { ...cloud.value.t1, updatedAt: '2026-09-30T06:00:00.000Z' } };
+  d.edit({});
+  await d.bridge.flush();
+  assert.equal(cloud.value.t1, undefined, 'a deletion is a deliberate action, not a stale copy');
+});
+
+/* ---- Two offices deciding the same registration from two devices -------------
+   Admin and Manager may both decide a registration (js/registration-review.js),
+   and every device works offline-first. The registration is one roster row, so
+   two decisions merge into that row by `updatedAt`: two devices that agree keep
+   the one outcome, and when two devices decide differently the later decision
+   is what every device ends up showing — in whichever order the two writes
+   reach the cloud. */
+
+const pendingRow = {
+  id: 's260930002-efgh', name: 'নতুন শিক্ষার্থী', status: 'pending',
+  registeredAt: '2026-09-30T04:00:00.000Z'
+};
+const decided = (status, at, role) => ({
+  ...pendingRow, status, reviewedAt: at, updatedAt: at, reviewedRole: role
+});
+
+test('two devices approving the same registration keep one approved row', async () => {
+  const cloud = { value: { [pendingRow.id]: pendingRow } };
+  const phone = device(cloud, { [pendingRow.id]: pendingRow });
+  const office = device(cloud, { [pendingRow.id]: pendingRow });
+  phone.bridge.receive(cloud.value);
+  office.bridge.receive(cloud.value);
+
+  phone.edit({ [pendingRow.id]: decided('approved', '2026-09-30T05:00:00.000Z', 'manager') });
+  office.edit({ [pendingRow.id]: decided('approved', '2026-09-30T05:00:20.000Z', 'admin') });
+  await Promise.all([phone.bridge.flush(), office.bridge.flush()]);
+
+  assert.equal(Object.keys(cloud.value).length, 1, 'the registration never duplicates');
+  assert.equal(cloud.value[pendingRow.id].status, 'approved');
+  assert.equal(phone.local()[pendingRow.id].status, 'approved', 'both devices show the approval');
+  assert.equal(office.local()[pendingRow.id].status, 'approved');
+});
+
+test('when two devices decide differently, the later decision is the one kept', async () => {
+  for (const officeFirst of [false, true]) {
+    const cloud = { value: { [pendingRow.id]: pendingRow } };
+    const approver = device(cloud, { [pendingRow.id]: pendingRow });
+    const rejecter = device(cloud, { [pendingRow.id]: pendingRow });
+    approver.bridge.receive(cloud.value);
+    rejecter.bridge.receive(cloud.value);
+
+    approver.edit({ [pendingRow.id]: decided('approved', '2026-09-30T05:00:00.000Z', 'manager') });
+    rejecter.edit({ [pendingRow.id]: decided('rejected', '2026-09-30T06:00:00.000Z', 'admin') });
+    const writes = officeFirst
+      ? [rejecter.bridge.flush(), approver.bridge.flush()]
+      : [approver.bridge.flush(), rejecter.bridge.flush()];
+    await Promise.all(writes);
+
+    assert.equal(cloud.value[pendingRow.id].status, 'rejected',
+      'the newer decision wins whichever write lands first');
+    // Every device follows the cloud snapshot (js/realtime-sync.js listens on
+    // the roster node), so the earlier decision is replaced on its own screen.
+    approver.bridge.receive(cloud.value);
+    rejecter.bridge.receive(cloud.value);
+    assert.equal(approver.local()[pendingRow.id].status, 'rejected',
+      'the earlier device adopts the newer decision');
+    assert.equal(rejecter.local()[pendingRow.id].status, 'rejected');
+  }
+});

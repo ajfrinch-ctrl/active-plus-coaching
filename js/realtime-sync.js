@@ -25,7 +25,7 @@ import { STAFF_ACCOUNTS } from './staff-auth.js';
 import { encodeRealtimeRecords, decodeRealtimeRecords } from './realtime-value-codec.js';
 import { collectionPayload, remoteToLocal } from './sync-collections.js';
 import { createRecordSync, mergeRecordOperations } from './record-sync.js';
-import { chooseStaffCopy, chooseStudentCopy, sameStudentRecord, loginIdOf, matchesLoginIdentifier, findLoginMatches, suggestIdentifiers } from './sync-merge.js';
+import { chooseStaffCopy, chooseStudentCopy, sameStudentRecord, loginIdOf, matchesLoginIdentifier, findLoginMatches, suggestIdentifiers, recordTime } from './sync-merge.js';
 import { reportSyncConflict, reportSyncError, setSyncStatus, markSyncSuccess } from './sync-status.js';
 import { unsafeKeyPath, isRtdbKey } from './rtdb-keys.js';
 import { isPasswordRecord, verifyPassword } from './password-hash.js';
@@ -399,14 +399,33 @@ function syncStudentAccount() {
     lastRemote.set('student:' + key, JSON.stringify(remote));
     if (sameStudentRecord(local, remote)) {
       clearConflict('login-id-conflict');
-      // The cloud copy is what other devices use: adopt it when it is newer.
-      remoteWrite(KEYS.account, remote, 'studentAccount');
+      // The cloud copy is what other devices use: adopt it only when it really
+      // is newer than what this device holds now. The copy this flight read can
+      // be older than a change that arrived while the write was in flight — an
+      // approval flipping the account to 'active', for example — and adopting it
+      // would undo that change.
+      const current = studentAccountPayload(readLocal(KEYS.account));
+      if (sameStudentRecord(current, remote) && recordTime(remote) > recordTime(current)) {
+        remoteWrite(KEYS.account, remote, 'studentAccount');
+      }
     } else {
       // Another student owns this login ID in the cloud. Keep both records —
       // the local registration stays usable here, nothing is destroyed.
       reportConflict('login-id-conflict');
     }
-  })().finally(() => { studentFlight = null; });
+  })().finally(() => {
+    studentFlight = null;
+    // A change made while this write was in flight (a registration approval,
+    // for example) was not part of the transaction above. One more pass pushes
+    // the newest local copy; it stops as soon as the cloud is up to date.
+    const local = studentAccountPayload(readLocal(KEYS.account));
+    const key = studentKey(local);
+    const remembered = key ? lastRemote.get('student:' + key) : null;
+    if (!key || !remembered || !isPasswordRecord(local?.pinHash)) return;
+    try {
+      if (recordTime(local) > recordTime(JSON.parse(remembered))) pushStudentAccount().catch(syncError);
+    } catch { /* unreadable memory is only a missed retry */ }
+  });
   return studentFlight;
 }
 
@@ -855,7 +874,10 @@ function listenStudentAccount() {
       return;
     }
     lastRemote.set('student:' + key, JSON.stringify(remote));
-    remoteWrite(KEYS.account, remote, 'studentAccount');
+    // Adopt the cloud copy only when it is genuinely newer than this device's.
+    // A phone that just flipped to 'active' after an approval must not be put
+    // back to the office's older copy (a stale 'pending' login record).
+    if (recordTime(remote) > recordTime(local)) remoteWrite(KEYS.account, remote, 'studentAccount');
   });
 }
 

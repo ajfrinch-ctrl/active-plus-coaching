@@ -1,4 +1,5 @@
 import { hasStaffSession, clearStaffSession, readStaffAccount, goToLoginPage } from './staff-auth.js';
+import { rememberRoute, onRouteChange, routeName } from './panel-route.js';
 import { decideRegistration, DECISION_MESSAGES, DECIDED_EVENT } from './registration-review.js';
 import { installPanelGuard, lockPanel, rememberPanelPage, watchOwnPanelSession } from './panel-lockdown.js';
 import { openStaffPasswordDialog } from './staff-password-dialog.js';
@@ -17,6 +18,7 @@ import { initFixedShell } from './fixed-shell.js';
 import { initExamManager } from './exam-manager.js';
 import { listTeacherAssignments, saveTeacherAssignment, deleteTeacherAssignment, TEACHER_ASSIGNMENTS_KEY } from './teacher-assignments.js';
 import { mountReports, refreshReports } from './reports.js';
+import { iconElement } from './icons.js';
 
 registerServiceWorker();
 initFixedShell();
@@ -25,9 +27,21 @@ const $$ = selector => [...document.querySelectorAll(selector)];
 const bn = value => String(value ?? 0).replace(/\d/g, digit => '০১২৩৪৫৬৭৮৯'[digit]);
 const money = value => `৳${bn(Number(value || 0).toLocaleString('en-US'))}`;
 const MANAGER_VIEWS = Object.freeze(['dashboard', 'students', 'approvals', 'classes', 'teachers', 'finance', 'cash-counter', 'notices', 'routine', 'exams', 'results', 'reports', 'profile', 'more']);
-const MORE_VIEWS = Object.freeze([
-  ['classes', 'Classes & Batches'], ['teachers', 'Teachers'], ['finance', 'Fees & Payments'], ['cash-counter', 'Cash Counter'],
-  ['notices', 'Notice'], ['routine', 'Routine'], ['exams', 'Examination'], ['results', 'Result'], ['reports', 'Reports'], ['profile', 'Manager Profile']
+/* The "আরও" page. One row per Manager module, in the same icon + title + hint
+   language as the Admin panel's More menu, so a module looks the same wherever
+   it is reached from. Labels stay Bangla like the bottom bar; the hint names
+   what actually happens inside. */
+const MORE_MODULES = Object.freeze([
+  { view: 'classes', icon: 'book', label: 'ক্লাস ও ব্যাচ', hint: 'শ্রেণি, ব্যাচ ও বিষয় তালিকা' },
+  { view: 'teachers', icon: 'users', label: 'শিক্ষক', hint: 'Teacher assignment ও ক্লাস বণ্টন' },
+  { view: 'finance', icon: 'wallet', label: 'ফি ও পেমেন্ট', hint: 'পেমেন্ট যাচাই, বকেয়া ও কালেকশন' },
+  { view: 'cash-counter', icon: 'receipt', label: 'ক্যাশ কাউন্টার', hint: 'কাউন্টার এন্ট্রি ও আদায়ের অবস্থা' },
+  { view: 'notices', icon: 'notice', label: 'নোটিশ', hint: 'নোটিশ তৈরি, সম্পাদনা ও মুছে ফেলা' },
+  { view: 'routine', icon: 'calendar', label: 'রুটিন', hint: 'দিনভিত্তিক ক্লাস ও শিক্ষক সাজানো' },
+  { view: 'exams', icon: 'exam', label: 'পরীক্ষা', hint: 'পরীক্ষা তৈরি, প্রশ্ন ও প্রকাশ' },
+  { view: 'results', icon: 'result', label: 'ফলাফল', hint: 'নম্বর যাচাই ও ফলাফল প্রকাশ' },
+  { view: 'reports', icon: 'reports', label: 'রিপোর্ট', hint: 'রিপোর্ট তৈরি, প্রিভিউ ও ডাউনলোড' },
+  { view: 'profile', icon: 'user', label: 'ম্যানেজার প্রোফাইল', hint: 'নিজের পরিচয় ও পাসওয়ার্ড' }
 ]);
 const dayLabel = Object.freeze({ sat: 'শনিবার', sun: 'রবিবার', mon: 'সোমবার', tue: 'মঙ্গলবার', wed: 'বুধবার', thu: 'বৃহস্পতিবার' });
 const statusLabel = Object.freeze({ approved: 'সক্রিয়', pending: 'অপেক্ষমাণ', rejected: 'বাতিল' });
@@ -49,7 +63,10 @@ function renderView(view) {
     button.classList.toggle('active', active);
     if (active) button.setAttribute('aria-current', 'page'); else button.removeAttribute('aria-current');
   });
-  $('#managerMoreDrawer').hidden = view !== 'more';
+  // Refresh reopens this page: the open view lives in the URL. It is remembered
+  // before the panels render, so a renderer that ever fails can still not send
+  // the next refresh back to the dashboard.
+  rememberRoute(view);
   if (view === 'dashboard') renderDashboard();
   if (view === 'students') renderStudents();
   if (view === 'approvals') renderApprovals();
@@ -60,7 +77,7 @@ function renderView(view) {
   if (view === 'notices') renderNotices();
   if (view === 'routine') renderRoutine();
   if (view === 'results') renderResults();
-  if (view === 'reports') renderReportPreview();
+  if (view === 'reports') void refreshReports($('#managerReports'));
   if (view === 'profile') renderProfile();
   $('#managerMain')?.scrollTo({ top: 0, behavior: 'smooth' });
   return true;
@@ -281,14 +298,42 @@ async function changeRoutine(index) {
   void loadOperationalData(); toast('Routine assignment আপডেট হয়েছে।');
 }
 
-// Manager's menu is an explicit allow-list. No Admin-only route/view exists here.
-const drawer = $('#managerMoreDrawer');
-MORE_VIEWS.forEach(([view, label]) => { const button = document.createElement('button'); button.type = 'button'; button.className = 'manager-more-item'; button.dataset.managerView = view; button.textContent = label; drawer.append(button); });
+/* Manager's menu is an explicit allow-list. No Admin-only route/view exists here. */
+function moreMenuItem({ icon, label, hint }) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'admin-more-item';
+  const iconHost = document.createElement('span');
+  iconHost.className = 'admin-more-icon';
+  iconHost.setAttribute('aria-hidden', 'true');
+  iconHost.append(iconElement(icon, 'admin-more-icon-svg apc-icon-svg'));
+  const copy = document.createElement('span');
+  copy.className = 'admin-more-copy';
+  const title = document.createElement('strong');
+  title.textContent = label;
+  const note = document.createElement('small');
+  note.textContent = hint;
+  copy.append(title, note);
+  button.append(iconHost, copy, iconElement('arrow-right', 'admin-menu-arrow apc-icon-svg'));
+  return button;
+}
+const moreMenu = $('#managerMoreMenu');
+MORE_MODULES.forEach(module => {
+  const button = moreMenuItem(module);
+  button.dataset.managerView = module.view;
+  button.addEventListener('click', () => renderView(module.view));
+  moreMenu.append(button);
+});
+/* Logging out is one deliberate row here too, the way the Admin panel ends its
+   own More menu — phones reach it without hunting for the top-bar icon. */
+const moreLogout = moreMenuItem({ icon: 'logout', label: 'লগআউট', hint: 'সেশন শেষ করে লগইন পেইজে যান' });
+moreLogout.classList.add('is-logout');
+moreLogout.addEventListener('click', () => { clearStaffSession('manager'); goToLoginPage(); });
+moreMenu.append(moreLogout);
 $$('[data-manager-view]').forEach(button => button.addEventListener('click', () => {
   const view = button.dataset.managerView;
-  if (view === 'more') { const open = !drawer.hidden; drawer.hidden = open; return; }
   if (!MANAGER_VIEWS.includes(view)) return;
-  drawer.hidden = true; renderView(view);
+  renderView(view);
 }));
 $('#managerStudentSearch').addEventListener('input', renderStudents);
 $('#managerStudentSearch').addEventListener('search', renderStudents);
@@ -409,7 +454,12 @@ async function enterManager() {
   const shortName = $('#managerNameShort');
   if (shortName) shortName.textContent = managerAccount.fullName || 'Manager Profile';
   if (!examStarted) { initExamManager('#managerExamWorkspace', 'manager'); examStarted = true; }
-  renderView('dashboard'); await loadOperationalData();
+  // A refresh (or a shared link) reopens the page that was open, when it is a
+  // page this panel knows.
+  const wanted = routeName();
+  renderView(MANAGER_VIEWS.includes(wanted) ? wanted : 'dashboard');
+  onRouteChange(name => { if (MANAGER_VIEWS.includes(name) && name !== activeView) renderView(name); });
+  await loadOperationalData();
   mountReports($('#managerReports'), { panel: 'manager' });
   watchOwnPanelSession('manager');
 }

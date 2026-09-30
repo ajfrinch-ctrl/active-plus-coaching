@@ -24,7 +24,7 @@ before(async () => {
 test('Manager boots on the operational dashboard with only its allow-listed sections', () => {
   assert.deepEqual(ctx.jsdomErrors, []);
   const views = ctx.$$('.manager-view').map(view => view.dataset.viewPanel);
-  assert.deepEqual(views, ['dashboard', 'students', 'approvals', 'classes', 'teachers', 'finance', 'cash-counter', 'notices', 'routine', 'exams', 'results', 'reports', 'profile']);
+  assert.deepEqual(views, ['dashboard', 'students', 'approvals', 'classes', 'teachers', 'finance', 'cash-counter', 'notices', 'routine', 'exams', 'results', 'reports', 'profile', 'more']);
   const routes = ctx.$$('[data-manager-view]').map(button => button.dataset.managerView);
   for (const forbidden of ['staff', 'roles', 'permissions', 'security', 'backup', 'restore', 'settings', 'admin']) assert.equal(routes.includes(forbidden), false);
   assert.equal(ctx.$('#managerMain a[href*="admin"]'), null);
@@ -56,7 +56,7 @@ test('Manager navigation refuses unknown or admin-only route identifiers', () =>
 
 test('Manager alone assigns Teacher class/batch scope through the Teachers workflow', async () => {
   ctx.click(ctx.$('.manager-bottom [data-manager-view="more"]'));
-  ctx.click(ctx.$('#managerMoreDrawer [data-manager-view="teachers"]'));
+  ctx.click(ctx.$('#managerMoreMenu [data-manager-view="teachers"]'));
   await ctx.waitFor(() => ctx.$('#managerTeacherAssignmentForm [name=className]')?.options.length > 1);
   const form = ctx.$('#managerTeacherAssignmentForm');
   form.elements.className.value = 'দশম শ্রেণি'; form.elements.group.value = 'বিজ্ঞান বিভাগ'; form.elements.subject.value = 'গণিত';
@@ -71,6 +71,11 @@ test('Manager alone assigns Teacher class/batch scope through the Teachers workf
 /* Tracking a student by the permanent Student ID in the Manager panel — the
    same box staff already use for names and mobile numbers. Bangla digits are
    what a Bangla keyboard produces, so they must find the student too. */
+test('the running Manager panel shows no offline-workspace notice', () => {
+  assert.equal(ctx.$('.manager-local-notice'), null, 'no notice element');
+  assert.ok(!ctx.$('#managerMain').textContent.includes('Offline workspace'), 'no notice text');
+});
+
 test('the Manager student search finds a student by Student ID, including Bangla digits', async () => {
   const box = ctx.$('#managerStudentSearch');
   const rows = () => ctx.$$('#managerStudentList [data-manager-student]');
@@ -93,4 +98,49 @@ test('the Manager student search finds a student by Student ID, including Bangla
   await ctx.waitFor(() => rows().length === 0);
   ctx.type(box, '');
   await ctx.waitFor(() => rows().length === 2);
+});
+
+/* The "আরও" page is a normal Manager page: the bottom tab opens it, the rows
+   carry the same icon + title + hint language as every other module, and a
+   refresh lands back on it (the URL keeps the page). */
+test('the আরও page lists every module as a real page, not a floating drawer', async () => {
+  assert.equal(ctx.$('#managerMoreDrawer'), null, 'the old drawer is gone');
+  ctx.click(ctx.$('.manager-bottom [data-manager-view="more"]'));
+  await ctx.waitFor(() => ctx.$('.manager-view.active')?.dataset.viewPanel === 'more');
+
+  const page = ctx.$('.manager-view[data-view-panel="more"]');
+  assert.equal(page.hidden, false);
+  assert.equal(ctx.$('#managerMoreTitle').textContent.trim(), 'আরও');
+  assert.equal(ctx.window.location.hash, '#more', 'the open page lives in the URL');
+
+  const rows = ctx.$$('#managerMoreMenu .admin-more-item');
+  const expected = ['classes', 'teachers', 'finance', 'cash-counter', 'notices', 'routine', 'exams', 'results', 'reports', 'profile'];
+  assert.deepEqual(rows.slice(0, expected.length).map(row => row.dataset.managerView), expected);
+  assert.equal(rows.length, expected.length + 1, 'the log-out row is the last one');
+  assert.ok(rows[rows.length - 1].classList.contains('is-logout'));
+  for (const row of rows) {
+    assert.ok(row.querySelector('.admin-more-icon svg'), 'every row keeps its icon');
+    assert.ok(row.querySelector('.admin-more-copy strong').textContent.trim(), 'every row has a title');
+    assert.ok(row.querySelector('.admin-more-copy small').textContent.trim(), 'every row explains what is inside');
+    assert.ok(row.querySelector('.admin-menu-arrow'), 'every row keeps the arrow');
+  }
+  // A row opens its module, and the page is reachable after a reload.
+  ctx.click(rows[0]);
+  await ctx.waitFor(() => ctx.$('.manager-view.active')?.dataset.viewPanel === 'classes');
+  assert.equal(ctx.window.location.hash, '#classes');
+});
+
+test('every আরও row opens its own page without an error', async () => {
+  ctx.click(ctx.$('.manager-bottom [data-manager-view="more"]'));
+  await ctx.flush();
+  for (const row of ctx.$$('#managerMoreMenu .admin-more-item')) {
+    if (row.classList.contains('is-logout')) continue;
+    const view = row.dataset.managerView;
+    ctx.click(row);
+    await ctx.waitFor(() => ctx.$('.manager-view.active')?.dataset.viewPanel === view);
+    assert.equal(ctx.$('.manager-view.active').hidden, false, `${view} is visible`);
+    assert.equal(ctx.window.location.hash, `#${view}`, `${view} is remembered in the URL`);
+    if (view !== 'more') { ctx.click(ctx.$('.manager-bottom [data-manager-view="more"]')); await ctx.flush(); }
+  }
+  assert.deepEqual(ctx.jsdomErrors, [], 'no page raised an error while opening');
 });

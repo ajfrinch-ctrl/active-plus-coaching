@@ -1,4 +1,4 @@
-const CACHE_VERSION = 121;
+const CACHE_VERSION = 130;
 const CACHE_NAME = `active-plus-student-v${CACHE_VERSION}-minimal-education`;
 const APP_SHELL = [
   './css/app-polish.css',
@@ -110,6 +110,7 @@ const APP_SHELL = [
   './js/theme.js',
   './js/fixed-shell.js',
   './js/main.js',
+  './js/panel-route.js',
   './js/admin.js',
   './js/manager.js',
   './js/payment.js',
