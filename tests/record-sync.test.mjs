@@ -168,3 +168,63 @@ test('an explicit local deletion is still applied', async () => {
   await d.bridge.flush();
   assert.equal(cloud.value.t1, undefined, 'a deletion is a deliberate action, not a stale copy');
 });
+
+/* ---- Two offices deciding the same registration from two devices -------------
+   Admin and Manager may both decide a registration (js/registration-review.js),
+   and every device works offline-first. The registration is one roster row, so
+   two decisions merge into that row by `updatedAt`: two devices that agree keep
+   the one outcome, and when two devices decide differently the later decision
+   is what every device ends up showing — in whichever order the two writes
+   reach the cloud. */
+
+const pendingRow = {
+  id: 's260930002-efgh', name: 'নতুন শিক্ষার্থী', status: 'pending',
+  registeredAt: '2026-09-30T04:00:00.000Z'
+};
+const decided = (status, at, role) => ({
+  ...pendingRow, status, reviewedAt: at, updatedAt: at, reviewedRole: role
+});
+
+test('two devices approving the same registration keep one approved row', async () => {
+  const cloud = { value: { [pendingRow.id]: pendingRow } };
+  const phone = device(cloud, { [pendingRow.id]: pendingRow });
+  const office = device(cloud, { [pendingRow.id]: pendingRow });
+  phone.bridge.receive(cloud.value);
+  office.bridge.receive(cloud.value);
+
+  phone.edit({ [pendingRow.id]: decided('approved', '2026-09-30T05:00:00.000Z', 'manager') });
+  office.edit({ [pendingRow.id]: decided('approved', '2026-09-30T05:00:20.000Z', 'admin') });
+  await Promise.all([phone.bridge.flush(), office.bridge.flush()]);
+
+  assert.equal(Object.keys(cloud.value).length, 1, 'the registration never duplicates');
+  assert.equal(cloud.value[pendingRow.id].status, 'approved');
+  assert.equal(phone.local()[pendingRow.id].status, 'approved', 'both devices show the approval');
+  assert.equal(office.local()[pendingRow.id].status, 'approved');
+});
+
+test('when two devices decide differently, the later decision is the one kept', async () => {
+  for (const officeFirst of [false, true]) {
+    const cloud = { value: { [pendingRow.id]: pendingRow } };
+    const approver = device(cloud, { [pendingRow.id]: pendingRow });
+    const rejecter = device(cloud, { [pendingRow.id]: pendingRow });
+    approver.bridge.receive(cloud.value);
+    rejecter.bridge.receive(cloud.value);
+
+    approver.edit({ [pendingRow.id]: decided('approved', '2026-09-30T05:00:00.000Z', 'manager') });
+    rejecter.edit({ [pendingRow.id]: decided('rejected', '2026-09-30T06:00:00.000Z', 'admin') });
+    const writes = officeFirst
+      ? [rejecter.bridge.flush(), approver.bridge.flush()]
+      : [approver.bridge.flush(), rejecter.bridge.flush()];
+    await Promise.all(writes);
+
+    assert.equal(cloud.value[pendingRow.id].status, 'rejected',
+      'the newer decision wins whichever write lands first');
+    // Every device follows the cloud snapshot (js/realtime-sync.js listens on
+    // the roster node), so the earlier decision is replaced on its own screen.
+    approver.bridge.receive(cloud.value);
+    rejecter.bridge.receive(cloud.value);
+    assert.equal(approver.local()[pendingRow.id].status, 'rejected',
+      'the earlier device adopts the newer decision');
+    assert.equal(rejecter.local()[pendingRow.id].status, 'rejected');
+  }
+});
