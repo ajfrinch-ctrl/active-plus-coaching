@@ -17,7 +17,7 @@ test('protected core and all new and protected assets cached',()=>{
  const sw=read('sw.js');
  for(const dir of ['firebase','sync'])for(const file of readdirSync(dir).filter(f=>f.endsWith('.js'))){const p=`${dir}/${file}`;assert.ok(sw.includes(`'./${p}'`),p);} // byte-equality with baseline 13ab90a dropped: that commit is not in this repository's history, and sync/cloud-access.js now changes by owner decision (docs/INTERIM-ANONYMOUS-SYNC.md)
  for(const f of ['design-system','foundation','ui-layout','ui-components','ui-forms','ui-features'])assert.ok(sw.includes(`'./css/${f}.css'`));
- assert.ok(sw.includes("'./js/realtime-sync.js'"));assert.ok(sw.includes("'./js/icons.js'"));assert.match(sw,/CACHE_VERSION = 118/);
+ assert.ok(sw.includes("'./js/realtime-sync.js'"));assert.ok(sw.includes("'./js/icons.js'"));assert.match(sw,/CACHE_VERSION = 119/);
  const added=execFileSync('git',['diff','--unified=0','--','js','sw.js'],{encoding:'utf8'}).split('\n').filter(l=>l.startsWith('+')).join('\n');assert.doesNotMatch(added,/localStorage\.clear\s*\(|indexedDB\.deleteDatabase\s*\(/);
 });
 test('precache URLs are unique and all local shell assets exist',()=>{

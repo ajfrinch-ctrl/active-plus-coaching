@@ -440,6 +440,29 @@ const commands = {
     };
   },
 
+  /* What an Admin/Manager bell would list for new registrations, from this
+     device's synced roster (js/notification-rules.js, as shipped). */
+  async 'registration-feed'({ role = 'admin' } = {}) {
+    const rules = await mod('notification-rules.js');
+    const office = await mod('office-data.js');
+    const items = rules.registrationItems(office.loadRoster(), { kind: 'staff', role, username: role });
+    return { keys: items.map(item => item.key) };
+  },
+
+  /* The shared Admin/Manager decision path (js/registration-review.js). */
+  async 'decide-registration'({ studentId, decision, role = 'admin', note = '' }) {
+    const review = await mod('registration-review.js');
+    return review.decideRegistration(studentId, decision, { role, note });
+  },
+
+  async 'wait-roster-status'({ studentId, status }) {
+    await waitUntil(() => {
+      const list = readLocal(db.KEYS.students);
+      return Array.isArray(list) && list.some(item => item?.id === studentId && item.status === status);
+    }, { timeout: 20000 });
+    return { ok: true };
+  },
+
   async snapshot({ keys }) {
     const out = {};
     for (const key of keys) out[key] = await readPlain(key);

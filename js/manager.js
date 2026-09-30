@@ -1,4 +1,5 @@
 import { hasStaffSession, clearStaffSession, readStaffAccount, goToLoginPage } from './staff-auth.js';
+import { decideRegistration, DECISION_MESSAGES, DECIDED_EVENT } from './registration-review.js';
 import { installPanelGuard, lockPanel, rememberPanelPage, watchOwnPanelSession } from './panel-lockdown.js';
 import { openStaffPasswordDialog } from './staff-password-dialog.js';
 import { loadRoster, saveRoster, syncAccountStatus, loadNotices, saveNotices, loadRoutine, saveRoutine, WEEK_DAYS } from './office-data.js';
@@ -215,21 +216,22 @@ async function loadOperationalData() {
 }
 async function managerGuard() { return !managerBusy && await hasStaffSession('manager'); }
 async function approveStudent(studentId, decision) {
-  if (!(await managerGuard())) return toast('Manager session যাচাই হয়নি। আবার প্রবেশ করুন।', true);
+  if (!(await managerGuard())) return toast('Manager session যাচাই হয়নি। আবার প্রবেশ করুন।', true);
   const student = students.find(row => row.id === studentId);
-  if (!student || student.status !== 'pending') return toast('এই নিবন্ধনে আর সিদ্ধান্ত নেওয়া যাবে না।', true);
+  if (!student || student.status !== 'pending') return toast('এই নিবন্ধনে আর সিদ্ধান্ত নেওয়া যাবে না।', true);
   const note = decision === 'rejected' ? window.prompt('Reject করার কারণ লিখুন (আবশ্যক):', '')?.trim() : '';
   if (decision === 'rejected' && !note) return;
   managerBusy = true;
   try {
-    student.status = decision; student.reviewedAt = new Date().toISOString(); student.reviewedBy = managerAccount?.username || 'manager';
-    if (note) student.reviewNote = note;
-    if (!saveRoster(students)) throw new Error('Student decision সংরক্ষণ হয়নি।');
-    await syncAccountStatus(studentId, decision);
-    await loadOperationalData(); toast(decision === 'approved' ? 'Registration অনুমোদিত হয়েছে।' : 'Registration কারণসহ বাতিল হয়েছে।');
-  } catch (error) { toast(error.message || 'সিদ্ধান্ত সংরক্ষণ হয়নি।', true); }
+    // Shared with the Admin panel and the notification review dialog.
+    const result = await decideRegistration(studentId, decision, { role: 'manager', note });
+    if (!result.ok) throw new Error(DECISION_MESSAGES[result.reason] || 'Student decision সংরক্ষণ হয়নি।');
+    await loadOperationalData(); toast(decision === 'approved' ? 'Registration অনুমোদিত হয়েছে।' : 'Registration কারণসহ বাতিল হয়েছে।');
+  } catch (error) { toast(error.message || 'সিদ্ধান্ত সংরক্ষণ হয়নি।', true); }
   finally { managerBusy = false; }
 }
+// A decision from the notification dialog (or another tab) refreshes the queue.
+window.addEventListener(DECIDED_EVENT, () => { if (!managerBusy) void loadOperationalData(); });
 async function reviewPayment(id, decision) {
   if (!(await managerGuard())) return toast('Manager session যাচাই হয়নি।', true);
   const note = decision === 'rejected' ? window.prompt('Payment reject করার কারণ লিখুন (আবশ্যক):', '')?.trim() : '';

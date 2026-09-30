@@ -170,13 +170,46 @@ export function examItems(examDb, viewer, now = Date.now()) {
   return items;
 }
 
+/* Staff roles that decide on a student registration (js/admin-permissions.js
+   STUDENTS_APPROVE): both see the same "new registration" item. */
+export const REGISTRATION_REVIEWERS = Object.freeze(['admin', 'manager']);
+
+/**
+ * One actionable item per registration still waiting for a decision. The item
+ * disappears by itself once the student is approved or rejected (on any
+ * device), because only `pending` rows produce one.
+ */
+export function registrationItems(students, viewer) {
+  if (viewer?.kind !== 'staff' || !REGISTRATION_REVIEWERS.includes(text(viewer.role))) return [];
+  const items = [];
+  for (const student of Array.isArray(students) ? students : []) {
+    if (!isObject(student) || student.status !== 'pending') continue;
+    const id = text(student.id);
+    if (!id) continue;
+    const name = text(student.name) || text(student.nameEn) || 'নাম নেই';
+    const details = [text(student.className), text(student.group), id].filter(Boolean).join(' • ');
+    items.push({
+      key: `registration:${id}`,
+      source: 'students',
+      sourceId: id,
+      kind: 'registration',
+      actionable: true,
+      title: 'নতুন শিক্ষার্থী রেজিস্ট্রেশন',
+      body: `${name}${details ? ` — ${details}` : ''} · অনুমোদনের অপেক্ষায়`,
+      at: Date.parse(text(student.registeredAt) || text(student.createdAt) || '') || 0,
+      audience: 'এডমিন ও ম্যানেজার'
+    });
+  }
+  return items;
+}
+
 /** Newest first, stable for equal timestamps. */
 export function sortNewestFirst(items) {
   return [...items].sort((left, right) => (right.at || 0) - (left.at || 0));
 }
 
 /** The complete notification list for one device, deduplicated by key. */
-export function notificationFeed({ notices = [], config = null, examDb = null, viewer = null, now = Date.now(), localWrites = null } = {}) {
+export function notificationFeed({ notices = [], config = null, examDb = null, viewer = null, now = Date.now(), localWrites = null, students = null, cleared = null } = {}) {
   const items = [];
   const broadcast = broadcastItem(config);
   if (broadcast) items.push(broadcast);
@@ -185,8 +218,11 @@ export function notificationFeed({ notices = [], config = null, examDb = null, v
     if (item && audienceMatches(notice, viewer)) items.push(item);
   }
   items.push(...examItems(examDb, viewer, now));
+  items.push(...registrationItems(students, viewer));
+  // Items this person cleared from the list stay cleared on this device.
+  const hidden = new Set(Array.isArray(cleared) ? cleared : []);
   const unique = new Map();
-  for (const item of sortNewestFirst(items)) if (!unique.has(item.key)) unique.set(item.key, item);
+  for (const item of sortNewestFirst(items)) if (!unique.has(item.key) && !hidden.has(item.key)) unique.set(item.key, item);
   return [...unique.values()].map(item => ({ ...item, selfAuthored: isSelfAuthored(item, localWrites, now) }));
 }
 
@@ -237,6 +273,17 @@ export function planDeliveries({ feed = [], seen = [], firstRun = false, maxBurs
     if (keys.length >= maxSeen) break;
   }
   return { notify, seen: keys };
+}
+
+export const CLEARED_KEY_PREFIX = `${NOTIFY_PREFIX}cleared.v1:`;
+export const MAX_CLEARED = 500;
+
+/** Keys the person emptied from the list. Only keys that still exist in the
+    feed are worth remembering, so the record never grows without bound. */
+export function clearedRecord(keys, liveKeys = null, at = Date.now()) {
+  let list = [...new Set((Array.isArray(keys) ? keys : []).filter(key => typeof key === 'string' && key))];
+  if (Array.isArray(liveKeys)) { const live = new Set(liveKeys); list = list.filter(key => live.has(key)); }
+  return { version: 1, at: Number(at) || Date.now(), keys: list.slice(-MAX_CLEARED) };
 }
 
 export function seenRecord(keys, at = Date.now()) {

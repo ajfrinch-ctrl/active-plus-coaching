@@ -18,12 +18,21 @@ import { mountStatusNotice } from './status-surface.js';
 
 import { readJSON, writeJSON, loadAppConfig, loadAccount } from './storage.js';
 import { KEYS, STAFF_KEYS } from './database.js';
-import { loadNotices } from './office-data.js';
+import { loadNotices, loadRoster } from './office-data.js';
 import { getDeviceId } from './session.js';
 import {
-  BOOT_KEY_PREFIX, LOCAL_WRITE_KEY, PROMPT_HIDDEN_KEY, SEEN_KEY_PREFIX, SHOWN_KEY,
-  claimDelivery, notificationFeed, planDeliveries, pushPayload, seenRecord, viewerKeyOf
+  BOOT_KEY_PREFIX, CLEARED_KEY_PREFIX, LOCAL_WRITE_KEY, PROMPT_HIDDEN_KEY, REGISTRATION_REVIEWERS,
+  SEEN_KEY_PREFIX, SHOWN_KEY, claimDelivery, clearedRecord, notificationFeed, planDeliveries,
+  pushPayload, seenRecord, viewerKeyOf
 } from './notification-rules.js';
+
+/* A notification tapped while no app window was open: the service worker
+   leaves the payload here and opens the panel, which picks it up once. */
+export const PENDING_CLICK_PATH = './__apc-pending-click';
+// Same cache name as js/panel-lockdown.js and sw.js (not imported: the student
+// page must not load the staff lockdown module just for a constant).
+const PANEL_HINT_CACHE = 'apc-panel-hint';
+const PENDING_CLICK_MAX_AGE_MS = 10 * 60 * 1000;
 
 const ROLE_PAGES = Object.freeze({
   'admin.html': 'admin',
@@ -45,7 +54,8 @@ const PROMPT_HIDE_MS = 7 * 24 * 60 * 60 * 1000;
 const REFRESH_DEBOUNCE_MS = 400;
 const ARM_FALLBACK_MS = 12000;
 const SW_READY_TIMEOUT_MS = 2500;
-const WATCHED_KEYS = new Set([KEYS.notices, KEYS.settings, KEYS.exams]);
+const WATCHED_KEYS = new Set([KEYS.notices, KEYS.settings, KEYS.exams, KEYS.students]);
+const WATCHED_COLLECTIONS = Object.freeze(['notices', 'settings', 'exams', 'students']);
 
 let controller = null;
 let viewer = null;
@@ -135,16 +145,114 @@ function promptHiddenUntil() {
 
 /* ---- Feed ------------------------------------------------------------------- */
 
-export function buildFeed() {
+function reviewsRegistrations() {
+  return viewer?.kind === 'staff' && REGISTRATION_REVIEWERS.includes(viewer.role);
+}
+
+function readCleared() {
+  const record = readJSON(CLEARED_KEY_PREFIX + viewerKey, null);
+  return Array.isArray(record?.keys) ? record.keys.filter(key => typeof key === 'string') : [];
+}
+
+function rawFeed(cleared = null) {
   const config = loadAppConfig();
   const examDb = viewer?.kind === 'student' ? readJSON(KEYS.exams, null) : null;
+  let students = null;
+  if (reviewsRegistrations()) { try { students = loadRoster(); } catch { students = null; } }
   return notificationFeed({
     notices: loadNotices(),
     config,
     examDb,
     viewer,
+    students,
+    cleared,
     localWrites: readJSON(LOCAL_WRITE_KEY, null)
   });
+}
+
+export function buildFeed() {
+  return rawFeed(readCleared());
+}
+
+/**
+ * Empty the list: the given keys, or everything currently shown. Cleared items
+ * are also marked seen, so they never come back as a system notification.
+ */
+export function clearNotifications(keys = null) {
+  const all = rawFeed(null).map(item => item.key);
+  const target = Array.isArray(keys) ? keys : buildFeed().map(item => item.key);
+  const saved = writeJSON(CLEARED_KEY_PREFIX + viewerKey, clearedRecord([...readCleared(), ...target], all));
+  writeSeen([...new Set([...readSeen(), ...target])]);
+  window.dispatchEvent(new CustomEvent('apc-notifications-updated', { detail: { cleared: target.length, saved } }));
+  return { cleared: target.length, saved };
+}
+
+/** Put one cleared item back (e.g. "পরে দেখব" on a registration review). */
+export function restoreNotification(key) {
+  const all = rawFeed(null).map(item => item.key);
+  const keys = readCleared().filter(item => item !== key);
+  writeJSON(CLEARED_KEY_PREFIX + viewerKey, clearedRecord(keys, all));
+  window.dispatchEvent(new CustomEvent('apc-notifications-updated', { detail: { restored: key } }));
+}
+
+/**
+ * Open a registration for review from a notification (inbox or tray). The item
+ * is cleared as soon as it has been looked at; "পরে দেখব" puts it back, and a
+ * decision removes it for good (the student is no longer pending anywhere).
+ */
+export async function openRegistration(studentId) {
+  const id = String(studentId || '').trim();
+  if (!id || !reviewsRegistrations()) return false;
+  const key = `registration:${id}`;
+  clearNotifications([key]);
+  try {
+    const module = await import('./registration-review.js');
+    const opened = await module.openRegistrationReview(id, {
+      role: viewer.role,
+      onLater: () => restoreNotification(key),
+      onDone: () => scheduleRefresh()
+    });
+    if (!opened) restoreNotification(key);
+    return opened;
+  } catch (error) {
+    console.warn('[Active Plus] registration review unavailable:', error?.name || 'unknown');
+    restoreNotification(key);
+    return false;
+  }
+}
+
+/** A tapped notification: only actionable kinds need more than focusing the app. */
+export function openNotificationTarget(data) {
+  if (data?.kind === 'registration' || String(data?.key || '').startsWith('registration:')) {
+    return openRegistration(data.id || String(data.key).slice('registration:'.length));
+  }
+  return Promise.resolve(false);
+}
+
+async function takePendingClick() {
+  try {
+    if (!('caches' in window)) return null;
+    const cache = await caches.open(PANEL_HINT_CACHE);
+    const response = await cache.match(PENDING_CLICK_PATH);
+    if (!response) return null;
+    await cache.delete(PENDING_CLICK_PATH);
+    const record = JSON.parse(await response.text());
+    if (!record || Date.now() - Number(record.at) > PENDING_CLICK_MAX_AGE_MS) return null;
+    return record.data || null;
+  } catch { return null; }
+}
+
+function watchNotificationClicks() {
+  try {
+    navigator.serviceWorker?.addEventListener?.('message', event => {
+      if (event.data?.type === 'apc-notification-click') void openNotificationTarget(event.data.data);
+    });
+  } catch { /* no service worker: the inbox still works */ }
+  // The panel restores its session asynchronously; give it a moment first.
+  setTimeout(async () => {
+    const data = await takePendingClick();
+    if (data) void openNotificationTarget(data);
+  }, 800);
 }
 
 /** The receipt keys this device already knows about (inbox + tray agree). */
@@ -216,10 +324,15 @@ function deliver(item) {
 
 export function refreshNotifications() {
   if (!viewer) return { delivered: 0 };
-  const feed = buildFeed();
+  // Receipts are kept for the whole feed, cleared items included: an item put
+  // back with "পরে দেখব" must not be announced a second time.
+  const cleared = new Set(readCleared());
+  const full = rawFeed(null);
+  const feed = full.filter(item => !cleared.has(item.key));
   // While the device is not "armed" (see below) the list is only recorded, so a
   // fresh install or a half-finished cloud load cannot fire old news.
-  const plan = planDeliveries({ feed, seen: readSeen(), firstRun: !armed });
+  const plan = planDeliveries({ feed: full, seen: readSeen(), firstRun: !armed });
+  plan.notify = plan.notify.filter(item => !cleared.has(item.key));
   writeSeen(plan.seen);
   let delivered = 0;
   if (armed && notificationsEnabled() && permission() === 'granted') {
@@ -401,8 +514,11 @@ export function initNotifications() {
     });
     window.addEventListener('apc-sync-updated', event => {
       const collection = event.detail?.collection;
-      if (!collection || ['notices', 'settings', 'exams'].includes(collection)) scheduleRefresh();
+      if (!collection || WATCHED_COLLECTIONS.includes(collection)) scheduleRefresh();
     });
+    // A decision taken on this device does not fire a storage event here.
+    window.addEventListener('apc-registration-decided', scheduleRefresh);
+    watchNotificationClicks();
     window.addEventListener('apc-sync-status', () => { if (!armed) return; paintPill(); });
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible' && armed) refreshNotifications();
@@ -413,6 +529,9 @@ export function initNotifications() {
       feed: buildFeed,
       seen: seenKeys,
       markAllSeen,
+      clear: clearNotifications,
+      restore: restoreNotification,
+      openItem: item => openNotificationTarget({ kind: item?.kind, id: item?.sourceId, key: item?.key }),
       enable: enableNotifications,
       disable: disableNotifications,
       pushSupport: async () => (await import('./push-notifications.js')).pushSupport(),
