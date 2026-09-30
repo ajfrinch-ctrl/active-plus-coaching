@@ -234,6 +234,26 @@ export function staffAccountRecordExists(role) {
   try { return window.localStorage.getItem(spec.accountKey) !== null; } catch { return true; }
 }
 
+export async function importCloudStaffAccount(role, account) {
+  const spec = staffSpec(role);
+  if (!spec || !account?.username || !account?.pinHash) return false;
+  const existing = await readStaffAccount(role);
+  if (existing?.username && normalizeStaffUsername(existing.username) !== normalizeStaffUsername(account.username)) return false;
+  return writeStaffAccount(role, {
+    ...(existing || {}),
+    uid: account.uid || existing?.uid,
+    role,
+    username: account.username,
+    fullName: account.fullName || existing?.fullName || '',
+    mobile: account.mobile || existing?.mobile || '',
+    email: account.email || existing?.email || '',
+    status: account.status || 'active',
+    accountStatus: account.status || 'active',
+    pinHash: account.pinHash,
+    updatedAt: new Date().toISOString()
+  });
+}
+
 export async function readStaffAccount(role) {
   const spec = staffSpec(role);
   if (!spec) return null;
