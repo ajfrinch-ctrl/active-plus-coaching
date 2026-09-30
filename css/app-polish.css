@@ -1,16 +1,7 @@
 /* Shared visual language for every portal. No visibility, routing or permission
    selectors here; document/PDF geometry remains owned by its renderer. */
-:root {
-  --color-bg:#f3f6fb; --color-surface-muted:#edf3fc;
-  --color-border:#dce5f0; --color-text:#213047; --color-text-secondary:#56677e;
-  --color-primary:#2864bd; --radius-sm:9px; --radius-md:14px; --radius-lg:18px;
-  --shadow-sm:0 3px 14px #20365306;
-}
-html[data-theme=dark] {
-  --color-bg:#121c2b; --color-surface:#1b293c; --color-surface-muted:#253750;
-  --color-border:#374b64; --color-text:#edf3fc; --color-text-secondary:#bfccdf;
-  --color-primary:#96bcff;
-}
+/* Tokens live in css/foundation.css — one palette for every portal, light and
+   dark (the dark one is the AMOLED black theme). This file only arranges them. */
 @media screen {
   .app-topbar-inner { min-height:72px; }
   .app-brand-logo { border-radius:10px; }
@@ -324,3 +315,43 @@ html[data-theme=dark] {
   color: #bbf7d0;
   border-color: #4ade80;
 }
+
+/* ── AMOLED dark: component tuning ─────────────────────────────────────────
+   The palette lives in css/foundation.css and is shared by every portal; this
+   block only adjusts the pieces a pure-black canvas changes the meaning of —
+   surfaces that would otherwise glare, and the few separations that were done
+   with a shadow (invisible on black) instead of a border. Flat selectors only:
+   the app also runs in WebViews without CSS nesting. */
+html[data-theme="dark"] .app-topbar,
+html[data-theme="dark"] .bottom-nav,
+html[data-theme="dark"] .admin-bottom { background: var(--color-bg); }
+html[data-theme="dark"] .app-topbar-icon { background: var(--color-surface-muted); }
+/* A drop shadow has nothing to fall on here — the border does the work. */
+html[data-theme="dark"] .auth-card,
+html[data-theme="dark"] .pay-stickybar,
+html[data-theme="dark"] .admin-card,
+html[data-theme="dark"] .pay-card { box-shadow: none; }
+html[data-theme="dark"] .admin-modal,
+html[data-theme="dark"] .modal,
+html[data-theme="dark"] .staff-pw-card,
+html[data-theme="dark"] .student-record-modal { box-shadow: var(--shadow-dialog); }
+html[data-theme="dark"] .student-record-modal .admin-modal-close { background: var(--color-surface-muted); }
+/* Toasts invert to near-white in light mode; on black that is a flashlight, so
+   they become a raised surface with a border instead. */
+html[data-theme="dark"] .feedback-toast,
+html[data-theme="dark"] .pay-toast,
+html[data-theme="dark"] .apc-lock-notice {
+  background: var(--color-surface-muted); color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+html[data-theme="dark"] .apc-inapp-alert { box-shadow: 0 16px 40px #000; }
+html[data-theme="dark"] .topbar-sync-chip { background: #0f3d29; color: #7fe0a8; border-color: #3f8a63; }
+/* The brand mark keeps its light-paper artwork, but never glares full-on: a
+   slight dim is the whole AMOLED treatment for it. */
+html[data-theme="dark"] .app-brand-logo,
+html[data-theme="dark"] .auth-brand img,
+html[data-theme="dark"] .pending-logo img,
+html[data-theme="dark"] .launch-screen img { filter: brightness(.94); }
+/* Report/receipt preview keeps white paper on purpose (it mirrors the PDF);
+   only the gutters around it follow the theme. */
+html[data-theme="dark"] .rc-pdf-preview { background: var(--color-bg); }

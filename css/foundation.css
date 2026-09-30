@@ -1,16 +1,35 @@
 @font-face{font-family:'Noto Sans Bengali';src:url('../assets/fonts/NotoSansBengali-Variable.ttf') format('truetype');font-weight:100 900;font-display:swap}
+/* One palette for every portal — the only place a colour is defined.
+   Light is the default. The dark theme is the AMOLED one: a true-black canvas
+   (#000 — the pixels an OLED panel actually switches off), surfaces lifted by
+   a single hairline step so a card still reads as a card, borders instead of
+   shadows, and accents bright enough to hold contrast on black.
+   Component-level dark tuning lives in css/app-polish.css; neither file may
+   define a second palette (§ AMOLED block there is strict overrides only). */
 :root{
- --color-bg:#f7f9fc;--color-surface:#fff;--color-surface-muted:#edf3fb;--color-border:#dce3ed;
- --color-text:#202b3c;--color-text-secondary:#526176;--color-text-muted:#65748a;
+ --color-bg:#f3f6fb;--color-surface:#fff;--color-surface-muted:#edf3fc;--color-border:#dce5f0;
+ --color-text:#213047;--color-text-secondary:#56677e;--color-text-muted:#65748a;
  --color-primary:#2864bd;--color-primary-hover:#194f9d;--color-success:#187346;--color-warning:#875b0c;--color-danger:#b83239;
  --space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:24px;--space-6:32px;--space-7:48px;
- --radius-sm:6px;--radius-md:10px;--radius-lg:14px;
+ --radius-sm:9px;--radius-md:14px;--radius-lg:18px;
  --font-xs:12px;--font-sm:14px;--font-md:16px;--font-lg:20px;--font-xl:28px;--font-2xl:36px;
- --shadow-sm:0 2px 6px #202b3c08;--shadow-dialog:0 12px 36px #202b3c18;
+ --shadow-sm:0 3px 14px #20365306;--shadow-dialog:0 12px 36px #202b3c18;
+ --modal-backdrop:#17243866;
  --safe-bottom:env(safe-area-inset-bottom,0px);
  /* Compatibility for JS-rendered content, not a legacy stylesheet dependency. */
  --ink:var(--color-text);--muted:var(--color-text-secondary);--muted-2:var(--color-text-muted);--surface:var(--color-surface);--white:var(--color-surface);--line:var(--color-border);--forest:var(--color-primary);--forest-text:var(--color-primary);--mint:var(--color-surface-muted);--cream:var(--color-bg);--coral:var(--color-danger);
 }
-html[data-theme=dark]{--color-bg:#141c29;--color-surface:#1c2838;--color-surface-muted:#25354b;--color-border:#3b4b61;--color-text:#edf2fa;--color-text-secondary:#bdc9da;--color-text-muted:#a8b9cf;--color-primary:#96bcff;--color-primary-hover:#b8d2ff;--color-success:#8fddb1;--color-warning:#f1ca7c;--color-danger:#ffa9ae}
+html[data-theme=dark]{
+ color-scheme:dark;
+ --color-bg:#000;--color-surface:#0b0d10;--color-surface-muted:#171a20;--color-border:#2b303a;
+ --color-text:#f4f6fa;--color-text-secondary:#b7bec9;--color-text-muted:#8e96a3;
+ --color-primary:#5ea9ff;--color-primary-hover:#8ac2ff;--color-success:#5cd68f;--color-warning:#f2c56d;--color-danger:#ff8d92;
+ /* AMOLED: a drop shadow on black is invisible and still costs paint on every
+     scroll — surfaces separate with borders instead, dialogs with one deep
+     shadow so the backdrop still reads as a layer. */
+ --shadow-sm:none;--shadow-dialog:0 24px 70px #000;
+ --modal-backdrop:#000000d9;
+}
 *{box-sizing:border-box}html{scroll-padding-block:90px}body{margin:0;background:var(--color-bg);color:var(--color-text);font:400 var(--font-md)/1.65 'Noto Sans Bengali',system-ui,sans-serif}h1,h2,h3,p{margin:0 0 var(--space-3)}h1{font-size:var(--font-xl);line-height:1.4;font-weight:650}h2{font-size:var(--font-lg);line-height:1.5;font-weight:600}h3{font-size:var(--font-md);font-weight:600}strong,b{font-weight:600}small,.eyebrow{font-size:var(--font-xs);color:var(--color-text-secondary)}.eyebrow{letter-spacing:.06em;margin-bottom:var(--space-2)}a{color:var(--color-primary)}img{max-width:100%;object-fit:contain}svg{width:22px;height:22px;flex-shrink:0;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}button,a,input,select,textarea{touch-action:manipulation}button{font:inherit;cursor:pointer}button:disabled{opacity:.55;cursor:not-allowed}:focus-visible{outline:3px solid var(--color-primary);outline-offset:3px}[hidden]{display:none!important}pre,code{white-space:pre-wrap;overflow-wrap:anywhere}p,small,strong,label{overflow-wrap:anywhere}::selection{background:var(--color-surface-muted)}
+html[data-theme=dark] ::selection{background:#5ea9ff38;color:var(--color-text)}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
