@@ -498,6 +498,37 @@ export function claimDelivery(shown, id, at = Date.now(), windowMs = SHOWN_WINDO
   return { claim: true, record };
 }
 
+/* ---- In-app alert card (owner decision 2026-09-30) ---------------------------
+   "Showing notifications when the app is opened is enough": new items appear
+   on a card inside the app, with no phone permission needed. Each item is shown
+   on the card once; it stays in the bell list afterwards. */
+
+export const INAPP_KEY_PREFIX = `${NOTIFY_PREFIX}inapp.v1:`;
+export const INAPP_MAX_ITEMS = 3;
+/* Always current, so worth showing even on the very first run. */
+const ALWAYS_CURRENT = new Set(['exam-soon', 'exam-live']);
+
+/**
+ * Which items the card shows now, and the receipt list to store.
+ * `feed` is what the list shows (cleared items removed); `known` is every key
+ * the device may remember (the full feed), so receipts cannot grow forever.
+ * `initialise` (no receipt file yet: a new install, or the first run after this
+ * update) shows only waiting tasks and running exams — old news stays quiet.
+ */
+export function planInAppAlerts({ feed = [], known = [], shown = null, initialise = false } = {}) {
+  const items = (Array.isArray(feed) ? feed : []).filter(item => isObject(item) && text(item.key));
+  const keep = new Set((Array.isArray(known) ? known : []).map(item => text(isObject(item) ? item.key : item)).filter(Boolean));
+  for (const item of items) keep.add(item.key);
+  const before = new Set(Array.isArray(shown) ? shown : []);
+  const show = initialise
+    ? items.filter(item => item.actionable || ALWAYS_CURRENT.has(item.kind))
+    : items.filter(item => !before.has(item.key));
+  // A new baseline remembers everything current; otherwise receipts are only
+  // added when the card really shows an item (markInAppShown), here just pruned.
+  const record = initialise ? [...keep] : [...before].filter(key => keep.has(key));
+  return { show: sortNewestFirst(show), record };
+}
+
 /* ---- Push transport --------------------------------------------------------- */
 
 /** FCM payload shown by the service worker. Kept identical to the sender's. */

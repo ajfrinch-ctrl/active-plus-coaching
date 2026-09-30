@@ -85,4 +85,21 @@ test('a paper from the teacher opens the Examination view', async () => {
   assert.equal(inboxOpen(), false);
 });
 
+test('the in-app card: a new entry appears on it, and tapping it opens the Cash Counter', async () => {
+  ctx.click(ctx.$('[data-manager-view="dashboard"]'));
+  const list = JSON.parse(ctx.window.localStorage.getItem(KEYS.transactions));
+  list.unshift({ id: 'TX-10', receiptNo: 'R-10', studentId: 'S-2', studentName: 'করিম হাসান', className: 'নবম', feeType: 'মাসিক বেতন', month: 'অক্টোবর', amount: 1200, method: 'Cash', status: 'pending', reviewHistory: [], recordedAt: Date.now() });
+  // Arrives the way the sync bridge delivers it (js/realtime-sync.js notifyRemote).
+  ctx.window.localStorage.setItem(KEYS.transactions, JSON.stringify(list));
+  const arrived = new ctx.window.StorageEvent('storage', { key: KEYS.transactions, newValue: JSON.stringify(list), storageArea: ctx.window.localStorage });
+  Object.defineProperty(arrived, 'apcRemote', { value: true });
+  ctx.window.dispatchEvent(arrived);
+  await ctx.waitFor(() => ctx.$('#apcInAppAlert') && !ctx.$('#apcInAppAlert').hidden, 3000);
+  assert.match(ctx.$('#apcInAppAlert').textContent, /করিম হাসান/);
+  ctx.click(ctx.$('#apcInAppAlert [data-apc-alert-open="payment-review:TX-10"]'));
+  await ctx.waitFor(() => activeView() === 'cash-counter', 3000);
+  await ctx.waitFor(() => ctx.$('#managerCashList [data-manager-action="approve-payment"][data-id="TX-10"]'), 5000);
+  assert.equal(ctx.$('#apcInAppAlert').hidden, true);
+});
+
 test('no page errors', () => assert.deepEqual(ctx.jsdomErrors, []));

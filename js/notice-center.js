@@ -239,6 +239,7 @@ export function mountNoticeCenter(api) {
   }
 
   function open() {
+    hideAlerts();                              // the list shows them all
     let result = null;
     try { result = api.markAllSeen?.(); } catch { /* the list still opens */ }
     paint();
@@ -290,6 +291,73 @@ export function mountNoticeCenter(api) {
     if (pageClose) pageClose.click();
     else modal.hidden = true;
   }
+
+  /* ---- In-app card: new notifications, shown inside the app -------------
+     No phone permission needed. Tapping an item opens it (its view or review
+     dialog; plain news opens the list); "সব দেখুন" opens the list. */
+  let alertCard = null;
+  let alertItems = [];
+
+  function hideAlerts() {
+    alertItems = [];
+    if (alertCard) alertCard.hidden = true;
+  }
+
+  function paintAlerts() {
+    if (!alertItems.length) { hideAlerts(); return; }
+    if (!alertCard) {
+      alertCard = document.createElement('section');
+      alertCard.className = 'apc-inapp-alert';
+      alertCard.id = 'apcInAppAlert';
+      alertCard.setAttribute('role', 'status');
+      alertCard.setAttribute('aria-live', 'polite');
+      document.body.append(alertCard);
+      alertCard.addEventListener('click', event => {
+        if (event.target.closest('[data-apc-alert-close]')) { hideAlerts(); return; }
+        if (event.target.closest('[data-apc-alert-all]')) { hideAlerts(); open(); return; }
+        const row = event.target.closest('[data-apc-alert-open]');
+        if (!row) return;
+        const item = alertItems.find(entry => entry.key === row.dataset.apcAlertOpen);
+        alertItems = alertItems.filter(entry => entry !== item);
+        paintAlerts();
+        if (!item) return;
+        if ((item.actionable || item.target) && typeof api.openItem === 'function') {
+          void Promise.resolve(api.openItem(item)).finally(() => paint());
+        } else open();
+      });
+    }
+    const rows = alertItems.slice(0, 3).map(item =>
+      '<li><button type="button" class="apc-inapp-alert-item" data-apc-alert-open="' + escapeHtml(item.key) + '">' +
+        '<span class="apc-inapp-alert-icon">' + iconMarkup(item.kind) + '</span>' +
+        '<span><b>' + escapeHtml(item.title) + '</b>' + (item.body ? '<small>' + escapeHtml(item.body) + '</small>' : '') + '</span>' +
+      '</button></li>').join('');
+    const more = alertItems.length > 3 ? ' (আরও ' + bn(alertItems.length - 3) + 'টি)' : '';
+    alertCard.innerHTML =
+      '<header><strong>নতুন নোটিফিকেশন' + (alertItems.length > 1 ? ' · ' + bn(alertItems.length) + 'টি' : '') + '</strong>' +
+        '<button type="button" class="apc-inapp-alert-close" data-apc-alert-close aria-label="বন্ধ করুন">×</button></header>' +
+      '<ul>' + rows + '</ul>' +
+      '<footer><button type="button" class="mini-btn" data-apc-alert-all>সব দেখুন' + more + '</button></footer>';
+    alertCard.hidden = false;
+  }
+
+  let pumping = false;
+  async function pumpAlerts() {
+    if (pumping || typeof api.takeAlerts !== 'function') return;
+    pumping = true;
+    try {
+      // Never over a lock/login screen: wait for the signed-in panel.
+      if (typeof api.whenReady === 'function' && !(await api.whenReady())) return;
+      const incoming = api.takeAlerts() || [];
+      if (!incoming.length) return;
+      const keys = new Set(incoming.map(item => item.key));
+      alertItems = [...incoming, ...alertItems.filter(item => !keys.has(item.key))];
+      paintAlerts();
+    } finally {
+      pumping = false;
+    }
+  }
+  window.addEventListener('apc-inapp-alerts', () => { void pumpAlerts(); });
+  void pumpAlerts();
 
   const repaint = () => paint();
   window.addEventListener('apc-notifications-updated', repaint);

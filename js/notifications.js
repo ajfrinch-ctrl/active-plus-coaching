@@ -22,7 +22,7 @@ import { loadNotices, loadRoster } from './office-data.js';
 import { getDeviceId } from './session.js';
 import {
   BOOT_KEY_PREFIX, CLEARED_KEY_PREFIX, LOCAL_WRITE_KEY, PROMPT_HIDDEN_KEY, REGISTRATION_REVIEWERS,
-  SEEN_KEY_PREFIX, SHOWN_KEY, claimDelivery, clearedRecord, nextExamBoundary, notificationFeed,
+  SEEN_KEY_PREFIX, SHOWN_KEY, INAPP_KEY_PREFIX, claimDelivery, planInAppAlerts, clearedRecord, nextExamBoundary, notificationFeed,
   planDeliveries, pushPayload, seenRecord, viewerKeyOf
 } from './notification-rules.js';
 
@@ -92,6 +92,8 @@ const V2_KINDS = new Set([
   'payment-review', 'payment-rejected', 'exam-review', 'exam-returned', 'exam-approved'
 ]);
 let boundaryTimer = null;
+/* Items waiting for the in-app card (shown once the panel is on screen). */
+let alertQueue = [];
 
 let controller = null;
 let viewer = null;
@@ -294,6 +296,46 @@ export async function whenPanelReady(timeout = PANEL_READY_TIMEOUT_MS) {
   return true;
 }
 
+/* ---- In-app card: new notifications shown inside the app -------------------- */
+
+function readInApp() {
+  const record = readJSON(INAPP_KEY_PREFIX + viewerKey, null);
+  return Array.isArray(record?.keys) ? record.keys.filter(key => typeof key === 'string') : null;
+}
+
+function writeInApp(keys) {
+  return writeJSON(INAPP_KEY_PREFIX + viewerKey, { version: 1, at: Date.now(), keys });
+}
+
+function queueInAppAlerts(feed, full) {
+  const stored = readInApp();
+  const queued = alertQueue.map(item => item.key);
+  const plan = planInAppAlerts({
+    feed, known: full, initialise: stored === null,
+    shown: stored === null ? null : [...stored, ...queued]
+  });
+  // Queued keys are not receipts yet: only the stored ones are kept (pruned).
+  const known = new Set(full.map(item => item.key));
+  writeInApp(stored === null ? plan.record : stored.filter(key => known.has(key)));
+  const visible = new Set(feed.map(item => item.key));
+  const fresh = plan.show.filter(item => !queued.includes(item.key));
+  alertQueue = [...fresh, ...alertQueue.filter(item => visible.has(item.key))];
+  if (alertQueue.length) window.dispatchEvent(new CustomEvent('apc-inapp-alerts', { detail: { count: alertQueue.length } }));
+}
+
+/**
+ * The card takes the waiting items when it can really show them; only then do
+ * they count as shown (a lock screen or reload in between loses nothing).
+ */
+export function takeInAppAlerts() {
+  if (!viewer || !alertQueue.length) return [];
+  const current = new Map(buildFeed().map(item => [item.key, item]));
+  const items = alertQueue.map(item => current.get(item.key)).filter(Boolean);
+  alertQueue = [];
+  if (items.length) writeInApp([...new Set([...(readInApp() || []), ...items.map(item => item.key)])]);
+  return items;
+}
+
 /** Open the panel view a notification belongs to (bottom-bar button). */
 function navigateTo(target) {
   const attribute = NAV_ATTRIBUTE[viewer?.kind === 'staff' ? viewer.role : 'student'];
@@ -433,6 +475,8 @@ export function refreshNotifications() {
     if (armed) writeJSON(RULES_KEY_PREFIX + viewerKey, { version: RULES_VERSION, at: Date.now() });
   }
   writeSeen(plan.seen);
+  // The in-app card needs no phone permission (owner decision 2026-09-30).
+  if (armed) queueInAppAlerts(feed, full);
   let delivered = 0;
   if (armed && notificationsEnabled() && permission() === 'granted') {
     for (const item of plan.notify) { deliver(item); delivered += 1; }
@@ -634,6 +678,8 @@ export function initNotifications() {
       markAllSeen,
       clear: clearNotifications,
       restore: restoreNotification,
+      takeAlerts: takeInAppAlerts,
+      whenReady: () => whenPanelReady(),
       openItem: item => openNotificationTarget({ kind: item?.kind, id: item?.sourceId, key: item?.key, target: item?.target }),
       enable: enableNotifications,
       disable: disableNotifications,
