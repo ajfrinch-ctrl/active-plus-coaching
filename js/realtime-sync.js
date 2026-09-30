@@ -19,7 +19,7 @@ import { LEGACY_CLOUD_ENABLED, assertCloudAccess, cloudPausedResult } from '../s
    cloud-access.js and deny-all database rules. It must not be reopened before
    server-verified authentication and per-user authorization are implemented. */
 import { firebaseApp, appCheckReady } from '../firebase/firebase-init.js';
-import { getAuth, signInAnonymously, setPersistence, browserLocalPersistence, getDatabase, ref, get, set, runTransaction, onValue as firebaseOnValue } from '../firebase/firebase-services.js';
+import { getAuth, setPersistence, browserLocalPersistence, getDatabase, ref, get, set, runTransaction, onValue as firebaseOnValue } from '../firebase/firebase-services.js';
 import { SYNCABLE, KEYS } from './database.js';
 import { STAFF_ACCOUNTS } from './staff-auth.js';
 import { encodeRealtimeRecords, decodeRealtimeRecords } from './realtime-value-codec.js';
@@ -145,9 +145,14 @@ export async function ensureCloudAuth() {
     await appCheckReady;
     const auth = getAuth(firebaseApp);
     await auth.authStateReady();
-    if (!auth.currentUser) {
-      await setPersistence(auth, browserLocalPersistence);
-      await signInAnonymously(auth);
+    // Never create an anonymous identity. Every cloud read/write must be tied
+    // to a real Firebase Auth account whose role/status claims were issued by
+    // the trusted backend.
+    if (!auth.currentUser) return null;
+    const token = await auth.currentUser.getIdTokenResult();
+    const claims = token.claims || {};
+    if (!['active', 'approved'].includes(claims.status) || claims.mustChangePassword === true) {
+      return null;
     }
     return auth.currentUser;
   })().finally(() => { authFlight = null; });
