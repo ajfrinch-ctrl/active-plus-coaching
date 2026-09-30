@@ -111,3 +111,60 @@ test('the persisted outbox stores fingerprints, not a second copy of every recor
   await d.bridge.flush();
   assert.equal(cloud.value.A.body, 'changed');
 });
+
+/* ---- A stale phone copy must never undo a newer decision ----------------------
+   The reported defect (2026-09-30): the Admin approves a registration, but the
+   student's phone — which was closed (or offline) while the decision was made —
+   still holds the old "pending" row. On the next boot that stale row was pushed
+   back over the approval, so the student stayed locked out of the app. A queued
+   local copy now loses to a strictly newer cloud copy. */
+
+test('a stale local copy never overwrites a newer cloud record', async () => {
+  const pendingRow = {
+    id: 's260930001-abcd', name: 'নতুন শিক্ষার্থী', status: 'pending',
+    registeredAt: '2026-09-30T04:00:00.000Z'
+  };
+  const approvedRow = {
+    ...pendingRow, status: 'approved', reviewedAt: '2026-09-30T05:00:00.000Z',
+    reviewedBy: 'office.admin.apc', reviewedRole: 'admin', updatedAt: '2026-09-30T05:00:00.000Z'
+  };
+  const cloud = { value: { [pendingRow.id]: pendingRow } };
+  // The phone already synced the pending row, so its outbox knows that state.
+  const phone = device(cloud, { [pendingRow.id]: pendingRow });
+  phone.bridge.receive(cloud.value);
+  await phone.bridge.flush();
+  assert.equal(cloud.value[pendingRow.id].status, 'pending');
+
+  // The office decides on another device…
+  cloud.value = { [pendingRow.id]: approvedRow };
+  // …while this phone is closed. On its next boot the schema migration rewrites
+  // the stored row (a new field appears), which looks like a local change.
+  const rebooted = device(cloud, { [pendingRow.id]: { ...pendingRow, email: '' } }, phone.disk);
+  rebooted.bridge.receive(cloud.value);
+  await rebooted.bridge.flush();
+
+  assert.equal(cloud.value[pendingRow.id].status, 'approved', 'the decision survives the stale phone');
+  assert.equal(rebooted.local()[pendingRow.id].status, 'approved', 'and the phone adopts it');
+  assert.equal(rebooted.bridge.hasPending(), false, 'the stale queued copy is dropped');
+});
+
+test('a genuinely newer local edit still wins over an older cloud copy', async () => {
+  const cloud = { value: { t1: { id: 't1', amount: 500, updatedAt: '2026-09-30T04:00:00.000Z' } } };
+  const d = device(cloud, { t1: { id: 't1', amount: 500, updatedAt: '2026-09-30T04:00:00.000Z' } });
+  d.bridge.receive(cloud.value);
+  await d.bridge.flush();
+  d.edit({ t1: { id: 't1', amount: 900, updatedAt: '2026-09-30T06:00:00.000Z' } });
+  await d.bridge.flush();
+  assert.equal(cloud.value.t1.amount, 900, 'an offline edit made after the cloud copy is kept');
+});
+
+test('an explicit local deletion is still applied', async () => {
+  const cloud = { value: { t1: { id: 't1', amount: 500, updatedAt: '2026-09-30T04:00:00.000Z' } } };
+  const d = device(cloud, { t1: { id: 't1', amount: 500, updatedAt: '2026-09-30T04:00:00.000Z' } });
+  d.bridge.receive(cloud.value);
+  await d.bridge.flush();
+  cloud.value = { t1: { ...cloud.value.t1, updatedAt: '2026-09-30T06:00:00.000Z' } };
+  d.edit({});
+  await d.bridge.flush();
+  assert.equal(cloud.value.t1, undefined, 'a deletion is a deliberate action, not a stale copy');
+});
