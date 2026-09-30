@@ -4,7 +4,7 @@
  */
 import { firebaseApp, appCheckReady } from '../firebase/firebase-init.js';
 import {
-  getAuth, signInWithEmailAndPassword, setPersistence, browserLocalPersistence,
+  getAuth, signInWithEmailAndPassword, updatePassword, setPersistence, browserLocalPersistence,
   getFirestore, doc, getDoc, getFunctions, httpsCallable
 } from '../firebase/firebase-services.js';
 
@@ -28,9 +28,7 @@ export async function signInCloudUsername(username, password) {
     if (claims.status && !['active', 'approved'].includes(claims.status)) {
       return { ok: false, reason: 'account-inactive', claims, user: credential.user };
     }
-    if (claims.mustChangePassword === true) {
-      return { ok: false, reason: 'must-change-password', claims, user: credential.user };
-    }
+    const needsPasswordChange = claims.mustChangePassword === true;
     const firestore = getFirestore(firebaseApp);
     const userSnapshot = await getDoc(doc(firestore, 'users', credential.user.uid));
     const userProfile = userSnapshot.exists() ? userSnapshot.data() : null;
@@ -39,7 +37,7 @@ export async function signInCloudUsername(username, password) {
       const studentSnapshot = await getDoc(doc(firestore, 'students', credential.user.uid));
       studentProfile = studentSnapshot.exists() ? studentSnapshot.data() : null;
     }
-    return { ok: true, user: credential.user, claims, userProfile, studentProfile };
+    return { ok: true, user: credential.user, claims, userProfile, studentProfile, needsPasswordChange };
   } catch (error) {
     return { ok: false, reason: error?.code || 'auth-failed', error };
   }
@@ -66,4 +64,15 @@ export async function callCloudFunction(name, data = {}) {
 
 export async function createFirstAdminCloud(profile) {
   return callCloudFunction('createFirstAdmin', profile);
+}
+
+
+export async function changeCloudPassword(nextPassword) {
+  const auth = getAuth(firebaseApp);
+  const user = auth.currentUser;
+  if (!user) throw new Error('Firebase login required');
+  await updatePassword(user, String(nextPassword));
+  const result = await callCloudFunction('completeTemporaryPasswordChange', {});
+  await user.getIdToken(true);
+  return result;
 }
