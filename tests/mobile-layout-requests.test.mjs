@@ -82,3 +82,29 @@ test('staff management keeps one search box and the create button at the bottom'
   assert.ok(createIndex > listIndex, 'the create button sits after the list');
   assert.ok(html.indexOf('staff-create-bar') > listIndex);
 });
+
+/* ---------- Button rows: fill the screen in even shares (item 9) ---------- */
+
+test('every action row shares the screen width evenly, in every viewport', () => {
+  const css = read('css/ui-forms.css');
+  const rows = ['.step-actions', '.modal-actions', '.logout-actions', '.staff-pw-actions', '.pay-form-actions', '.row-actions'];
+  const children = suffix => rows.map(row => row + suffix).join(',');
+  assert.ok(
+    css.includes(`${rows.join(',')}{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))`),
+    'action rows split the width in halves'
+  );
+  assert.ok(css.includes(`${children('>:only-child')}{grid-column:1/-1}`), 'a lone button takes the full width');
+  assert.ok(css.includes(`${children('>:nth-child(3):last-child')}{grid-column:1/-1}`), 'a third button gets a full line');
+  assert.ok(!/\.step-actions>\*\{flex:1\}/.test(css), 'the old phone-only width rule is gone');
+  const phone = css.match(/@media\(max-width:560px\)\{([\s\S]*?)\}\s*$/);
+  assert.ok(phone, 'the phone media query stays');
+  assert.ok(!phone[1].includes('.step-actions'), 'the even-share rule is not confined to the phone query');
+});
+
+test('registration step one closes with one full-width button', () => {
+  const html = read('index.html');
+  const start = html.indexOf('<div class="step-actions">');
+  const row = html.slice(start, html.indexOf('</div>', start));
+  assert.ok(row.startsWith('<div class="step-actions"><button'), 'the lone button opens the row — no empty spacer');
+  assert.equal((row.match(/<button/g) || []).length, 1, 'exactly one button in the row');
+});

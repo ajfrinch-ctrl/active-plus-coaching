@@ -28,7 +28,7 @@ import { initFixedShell } from './fixed-shell.js';
 import { escapeHtml } from './sanitize.js';
 import { matchesStudentQuery } from './student-search.js';
 import { createAccess, CAPABILITIES, routeFromHash } from './admin-permissions.js';
-import { rememberRoute, onRouteChange, routeName } from './panel-route.js';
+import { rememberRoute, onRouteChange } from './panel-route.js';
 import { openRegistrationReview, DECIDED_EVENT } from './registration-review.js';
 import { initAdminPanelShell } from './admin-panel-ui.js';
 import { paintIcon } from './icons.js';
@@ -642,8 +642,7 @@ function renderFinanceStats() {
 
 function renderFeeSearch() {
   const searchInput = $('#feeStudentSearch');
-  if (!searchInput) return; // Collection search was removed from this page.
-  if (!searchInput) return; // Finance collection UI is removed for read-only roles.
+  if (!searchInput) return; // Collection search is not part of this page.
   const query = searchInput.value.trim();
   const matches = searchStudents(state.students, query);
   $('#feeSearchStatus').textContent = !query ? '' : matches.length ? `${bn(matches.length)} জন শিক্ষার্থী পাওয়া গেছে` : 'কোনো শিক্ষার্থী পাওয়া যায়নি';
@@ -1417,23 +1416,17 @@ $$('[data-admin-view]').forEach(button => {
   button.addEventListener('click', () => navigate(button.dataset.adminView, button));
 });
 
-// Deep links: admin.html#finance opens Finance, an unauthorised or unknown
-// #route is refused and the panel stays on the first permitted tab.
-window.addEventListener('hashchange', () => {
-  if ($('#adminShell')?.hidden !== false) return; // panel closed → nothing to open
-  const route = routeFromHash(window.location.hash);
-  if (!route) return;
-  navigate(route, null);
-});
-/* An entry that arrived after the panel was already open (a shared link typed
-   into the address bar) still moves the panel. */
+/* Deep links: admin.html#finance opens Finance, an unauthorised or unknown
+   #route is refused and the panel stays on the first permitted tab. An entry
+   that arrived after the panel was already open — a shared link typed into the
+   address bar, or the browser's Back into a page of this panel — still moves
+   the panel (js/panel-route.js listens for that one event). */
 onRouteChange(name => {
   if ($('#adminShell')?.hidden !== false) return;
   const route = routeFromHash('#' + name);
   if (!route || route === state.activeView) return;
   navigate(route, null);
 });
-void routeName;
 
 /* Fee collection is the Cash Counter's job; this panel keeps no handler. */
 
