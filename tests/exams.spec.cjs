@@ -141,7 +141,7 @@ for (const width of [320,390,844,1280]) {
 }
 
 test('copyable templates and long Bengali exam PDFs paginate without print dialogs', async ({ page, context }) => {
-  await context.grantPermissions(['clipboard-read','clipboard-write']); await teacher(page); const root=page.locator('#teacherExamWorkspace'); await root.locator('[data-exam-action=new-mcq]').click(); await root.locator('summary').click(); await root.locator('[data-exam-action=copy-template]').click(); expect(await page.evaluate(()=>navigator.clipboard.readText())).toContain('উত্তর: A');
+  await context.grantPermissions(['clipboard-read','clipboard-write']); await teacher(page); const root=page.locator('#teacherExamWorkspace'); await root.locator('[data-exam-action=new-mcq]').click(); await root.locator('[data-exam-action=copy-template]').click(); expect(await page.evaluate(()=>navigator.clipboard.readText())).toContain('উত্তর: A');
   await root.locator('[data-exam-action=list]').click();
   const longTemplate=Array.from({length:14},(_,i)=>template.split('\n---\n')[0].replace('বাংলাদেশের রাজধানী কোনটি?',`প্রশ্ন ${i+1}: বাংলাদেশের রাজধানী ও প্রশাসনিক বিভাগ সম্পর্কে তোমার জানা তথ্য অনুযায়ী সঠিক উত্তরটি নির্বাচন করো।`)).join('\n---\n');
   await seed(page,{template:longTemplate}); await root.locator('[data-exam-action=detail]').click();

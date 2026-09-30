@@ -26,7 +26,14 @@ export function buildDemoExams(now = Date.now(), batch = 'initial') {
   function result(exam, person, answers) {
     const attempt = { id: `DEMO-AT-${batch}-${exam.type}-${exam.id.split('-').at(-1)}-${person.id}`, examId: exam.id, studentId: person.id, name: person.name, className: person.className, number: 1, status: 'submitted', startedAt: exam.startAt + 1000, finishedAt: Math.min(now - 1000, exam.endAt - 1000), savedAt: Math.min(now - 1000, exam.endAt - 1000), answers, demoFixture: true, order: exam.type === 'mcq' ? exam.questions.map(q => ({ id: q.id, options: q.options.map(o => o.id) })) : [] };
     if (exam.type === 'mcq') Object.assign(attempt, scoreAttempt(exam, attempt));
-    else { attempt.questionScores = { q1: 4, q2: 2 }; attempt.score = 6; attempt.finishedAt = now - 1000; }
+    // The written/short marks come from the exam's own questions, so editing a
+    // template can never leave the demo fixture disagreeing with its exam.
+    else {
+      const scores = Object.fromEntries(exam.questions.map((q, index) => [q.id, index === 0 ? q.marks : Math.max(0, q.marks - 1)]));
+      attempt.questionScores = scores;
+      attempt.score = Object.values(scores).reduce((sum, mark) => sum + mark, 0);
+      attempt.finishedAt = now - 1000;
+    }
     attempts.push(attempt);
   }
   const live = exams[0], complete = exams[2];
