@@ -71,3 +71,9 @@ local login, plus direct implementation-call blocking and exact deny-all rules.
 The older reconnect/lifecycle tests explicitly opt into the legacy engine ONLY
 in their test loader to retain regression coverage; they do not represent an
 enabled production bridge or live cloud-login validation.
+
+## Proposed replacement
+
+A per-user/per-role design (draft rules, simulator tests, emulator suite and the
+list of required code changes) is in `docs/RTDB-PER-USER-RULES-PLAN.md`. It is
+not deployed; `database.rules.json` above remains the published policy.
