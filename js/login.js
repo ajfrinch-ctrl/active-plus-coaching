@@ -346,7 +346,7 @@ async function handleLogin(event, state, onAuthenticated) {
           email: cloud.userProfile?.email || '',
           role,
           status: cloud.claims?.status || cloud.userProfile?.status || 'active',
-          password: await hashPassword(pin)
+          pinHash: await hashPassword(pin)
         });
         if (!localReady) {
           setAuthMessage('ক্লাউড লগইন সফল হয়েছে, কিন্তু এই ডিভাইসে স্টাফ সেশন প্রস্তুত করা যায়নি।');
