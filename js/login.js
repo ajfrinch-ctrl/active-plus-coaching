@@ -208,9 +208,10 @@ function isOwnIdentifier(account, identifier) {
   return /^s\d{6}/.test(typed) && Boolean(id) && id.startsWith(typed);
 }
 
-async function runBackgroundLoginSync() {
-  if (!LEGACY_CLOUD_ENABLED) return;
-  if (!navigator.onLine) return;
+async function runBackgroundLoginSync(identifier = '', secret = '') {
+  if (!navigator.onLine || !identifier || !secret) return;
+  const cloudLogin = await signInCloudUsername(identifier, secret);
+  if (!cloudLogin.ok) return;
   // Sync is deliberately fire-and-forget from the authentication path.
   // A slow/failed cloud bridge must never mutate or gate the login form.
   try {
@@ -293,7 +294,7 @@ async function handleLogin(event, state, onAuthenticated) {
     // Login is complete before cloud work begins.
     window.dispatchEvent(new Event('apc-student-login'));
     onAuthenticated?.();
-    void runBackgroundLoginSync();
+    void runBackgroundLoginSync(typedId, pin);
     return;
   }
 
