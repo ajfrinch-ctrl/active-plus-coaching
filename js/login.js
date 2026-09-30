@@ -114,6 +114,7 @@ async function handleStaffLogin(role, typedId, pin) {
     });
     return;
   }
+  // The staff panel boots cloud sync itself (js/realtime-sync-entry.js).
   await enterStaffPanel(role, remember);
 }
 
