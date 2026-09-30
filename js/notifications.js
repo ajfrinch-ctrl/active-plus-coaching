@@ -387,7 +387,8 @@ export function initNotifications() {
     const firstRun = !Number(readJSON(BOOT_KEY_PREFIX + viewerKey, null)?.at);
     if (firstRun) writeJSON(BOOT_KEY_PREFIX + viewerKey, { version: 1, at: Date.now() });
     armed = !firstRun;                       // a device with data notifies at once
-    const register = () => { mountPill(); refreshNotifications(); };
+    // Permission remains available in the notice inbox; no unsolicited banner.
+    const register = () => { refreshNotifications(); };
     if (document.readyState === 'loading') window.addEventListener('DOMContentLoaded', register, { once: true });
     else register();
     if (!armed) {

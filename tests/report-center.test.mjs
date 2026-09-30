@@ -286,7 +286,7 @@ test('11 — the preview shows exactly the pages the engine laid out', () => {
 /* ------------------------------------------------------------------ 7 ---- */
 
 test('7 — mobile: the preview cannot overflow horizontally', () => {
-  const css = readFileSync(new URL('../css/reports.css', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../css/ui-features.css', import.meta.url), 'utf8');
   const scroll = /\.rc-pdf-preview\s*\{([^}]*)\}/.exec(css);
   assert.ok(scroll, 'the preview scroll rule exists');
   assert.match(scroll[1], /min-width:\s*0/, 'the preview must not force the shell wider than the screen');
@@ -309,7 +309,7 @@ test('5 — no records means the honest empty state, never invented rows', async
 
   // The empty state travels inside the document, so the PDF says it too — and
   // no zero-filled table is printed in its place.
-  assert.match($('.rc-pdf-preview').textContent, /No data found/);
+  assert.ok($('.rc-pdf-preview').textContent.includes(catalog.EMPTY_MESSAGE), 'the preview uses the catalogue empty message');
   assert.equal($('.rc-pdf-preview').textContent.includes('AP-1024'), false, 'no student rows leak into an empty report');
   assert.ok(catalog.EMPTY_MESSAGE.length > 0, 'the catalogue keeps the Bengali empty message');
 });

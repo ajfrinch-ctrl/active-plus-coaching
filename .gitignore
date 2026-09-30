@@ -9,3 +9,13 @@ functions/service-account*.json
 emulator-data/
 
 .two-device-run/
+
+# Secrets: keep legitimate package/rules/public JSON tracked.
+.env
+.env.*
+!.env.example
+**/service-account*.json
+**/firebase-admin*.json
+**/*serviceAccount*.json
+*.pem
+*.key

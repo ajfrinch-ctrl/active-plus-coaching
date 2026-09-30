@@ -1,3 +1,4 @@
+import { LEGACY_CLOUD_ENABLED, CLOUD_PAUSED_MESSAGE, cloudPausedResult } from '../sync/cloud-access.js';
 /* Login feature: one door for everyone.
    A student signs in with username/mobile + password and lands in the student app.
    Staff (admin, manager, teacher, payment counter) sign in on the same form with their
@@ -15,7 +16,7 @@ import { contactNumber, normalizeUsername } from './account-policy.js';
 import { matchesLoginIdentifier, studentIdOf } from './sync-merge.js';
 import {
   loadAccount, saveStudent, persistSession, setTrustedDevice,
-  isSecurityCheckDisabled, loadAppConfig, verifyAccountPassword, upgradeAccountSecrets
+  loadAppConfig, verifyAccountPassword, upgradeAccountSecrets
 } from './storage.js';
 import {
   STAFF_ACCOUNTS, STAFF_USERNAMES, normalizeStaffUsername, authenticateStaff,
@@ -24,7 +25,7 @@ import {
 } from './staff-auth.js';
 import { KEYS, readJSON } from './database.js';
 import { openStaffPasswordDialog } from './staff-password-dialog.js';
-import { authenticateDirectoryStaff, changeDirectoryStaffPassword, findDirectoryStaffByUsername } from './staff-directory.js';
+import { authenticateDirectoryStaff, changeDirectoryStaffPassword } from './staff-directory.js';
 import { generateLoginId } from './user-id.js';
 import { isPasswordRecord } from './password-hash.js';
 
@@ -57,36 +58,10 @@ export function switchAuthTab(tab) {
   scrollToTop();
 }
 
-/* The same box takes a 4–6 digit student password or a staff password, so the
-   keyboard follows what is being typed. */
-let keyboardSequence = 0;
-function syncPasswordKeyboard() {
-  const idInput = $('#loginMobile');
-  const pinInput = $('#loginPin');
-  if (!idInput || !pinInput) return;
-  const value = idInput.value;
-  const sequence = ++keyboardSequence;
-  const paint = role => {
-    if (sequence !== keyboardSequence || idInput.value !== value) return;
-    pinInput.setAttribute('inputmode', role ? 'text' : 'numeric');
-    pinInput.setAttribute('placeholder', role ? 'পাসওয়ার্ড' : '৪–৬ সংখ্যার পাসওয়ার্ড');
-  };
-  const known = staffRoleFor(value);
-  if (known) { paint(known); return; }
-  resolveStaffRoleByUsername(value)
-    .then(role => (role ? role : staffPanelRoleFor(value)))
-    .then(paint)
-    .catch(() => paint(null));
-}
-
-/* A username created in Staff Management is not one of the four fixed role
-   names, so the panel it belongs to comes from the staff directory. */
-async function staffPanelRoleFor(value) {
-  try {
-    const staff = await findDirectoryStaffByUsername(value);
-    return staff ? staffRolePanelOf(staff) : null;
-  } catch { return null; }
-}
+/* The login box accepts both a student's numeric PIN and a staff member's
+   alphanumeric password. Always offer the full keyboard: switching inputmode
+   asynchronously after looking up a role leaves mobile keyboards stuck in
+   numeric mode when the password field was already focused. */
 
 function staffRolePanelOf(staff) {
   const role = staff?.role;
@@ -115,6 +90,12 @@ async function enterStaffPanel(role, remember) {
 
 async function handleStaffLogin(role, typedId, pin) {
   const result = await authenticateStaff(role, typedId, pin);
+  if (result.needsSetup) {
+    // A login must match an existing credential. Unknown reserved IDs must
+    // never become a password-provisioning shortcut into a staff panel.
+    setAuthMessage('এই স্টাফ অ্যাকাউন্টের পাসওয়ার্ড নির্ধারিত নেই। এডমিনের সাথে যোগাযোগ করুন।');
+    return;
+  }
   if (!result.ok) {
     setAuthMessage(`${STAFF_LABEL[role]}র ইউজারনেম বা পাসওয়ার্ড সঠিক নয়। আবার চেষ্টা করুন।`);
     return;
@@ -124,15 +105,6 @@ async function handleStaffLogin(role, typedId, pin) {
     return;
   }
   const remember = $('#rememberMe')?.checked !== false;
-  if (result.needsSetup) {
-    openStaffPasswordDialog({
-      role,
-      mode: 'setup',
-      onDone: () => enterStaffPanel(role, remember),
-      onCancel: () => setAuthMessage('প্রবেশের আগে একটি পাসওয়ার্ড নির্ধারণ করুন।')
-    });
-    return;
-  }
   if (result.needsPasswordChange) {
     openStaffPasswordDialog({
       role,
@@ -183,22 +155,6 @@ const ONLINE_BRIDGE_BUDGET_MS = 2500;
    reported as "not on this device". A wider budget only extends this one wait;
    login still proceeds either way. */
 const LOGIN_IDENTITY_BUDGET_MS = 8000;
-/* When the background sync bridge has already reported itself dead
-   (data-realtime-sync="error" — unreachable Firebase, blocked CDN, locked
-   school network), the SAME endpoint cannot answer the login hydrate either.
-   Waiting the full budget for it would hold the login button hostage for
-   seconds on every attempt ("লোডিং" with a dead sync). In that state both
-   waits collapse to a short grace: a reachable corner still gets a chance,
-   and the device's own records decide immediately otherwise. The background
-   bridge keeps retrying on its own and resumes syncing when it can. */
-const BRIDGE_DOWN_BUDGET_MS = 1200;
-
-function onlineLoginBudget() {
-  return document.documentElement?.dataset?.realtimeSync === 'error'
-    ? BRIDGE_DOWN_BUDGET_MS
-    : 0;
-}
-
 function withinBudget(promise, what, budget = ONLINE_BRIDGE_BUDGET_MS) {
   let timer;
   return Promise.race([
@@ -210,6 +166,7 @@ function withinBudget(promise, what, budget = ONLINE_BRIDGE_BUDGET_MS) {
 }
 
 async function hydrateStaffAccountsOnline(what, budget = ONLINE_BRIDGE_BUDGET_MS) {
+  if (!LEGACY_CLOUD_ENABLED) return cloudPausedResult();
   if (!navigator.onLine) return;
   try {
     const bridge = await withinBudget(import('../sync/sync-core.js?v=20260929-protected'), 'online bridge import', budget);
@@ -226,6 +183,7 @@ async function hydrateStaffAccountsOnline(what, budget = ONLINE_BRIDGE_BUDGET_MS
    Returns true only when the cloud lookup ran and finished; false when the
    device is offline, the budget ran out, or the cloud refused the request. */
 async function hydrateUserIdentifiersOnline(what, identifier = '', password = '', budget = LOGIN_IDENTITY_BUDGET_MS) {
+  if (!LEGACY_CLOUD_ENABLED) return cloudPausedResult();
   if (!navigator.onLine) return false;
   try {
     const bridge = await withinBudget(import('../sync/sync-core.js?v=20260929-protected'), 'online identity import', budget);
@@ -247,6 +205,8 @@ function isOwnIdentifier(account, identifier) {
 }
 
 async function runBackgroundLoginSync() {
+  if (!LEGACY_CLOUD_ENABLED) return;
+  if (!navigator.onLine) return;
   // Sync is deliberately fire-and-forget from the authentication path.
   // A slow/failed cloud bridge must never mutate or gate the login form.
   try {
@@ -285,9 +245,8 @@ async function handleLogin(event, state, onAuthenticated) {
   // 1) Fixed staff accounts — local first.
   const staffRole = await resolveStaffRoleByUsername(typedId);
   if (attemptId !== loginAttemptId) return;
-  if (staffRole) {
+  if (staffRole && staffAccountRecordExists(staffRole)) {
     await handleStaffLogin(staffRole, typedId, pin);
-    if (attemptId === loginAttemptId) void runBackgroundLoginSync();
     return;
   }
 
@@ -296,7 +255,6 @@ async function handleLogin(event, state, onAuthenticated) {
   if (attemptId !== loginAttemptId) return;
   if (directory.ok) {
     await handleDirectoryStaffLogin(directory, remember);
-    if (attemptId === loginAttemptId) void runBackgroundLoginSync();
     return;
   }
   if (directory.code === 'INACTIVE') {
@@ -349,12 +307,11 @@ async function handleLogin(event, state, onAuthenticated) {
 
   if (navigator.onLine && typedId && attemptId === loginAttemptId) {
     onlineIdentities.attempted = true;
-    const down = onlineLoginBudget();
     const identities = await hydrateUserIdentifiersOnline(
       'login',
       typedId,
       pin,
-      down || LOGIN_IDENTITY_BUDGET_MS
+      LOGIN_IDENTITY_BUDGET_MS
     );
 
     if (attemptId !== loginAttemptId) return;
@@ -388,12 +345,28 @@ async function handleLogin(event, state, onAuthenticated) {
       return;
     }
 
+    if (onlineIdentities.cloudPasswordMismatch || onlineIdentities.ambiguous) {
+      setAuthMessage(onlineIdentities.ambiguous
+        ? 'এই সংক্ষিপ্ত Student ID দিয়ে একাধিক শিক্ষার্থী পাওয়া গেছে — সম্পূর্ণ Student ID লিখুন।'
+        : 'ইউজারনেম, মোবাইল নম্বর বা Student ID অথবা পাসওয়ার্ড সঠিক নয়।');
+      return;
+    }
+
+    // Fixed-role records may only exist on another device. Do not depend on
+    // the first-use form's background hydration having finished already.
+    await hydrateStaffAccountsOnline('login', LOGIN_IDENTITY_BUDGET_MS);
+    if (attemptId !== loginAttemptId) return;
+    const cloudRole = await resolveStaffRoleByUsername(typedId);
+    if (cloudRole) {
+      await handleStaffLogin(cloudRole, typedId, pin);
+      return;
+    }
+
     // Cloud Directory may have hydrated a staff identity.
     const cloudDirectory = await authenticateDirectoryStaff(typedId, pin);
     if (attemptId !== loginAttemptId) return;
     if (cloudDirectory.ok) {
       await handleDirectoryStaffLogin(cloudDirectory, remember);
-      if (attemptId === loginAttemptId) void runBackgroundLoginSync();
       return;
     }
   }
@@ -404,7 +377,7 @@ async function handleLogin(event, state, onAuthenticated) {
   } else if (onlineIdentities.cloudPasswordMismatch) {
     setAuthMessage('ইউজারনেম, মোবাইল নম্বর বা Student ID অথবা পাসওয়ার্ড সঠিক নয়।');
   } else if (onlineIdentities.attempted && !onlineIdentities.synced) {
-    setAuthMessage('ক্লাউড থেকে অ্যাকাউন্ট আনা যায়নি। ইন্টারনেট ও Firebase সিঙ্ক পরীক্ষা করে আবার লগইন করুন। আগে অ্যাকাউন্ট তৈরি করে থাকলে নতুন করে রেজিস্ট্রেশন করবেন না।');
+    setAuthMessage(!LEGACY_CLOUD_ENABLED ? CLOUD_PAUSED_MESSAGE : 'ক্লাউড থেকে অ্যাকাউন্ট আনা যায়নি। ইন্টারনেট ও Firebase সিঙ্ক পরীক্ষা করে আবার লগইন করুন। আগে অ্যাকাউন্ট তৈরি করে থাকলে নতুন করে রেজিস্ট্রেশন করবেন না।');
   } else if (!navigator.onLine) {
     setAuthMessage('এই ডিভাইসে অ্যাকাউন্ট সংরক্ষিত নেই। অন্য ডিভাইসে তৈরি অ্যাকাউন্টে প্রথমবার লগইন করতে ইন্টারনেট চালু করুন।');
   } else {
@@ -431,20 +404,12 @@ function initPinVisibility() {
   });
 }
 
-function initSkipSecurityToggle() {
-  const checkbox = $('#skipSecurityCheck');
-  if (!checkbox) return;
-  checkbox.checked = isSecurityCheckDisabled();
-}
-
 export function initLogin({ state, onAuthenticated }) {
   initPinVisibility();
-  initSkipSecurityToggle();
   $$('[data-auth-tab]').forEach(trigger => trigger.addEventListener('click', () => {
-    switchAuthTab(trigger.dataset.authTab);
+    if (trigger.dataset.authTab === 'first-admin') void openFirstAdminSetup();
+    else switchAuthTab(trigger.dataset.authTab);
   }));
-  $('#loginMobile')?.addEventListener('input', syncPasswordKeyboard);
-  syncPasswordKeyboard();
   const form = $('#loginForm');
   let submitting = false;
   form?.addEventListener('submit', async event => {
@@ -518,26 +483,52 @@ async function lockFirstAdminSetup(reason = '') {
   if (reason) setAuthMessage(reason, 'success');
 }
 
+async function cloudFirstAdminExists() {
+  // First setup remains possible offline; the account is kept locally and
+  // published by the normal bridge on the next authenticated connection.
+  if (!navigator.onLine) return { ok: true, exists: false, offline: true };
+  try {
+    const bridge = await withinBudget(import('../sync/sync-core.js?v=20260929-protected'), 'admin check import', LOGIN_IDENTITY_BUDGET_MS);
+    return await withinBudget(bridge.firstAdminExistsOnline(), 'admin check', LOGIN_IDENTITY_BUDGET_MS);
+  } catch (error) {
+    console.warn('[Active Plus] first Admin check unavailable:', error?.message || error);
+    return { ok: false };
+  }
+}
+
 async function initFirstAdminSetup() {
   const panel = $('#firstAdminPanel');
-  if (!panel) return;                       // page carries no first-use form
-
-  // On a new device the Admin record may exist only in Firebase at first.
-  // Hydrate staff accounts before deciding whether the one-time setup is
-  // available, so a real Admin account is never shown as "Create Admin".
-  await hydrateStaffAccountsOnline('first-use check');
-  await hydrateUserIdentifiersOnline('first-use check');
-
-  if (await staffAccountRecordExists('admin')) {
-    await lockFirstAdminSetup();             // Admin Count >= 1 → never offered
+  if (!panel) return;
+  // First-use is an explicit action; no account or credential hydration on the
+  // login screen. Check the cloud only when someone opens this setup form.
+  if (staffAccountRecordExists('admin')) {
+    await lockFirstAdminSetup();
     return;
   }
-  firstAdminState.available = true;
   const footnote = $('#firstAdminFootnote');
   if (footnote) footnote.hidden = false;
   $('#firstAdminName')?.addEventListener('input', renderFirstAdminPreview);
   renderFirstAdminPreview();
   $('#firstAdminForm')?.addEventListener('submit', handleFirstAdminSubmit);
+}
+
+async function openFirstAdminSetup() {
+  if (!$('#firstAdminPanel')) return;
+  if (staffAccountRecordExists('admin')) {
+    await lockFirstAdminSetup('প্রথম Admin Account ইতিমধ্যে তৈরি হয়েছে — এখন লগইন করুন।');
+    return;
+  }
+  const status = await cloudFirstAdminExists();
+  if (!status.ok) {
+    setAuthMessage('প্রথম Admin Account তৈরির আগে ইন্টারনেট ও Firebase সংযোগ যাচাই করা দরকার। আবার চেষ্টা করুন।');
+    return;
+  }
+  if (status.exists) {
+    await lockFirstAdminSetup('প্রথম Admin Account ইতিমধ্যে তৈরি হয়েছে — এখন লগইন করুন।');
+    return;
+  }
+  firstAdminState.available = true;
+  switchAuthTab('first-admin');
 }
 
 async function handleFirstAdminSubmit(event) {
@@ -552,8 +543,13 @@ async function handleFirstAdminSubmit(event) {
     error.hidden = !message;
   };
   showError('');
-  // Re-check at submit time too: a second tab may have created the Admin.
-  if (await staffAccountRecordExists('admin')) {
+  // Re-check at submit time too: another device may have created the Admin.
+  const status = await cloudFirstAdminExists();
+  if (!status.ok) {
+    showError('Firebase সংযোগ যাচাই করা যায়নি। ডেটা নিরাপদ আছে — আবার চেষ্টা করুন।');
+    return;
+  }
+  if (status.exists || staffAccountRecordExists('admin')) {
     await lockFirstAdminSetup('প্রথম Admin Account ইতিমধ্যে তৈরি হয়েছে — এখন লগইন করুন।');
     switchAuthTab('login');
     return;

@@ -23,12 +23,12 @@ let ctx;
 
 async function openLoginPage() {
   ctx = await loadPage('index.html', { seed: { ...DEMO_OFF } });
+  // Offline first-use is local-only; no Firebase request before an explicit action.
+  Object.defineProperty(ctx.window.navigator, 'onLine', { configurable: true, value: false });
   const { initLogin } = await import('../js/login.js');
   initLogin({ state: { student: null, account: null }, onAuthenticated: () => {} });
-  // The gate is async (it settles the stored Admin record, and may consult the
-  // optional online bridge first), so wait for it to actually decide rather
-  // than for the element to merely exist in the markup: it ships hidden and is
-  // either unhidden or removed once the answer is known.
+  // Startup uses only the local record. Cloud checks are reserved for an
+  // explicit setup action; wait for the initially hidden option to be exposed.
   await ctx.waitFor(() => {
     const footnote = ctx.$('#firstAdminFootnote');
     if (!footnote) return true;

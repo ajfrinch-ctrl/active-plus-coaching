@@ -1,12 +1,18 @@
+import { LEGACY_CLOUD_ENABLED, CLOUD_PAUSED_MESSAGE, cloudPausedResult } from '../sync/cloud-access.js';
 // Active Plus — real Firebase connection smoke test.
 // This is diagnostic only; it never changes local app data.
-import { firebaseApp, appCheckReady } from '../firebase/firebase-init.js';
+
 import { firebaseConfig } from '../firebase/firebase-config.js';
-import { getAuth, signInAnonymously, getDatabase, ref, onValue, get } from '../firebase/firebase-services.js';
+
 
 export async function testFirebaseOnlineConnection(timeout = 8000) {
+  if (!LEGACY_CLOUD_ENABLED) return cloudPausedResult();
   if (!navigator.onLine) return { ok: false, reason: 'offline' };
   try {
+    const { hasSyncSession } = await import('./sync-session.js');
+    if (!(await hasSyncSession())) throw new Error('authentication-required');
+    const { firebaseApp, appCheckReady } = await import('../firebase/firebase-init.js');
+    const { getAuth, signInAnonymously, getDatabase, ref, onValue, get } = await import('../firebase/firebase-services.js');
     await appCheckReady;
     const auth = getAuth(firebaseApp);
     await auth.authStateReady();

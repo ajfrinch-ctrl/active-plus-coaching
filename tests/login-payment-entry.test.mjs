@@ -12,7 +12,7 @@ import { loadPage } from './jsdom-harness.mjs';
 import { STAFF_ACCOUNTS } from '../js/staff-auth.js';
 import { hasStaffSession, createInitialAdmin, staffAccountRecordExists } from '../js/staff-auth.js';
 import { STORAGE_KEYS } from '../js/config.js';
-import { STAFF_TEST_PASSWORD, provisionStaff, seedStaffSession, signInOnLoginPage, completeStaffPasswordDialog, cancelStaffPasswordDialog } from './staff-harness.mjs';
+import { STAFF_TEST_PASSWORD, provisionStaff, seedStaffSession, signInOnLoginPage, completeStaffPasswordDialog } from './staff-harness.mjs';
 
 const DEMO_OFF = { 'activePlus.demo.autofill.v1': 'off' };
 const ACCOUNT_KEY = 'active-plus-account-v1';
@@ -87,8 +87,8 @@ test('admin credentials hand over to the admin panel, wrong ones change nothing'
     () => Boolean(ctx.$('#authMessage').textContent) || Boolean(ctx.$('.staff-pw-backdrop')));
   assert.equal(session('admin'), null, 'no Admin session before initial setup');
   assert.equal(await staffAccountRecordExists('admin'), false, 'shared login cannot create the first Admin');
-  await cancelStaffPasswordDialog(ctx);
-  assert.match(ctx.$('#authMessage').textContent, /পাসওয়ার্ড নির্ধারণ করুন/);
+  assert.equal(ctx.$('.staff-pw-backdrop'), null, 'unknown Admin credentials cannot open a setup dialog');
+  assert.match(ctx.$('#authMessage').textContent, /অ্যাকাউন্ট সংরক্ষিত নেই|পাসওয়ার্ড নির্ধারিত নেই/);
 
   await provisionStaff('admin');
   await signIn('admin.apc', 'ভুল-পাসওয়ার্ড', () => /সঠিক ন(য়|য়)/.test(ctx.$('#authMessage').textContent));
@@ -204,14 +204,13 @@ for (const [panel, script, exitButton, role] of [
   });
 }
 
-test('typing a provisioned staff username switches the password box to a keyboard layout', async () => {
+test('the shared password box offers letters and digits before login, regardless of ID', async () => {
   await open();
   await provisionStaff('admin');
   const { $, type } = ctx;
-  assert.equal($('#loginPin').getAttribute('inputmode'), 'numeric');
+  assert.equal($('#loginPin').getAttribute('inputmode'), 'text');
   type($('#loginMobile'), 'admin.apc');
   assert.equal($('#loginPin').getAttribute('inputmode'), 'text');
   type($('#loginMobile'), 'raisa.islam');
-  await ctx.waitFor(() => $('#loginPin').getAttribute('inputmode') === 'numeric');
-  assert.equal($('#loginPin').getAttribute('inputmode'), 'numeric');
+  assert.equal($('#loginPin').getAttribute('inputmode'), 'text');
 });

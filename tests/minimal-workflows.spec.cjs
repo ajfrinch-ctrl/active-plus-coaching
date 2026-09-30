@@ -39,9 +39,9 @@ test('teacher: all 30 MCQ templates render, apply and copy without changing acad
 test('offline update preserves sentinel, existing account and all protected assets',async({page,context})=>{
  await enterPortal(page,'admin');await page.evaluate(()=>localStorage.setItem('qa-existing-data','must-survive'));
  await page.evaluate(async()=>{const r=await navigator.serviceWorker.ready;await r.update();});
- await expect.poll(()=>page.evaluate(async()=> (await caches.keys()).some(k=>k.includes('v109')))).toBe(true);
- const cached=await page.evaluate(async()=>{const c=await caches.open('active-plus-student-v109-minimal-education');return (await c.keys()).map(r=>new URL(r.url).pathname)});
- for(const p of ['/firebase/firebase-config.js','/firebase/firebase-init.js','/sync/sync-core.js','/sync/sync-guard.js','/sync/sync-retry.js','/js/icons.js','/css/ui-status.css'])expect(cached).toContain(p);
+ await expect.poll(()=>page.evaluate(async()=> (await caches.keys()).some(k=>k.includes('v116')))).toBe(true);
+ const cached=await page.evaluate(async()=>{const c=await caches.open('active-plus-student-v116-minimal-education');return (await c.keys()).map(r=>new URL(r.url).pathname)});
+ for(const p of ['/firebase/firebase-config.js','/firebase/firebase-init.js','/sync/sync-core.js','/sync/sync-guard.js','/sync/sync-retry.js','/js/icons.js','/css/ui-status.css','/css/app-polish.css','/css/student-record.css'])expect(cached).toContain(p);
  await context.setOffline(true);await page.reload();await expect(page.locator('#adminShell')).toBeVisible();expect(await page.evaluate(()=>localStorage.getItem('qa-existing-data'))).toBe('must-survive');await context.setOffline(false);
 });
 test('staff modal: visible heading, keyboard focus containment and Escape close',async({page})=>{

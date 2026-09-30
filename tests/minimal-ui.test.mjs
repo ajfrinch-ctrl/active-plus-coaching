@@ -17,7 +17,7 @@ test('protected core unchanged from upstream main and all new and protected asse
  const sw=read('sw.js');
  for(const dir of ['firebase','sync'])for(const file of readdirSync(dir).filter(f=>f.endsWith('.js'))){const p=`${dir}/${file}`;assert.equal(read(p),execFileSync('git',['show',`13ab90a:${p}`],{encoding:'utf8'}));assert.ok(sw.includes(`'./${p}'`),p);}
  for(const f of ['design-system','foundation','ui-layout','ui-components','ui-forms','ui-features'])assert.ok(sw.includes(`'./css/${f}.css'`));
- assert.ok(sw.includes("'./js/realtime-sync.js'"));assert.ok(sw.includes("'./js/icons.js'"));assert.match(sw,/CACHE_VERSION = 109/);
+ assert.ok(sw.includes("'./js/realtime-sync.js'"));assert.ok(sw.includes("'./js/icons.js'"));assert.match(sw,/CACHE_VERSION = 116/);
  const added=execFileSync('git',['diff','--unified=0','--','js','sw.js'],{encoding:'utf8'}).split('\n').filter(l=>l.startsWith('+')).join('\n');assert.doesNotMatch(added,/localStorage\.clear\s*\(|indexedDB\.deleteDatabase\s*\(/);
 });
 test('precache URLs are unique and all local shell assets exist',()=>{

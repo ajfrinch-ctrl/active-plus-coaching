@@ -1,3 +1,4 @@
+import { LEGACY_CLOUD_ENABLED, assertCloudAccess } from '../sync/cloud-access.js';
 /* Push transport (FCM) for the notification centre.
 
    What this file does when it is fully configured:
@@ -11,10 +12,9 @@
    module reports `needs-key` and the in-app centre keeps working. Nothing in
    the record is a secret — no password hash and no session token is ever added.
 
-   The token node inherits the bridge rules (any signed-in user of this project
-   can read the bridge during the test phase), so the tokens are only as private
-   as the rest of the bridge; the production Firebase Auth migration moves them
-   next to the account that owns them. */
+   The legacy bridge is currently disabled and deny-all rules protect these
+   nodes. Token registration stays paused until a per-account, server-verified
+   authentication/authorization migration replaces the anonymous transport. */
 
 import { readJSON, writeJSON } from './storage.js';
 import { getDeviceId } from './session.js';
@@ -24,7 +24,7 @@ export const PUSH_LOCAL_KEY = 'activePlus.push.device.v1';
 const TOKENS_ROOT = 'activePlusSync/v1/pushTokens';
 /* Same specifier as the entry point, so the browser reuses ONE sync module
    instance (two copies would install two write bridges). */
-const SYNC_MODULE = './realtime-sync.js?v=20260929-fbaudit';
+const SYNC_MODULE = './realtime-sync.js';
 
 const SDK = 'https://www.gstatic.com/firebasejs/12.2.1';
 
@@ -66,6 +66,7 @@ export async function pushSupport() {
 }
 
 async function firebase() {
+  assertCloudAccess();
   const { firebaseApp } = await config();
   // The sync module owns the anonymous session; asking it (instead of signing
   // in again here) keeps one identity per device.
@@ -85,6 +86,7 @@ function writeLocal(state) {
 
 /** Ask the browser for a token and publish it for the sender. */
 export async function enablePush({ viewer } = {}) {
+  if (!LEGACY_CLOUD_ENABLED) return { ok: false, status: 'cloud-paused' };
   if (!supported()) return { ok: false, status: 'unsupported' };
   if (permission() !== 'granted') return { ok: false, status: 'denied' };
   let vapidKey = '';
@@ -114,6 +116,7 @@ export async function enablePush({ viewer } = {}) {
     A page load is not a reason to write to the cloud: the record is only
     re-published when it is missing or stale. */
 export async function syncPushRegistration({ viewer, maxAgeMs = 6 * 60 * 60 * 1000 } = {}) {
+  if (!LEGACY_CLOUD_ENABLED) return { ok: false, status: 'cloud-paused' };
   if (!supported() || permission() !== 'granted') return { ok: false, status: 'inactive' };
   const state = pushState();
   if (!state?.token) return enablePush({ viewer });
