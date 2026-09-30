@@ -106,6 +106,7 @@ async function formLogin({ username, pin }) {
 
 const commands = {
   async boot() {
+    globalThis.__apcTwoDeviceSignedIn = true;
     const result = await syncModule.startRealtimeSync();
     if (!result.ok) throw new Error('sync did not start: ' + result.reason);
     await bindLogin();

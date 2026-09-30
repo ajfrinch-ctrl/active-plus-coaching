@@ -284,7 +284,11 @@ export function generateStudentId() {
   const now = new Date();
   const date = `${String(now.getFullYear()).slice(-2)}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
   const sequence = nextSequence(`s:${date}`);
-  return `S-${date}${String(sequence).padStart(3, '0')}`;
+  // The daily sequence is per device. The random suffix keeps IDs created on
+  // two phones the same day distinct once they meet in the synced roster; the
+  // readable "s260930001" prefix still works as the short login form
+  // (sync-merge.js findLoginMatches).
+  return `s${date}${String(sequence).padStart(3, '0')}-${recordNonce()}`;
 }
 
 const CLASS_ID_CODES = Object.freeze({

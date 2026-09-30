@@ -47,7 +47,9 @@ export async function diagnoseFirebaseSync() {
       return result;
     }
 
-    await get(ref(db, 'activePlusSync/v1'));
+    // A small node the rules allow: reading all of activePlusSync/v1 would
+    // download every record (and the root itself is not readable).
+    await get(ref(db, 'activePlusSync/v1/settings'));
     result.databaseRead = true;
   } catch (error) {
     const code = String(error?.code || '');

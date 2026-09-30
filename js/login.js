@@ -21,20 +21,16 @@ import {
 import {
   STAFF_ACCOUNTS, STAFF_USERNAMES, normalizeStaffUsername, authenticateStaff,
   saveStaffSession, resolveStaffRoleByUsername, createInitialAdmin, staffAccountRecordExists,
-  activeStaffRoles, importCloudStaffAccount
+  activeStaffRoles
 } from './staff-auth.js';
 import { KEYS, readJSON } from './database.js';
 import { openStaffPasswordDialog } from './staff-password-dialog.js';
 import { authenticateDirectoryStaff, changeDirectoryStaffPassword } from './staff-directory.js';
 import { generateLoginId } from './user-id.js';
-import { isPasswordRecord, hashPassword } from './password-hash.js';
-import { signInCloudUsername, createFirstAdminCloud } from '../sync/cloud-auth.js';
+import { isPasswordRecord } from './password-hash.js';
 
 const STAFF_PANEL = Object.freeze({ admin: 'admin.html', manager: 'manager.html', teacher: 'teacher.html', payment: 'payment.html' });
 const STAFF_LABEL = Object.freeze({ admin: 'এডমিন প্যানেল', manager: 'ম্যানেজার প্যানেল', teacher: 'শিক্ষক প্যানেল', payment: 'পেমেন্ট রিসিভ প্যানেল' });
-
-async function persistCloudStudentAccount(account) { return saveAccount(account); }
-async function hydrateCloudStaffAccount(role, account) { return importCloudStaffAccount(role, account); }
 
 export function staffRoleFor(value) {
   const typed = normalizeStaffUsername(value);
@@ -109,34 +105,6 @@ async function handleStaffLogin(role, typedId, pin) {
     return;
   }
   const remember = $('#rememberMe')?.checked !== false;
-  // A legacy/local first Admin is upgraded to the same Firebase identity on
-  // the first successful online login. The callable is idempotently rejected
-  // when a cloud Admin already exists, so the local account remains intact.
-  if (role === 'admin' && navigator.onLine && result.ok) {
-    const localAccount = await import('../js/staff-auth.js').then(m => m.readStaffAccount(role));
-    if (localAccount?.username && localAccount?.password && typeof localAccount.password === 'string') {
-      try {
-        // Plaintext is used only transiently from the legacy local record and
-        // is never sent to RTDB/Firestore; Firebase Auth receives it directly.
-        const password = pin;
-        const bootstrap = await createFirstAdminCloud({
-          fullName: localAccount.fullName || 'Admin',
-          mobile: localAccount.mobile || '',
-          email: localAccount.email || '',
-          username: localAccount.username,
-          password
-        });
-        if (bootstrap?.uid) {
-          await import('../js/staff-auth.js').then(m => m.importCloudStaffAccount('admin', {
-            ...localAccount, uid: bootstrap.uid, pinHash: await hashPassword(password)
-          }));
-        }
-      } catch (error) {
-        console.warn('[Active Plus] local Admin cloud upgrade unavailable:', error?.message || error);
-      }
-    }
-  }
-
   if (result.needsPasswordChange) {
     openStaffPasswordDialog({
       role,
@@ -236,10 +204,8 @@ function isOwnIdentifier(account, identifier) {
   return /^s\d{6}/.test(typed) && Boolean(id) && id.startsWith(typed);
 }
 
-async function runBackgroundLoginSync(identifier = '', secret = '') {
-  if (!navigator.onLine || !identifier || !secret) return;
-  const cloudLogin = await signInCloudUsername(identifier, secret);
-  if (!cloudLogin.ok) return;
+async function runBackgroundLoginSync() {
+  if (!LEGACY_CLOUD_ENABLED || !navigator.onLine) return;
   // Sync is deliberately fire-and-forget from the authentication path.
   // A slow/failed cloud bridge must never mutate or gate the login form.
   try {
@@ -322,75 +288,8 @@ async function handleLogin(event, state, onAuthenticated) {
     // Login is complete before cloud work begins.
     window.dispatchEvent(new Event('apc-student-login'));
     onAuthenticated?.();
-    void runBackgroundLoginSync(typedId, pin);
+    void runBackgroundLoginSync();
     return;
-  }
-
-  // 4) Authenticated Firebase login is the cross-device path.
-  // The same username/password works on every device once the account is
-  // provisioned in Firebase Auth. No password hash is read from RTDB.
-  if (navigator.onLine && typedId && attemptId === loginAttemptId) {
-    const cloud = await signInCloudUsername(typedId, pin);
-    if (attemptId !== loginAttemptId) return;
-    if (cloud.ok) {
-      const role = String(cloud.claims?.role || cloud.userProfile?.role || '');
-      if (role === 'student' && cloud.studentProfile) {
-        const p = cloud.studentProfile;
-        const profile = cloud.userProfile || {};
-        const account = {
-          uid: cloud.user.uid,
-          role: 'student',
-          status: profile.status || p.status || 'active',
-          fullName: profile.fullName || p.fullName || cloud.user.displayName || '',
-          mobile: profile.mobile || p.mobile || '',
-          email: profile.email || p.email || '',
-          username: profile.username || p.username || typedId.toLowerCase(),
-          student: { ...p },
-          pinHash: await hashPassword(pin),
-          updatedAt: new Date().toISOString()
-        };
-        if (!(await persistCloudStudentAccount(account))) {
-          setAuthMessage('ক্লাউড অ্যাকাউন্ট পাওয়া গেছে, কিন্তু এই ডিভাইসে সংরক্ষণ করা যায়নি।');
-          return;
-        }
-        state.account = loadAccount() || account;
-        state.student = { ...defaultStudent, ...(state.account.student || {}) };
-        saveStudent(state.student);
-        if (!(await persistSession(remember))) {
-          setAuthMessage('সেশন সংরক্ষণ করা যায়নি — স্টোরেজ পরীক্ষা করুন।');
-          return;
-        }
-        if (remember) setTrustedDevice(true);
-        window.dispatchEvent(new Event('apc-student-login'));
-        onAuthenticated?.();
-        void runBackgroundLoginSync();
-        return;
-      }
-      if (['admin', 'manager', 'teacher', 'payment'].includes(role)) {
-        const localReady = await hydrateCloudStaffAccount(role, {
-          uid: cloud.user.uid,
-          username: cloud.userProfile?.username || typedId.toLowerCase(),
-          fullName: cloud.userProfile?.fullName || cloud.user.displayName || '',
-          mobile: cloud.userProfile?.mobile || '',
-          email: cloud.userProfile?.email || '',
-          role,
-          status: cloud.claims?.status || cloud.userProfile?.status || 'active',
-          pinHash: await hashPassword(pin)
-        });
-        if (!localReady) {
-          setAuthMessage('ক্লাউড লগইন সফল হয়েছে, কিন্তু এই ডিভাইসে স্টাফ সেশন প্রস্তুত করা যায়নি।');
-          return;
-        }
-        await enterStaffPanel(role, remember);
-        return;
-      }
-    } else if (cloud.reason === 'must-change-password') {
-      setAuthMessage('এই অ্যাকাউন্টে নতুন পাসওয়ার্ড সেট করা বাধ্যতামূলক। প্রথমে Admin-এর দেওয়া অস্থায়ী পাসওয়ার্ড দিয়ে প্রবেশ করুন।');
-      return;
-    } else if (cloud.reason === 'account-inactive') {
-      setAuthMessage('এই অ্যাকাউন্টটি বর্তমানে সক্রিয় নয়।');
-      return;
-    }
   }
 
   // 4) No usable local account: ONLY NOW do a short, isolated cloud lookup.

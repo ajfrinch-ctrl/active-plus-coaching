@@ -15,11 +15,11 @@ import { LEGACY_CLOUD_ENABLED, assertCloudAccess, cloudPausedResult } from '../s
 
    Only records that already hold PBKDF2 password HASHES travel the bridge — a
    plaintext password or security answer never does, and sessions stay
-   device-bound. This legacy anonymous TEST bridge is now disabled by
-   cloud-access.js and deny-all database rules. It must not be reopened before
-   server-verified authentication and per-user authorization are implemented. */
+   device-bound. This anonymous bridge is re-enabled as an INTERIM measure by
+   owner decision (2026-09-30): see docs/INTERIM-ANONYMOUS-SYNC.md for the
+   accepted risk and docs/RTDB-PER-USER-RULES-PLAN.md for the replacement. */
 import { firebaseApp, appCheckReady } from '../firebase/firebase-init.js';
-import { getAuth, setPersistence, browserLocalPersistence, getDatabase, ref, get, set, runTransaction, onValue as firebaseOnValue } from '../firebase/firebase-services.js';
+import { getAuth, signInAnonymously, setPersistence, browserLocalPersistence, getDatabase, ref, get, set, runTransaction, onValue as firebaseOnValue } from '../firebase/firebase-services.js';
 import { SYNCABLE, KEYS } from './database.js';
 import { STAFF_ACCOUNTS } from './staff-auth.js';
 import { encodeRealtimeRecords, decodeRealtimeRecords } from './realtime-value-codec.js';
@@ -144,17 +144,18 @@ export async function ensureCloudAuth() {
   authFlight = (async () => {
     await appCheckReady;
     const auth = getAuth(firebaseApp);
+    // One persisted transport identity per device: reloads reuse it instead of
+    // minting a new anonymous user on every visit.
+    try { await setPersistence(auth, browserLocalPersistence); } catch { /* private mode: memory */ }
     await auth.authStateReady();
-    // Never create an anonymous identity. Every cloud read/write must be tied
-    // to a real Firebase Auth account whose role/status claims were issued by
-    // the trusted backend.
-    if (!auth.currentUser) return null;
-    const token = await auth.currentUser.getIdTokenResult();
-    const claims = token.claims || {};
-    if (!['active', 'approved'].includes(claims.status) || claims.mustChangePassword === true) {
-      return null;
-    }
-    return auth.currentUser;
+    if (auth.currentUser) return auth.currentUser;
+    /* INTERIM anonymous test bridge (owner decision, 2026-09-30). The database
+       rules only require `auth != null`, so this identity proves nothing about
+       the app login — the local PBKDF2 check and the app session gate do. See
+       docs/INTERIM-ANONYMOUS-SYNC.md for the accepted risk and the exit plan
+       (docs/RTDB-PER-USER-RULES-PLAN.md). */
+    const credential = await signInAnonymously(auth);
+    return credential?.user || auth.currentUser;
   })().finally(() => { authFlight = null; });
   return authFlight;
 }
@@ -265,7 +266,9 @@ function syncStaffRole(role) {
       lastRemote.set('staff:' + role, JSON.stringify(remote));
       return;
     }
-    if (!local) return;
+    // Only a complete credential record is uploaded (the rules require a
+    // username and a password hash); a half-initialised local role is kept here.
+    if (!local || typeof local.username !== 'string' || !local.username || !isPasswordRecord(local.password)) return;
     /* Never hand Realtime Database a key it will reject: the write would fail
        and, before this guard, take the whole startup batch with it. */
     const unsafe = unsafeKeyPath(local);
@@ -350,10 +353,13 @@ async function syncUsernames() {
   if (!syncEnabled) return;
   const local = readUsernamesLocal() || {};
   const node = ref(getDatabase(firebaseApp), USERNAMES_ROOT);
-  const result = await runTransaction(node, current =>
-    syncEnabled && generation === syncGeneration ? {
-      ...encodeUsernameRegistry(local), ...(current || {})
-    } : undefined, { applyLocally: false });
+  const result = await runTransaction(node, current => {
+    if (!syncEnabled || generation !== syncGeneration) return undefined;
+    const merged = { ...encodeUsernameRegistry(local), ...(current || {}) };
+    // Nothing claimed anywhere yet: writing an empty registry would delete the
+    // node (the rules refuse that), so abort and leave the cloud untouched.
+    return Object.keys(merged).length ? merged : undefined;
+  }, { applyLocally: false });
   if (!syncEnabled || generation !== syncGeneration) return;
   const remote = result.snapshot.val() || {};
   lastRemote.set('usernames', JSON.stringify(remote));
@@ -1024,7 +1030,14 @@ export async function startRealtimeSync() {
       });
       const tasks = [
         ...RECORD_COLLECTIONS.map(collection => () => syncCollection(collection)),
-        () => syncExamDb()
+        () => syncExamDb(),
+        // Cross-device login identities: without these, an ID created on one
+        // phone never reaches the cloud until it is edited again, and a
+        // password changed elsewhere is never received here.
+        ...Object.keys(STAFF_ACCOUNTS).map(role => () => syncStaffRole(role)),
+        () => syncDirectory(),
+        () => syncUsernames(),
+        () => syncStudentAccount()
       ];
       // Keep failed collections separate. An independent node's rejection must
       // neither discard working listeners nor be falsely painted "synced".
@@ -1039,6 +1052,10 @@ export async function startRealtimeSync() {
       }
       for (const collection of RECORD_COLLECTIONS) listenCollection(collection);
       listenExamDb();
+      for (const role of Object.keys(STAFF_ACCOUNTS)) listenStaffRole(role);
+      listenDirectory();
+      listenUsernames();
+      listenStudentAccount();
       ready = true;
       started = true;
       schedulePendingFlush();
@@ -1057,16 +1074,20 @@ export async function startRealtimeSync() {
   try { return await flight; } finally { if (booting === flight) booting = null; }
 }
 
+/* `connected` mirrors ONLY Firebase's .info/connected. The browser's offline
+   event is often a blip in which the database socket never drops; clearing
+   `connected` here meant no .info/connected=true ever followed, so the
+   pending-flush timer (which requires `connected`) stranded offline edits. */
 window.addEventListener('offline', () => {
-  connected = false;
   if (syncEnabled) setSyncStatus('offline');
 });
 window.addEventListener('online', () => {
   if (!syncEnabled) return;
-  // Do not discard healthy subscriptions: the SDK's reconnect will deliver
-  // .info/connected and pending changes. A failed listener does need a retry.
-  if (syncFailed) void startRealtimeSync();
-  else paintSyncStatus();
+  // Do not discard healthy subscriptions. A failed listener does need a retry;
+  // otherwise push whatever the outbox collected while the browser was offline.
+  if (syncFailed) { void startRealtimeSync(); return; }
+  if (ready && connected) void flushPending().then(paintSyncStatus).catch(recordSyncError);
+  paintSyncStatus();
 });
 // The SDK owns transport reconnects; only detached listeners and independent
 // failed boot tasks need retries. Never rehydrate every collection for a normal

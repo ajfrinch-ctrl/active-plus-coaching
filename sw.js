@@ -1,4 +1,4 @@
-const CACHE_VERSION = 117;
+const CACHE_VERSION = 118;
 const CACHE_NAME = `active-plus-student-v${CACHE_VERSION}-minimal-education`;
 const APP_SHELL = [
   './css/app-polish.css',
@@ -28,6 +28,7 @@ const APP_SHELL = [
   './sync/sync-core.js',
   './sync/sync-config.js',
   './sync/sync-auth.js',
+  './sync/cloud-auth.js',
   './sync/sync-queue.js',
   './sync/sync-retry.js',
   './sync/sync-status.js',

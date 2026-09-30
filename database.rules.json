@@ -1,6 +1,103 @@
 {
   "rules": {
     ".read": false,
-    ".write": false
+    ".write": false,
+    "activePlusSync": {
+      "v1": {
+        "staffAccounts": {
+          ".read": "auth != null",
+          "$role": {
+            ".write": "auth != null && newData.exists() && ($role === 'admin' || $role === 'manager' || $role === 'teacher' || $role === 'payment')",
+            ".validate": "newData.hasChildren(['username', 'password']) && newData.child('username').isString()"
+          }
+        },
+        "staffDirectory": {
+          ".read": "auth != null",
+          ".write": "auth != null && newData.exists()",
+          ".validate": "newData.hasChild('version')"
+        },
+        "usernames": {
+          ".read": "auth != null",
+          ".write": "auth != null && newData.exists()"
+        },
+        "studentAccount": {
+          ".read": "auth != null"
+        },
+        "studentAccounts": {
+          ".read": "auth != null",
+          "$loginKey": {
+            ".write": "auth != null && newData.exists()",
+            ".validate": "newData.hasChild('pinHash')"
+          }
+        },
+        "examDb": {
+          ".read": "auth != null",
+          "exams": {
+            "$examId": {
+              ".write": "auth != null",
+              ".validate": "newData.child('id').val() === $examId && newData.child('teacherId').isString() && newData.child('status').isString()"
+            }
+          },
+          "attempts": {
+            "$attemptId": {
+              ".write": "auth != null",
+              ".validate": "newData.child('id').val() === $attemptId && newData.child('examId').isString() && newData.child('studentId').isString()"
+            }
+          }
+        },
+        "settings": {
+          ".read": "auth != null",
+          ".write": "auth != null"
+        },
+        "pushTokens": {
+          "$deviceKey": {
+            ".write": "auth != null",
+            ".validate": "newData.child('token').isString() && newData.child('token').val().length > 20 && newData.child('token').val().length <= 4096"
+          }
+        },
+        "students": {
+          ".read": "auth != null",
+          ".write": "auth != null",
+          "$recordId": {
+            ".validate": "newData.hasChildren()"
+          }
+        },
+        "transactions": {
+          ".read": "auth != null",
+          ".write": "auth != null",
+          "$recordId": {
+            ".validate": "newData.hasChildren()"
+          }
+        },
+        "notices": {
+          ".read": "auth != null",
+          ".write": "auth != null",
+          "$recordId": {
+            ".validate": "newData.hasChildren()"
+          }
+        },
+        "routine": {
+          ".read": "auth != null",
+          ".write": "auth != null",
+          "$recordId": {
+            ".validate": "newData.hasChildren()"
+          }
+        },
+        "teaching": {
+          ".read": "auth != null",
+          ".write": "auth != null",
+          "$recordId": {
+            ".validate": "newData.hasChildren()"
+          }
+        },
+        "teacherAssignments": {
+          ".read": "auth != null",
+          ".write": "auth != null",
+          "$recordId": {
+            ".validate": "newData.hasChildren()"
+          }
+        }
+      }
+    }
   }
 }

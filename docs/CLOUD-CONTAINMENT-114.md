@@ -1,3 +1,9 @@
+> **Superseded 2026-09-30.** By owner decision the anonymous bridge is running
+> again as an interim measure with hardened `auth != null` rules — see
+> `docs/INTERIM-ANONYMOUS-SYNC.md`. This document is kept as history and as the
+> reference for re-applying containment (its deny-all rules are the emergency
+> pause).
+
 # Cloud containment — 2026-09-29 (cache 114)
 
 ## Current state

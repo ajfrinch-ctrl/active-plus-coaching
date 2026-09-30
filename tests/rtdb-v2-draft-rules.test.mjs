@@ -71,10 +71,11 @@ const only = (allowed, check) => {
 };
 
 // ---- deployment guards ----------------------------------------------------
-test('draft stays a draft: firebase.json still deploys the deny-all rules', () => {
+test('draft stays a draft: firebase.json deploys database.rules.json, not the v2 draft', () => {
   const firebase = JSON.parse(read('../firebase.json'));
   assert.equal(firebase.database.rules, 'database.rules.json');
-  assert.deepEqual(JSON.parse(read('../database.rules.json')), { rules: { '.read': false, '.write': false } });
+  assert.notEqual(read('../database.rules.json'), read('../database.rules.v2.draft.json'));
+  assert.equal(JSON.parse(read('../database.rules.json')).rules[V2_ROOT], undefined, 'no v2 grants are live');
 });
 
 test('committed draft JSON matches its generator', () => {
