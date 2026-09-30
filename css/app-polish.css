@@ -117,6 +117,23 @@ html[data-theme=dark] {
   .staff-stat-label { font-size:12px;color:var(--color-text-secondary);margin:8px 0; }
   .staff-stat-value { font-size:24px;font-weight:600;margin:0; }
   .staff-toolbar { padding:20px;border:1px solid var(--color-border);border-radius:14px;background:var(--color-surface);margin-bottom:20px; }
+  /* One universal search box and the create action sit where the list ends;
+     the button fills the width, like every other panel action on a phone. */
+  .staff-create-bar { margin-top:16px; }
+  .staff-create-bar .staff-create-btn { width:100%; }
+  /* Student management: filters stay folded until they are asked for, and the
+     list itself shows nothing personal. */
+  .student-toolbar { display:flex;flex-wrap:wrap;gap:12px;align-items:center; }
+  .student-search-box { flex:1 1 100%; }
+  .student-filter-toggle { display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border:1px solid var(--color-border);border-radius:12px;background:var(--color-surface);color:var(--color-text);font-weight:500; }
+  .student-filter-toggle.active { border-color:var(--color-primary);color:var(--color-primary); }
+  .student-filter-toggle svg { width:18px;height:18px; }
+  .student-filter-panel { flex:1 1 100%;display:grid;gap:12px;padding:16px;border:1px solid var(--color-border);border-radius:14px;background:var(--color-surface); }
+  .student-filter-panel[hidden] { display:none; }
+  .student-filter-field { min-width:0; }
+  .student-filter-field label,.student-filter-field .staff-filter-label { font-size:12px;color:var(--color-text-secondary);margin:0 0 6px;display:block; }
+  .student-filter-reset { justify-self:start;min-height:40px;padding:0 14px;border:1px solid var(--color-border);border-radius:12px;background:transparent;color:var(--color-text-secondary); }
+
   .staff-search { display:flex;position:relative;align-items:center;margin-top:0; }
   .staff-search-icon { position:absolute;left:12px;display:flex;color:var(--color-text-muted);pointer-events:none; }
   .staff-search input { padding-inline:44px; }

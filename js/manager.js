@@ -1,4 +1,5 @@
 import { hasStaffSession, clearStaffSession, readStaffAccount, goToLoginPage } from './staff-auth.js';
+import { rememberRoute, onRouteChange, routeName } from './panel-route.js';
 import { decideRegistration, DECISION_MESSAGES, DECIDED_EVENT } from './registration-review.js';
 import { installPanelGuard, lockPanel, rememberPanelPage, watchOwnPanelSession } from './panel-lockdown.js';
 import { openStaffPasswordDialog } from './staff-password-dialog.js';
@@ -63,6 +64,8 @@ function renderView(view) {
   if (view === 'reports') renderReportPreview();
   if (view === 'profile') renderProfile();
   $('#managerMain')?.scrollTo({ top: 0, behavior: 'smooth' });
+  // Refresh reopens this page: the open view lives in the URL.
+  rememberRoute(view);
   return true;
 }
 function compactRow(text, meta = '') { return `<div class="manager-compact-row"><strong>${escapeHtml(text)}</strong>${meta ? `<br><small>${escapeHtml(meta)}</small>` : ''}</div>`; }
@@ -409,7 +412,12 @@ async function enterManager() {
   const shortName = $('#managerNameShort');
   if (shortName) shortName.textContent = managerAccount.fullName || 'Manager Profile';
   if (!examStarted) { initExamManager('#managerExamWorkspace', 'manager'); examStarted = true; }
-  renderView('dashboard'); await loadOperationalData();
+  // A refresh (or a shared link) reopens the page that was open, when it is a
+  // page this panel knows.
+  const wanted = routeName();
+  renderView(MANAGER_VIEWS.includes(wanted) ? wanted : 'dashboard');
+  onRouteChange(name => { if (MANAGER_VIEWS.includes(name) && name !== activeView) renderView(name); });
+  await loadOperationalData();
   mountReports($('#managerReports'), { panel: 'manager' });
   watchOwnPanelSession('manager');
 }

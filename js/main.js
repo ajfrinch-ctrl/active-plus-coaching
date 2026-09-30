@@ -272,6 +272,13 @@ async function restoreEntrySession() {
   }
 }
 window.addEventListener('popstate', () => { void restoreEntrySession(); });
+/* The open student page lives in the URL hash, so a refresh reopens it. A hash
+   edited (or a link opened) while the app is already on screen follows here. */
+window.addEventListener('hashchange', () => {
+  if ($('#appShell')?.hidden !== false) return;
+  if ($('#appShell')?.classList.contains('is-pending')) return;
+  setView(viewRouteFromHash(), { history: 'keep' });
+});
 // Back/forward cache restores an old DOM without running module startup again.
 window.addEventListener('pageshow', event => {
   if (event.persisted) void restoreEntrySession();

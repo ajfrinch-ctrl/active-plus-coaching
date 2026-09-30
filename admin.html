@@ -114,35 +114,6 @@
         <!-- Permission-driven section grid: one large icon + one clear label per
              section, rendered only for the capabilities this role holds. -->
         <div class="admin-feature-grid" id="adminFeatureGrid" aria-label="অনুমোদিত বিভাগসমূহ"></div>
-        <article class="admin-card dash-finance-card" aria-labelledby="dashFinanceTitle">
-          <header class="admin-card-head dash-finance-head">
-            <div><p class="eyebrow">Money &amp; Fees</p><h2 id="dashFinanceTitle">অর্থ সারাংশ (পর্যবেক্ষণ)</h2></div>
-            <button class="mini-btn" type="button" data-admin-view="reports">বিস্তারিত রিপোর্ট</button>
-          </header>
-          <div class="dash-finance-grid">
-            <div class="dash-finance-tile tone-mint">
-              <small>সিস্টেমে মোট লেনদেন</small>
-              <strong id="dashTransactionCount">০ টি</strong>
-              <span>সংরক্ষিত আর্থিক রেকর্ড</span>
-            </div>
-            <div class="dash-finance-tile tone-blue">
-              <small>এই মাসের আদায়</small>
-              <strong id="dashMonthAmount">৳০</strong>
-              <span id="dashMonthSub">—</span>
-            </div>
-            <div class="dash-finance-tile tone-amber">
-              <small>চলতি মাসের বকেয়া</small>
-              <strong id="dashMonthDue">৳০</strong>
-              <span>মাসিক বেতন</span>
-            </div>
-            <div class="dash-finance-tile">
-              <small>সর্বমোট আদায়</small>
-              <strong id="dashTotalAmount">৳০</strong>
-              <span>সব সময়ের হিসাব</span>
-            </div>
-          </div>
-          <p class="finance-hint">ফি গ্রহণ ও ক্যাশ কাউন্টার এন্ট্রি Cash Counter প্যানেলের কাজ — এডমিন শুধু পর্যবেক্ষণ ও রিপোর্ট দেখেন।</p>
-        </article>
       </section>
 
       <!-- ================= Staff Management =================
@@ -151,18 +122,13 @@
       <section class="admin-view" data-view-panel="staff" aria-labelledby="staffTitle">
         <div class="page-intro">
           <div><p class="eyebrow">Staff Management</p><h1 id="staffTitle">স্টাফ ম্যানেজমেন্ট</h1></div>
-          <button class="admin-btn primary staff-create-btn" type="button" id="staffCreateButton">
-            <span class="apc-icon" aria-hidden="true"></span>
-            <span>নতুন স্টাফ</span>
-          </button>
         </div>
-        <p class="finance-hint">স্টাফ অ্যাকাউন্ট, ভূমিকা ও অ্যাক্সেস পরিচালনা করুন।</p>
+        <p class="finance-hint">নিচের সার্চ বক্সে Staff ID, নাম, ইউজারনেম, মোবাইল বা রোল লিখে খুঁজুন — খালি রাখলে সব স্টাফ দেখা যাবে।</p>
         <p class="finance-error" id="staffReadonlyNote" role="status" hidden>শুধুমাত্র Admin স্টাফ অ্যাকাউন্ট তৈরি, সম্পাদনা বা মুছতে পারবেন।</p>
-        <div class="staff-stats" id="staffStats"></div>
         <div class="staff-toolbar">
           <label class="staff-search" for="staffSearch">
             <span class="staff-search-icon" aria-hidden="true"><svg class="" data-icon="search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0M15 15l7 7"/></svg></span>
-            <input id="staffSearch" type="search" placeholder="Staff ID, নাম, ইউজারনেম বা মোবাইল" autocomplete="off" aria-label="স্টাফ অনুসন্ধান">
+            <input id="staffSearch" type="search" placeholder="স্টাফ খুঁজুন — ID, নাম, ইউজারনেম, মোবাইল বা রোল" autocomplete="off" aria-label="স্টাফ অনুসন্ধান">
             <button class="staff-search-clear" id="staffSearchClear" type="button" aria-label="অনুসন্ধান মুছুন" hidden>
               <svg class="" data-icon="close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 5l14 14M19 5 5 19"/></svg>
             </button>
@@ -178,11 +144,16 @@
           <span class="staff-count-badge" id="staffCountBadge" aria-live="polite"></span>
         </div>
         <div class="staff-list" id="staffList"></div>
+        <div class="staff-create-bar" data-admin-cap="staff.manage">
+          <button class="admin-btn primary staff-create-btn" type="button" id="staffCreateButton">
+            <span class="apc-icon" aria-hidden="true"></span>
+            <span>স্টাফ ক্রিয়েট</span>
+          </button>
+        </div>
       </section>
 
       <!-- Roles & Permissions: read-only projection of the existing role tree -->
       <section class="admin-view" data-view-panel="roles" aria-labelledby="rolesTitle">
-        <button class="admin-more-back" type="button" data-admin-view="more">← আরও-তে ফিরুন</button>
         <div class="page-intro">
           <div><p class="eyebrow">Roles &amp; Permissions</p><h1 id="rolesTitle">রোল ও অনুমতি</h1></div>
         </div>
@@ -195,7 +166,6 @@
         <div class="page-intro">
           <div><p class="eyebrow">Student Management</p><h1 id="studentsTitle">শিক্ষার্থী ব্যবস্থাপনা</h1></div>
         </div>
-        <div class="student-overview-stats" id="studentOverviewStats" aria-label="শিক্ষার্থী সারাংশ"></div>
         <div class="student-toolbar">
           <div class="student-search-box">
             <label class="student-search" for="studentSearch">
@@ -206,24 +176,33 @@
               </button>
             </label>
             <div class="student-search-meta">
-              <span class="auto-hide-badge" title="টাইপ করার সাথে সাথে অমিল শিক্ষার্থী স্বয়ংক্রিয়ভাবে লুকাবে"><span class="auto-hide-dot"></span>অটো হাইড সক্রিয়</span>
-              <span class="auto-hide-badge privacy" title="গোপনীয়তা মোড: তালিকায় ব্যক্তিগত তথ্য লুকানো — তথ্য দেখুন চাপলেই দেখা যাবে"><svg class="" data-icon="lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 10h14v11H5zM8 10V6a4 4 0 0 1 8 0v4"/></svg>তথ্য গোপন মোড</span>
               <span class="student-count-badge" id="studentCountBadge">৮ জন শিক্ষার্থী</span>
             </div>
           </div>
-          <div class="student-class-filter">
-            <label class="student-search" for="studentClassFilter">
-              <svg class="" data-icon="users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M13 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0M3 21v-3a7 7 0 0 1 14 0v3M17 4a3 3 0 0 1 0 6M20 14a6 6 0 0 1 2 5v2"/></svg>
+          <!-- Nothing about a student is on screen until it is asked for: the
+               list carries only name, ID and status, and this panel holds the
+               optional filters (class, status). -->
+          <button class="student-filter-toggle" type="button" id="studentFilterToggle" aria-expanded="false" aria-controls="studentFilterPanel">
+            <svg class="" data-icon="grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></svg>
+            <span>ফিল্টার</span>
+          </button>
+          <div class="student-filter-panel" id="studentFilterPanel" hidden>
+            <div class="student-filter-field">
+              <label for="studentClassFilter">শ্রেণি</label>
               <select id="studentClassFilter" aria-label="শ্রেণি অনুযায়ী ফিল্টার">
-                <option value="all">সব শ্রেণির শিক্ষার্থী</option>
+                <option value="all">সব শ্রেণি</option>
               </select>
-            </label>
-          </div>
-          <div class="chip-row" id="studentFilterChips" aria-label="স্ট্যাটাস ফিল্টার">
-            <button class="chip active" type="button" data-student-filter="all">সব</button>
-            <button class="chip" type="button" data-student-filter="pending">অপেক্ষমাণ</button>
-            <button class="chip" type="button" data-student-filter="approved">অনুমোদিত</button>
-            <button class="chip" type="button" data-student-filter="rejected">বাতিল</button>
+            </div>
+            <div class="student-filter-field">
+              <span class="staff-filter-label">স্ট্যাটাস</span>
+              <div class="chip-row" id="studentFilterChips" aria-label="স্ট্যাটাস ফিল্টার">
+                <button class="chip active" type="button" data-student-filter="all">সব</button>
+                <button class="chip" type="button" data-student-filter="pending">অপেক্ষমাণ</button>
+                <button class="chip" type="button" data-student-filter="approved">অনুমোদিত</button>
+                <button class="chip" type="button" data-student-filter="rejected">বাতিল</button>
+              </div>
+            </div>
+            <button class="student-filter-reset" type="button" id="studentFilterReset">ফিল্টার মুছুন</button>
           </div>
         </div>
         <div class="student-list" id="studentList"></div>
@@ -231,14 +210,10 @@
 
       <!-- Report Center: every downloadable report lives here. -->
       <section class="admin-view" data-view-panel="reports" aria-labelledby="reportsTitle">
-        <button class="admin-more-back" type="button" data-admin-view="more">
-          <svg class="" data-icon="arrow-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20 12H4M10 6l-6 6 6 6"/></svg>
-          আরও-তে ফিরুন
-        </button>
         <div class="page-intro">
           <div><p class="eyebrow">Report Center</p><h1 id="reportsTitle">রিপোর্ট সেন্টার</h1></div>
         </div>
-        <p class="finance-hint reports-intro-hint">ক্যাটাগরি থেকে রিপোর্ট বেছে নিন, প্রয়োজনীয় ফিল্টার দিন, তারপর রিপোর্ট তৈরি করে প্রিভিউ দেখুন — একই রিপোর্ট থেকে PDF ও CSV ডাউনলোড করা যায়। নিচের আর্থিক সারাংশ আপনার সংগ্রহ ও লেনদেনের চলমান হিসাব দেখায়।</p>
+        <p class="finance-hint reports-intro-hint">ক্যাটাগরি থেকে রিপোর্ট বেছে নিন, প্রয়োজনীয় ফিল্টার দিন, তারপর রিপোর্ট তৈরি করে প্রিভিউ দেখুন — একই রিপোর্ট থেকে PDF ও CSV ডাউনলোড করা যায়।</p>
 
         <!-- Reports Module: type → filters → preview → PDF, on every role. -->
         <section class="rp-section" aria-labelledby="adminReportsTitle">
@@ -248,163 +223,10 @@
           <div id="adminReports" class="rp-mount"></div>
         </section>
 
-        <!-- Finance Summary: read-only monitoring of the money that already
-             came in. Collecting money is the Cash Counter's job, not Admin's. -->
-        <h2 class="reports-group-title">আর্থিক সারাংশ (Finance Summary)</h2>
-        <div class="admin-stats">
-          <article class="admin-stat">
-            <span class="admin-stat-icon mint" aria-hidden="true"><svg class="" data-icon="wallet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 7V5h16v3M3 7h18v14H3zM21 12h-6v5h6M17 14h1"/></svg></span>
-            <div><strong id="financeTotalCollected">৳০</strong><small>মোট ফি আদায়</small></div>
-          </article>
-          <article class="admin-stat">
-            <span class="admin-stat-icon blue" aria-hidden="true"><svg class="" data-icon="calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2M7 3v4M17 3v4M3 11h18M7 15h2M15 15h2"/></svg></span>
-            <div><strong id="financeMonthCollected">৳০</strong><small>চলতি মাস</small></div>
-          </article>
-          <article class="admin-stat">
-            <span class="admin-stat-icon amber" aria-hidden="true"><svg class="" data-icon="clipboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M8 4H5v17h14V4h-3M8 2h8v5H8zM8 11h8M8 15h5"/></svg></span>
-            <div><strong id="financeTotalDue">৳০</strong><small>চলতি মাসের বকেয়া বেতন</small></div>
-          </article>
-          <article class="admin-stat">
-            <span class="admin-stat-icon lilac" aria-hidden="true"><svg class="" data-icon="receipt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 3h14v19l-3-2-4 2-4-2-3 2zM8 7h8M8 11h8M8 15h5"/></svg></span>
-            <div><strong id="financeTrxCount">০ টি</strong><small>মোট ট্রানজেকশন</small></div>
-          </article>
-        </div>
-
-        <div class="finance-nav-pills" id="financeSubNav">
-          <button class="chip active" type="button" data-finance-tab="collection">লেনদেন দেখুন</button>
-          <button class="chip" type="button" data-finance-tab="students">শিক্ষার্থী ফি লেজার</button>
-        </div>
-
-        <!-- Sub-panel 1: Read-only transaction monitoring -->
-        <div class="finance-panel active" data-finance-view="collection">
-          <article class="admin-card finance-search-card" data-admin-cap="finance.collect">
-            <header class="admin-card-head">
-              <div><p class="eyebrow">Student Search</p><h2>শিক্ষার্থী খুঁজুন</h2></div>
-            </header>
-            <div class="finance-search-body">
-              <label for="feeStudentSearch">নাম, মোবাইল নম্বর, Student ID অথবা অভিভাবকের মোবাইল</label>
-              <div class="finance-search-input">
-                <svg class="" data-icon="search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0M15 15l7 7"/></svg>
-                <input id="feeStudentSearch" type="search" placeholder="নাম, মোবাইল বা Student ID" autocomplete="off" aria-controls="feeSearchResults" aria-describedby="feeSearchHint">
-              </div>
-              <p id="feeSearchHint" class="finance-hint">শিক্ষার্থী খুঁজুন → প্রোফাইল দেখুন → পেমেন্ট গ্রহণ করুন</p>
-              <p id="financeLoadError" class="finance-error" role="alert" hidden></p>
-              <p id="feeSearchStatus" class="finance-hint" role="status" aria-live="polite"></p>
-              <div id="feeSearchResults" class="fee-search-results"></div>
-            </div>
-          </article>
-          <div class="admin-duo">
-            <article class="admin-card" data-admin-cap="finance.collect">
-              <header class="admin-card-head">
-                <div><p class="eyebrow">Student Quick Profile</p><h2>প্রোফাইল ও ফি গ্রহণ</h2></div>
-              </header>
-              <div id="feeQuickProfile" class="fee-quick-profile">
-                <p class="admin-empty">উপরে সার্চ করে শিক্ষার্থীর নামের উপর ক্লিক করুন।</p>
-              </div>
-              <form id="feeCollectionForm" class="fee-form" hidden>
-                <input id="feeStudent" type="hidden">
-                <p id="feePaymentFor" class="finance-payment-for"></p>
-
-                <div class="form-grid-2">
-                  <div>
-                    <label for="feeType">ফি এর ধরন *</label>
-                    <select id="feeType" required>
-                      <option value="মাসিক বেতন">মাসিক বেতন</option>
-                      <option value="ভর্তি ফি">ভর্তি ফি</option>
-                      <option value="মডেল টেস্ট ফি">মডেল টেস্ট ফি</option>
-                      <option value="লেকচার শিট ফি">লেকচার শিট ফি</option>
-                      <option value="পরীক্ষার ফি">পরীক্ষার ফি</option>
-                      <option value="অন্যান্য">অন্যান্য</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label for="feeMonth">কোন মাসের ফি *</label>
-                    <select id="feeMonth" required>
-                      <option value="সেপ্টেম্বর ২০২৬">সেপ্টেম্বর ২০২৬</option>
-                      <option value="অক্টোবর ২০২৬">অক্টোবর ২০২৬</option>
-                      <option value="আগস্ট ২০২৬">আগস্ট ২০২৬</option>
-                      <option value="জুলাই ২০২৬">জুলাই ২০২৬</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div class="form-grid-2">
-                  <div>
-                    <label for="feeAmount">টাকার পরিমাণ (৳) *</label>
-                    <input id="feeAmount" type="number" min="1" max="10000000" step="1" placeholder="১৫০০" value="1500" required>
-                    <div class="quick-amount-row" id="feeQuickAmounts" aria-label="দ্রুত পরিমাণ">
-                      <button class="quick-amount" type="button" data-fee-quick="due">পূর্ণ বকেয়া</button>
-                      <button class="quick-amount" type="button" data-fee-quick="monthly">মাসিক ফি</button>
-                      <button class="quick-amount" type="button" data-fee-quick="half">অর্ধেক (আংশিক)</button>
-                    </div>
-                  </div>
-                  <div>
-                    <label for="feeMethod">পেমেন্ট মাধ্যম *</label>
-                    <select id="feeMethod" required>
-                      <option value="নগদ (Cash)">নগদ (Cash)</option>
-                      <option value="বিকাশ (bKash)">বিকাশ (bKash)</option>
-                      <option value="নগদ (Nagad)">নগদ (Nagad)</option>
-                      <option value="রকেট (Rocket)">রকেট (Rocket)</option>
-                      <option value="ব্যাংক ট্রান্সফার">ব্যাংক ট্রান্সফার</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div class="form-grid-2">
-                  <div>
-                    <label for="feeTrxId">Trx ID / রেফারেন্স (ঐচ্ছিক)</label>
-                    <input id="feeTrxId" type="text" maxlength="120" placeholder="যেমন: BK-98X10">
-                  </div>
-                  <div>
-                    <label for="feeNote">নোট / মন্তব্য</label>
-                    <input id="feeNote" type="text" maxlength="500" placeholder="যেমন: নিয়মিত পরিশোধ">
-                  </div>
-                </div>
-
-                <p id="feeSaveError" class="finance-error" role="alert" hidden></p>
-                <button id="feeSaveButton" class="admin-btn primary" type="submit" style="margin-top: 14px;">
-                  <svg class="" data-icon="check-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0m-13 0 3 3 5-6"/></svg>
-                  ফি গ্রহণ ও রসিদ তৈরি করুন
-                </button>
-              </form>
-            </article>
-
-            <article class="admin-card">
-              <header class="admin-card-head">
-                <div><p class="eyebrow">Recent Payments</p><h2>সাম্প্রতিক কালেকশন</h2><p class="finance-hint">সর্বশেষ ৫টি আদায় • রসিদ ও ডাউনলোড</p></div>
-                <span class="badge badge-approved" id="trxCountBadge">০ টি লেনদেন</span>
-              </header>
-              <div class="trx-list" id="recentTrxList"></div>
-            </article>
-          </div>
-        </div>
-
-        <!-- Sub-panel 2: Student Fee Ledger -->
-        <div class="finance-panel" data-finance-view="students">
-          <article class="admin-card">
-            <header class="admin-card-head">
-              <div><p class="eyebrow">Student Ledger</p><h2>শিক্ষার্থীদের ফি ও বকেয়া হিসাব</h2></div>
-              <div class="chip-row" id="ledgerFilterChips">
-                <button class="chip active" type="button" data-ledger-filter="all">সব</button>
-                <button class="chip" type="button" data-ledger-filter="due">বকেয়া আছে</button>
-                <button class="chip" type="button" data-ledger-filter="paid">পরিশোধিত</button>
-              </div>
-            </header>
-            <div class="ledger-search-wrap">
-              <label class="student-search" for="ledgerSearch">
-                <svg class="" data-icon="search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0M15 15l7 7"/></svg>
-                <input id="ledgerSearch" type="search" placeholder="লেজারে নাম, আইডি বা মোবাইল দিয়ে খুঁজুন..." autocomplete="off">
-              </label>
-            </div>
-            <div class="ledger-list" id="studentLedgerList"></div>
-          </article>
-        </div>
-
         </section>
 
       <!-- Data Management -->
       <section class="admin-view" data-view-panel="data" aria-labelledby="dataTitle">
-        <button class="admin-more-back" type="button" data-admin-view="more">← আরও-তে ফিরুন</button>
         <div class="page-intro">
           <div><p class="eyebrow">Data Management</p><h1 id="dataTitle">ডেটা ম্যানেজমেন্ট</h1></div>
         </div>
@@ -438,7 +260,6 @@
 
       <!-- Backup & Restore -->
       <section class="admin-view" data-view-panel="backup" aria-labelledby="backupTitle">
-        <button class="admin-more-back" type="button" data-admin-view="more">← আরও-তে ফিরুন</button>
         <div class="page-intro">
           <div><p class="eyebrow">Backup &amp; Restore</p><h1 id="backupTitle">ব্যাকআপ ও রিস্টোর</h1></div>
         </div>
@@ -471,7 +292,6 @@
 
       <!-- Security -->
       <section class="admin-view" data-view-panel="security" aria-labelledby="securityTitle">
-        <button class="admin-more-back" type="button" data-admin-view="more">← আরও-তে ফিরুন</button>
         <div class="page-intro">
           <div><p class="eyebrow">Security</p><h1 id="securityTitle">সিকিউরিটি</h1></div>
         </div>
@@ -480,10 +300,6 @@
 
       <!-- System Settings -->
       <section class="admin-view" data-view-panel="settings" aria-labelledby="appManagementTitle">
-        <button class="admin-more-back" type="button" data-admin-view="more">
-          <svg class="" data-icon="arrow-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20 12H4M10 6l-6 6 6 6"/></svg>
-          আরও-তে ফিরুন
-        </button>
         <div class="page-intro">
           <div><p class="eyebrow">System Settings</p><h1 id="appManagementTitle">সিস্টেম সেটিংস</h1></div>
         </div>
@@ -530,7 +346,6 @@
 
       <!-- Admin Profile -->
       <section class="admin-view" data-view-panel="profile" aria-labelledby="adminProfileTitle">
-        <button class="admin-more-back" type="button" data-admin-view="more">← আরও-তে ফিরুন</button>
         <div class="page-intro">
           <div><p class="eyebrow">Admin Profile</p><h1 id="adminProfileTitle">আমার প্রোফাইল</h1></div>
         </div>

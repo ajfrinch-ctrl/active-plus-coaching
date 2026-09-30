@@ -3,6 +3,7 @@ import { readStaffAccount } from './staff-auth.js';
 import { listTeacherAssignments } from './teacher-assignments.js';
 import { hasStaffSession, clearStaffSession, goToLoginPage } from './staff-auth.js';
 import { installPanelGuard, lockPanel, rememberPanelPage, watchOwnPanelSession } from './panel-lockdown.js';
+import { rememberRoute, onRouteChange, routeName } from './panel-route.js';
 import { openStaffPasswordDialog } from './staff-password-dialog.js';
 import { loadAppConfig } from './storage.js';
 import { toBanglaNumber as bn } from './ui.js';
@@ -153,7 +154,7 @@ function renderRecords() {
   if (!ACTIVITY_TYPES[state.view]) return;
   $('#teacherRecordsTitle').textContent = ACTIVITY_TYPES[state.view].plural;
   $('#teacherNewActivity').hidden = state.view === 'exam';
-  $('#teacherRecordsBack').hidden = !['suggestion', 'routine'].includes(state.view);
+  if ($('#teacherRecordsBack')) $('#teacherRecordsBack').hidden = !['suggestion', 'routine'].includes(state.view);
   $('#teacherOnlineExamHint').hidden = state.view !== 'exam';
   const query = $('#teacherRecordSearch').value.trim().toLocaleLowerCase();
   const className = $('#teacherClassFilter').value;
@@ -231,8 +232,9 @@ function renderTeacherProfile() {
   host.innerHTML = `<div class="manager-profile-list"><div><small>নাম</small><strong>${esc(account.fullName || '—')}</strong></div><div><small>Username</small><strong>${esc(account.username || '—')}</strong></div><div><small>যোগাযোগ</small><strong>${esc(account.mobile || '—')}</strong></div><div><small>Role</small><strong>Teacher — Academic</strong></div><div><small>Assigned class/batch</small><strong>${bn(state.assignments.length)}</strong></div></div>`;
 }
 function render() { renderHome(); renderRecords(); renderStudents(); renderTeacherClasses(); renderTeacherRoutine(); renderAcademicReports(); renderTeacherProfile(); }
+const TEACHER_VIEWS = Object.freeze(['home', 'more', 'students', 'online-exams', 'classes', 'routine-view', 'reports', 'profile', ...Object.keys(ACTIVITY_TYPES)]);
 function setView(view) {
-  if (!['home', 'more', 'students', 'online-exams', 'classes', 'routine-view', 'reports', 'profile', ...Object.keys(ACTIVITY_TYPES)].includes(view)) return;
+  if (!TEACHER_VIEWS.includes(view)) return;
   const previous = state.view;
   // A search typed for one record type must not silently hide the next one.
   if (ACTIVITY_TYPES[view] && previous !== view) {
@@ -255,6 +257,8 @@ function setView(view) {
     if (active) el.setAttribute('aria-current', 'page'); else el.removeAttribute('aria-current');
   });
   $('#teacherMain').scrollTo({ top: 0, behavior: 'instant' }); render();
+  // The open page lives in the URL, so a refresh lands back on it.
+  rememberRoute(view);
 }
 async function reload() {
   try {
@@ -428,7 +432,10 @@ async function showTeacherShell() {
     return false;
   }
   $('#teacherShell').hidden = false;
-  setView('home');
+  // A refresh (or a shared link) reopens the page that was open.
+  const wanted = routeName();
+  setView(TEACHER_VIEWS.includes(wanted) ? wanted : 'home');
+  onRouteChange(name => { if (TEACHER_VIEWS.includes(name) && name !== state.view) setView(name); });
   const loaded = await reload();
   mountReports($('#teacherReports'), { panel: 'teacher' });
   watchOwnPanelSession('teacher');

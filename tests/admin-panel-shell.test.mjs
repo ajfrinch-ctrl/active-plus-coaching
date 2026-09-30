@@ -190,9 +190,18 @@ test('nothing outside the Admin role survives in the DOM', () => {
   }
   assert.equal(ctx.$$('#feeStudentSearch, #feeCollectionForm, #btnFinanceGoCollect, #dashCollectFee, #addRoutineForm, #noticeForm').length, 0);
   assert.equal(ctx.$$('#studentLedgerList [data-action="quick-collect"]').length, 0);
-  // Reports still carry the read-only finance summary (two tabs, no entry form).
-  assert.equal(ctx.$$('[data-finance-tab]').length, 2);
-  assert.ok(ctx.$('[data-finance-tab="collection"]'), 'the ledger stays in Reports');
+  // Reports is the report builder alone: the finance summary, the recent
+  // payments block and the ledger moved out of this page by request
+  // (2026-09-30) — money is handled in the Cash Counter panel and seen through
+  // generated reports here.
+  assert.equal(ctx.$('#adminReports'), ctx.$('.admin-view[data-view-panel="reports"] #adminReports'));
+  assert.ok(ctx.$('.admin-view[data-view-panel="reports"] #adminReports'), 'the report builder stays');
+  assert.equal(ctx.$$('[data-finance-tab]').length, 0);
+  assert.equal(ctx.$$('.finance-panel').length, 0);
+  assert.equal(ctx.$('#financeTotalCollected'), null);
+  assert.equal(ctx.$('#recentTrxList'), null);
+  assert.equal(ctx.$('#studentLedgerList'), null);
+  assert.equal(ctx.$('.reports-group-title'), null);
   // System sections are untouched.
   for (const view of ['dashboard', 'staff', 'roles', 'students', 'reports', 'data', 'backup', 'security', 'settings', 'profile', 'more']) {
     assert.equal(ctx.$$(`[data-admin-view="${view}"]`).length > 0, true, `${view} should still be reachable`);
