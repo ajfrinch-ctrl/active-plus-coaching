@@ -28,6 +28,7 @@ import { initFixedShell } from './fixed-shell.js';
 import { escapeHtml } from './sanitize.js';
 import { matchesStudentQuery } from './student-search.js';
 import { createAccess, CAPABILITIES, routeFromHash } from './admin-permissions.js';
+import { openRegistrationReview, DECIDED_EVENT } from './registration-review.js';
 import { initAdminPanelShell } from './admin-panel-ui.js';
 import { paintIcon } from './icons.js';
 import { TEACHER_ASSIGNMENTS_KEY } from './teacher-assignments.js';
@@ -353,6 +354,9 @@ function renderStudents() {
               <button class="mini-btn primary" type="button" data-action="view" data-id="${escapeHtml(student.id)}">তথ্য দেখুন</button>
               <button class="mini-btn" type="button" data-action="edit" data-id="${escapeHtml(student.id)}">সম্পাদনা</button>
               <button class="mini-btn" type="button" data-action="reset-pin" data-id="${escapeHtml(student.id)}">পাসওয়ার্ড রিসেট</button>
+              ${student.status === 'pending' && access.has(CAPABILITIES.STUDENTS_APPROVE)
+                ? `<button class="mini-btn approve" type="button" data-action="review-registration" data-id="${escapeHtml(student.id)}">রিভিউ ও অনুমোদন</button>`
+                : ''}
             </div>
           </article>`;
       }).join('')
@@ -1450,9 +1454,13 @@ const studentAction = event => {
   const { action, id } = button.dataset;
   const student = findStudent(id);
   if (!student) return;
-  // approve/reject handled by the Manager portal only — this panel never shows
-  // those actions, so an injected click simply does nothing.
-  if (action === 'view') {
+  // Registration decisions go through the shared review dialog, and only for a
+  // role holding STUDENTS_APPROVE (Admin and Manager).
+  if (action === 'review-registration') {
+    if (access.has(CAPABILITIES.STUDENTS_APPROVE) && student.status === 'pending') {
+      void openRegistrationReview(student.id, { role: 'admin', onDone: result => toast(result.student.status === 'approved' ? 'রেজিস্ট্রেশন অনুমোদিত হয়েছে।' : 'রেজিস্ট্রেশন কারণসহ বাতিল হয়েছে।') });
+    }
+  } else if (action === 'view') {
     openStudentDetail(student);
   } else if (action === 'edit') {
     openStudentEdit(student);
@@ -1642,6 +1650,12 @@ $('#feeMonth').innerHTML = '';
 populateFinanceMonths();
 loadFinanceTransactions();
 let cloudRefreshTimer;
+// A decision taken here (list button or tapped notification) refreshes the list.
+window.addEventListener(DECIDED_EVENT, () => {
+  if ($('#adminShell')?.hidden) return;
+  state.students = loadRoster();
+  renderAll();
+});
 window.addEventListener('storage', event => {
   if (!state.savingFee && (event.key === TRANSACTIONS_KEY || event.key === null)) loadFinanceTransactions();
   if (!event.apcRemote) return;

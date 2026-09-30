@@ -3,9 +3,11 @@
 
    Sources of truth (never modified by this file):
      • firestore.rules      — Admin owns reports, settings, notices, routine,
-                              transactions and exam records; a Manager is the
-                              only role that may approve/reject a student or
-                              publish/reject a pending exam.
+                              transactions and exam records; a Manager may
+                              approve/reject a student (and, by owner
+                              decision 2026-09-30, the Admin too — see
+                              js/registration-review.js) and is the only role
+                              that may publish/reject a pending exam.
      • functions/index.js   — "Manager is the only role allowed to publish or
                               reject pending exam records."
      • manager.html         — the separate approval portal (students + exams).
@@ -54,10 +56,13 @@ export const CAPABILITIES = Object.freeze({
   SETTINGS_MANAGE: 'settings.manage',
   PROFILE_VIEW: 'profile.view',
 
+  /* Student registration approval: Manager and — by owner decision
+     2026-09-30 — Admin (js/registration-review.js is the shared path). */
+  STUDENTS_APPROVE: 'students.approve',
+
   /* Kept so the existing role boundary stays readable in one place. None of
      these is granted to Admin: they belong to the Manager / Teacher / Cash
      Counter panels and to their own portals. */
-  STUDENTS_APPROVE: 'students.approve',
   FINANCE_VIEW: 'finance.view',
   FINANCE_COLLECT: 'finance.collect',
   NOTICES_MANAGE: 'notices.manage',
@@ -79,6 +84,7 @@ const ADMIN = Object.freeze([
   CAPABILITIES.ROLES_MANAGE,
   CAPABILITIES.STUDENTS_VIEW,
   CAPABILITIES.STUDENTS_MANAGE,
+  CAPABILITIES.STUDENTS_APPROVE,
   CAPABILITIES.REPORTS_VIEW,
   CAPABILITIES.DATA_MANAGE,
   CAPABILITIES.BACKUP_MANAGE,

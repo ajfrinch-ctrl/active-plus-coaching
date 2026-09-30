@@ -64,7 +64,6 @@ test('the Admin role keeps system control only — no daily operations', () => {
     CAPABILITIES.APP_MANAGE,
     CAPABILITIES.EXAMS_VIEW,
     CAPABILITIES.EXAMS_PUBLISH,
-    CAPABILITIES.STUDENTS_APPROVE,
     CAPABILITIES.TEACHING_PANEL,
     CAPABILITIES.PAYMENT_PANEL
   ]) {
@@ -76,6 +75,9 @@ test('the Admin role keeps system control only — no daily operations', () => {
   assert.equal(createAccess('admin').allowsView('staff'), true);
   assert.equal(createAccess('payment').has(CAPABILITIES.FINANCE_COLLECT), true, 'Cash Counter keeps fee collection');
   assert.equal(createAccess('manager').has(CAPABILITIES.STUDENTS_APPROVE), true, 'Manager keeps student approval');
+  // Owner decision 2026-09-30: the Admin may approve/reject registrations too.
+  assert.equal(createAccess('admin').has(CAPABILITIES.STUDENTS_APPROVE), true, 'Admin approves registrations too');
+  for (const role of ['teacher', 'payment']) assert.equal(createAccess(role).has(CAPABILITIES.STUDENTS_APPROVE), false, `${role} never approves`);
   assert.equal(createAccess('manager').has(CAPABILITIES.NOTICES_MANAGE), false);
   assert.equal(createAccess('admin').defaultView(), 'dashboard');
 });

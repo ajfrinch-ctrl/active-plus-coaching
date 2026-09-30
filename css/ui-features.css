@@ -9,3 +9,19 @@
 /* Receipt screen mirrors the light-paper document without old decorative seals. */
 .receipt-modal-box{padding:var(--space-4);border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-surface)}.receipt-header{text-align:center;border-bottom:1px solid var(--color-border);padding-bottom:var(--space-4);margin-bottom:var(--space-4)}.receipt-logo{display:block;width:56px;height:56px;margin:0 auto var(--space-3)}.receipt-brand-title{font-size:var(--font-lg);font-weight:600}.receipt-sub,.receipt-address,.receipt-note{font-size:var(--font-sm);color:var(--color-text-secondary)}.receipt-meta-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-3)}.receipt-meta-grid dt{font-size:var(--font-sm);color:var(--color-text-secondary)}.receipt-meta-grid dd{font-weight:500}.receipt-amount-block{display:flex;justify-content:space-between;flex-wrap:wrap;gap:var(--space-3);padding:var(--space-4);margin-block:var(--space-4);background:var(--color-surface-muted);border-radius:var(--radius-sm)}.receipt-amount-block strong{font-size:var(--font-xl)}.receipt-paid-seal{color:var(--color-success);font-size:var(--font-sm)}.receipt-footer-sign{display:flex;justify-content:space-between;gap:var(--space-3);margin-top:var(--space-5);font-size:var(--font-sm)}.receipt-signature-line{border-top:1px solid var(--color-border);padding-top:var(--space-2)}
 @media(max-width:380px){.receipt-meta-grid{grid-template-columns:1fr}}
+/* Registration review dialog and actionable notification (2026-09-30) */
+.apc-review-details{display:grid;gap:var(--space-2);margin:var(--space-3) 0}.apc-review-row{display:grid;grid-template-columns:minmax(110px,38%) 1fr;gap:var(--space-3);padding-block:var(--space-2);border-bottom:1px solid var(--color-border)}.apc-review-row dt{color:var(--color-text-secondary);font-size:var(--font-sm)}.apc-review-row dd{margin:0;overflow-wrap:anywhere}
+.notice-detail.actionable{cursor:pointer;border-color:var(--color-primary)}.notice-detail.actionable .mini-btn{margin-top:var(--space-2)}[data-apc-notice-clear]{margin-block:var(--space-2)}
+/* In-app notification card (js/notice-center.js): new notifications shown
+   inside the app, above the bottom bar and below every dialog. */
+.apc-inapp-alert{position:fixed;left:var(--space-3);right:var(--space-3);bottom:calc(84px + var(--safe-bottom, 0px));z-index:60;max-width:480px;margin-inline:auto;padding:var(--space-3);background:var(--color-surface);color:var(--color-text);border:1px solid var(--color-border);border-left:4px solid var(--color-primary);border-radius:var(--radius-md);box-shadow:0 10px 30px rgba(15,30,55,.18)}
+.apc-inapp-alert[hidden]{display:none}
+.apc-inapp-alert header{display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);margin-bottom:var(--space-2);font-size:var(--font-sm)}
+.apc-inapp-alert-close{min-width:36px;min-height:36px;border:0;background:transparent;color:var(--color-text-secondary);font-size:22px;line-height:1;cursor:pointer}
+.apc-inapp-alert ul{list-style:none;margin:0;padding:0;display:grid;gap:var(--space-2)}
+.apc-inapp-alert-item{display:flex;align-items:flex-start;gap:var(--space-2);width:100%;padding:var(--space-2);text-align:left;background:var(--color-surface-muted);color:inherit;border:0;border-radius:var(--radius-sm);cursor:pointer}
+.apc-inapp-alert-item b{display:block;font-size:var(--font-sm)}
+.apc-inapp-alert-item small{display:block;margin-top:2px;color:var(--color-text-secondary);font-size:var(--font-xs, 12px);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.apc-inapp-alert-icon{flex-shrink:0;display:grid;place-items:center;width:28px;height:28px;color:var(--color-primary)}
+.apc-inapp-alert-icon svg{width:20px;height:20px}
+.apc-inapp-alert footer{display:flex;justify-content:flex-end;margin-top:var(--space-2)}

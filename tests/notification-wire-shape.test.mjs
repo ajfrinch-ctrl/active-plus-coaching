@@ -162,3 +162,7 @@ test('a non-participant student is never told about the paper', () => {
   });
   assert.deepEqual(feed, []);
 });
+
+test('every read and write the app made was allowed by the deployed database.rules.json', () => {
+  assert.deepEqual(cloud.ruleViolations, [], 'the shipped client and the shipped rules must agree');
+});

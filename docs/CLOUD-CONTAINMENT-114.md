@@ -1,3 +1,9 @@
+> **Superseded 2026-09-30.** By owner decision the anonymous bridge is running
+> again as an interim measure with hardened `auth != null` rules — see
+> `docs/INTERIM-ANONYMOUS-SYNC.md`. This document is kept as history and as the
+> reference for re-applying containment (its deny-all rules are the emergency
+> pause).
+
 # Cloud containment — 2026-09-29 (cache 114)
 
 ## Current state
@@ -71,3 +77,9 @@ local login, plus direct implementation-call blocking and exact deny-all rules.
 The older reconnect/lifecycle tests explicitly opt into the legacy engine ONLY
 in their test loader to retain regression coverage; they do not represent an
 enabled production bridge or live cloud-login validation.
+
+## Proposed replacement
+
+A per-user/per-role design (draft rules, simulator tests, emulator suite and the
+list of required code changes) is in `docs/RTDB-PER-USER-RULES-PLAN.md`. It is
+not deployed; `database.rules.json` above remains the published policy.

@@ -106,6 +106,7 @@ async function formLogin({ username, pin }) {
 
 const commands = {
   async boot() {
+    globalThis.__apcTwoDeviceSignedIn = true;
     const result = await syncModule.startRealtimeSync();
     if (!result.ok) throw new Error('sync did not start: ' + result.reason);
     await bindLogin();
@@ -437,6 +438,62 @@ const commands = {
       message: authMessage(),
       navigated: navigated()
     };
+  },
+
+  /* What an Admin/Manager bell would list for new registrations, from this
+     device's synced roster (js/notification-rules.js, as shipped). */
+  async 'registration-feed'({ role = 'admin' } = {}) {
+    const rules = await mod('notification-rules.js');
+    const office = await mod('office-data.js');
+    const items = rules.registrationItems(office.loadRoster(), { kind: 'staff', role, username: role });
+    return { keys: items.map(item => item.key) };
+  },
+
+  /* The shared Admin/Manager decision path (js/registration-review.js). */
+  async 'decide-registration'({ studentId, decision, role = 'admin', note = '' }) {
+    const review = await mod('registration-review.js');
+    return review.decideRegistration(studentId, decision, { role, note });
+  },
+
+  /* Any person's notification list from THIS device's synced data, built by
+     the shipped rules (js/notification-rules.js) — the same inputs the engine
+     reads: roster, ledger, exam database. */
+  async 'notification-feed'({ role = '', studentId = '', now = Date.now() } = {}) {
+    const rules = await mod('notification-rules.js');
+    const office = await mod('office-data.js');
+    const database = await mod('database.js');
+    const viewer = studentId ? { kind: 'student', studentId, username: 'student' } : { kind: 'staff', role, username: role };
+    const items = rules.notificationFeed({
+      viewer, now,
+      students: office.loadRoster(),
+      transactions: database.listDocuments('transactions'),
+      examDb: readLocal(db.KEYS.exams)
+    });
+    return { items: items.map(item => ({ key: item.key, kind: item.kind, title: item.title, body: item.body })) };
+  },
+
+  async 'wait-record-status'({ key, id, status }) {
+    await waitUntil(() => {
+      const list = readLocal(key);
+      return Array.isArray(list) && list.some(item => item?.id === id && item.status === status);
+    }, { timeout: 20000 });
+    return { ok: true };
+  },
+
+  async 'wait-exam-status'({ examId, status }) {
+    await waitUntil(() => {
+      const value = readLocal(db.KEYS.exams);
+      return Array.isArray(value?.exams) && value.exams.some(exam => exam?.id === examId && exam.status === status);
+    }, { timeout: 20000 });
+    return { ok: true };
+  },
+
+  async 'wait-roster-status'({ studentId, status }) {
+    await waitUntil(() => {
+      const list = readLocal(db.KEYS.students);
+      return Array.isArray(list) && list.some(item => item?.id === studentId && item.status === status);
+    }, { timeout: 20000 });
+    return { ok: true };
   },
 
   async snapshot({ keys }) {

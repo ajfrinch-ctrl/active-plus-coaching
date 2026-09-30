@@ -1,4 +1,4 @@
-const CACHE_VERSION = 117;
+const CACHE_VERSION = 121;
 const CACHE_NAME = `active-plus-student-v${CACHE_VERSION}-minimal-education`;
 const APP_SHELL = [
   './css/app-polish.css',
@@ -28,6 +28,8 @@ const APP_SHELL = [
   './sync/sync-core.js',
   './sync/sync-config.js',
   './sync/sync-auth.js',
+  './sync/cloud-auth.js',
+  './js/registration-review.js',
   './sync/sync-queue.js',
   './sync/sync-retry.js',
   './sync/sync-status.js',
@@ -300,6 +302,14 @@ self.addEventListener('notificationclick', event => {
         return client.focus();
       }
     }
+    // No window yet: leave the tapped payload for the page (js/notifications.js
+    // picks it up once), so e.g. a registration opens straight into review.
+    try {
+      const cache = await caches.open(PANEL_HINT_CACHE);
+      await cache.put('./__apc-pending-click', new Response(JSON.stringify({
+        at: Date.now(), data: event.notification?.data || {}
+      }), { headers: { 'content-type': 'application/json' } }));
+    } catch { /* the app still opens */ }
     const target = (await panelHintTarget()) || APP_ENTRY;
     return self.clients.openWindow(target);
   })());

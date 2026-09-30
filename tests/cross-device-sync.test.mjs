@@ -243,6 +243,9 @@ test('fresh device can sign in through login hydration before background sync bo
     const login = await fresh.run('form-login', { username: 'dolon', pin: '4321' });
     assert.equal(login.studentSession, true, login.message);
     const { KEYS } = await import('../js/database.js');
+    // The login itself never waits for sync; the background sync that the
+    // successful login starts then pulls the rest (here: the ID registry).
+    await fresh.run('wait-content', { key: KEYS.usernames, id: adminUsername });
     const snapshot = await fresh.run('snapshot', { keys: [KEYS.usernames] });
     assert.equal(snapshot.values[KEYS.usernames][adminUsername], 'staff:admin');
   } finally { await fresh.stop(); }
@@ -512,4 +515,8 @@ test('package still declares the realtime bridge', async () => {
   const loginSource = readFileSync(new URL('../js/login.js', import.meta.url), 'utf8');
   assert.match(loginSource, /hydrateUserIdentifiers/, 'login.js hydrates synced user IDs');
   void pkg; void REPO;
+});
+
+test('every read and write the app made was allowed by the deployed database.rules.json', () => {
+  assert.deepEqual(cloud.ruleViolations, [], 'the shipped client and the shipped rules must agree');
 });

@@ -39,6 +39,8 @@ export function accountToRosterStudent(account) {
     average: Number(student.average) || 0,
     monthlyFee: student.monthlyFee ?? null,
     enrolledAt: account.createdAt ? new Date(account.createdAt).toLocaleDateString('bn-BD') : '',
+    // Machine-readable application time (the notification list sorts by it).
+    registeredAt: typeof account.createdAt === 'string' ? account.createdAt : '',
     lastActive: 'এই ডিভাইস'
   };
 }

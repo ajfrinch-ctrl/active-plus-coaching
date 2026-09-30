@@ -172,7 +172,9 @@ export async function disablePush() {
 
 /** A message that arrives while the app is open is displayed by this page. */
 async function showForeground(payload) {
-  const id = payload?.data?.id || payload?.data?.key || payload?.messageId || 'push';
+  // Same identity as the local engine (the item key): one record can raise
+  // several different notifications (an exam: scheduled, starting, started).
+  const id = payload?.data?.key || payload?.data?.id || payload?.messageId || 'push';
   const { claim, record } = claimDelivery(readJSON(SHOWN_KEY, null), id);
   writeJSON(SHOWN_KEY, record);
   if (!claim) return;                      // the sync bridge already showed this one

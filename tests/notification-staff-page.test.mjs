@@ -25,7 +25,8 @@ before(async () => {
   ctx.window.localStorage.setItem(KEYS.notices, JSON.stringify([]));
   const module = await import('../js/notifications.js');
   controller = module.initNotifications();
-  await ctx.waitFor(() => ctx.$('#apcNotifyToggle') !== null);
+  // The permission pill was removed on purpose (no unsolicited banner; the
+  // switch lives in the notice inbox). The controller itself is synchronous.
   await ctx.flush();
 });
 

@@ -178,7 +178,8 @@ test('the deployment assets the audit found are still in place', () => {
      wrong (or no) project, so the documented setup step cannot succeed. */
   const rc = JSON.parse(readFileSync(new URL('../.firebaserc', import.meta.url), 'utf8'));
   assert.equal(rc.projects.default, 'active-plus', 'the CLI target matches js/firebase-config.js');
-  const config = readFileSync(new URL('../js/firebase-config.js', import.meta.url), 'utf8');
+  // js/firebase-config.js only re-exports; the values live in firebase/.
+  const config = readFileSync(new URL('../firebase/firebase-config.js', import.meta.url), 'utf8');
   assert.match(config, /projectId:\s*'active-plus'/);
 
   /* App Check with a reCAPTCHA v3 key cannot run under a policy that blocks
@@ -188,4 +189,8 @@ test('the deployment assets the audit found are still in place', () => {
     assert.match(html, /script-src[^;]*google\.com\/recaptcha\//, `${page} allows the reCAPTCHA script`);
     assert.match(html, /frame-src[^;]*google\.com\/recaptcha\//, `${page} allows the reCAPTCHA frame`);
   }
+});
+
+test('every read and write the app made was allowed by the deployed database.rules.json', () => {
+  assert.deepEqual(cloud.ruleViolations, [], 'the shipped client and the shipped rules must agree');
 });

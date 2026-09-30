@@ -24,6 +24,10 @@ const PAGES = Object.freeze([
 
 const markup = file => new JSDOM(readFileSync(new URL(`../${file}`, import.meta.url), 'utf8')).window.document;
 
+/* Icons are inline SVG (js/icons.js; no sprite, no <use>): an icon must be
+   present and drawable — it carries its own shapes. */
+const drawable = svg => Boolean(svg && svg.querySelector('path, rect, circle, line, polyline, polygon'));
+
 /** The bar a signed-in person sees: brand + slogan + bell + sign-out. */
 function shellBar(document, name) {
   return [...document.querySelectorAll('.app-topbar')]
@@ -55,26 +59,31 @@ test('every panel ships the identical topbar: logo, slogan, bell, sign-out only'
     assert.ok(brand.querySelector('[data-fixed-tagline]').textContent.trim().length > 1, `${page.file}: the slogan is missing`);
 
     if (page.login) {
-      // The login screen shows the brand only: there is nobody to notify yet.
-      const loginBar = [...bars].find(candidate => candidate.querySelector('.app-brand-name')?.textContent.trim() === page.login);
-      assert.ok(loginBar, `${page.file}: the login topbar is missing`);
-      assert.equal(loginBar.querySelectorAll('button, [data-theme-toggle], time').length, 0, 'the login topbar carries a control');
-      assert.equal(bars.length, 2, `${page.file} should paint exactly the login bar and the signed-in bar`);
+      // The login screen has no topbar: its brand is the large logo card, with
+      // no control in it — there is nobody to notify or sign out yet.
+      const auth = document.getElementById('authScreen');
+      assert.ok(auth, `${page.file}: the login screen is missing`);
+      assert.equal(auth.querySelectorAll('.app-topbar').length, 0, `${page.file}: a topbar is back on the login screen`);
+      const card = auth.querySelector('.auth-card .auth-brand');
+      assert.ok(card, `${page.file}: the login brand card is missing`);
+      assert.equal(card.querySelectorAll('img[src*="logo"]').length, 1, `${page.file}: the login logo is missing`);
+      assert.equal(card.querySelector('h1')?.textContent.trim(), page.login, `${page.file}: the login brand name changed`);
+      assert.ok(card.querySelector('p')?.textContent.trim().length > 1, `${page.file}: the login slogan is missing`);
+      assert.equal(card.querySelectorAll('button, [data-theme-toggle], time').length, 0, 'the login brand carries a control');
+      assert.equal(auth.querySelectorAll('#notificationButton, .app-topbar-exit').length, 0, 'bell or sign-out on the login screen');
     }
     {
-      assert.equal(bars.length, page.login ? 2 : 1, `${page.file} paints an unexpected number of topbars`);
+      assert.equal(bars.length, 1, `${page.file} paints an unexpected number of topbars`);
       const actions = bar.querySelector('.app-topbar-actions');
       assert.ok(actions, `${page.file}: the action cluster is missing`);
       const bell = actions.querySelector('#notificationButton');
       assert.ok(bell, `${page.file}: the notification bell is missing`);
-      assert.ok(bell.querySelector('use[href="#icon-bell"]'), `${page.file}: the bell has no icon`);
+      assert.ok(drawable(bell.querySelector('svg[data-icon="bell"]')), `${page.file}: the bell has no icon`);
       assert.ok(bell.querySelector('.notification-dot'), `${page.file}: the bell has no unread dot`);
       const exit = actions.querySelector('.app-topbar-exit');
       assert.ok(exit, `${page.file}: sign-out is missing`);
       assert.equal(exit.id, page.exit, `${page.file}: sign-out changed id`);
-      assert.ok(exit.querySelector('use[href="#icon-logout"]'), `${page.file}: sign-out has no icon`);
-      // The bell has to be drawable: the page sprite must define its symbol.
-      assert.ok(document.getElementById('icon-bell'), `${page.file}: #icon-bell is not in the sprite`);
+      assert.ok(drawable(exit.querySelector('svg[data-icon="logout"]')), `${page.file}: sign-out has no icon`);
       assert.equal(actions.querySelectorAll('button').length, 2, `${page.file}: the topbar holds more than the bell and sign-out`);
       // Nothing else may sit in the bar — no theme switch, date, name chip or menu.
       assert.equal(bar.querySelectorAll('[data-theme-toggle], time, .student-date, .manager-top-actions, .topbar-chip').length, 0,
@@ -84,8 +93,8 @@ test('every panel ships the identical topbar: logo, slogan, bell, sign-out only'
       // student profile uses — sun/moon chip + the app's toggle switch.
       const themeSwitch = document.querySelector('.theme-switch');
       assert.ok(themeSwitch, `${page.file}: dark mode lost its switch`);
-      assert.ok(themeSwitch.querySelector('.theme-switch-icon use[href="#icon-sun"]')
-        && themeSwitch.querySelector('.theme-switch-icon use[href="#icon-moon"]'), `${page.file}: the switch lost an icon`);
+      assert.ok(drawable(themeSwitch.querySelector('.theme-switch-icon svg[data-icon="sun"]'))
+        && drawable(themeSwitch.querySelector('.theme-switch-icon svg[data-icon="moon"]')), `${page.file}: the switch lost an icon`);
       assert.ok(themeSwitch.textContent.includes('গাঢ় থিম'), `${page.file}: the switch label changed`);
       const checkbox = themeSwitch.querySelector('#darkModeToggle');
       assert.ok(checkbox && checkbox.type === 'checkbox', `${page.file}: the switch is not wired to the theme checkbox`);

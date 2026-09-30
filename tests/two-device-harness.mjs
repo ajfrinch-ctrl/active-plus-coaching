@@ -88,7 +88,18 @@ const affects = (listenerPath, writtenPath) =>
   listenerPath.startsWith(writtenPath + '/') ||
   writtenPath.startsWith(listenerPath + '/');
 
-export function startMockCloud() {
+/* The mock enforces the DEPLOYED database.rules.json (through the local rules
+   simulator) for the anonymous identity the app signs in with. A request the
+   rules would refuse in production is refused here too and recorded in
+   `ruleViolations`, so these end-to-end runs prove the shipped client and the
+   shipped rules agree. */
+const DEPLOYED_RULES = JSON.parse(readFileSync(path.join(REPO_DIR, 'database.rules.json'), 'utf8'));
+const ANONYMOUS_DEVICE = { uid: 'mock-anon', token: { firebase: { sign_in_provider: 'anonymous' } } };
+
+export async function startMockCloud() {
+  const { createSimulator } = await import('./rtdb-rules-sim.mjs');
+  const rules = createSimulator(DEPLOYED_RULES);
+  const ruleViolations = [];
   const state = {};
   let revision = 0;
   let paused = false;
@@ -110,6 +121,14 @@ export function startMockCloud() {
     if (blocked && url.pathname !== '/control') {
       res.writeHead(503, { 'content-type': 'application/json' });
       res.end('{"error":"offline"}');
+      return;
+    }
+    const readPath = url.searchParams.get('path') || '';
+    if (req.method === 'GET' && (url.pathname === '/db' || url.pathname === '/events') &&
+        readPath !== '.info/connected' && !rules.canRead(ANONYMOUS_DEVICE, readPath, state)) {
+      ruleViolations.push({ op: 'read', path: readPath });
+      res.writeHead(403, { 'content-type': 'application/json' });
+      res.end('{"error":"permission_denied"}');
       return;
     }
     if (req.method === 'GET' && url.pathname === '/db') {
@@ -146,6 +165,15 @@ export function startMockCloud() {
           if (expectedRevision !== undefined && expectedRevision !== revision) {
             res.writeHead(409); res.end(); return;
           }
+          // Key/path errors first (500, as before), then the security rules.
+          const dryRun = structuredClone(state);
+          setAt(dryRun, nodePath, value);
+          if (!rules.canWrite(ANONYMOUS_DEVICE, nodePath, firebaseValue(value) ?? null, state)) {
+            ruleViolations.push({ op: 'write', path: nodePath });
+            res.writeHead(403, { 'content-type': 'application/json' });
+            res.end('{"error":"permission_denied"}');
+            return;
+          }
           revision += 1;
           setAt(state, nodePath, value);
           broadcast(nodePath);
@@ -172,7 +200,7 @@ export function startMockCloud() {
   });
   return new Promise(resolve => {
     server.listen(0, '127.0.0.1', () => {
-      resolve({ server, state, url: `http://127.0.0.1:${server.address().port}` });
+      resolve({ server, state, ruleViolations, url: `http://127.0.0.1:${server.address().port}` });
     });
   });
 }
@@ -186,6 +214,10 @@ function buildAppCopy(cloudUrl) {
   rmSync(RUN_DIR, { recursive: true, force: true });
   mkdirSync(path.join(RUN_DIR, 'mock'), { recursive: true });
   cpSync(path.join(REPO_DIR, 'js'), path.join(RUN_DIR, 'js'), { recursive: true });
+  // The bridge imports its gate from ../sync and the SDK surface from
+  // ../firebase; both must exist beside the copied js/ tree.
+  cpSync(path.join(REPO_DIR, 'sync'), path.join(RUN_DIR, 'sync'), { recursive: true });
+  mkdirSync(path.join(RUN_DIR, 'firebase'), { recursive: true });
 
   const mockAppUrl = pathToFileUrl(path.join(RUN_DIR, 'mock', 'firebase-app.mock.mjs'));
   const mockAuthUrl = pathToFileUrl(path.join(RUN_DIR, 'mock', 'firebase-auth.mock.mjs'));
@@ -259,6 +291,29 @@ export function onValue(node, callback) {
   return () => controller.abort();
 }
 `);
+
+  /* These scenarios test data propagation between two signed-in phones, not
+     the session gate (tests/login-sync-lifecycle.test.mjs covers that). The
+     child's `boot` command marks the device as signed in; without the mark the
+     real session check runs unchanged. */
+  const sessionFile = path.join(RUN_DIR, 'js', 'sync-session.js');
+  writeFileSync(sessionFile, readFileSync(sessionFile, 'utf8').replace(
+    'export async function hasSyncSession() {',
+    'export async function hasSyncSession() {\n  if (globalThis.__apcTwoDeviceSignedIn === true) return true;'));
+
+  /* The app reaches Firebase only through firebase/firebase-init.js and
+     firebase/firebase-services.js: replace exactly those two modules. */
+  writeFileSync(path.join(RUN_DIR, 'firebase', 'firebase-init.js'),
+    "export const firebaseApp = { mock: 'app' };\nexport const appCheckReady = Promise.resolve();\n");
+  writeFileSync(path.join(RUN_DIR, 'firebase', 'firebase-services.js'),
+    `export { getAuth, signInAnonymously, setPersistence, browserLocalPersistence } from ${JSON.stringify(mockAuthUrl)};\n` +
+    `export { getDatabase, ref, get, set, runTransaction, onValue } from ${JSON.stringify(mockDbUrl)};\n` +
+    "const unavailable = name => () => { throw new Error(name + ' is not available in the two-device harness'); };\n" +
+    "export const signInWithEmailAndPassword = unavailable('signInWithEmailAndPassword');\n" +
+    "export const updatePassword = unavailable('updatePassword');\n" +
+    "export const getFirestore = unavailable('getFirestore'); export const doc = unavailable('doc'); export const getDoc = unavailable('getDoc');\n" +
+    "export const getFunctions = () => ({});\n" +
+    "export const httpsCallable = (functions, name) => async () => { throw new Error('functions/not-deployed: ' + name); };\n");
 
   const swap = (file, replacements) => {
     const target = path.join(RUN_DIR, 'js', file);

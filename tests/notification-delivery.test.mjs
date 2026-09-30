@@ -44,7 +44,8 @@ before(async () => {
 
   const module = await import('../js/notifications.js');
   controller = module.initNotifications();
-  await ctx.waitFor(() => ctx.$('#apcNotifyToggle') !== null);
+  // The permission pill was removed on purpose (no unsolicited banner; the
+  // switch lives in the notice inbox). The controller itself is synchronous.
   await ctx.flush();
 });
 
@@ -53,7 +54,6 @@ const seenKeys = () => JSON.parse(ctx.window.localStorage.getItem(SEEN_KEY)).key
 test('the notices already on the device are not announced again', () => {
   assert.deepEqual(shown, []);
   assert.equal(controller.permission(), 'granted');
-  assert.equal(ctx.$('#apcNotifyToggle').hidden, true, 'nothing to switch on — it is already on');
 });
 
 test('a notice that arrives from the other device raises a system notification', async () => {
@@ -95,8 +95,6 @@ test('with permission blocked the list still records what arrived', async () => 
   await ctx.flush();
   assert.equal(shown.length, 1, 'no system notification without permission');
   assert.ok(seenKeys().some(key => key.startsWith('notice:N3:')), 'but the app list stays correct');
-  assert.equal(ctx.$('#apcNotifyToggle').hidden, false, 'and the switch is offered again');
-  assert.match(ctx.$('#apcNotifyToggle').textContent, /নোটিফিকেশন/);
 });
 
 test('the urgent announcement replaces the notice list on top', async () => {
@@ -110,12 +108,3 @@ test('the urgent announcement replaces the notice list on top', async () => {
   assert.match(shown[1].options.body, /ক্লাস বন্ধ/);
 });
 
-test('the switch can be put away for a week without deciding', () => {
-  ctx.window.Notification.permission = 'default';
-  controller.refresh();
-  assert.equal(ctx.$('#apcNotifyToggle').hidden, false, 'the device is offered the choice');
-  ctx.click(ctx.$('#apcNotifyDismiss'));
-  assert.equal(ctx.$('#apcNotifyToggle').hidden, true, 'a later visit is not nagged');
-  const until = JSON.parse(ctx.window.localStorage.getItem('activePlus.notifications.promptHiddenAt.v1'));
-  assert.ok(until.at > Date.now() - 60000);
-});

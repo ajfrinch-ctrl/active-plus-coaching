@@ -23,9 +23,29 @@ const KIND_ICON = Object.freeze({
   notice: 'icon-megaphone',
   broadcast: 'icon-bell',
   exam: 'icon-clipboard',
-  result: 'icon-award'
+  result: 'icon-award',
+  registration: 'icon-users',
+  'exam-soon': 'icon-clipboard',
+  'exam-live': 'icon-clipboard',
+  'exam-review': 'icon-clipboard',
+  'exam-returned': 'icon-clipboard',
+  'exam-approved': 'icon-clipboard',
+  approved: 'icon-award',
+  rejected: 'icon-bell',
+  payment: 'icon-bell',
+  'payment-review': 'icon-bell',
+  'payment-rejected': 'icon-bell'
 });
-const REFRESH_KEYS = Object.freeze(['activePlus.admin.notices.v1', 'activePlus.app.config.v1', 'activePlus.exams.v1']);
+/* The button on an item that asks someone to act. */
+const ACTION_LABEL = Object.freeze({
+  registration: 'রিভিউ ও অনুমোদন',
+  'payment-review': 'পেমেন্ট দেখুন',
+  'exam-review': 'পরীক্ষা দেখুন',
+  'exam-returned': 'সংশোধন করুন',
+  'exam-live': 'পরীক্ষায় যাও'
+});
+const REFRESH_KEYS = Object.freeze(['activePlus.admin.notices.v1', 'activePlus.app.config.v1', 'active-plus-app-config-v1', 'activePlus.exams.v1', 'activePlus.admin.students.v1', 'activePlus.admin.transactions.v1']);
+const REFRESH_COLLECTIONS = Object.freeze(['notices', 'settings', 'exams', 'students', 'transactions']);
 
 const BN_DIGITS = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
 const bn = value => String(value).replace(/\d/g, digit => BN_DIGITS[Number(digit)]);
@@ -102,6 +122,20 @@ export function mountNoticeCenter(api) {
   const statusLine = modal.querySelector('[data-apc-notice-status], #noticeReadStatus');
   const pushNote = modal.querySelector('[data-apc-notice-push]');
   let pushRow = null;
+  let shownFeed = [];
+
+  /* "সব খালি করুন": one button on every panel (page modal or built modal). */
+  let clearButton = modal.querySelector('[data-apc-notice-clear]');
+  if (!clearButton && typeof api.clear === 'function') {
+    clearButton = document.createElement('button');
+    clearButton.type = 'button';
+    clearButton.className = 'mini-btn';
+    clearButton.dataset.apcNoticeClear = '';
+    clearButton.textContent = 'সব খালি করুন';
+    clearButton.hidden = true;
+    if (statusLine) statusLine.after(clearButton);
+    else if (listBox) listBox.before(clearButton);
+  }
 
   function show(visible) {
     modal.hidden = !visible;
@@ -115,7 +149,11 @@ export function mountNoticeCenter(api) {
     let feed = [];
     try { feed = api.feed() || []; } catch { feed = []; }
     const seen = new Set(api.seen ? api.seen() : []);
-    const unread = feed.filter(item => !seen.has(item.key)).length;
+    // A registration waiting for a decision stays "unread" until it is opened,
+    // decided or cleared: it is a task, not just news.
+    const unread = feed.filter(item => !seen.has(item.key) || item.actionable).length;
+    shownFeed = feed;
+    if (clearButton) clearButton.hidden = feed.length === 0;
 
     const bell = document.getElementById('notificationButton');
     if (bell) {
@@ -133,12 +171,18 @@ export function mountNoticeCenter(api) {
     if (!listBox) return { unread, total: feed.length };
     listBox.innerHTML = feed.length
       ? feed.map(item => {
-        const isUnread = !seen.has(item.key);
-        return '<article class="notice-detail' + (isUnread ? ' unread' : '') + '">' +
+        const isUnread = !seen.has(item.key) || item.actionable;
+        const opens = item.actionable || Boolean(item.target);
+        const label = ACTION_LABEL[item.kind] || (item.actionable ? 'দেখুন' : '');
+        const action = label
+          ? '<button type="button" class="mini-btn approve" data-apc-notice-open="' + escapeHtml(item.key) + '">' + escapeHtml(label) + '</button>'
+          : '';
+        return '<article class="notice-detail' + (isUnread ? ' unread' : '') + (opens ? ' actionable' : '') + '"' +
+          (opens ? ' data-apc-notice-open="' + escapeHtml(item.key) + '" role="button" tabindex="0"' : '') + '>' +
           '<span class="notice-detail-icon' + (item.kind === 'broadcast' ? ' light' : '') + '">' + iconMarkup(item.kind) + '</span>' +
           '<div><span class="notice-time">' + escapeHtml(whenText(item)) + '</span>' +
           '<h3>' + escapeHtml(item.title) + '</h3>' +
-          (item.body ? '<p>' + escapeHtml(item.body) + '</p>' : '') + '</div></article>';
+          (item.body ? '<p>' + escapeHtml(item.body) + '</p>' : '') + action + '</div></article>';
       }).join('')
       : '<p class="admin-empty">এখনও কোনো নোটিফিকেশন নেই।</p>';
     return { unread, total: feed.length };
@@ -195,6 +239,7 @@ export function mountNoticeCenter(api) {
   }
 
   function open() {
+    hideAlerts();                              // the list shows them all
     let result = null;
     try { result = api.markAllSeen?.(); } catch { /* the list still opens */ }
     paint();
@@ -209,19 +254,117 @@ export function mountNoticeCenter(api) {
   document.addEventListener('click', event => {
     const bell = event.target?.closest?.('#notificationButton');
     if (bell) { event.preventDefault(); open(); return; }
+    if (!modal.contains(event.target)) return;
+    const target = event.target?.closest?.('[data-apc-notice-open]');
+    if (target) { event.preventDefault(); openItem(target.dataset.apcNoticeOpen); return; }
+    if (event.target?.closest?.('[data-apc-notice-clear]')) {
+      event.preventDefault();
+      try { api.clear?.(); } catch { /* the list repaints anyway */ }
+      paint();
+      if (statusLine) statusLine.textContent = 'নোটিফিকেশন খালি করা হয়েছে।';
+      return;
+    }
     if (!ownsModal) return;
     if (event.target?.closest?.('[data-apc-notice-close]') || event.target === modal) show(false);
   });
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape' && !modal.hidden) show(false);
+    if ((event.key === 'Enter' || event.key === ' ') && event.target?.matches?.('article[data-apc-notice-open]')) {
+      event.preventDefault();
+      openItem(event.target.dataset.apcNoticeOpen);
+    }
   });
+
+  /* An actionable item closes the list and opens its own dialog. */
+  function openItem(key) {
+    const item = shownFeed.find(entry => entry.key === key);
+    if (!item || typeof api.openItem !== 'function') return;
+    closeModal();
+    void Promise.resolve(api.openItem(item)).finally(() => paint());
+  }
+
+  /* The page modal (#noticeModal) is closed by its own page code; hide it the
+     same way it is hidden there. */
+  function closeModal() {
+    if (ownsModal) { show(false); return; }
+    const pageClose = modal.querySelector('[data-close-notice], .modal-close, [data-close-modal]');
+    if (pageClose) pageClose.click();
+    else modal.hidden = true;
+  }
+
+  /* ---- In-app card: new notifications, shown inside the app -------------
+     No phone permission needed. Tapping an item opens it (its view or review
+     dialog; plain news opens the list); "সব দেখুন" opens the list. */
+  let alertCard = null;
+  let alertItems = [];
+
+  function hideAlerts() {
+    alertItems = [];
+    if (alertCard) alertCard.hidden = true;
+  }
+
+  function paintAlerts() {
+    if (!alertItems.length) { hideAlerts(); return; }
+    if (!alertCard) {
+      alertCard = document.createElement('section');
+      alertCard.className = 'apc-inapp-alert';
+      alertCard.id = 'apcInAppAlert';
+      alertCard.setAttribute('role', 'status');
+      alertCard.setAttribute('aria-live', 'polite');
+      document.body.append(alertCard);
+      alertCard.addEventListener('click', event => {
+        if (event.target.closest('[data-apc-alert-close]')) { hideAlerts(); return; }
+        if (event.target.closest('[data-apc-alert-all]')) { hideAlerts(); open(); return; }
+        const row = event.target.closest('[data-apc-alert-open]');
+        if (!row) return;
+        const item = alertItems.find(entry => entry.key === row.dataset.apcAlertOpen);
+        alertItems = alertItems.filter(entry => entry !== item);
+        paintAlerts();
+        if (!item) return;
+        if ((item.actionable || item.target) && typeof api.openItem === 'function') {
+          void Promise.resolve(api.openItem(item)).finally(() => paint());
+        } else open();
+      });
+    }
+    const rows = alertItems.slice(0, 3).map(item =>
+      '<li><button type="button" class="apc-inapp-alert-item" data-apc-alert-open="' + escapeHtml(item.key) + '">' +
+        '<span class="apc-inapp-alert-icon">' + iconMarkup(item.kind) + '</span>' +
+        '<span><b>' + escapeHtml(item.title) + '</b>' + (item.body ? '<small>' + escapeHtml(item.body) + '</small>' : '') + '</span>' +
+      '</button></li>').join('');
+    const more = alertItems.length > 3 ? ' (আরও ' + bn(alertItems.length - 3) + 'টি)' : '';
+    alertCard.innerHTML =
+      '<header><strong>নতুন নোটিফিকেশন' + (alertItems.length > 1 ? ' · ' + bn(alertItems.length) + 'টি' : '') + '</strong>' +
+        '<button type="button" class="apc-inapp-alert-close" data-apc-alert-close aria-label="বন্ধ করুন">×</button></header>' +
+      '<ul>' + rows + '</ul>' +
+      '<footer><button type="button" class="mini-btn" data-apc-alert-all>সব দেখুন' + more + '</button></footer>';
+    alertCard.hidden = false;
+  }
+
+  let pumping = false;
+  async function pumpAlerts() {
+    if (pumping || typeof api.takeAlerts !== 'function') return;
+    pumping = true;
+    try {
+      // Never over a lock/login screen: wait for the signed-in panel.
+      if (typeof api.whenReady === 'function' && !(await api.whenReady())) return;
+      const incoming = api.takeAlerts() || [];
+      if (!incoming.length) return;
+      const keys = new Set(incoming.map(item => item.key));
+      alertItems = [...incoming, ...alertItems.filter(item => !keys.has(item.key))];
+      paintAlerts();
+    } finally {
+      pumping = false;
+    }
+  }
+  window.addEventListener('apc-inapp-alerts', () => { void pumpAlerts(); });
+  void pumpAlerts();
 
   const repaint = () => paint();
   window.addEventListener('apc-notifications-updated', repaint);
   window.addEventListener('apc-notification', repaint);
   window.addEventListener('apc-sync-updated', event => {
     const collection = event?.detail?.collection;
-    if (!collection || ['notices', 'settings', 'exams'].includes(collection)) repaint();
+    if (!collection || REFRESH_COLLECTIONS.includes(collection)) repaint();
   });
   window.addEventListener('storage', event => {
     if (!event.key || REFRESH_KEYS.includes(event.key)) repaint();

@@ -17,13 +17,22 @@ import { mountStatusNotice } from './status-surface.js';
    must never replay old news as a burst of notifications. */
 
 import { readJSON, writeJSON, loadAppConfig, loadAccount } from './storage.js';
-import { KEYS, STAFF_KEYS } from './database.js';
-import { loadNotices } from './office-data.js';
+import { KEYS, STAFF_KEYS, listDocuments } from './database.js';
+import { loadNotices, loadRoster } from './office-data.js';
 import { getDeviceId } from './session.js';
 import {
-  BOOT_KEY_PREFIX, LOCAL_WRITE_KEY, PROMPT_HIDDEN_KEY, SEEN_KEY_PREFIX, SHOWN_KEY,
-  claimDelivery, notificationFeed, planDeliveries, pushPayload, seenRecord, viewerKeyOf
+  BOOT_KEY_PREFIX, CLEARED_KEY_PREFIX, LOCAL_WRITE_KEY, PROMPT_HIDDEN_KEY, REGISTRATION_REVIEWERS,
+  SEEN_KEY_PREFIX, SHOWN_KEY, INAPP_KEY_PREFIX, claimDelivery, planInAppAlerts, clearedRecord, nextExamBoundary, notificationFeed,
+  planDeliveries, pushPayload, seenRecord, viewerKeyOf
 } from './notification-rules.js';
+
+/* A notification tapped while no app window was open: the service worker
+   leaves the payload here and opens the panel, which picks it up once. */
+export const PENDING_CLICK_PATH = './__apc-pending-click';
+// Same cache name as js/panel-lockdown.js and sw.js (not imported: the student
+// page must not load the staff lockdown module just for a constant).
+const PANEL_HINT_CACHE = 'apc-panel-hint';
+const PENDING_CLICK_MAX_AGE_MS = 10 * 60 * 1000;
 
 const ROLE_PAGES = Object.freeze({
   'admin.html': 'admin',
@@ -45,7 +54,46 @@ const PROMPT_HIDE_MS = 7 * 24 * 60 * 60 * 1000;
 const REFRESH_DEBOUNCE_MS = 400;
 const ARM_FALLBACK_MS = 12000;
 const SW_READY_TIMEOUT_MS = 2500;
-const WATCHED_KEYS = new Set([KEYS.notices, KEYS.settings, KEYS.exams]);
+const WATCHED_KEYS = new Set([KEYS.notices, KEYS.settings, KEYS.exams, KEYS.students, KEYS.transactions]);
+const WATCHED_COLLECTIONS = Object.freeze(['notices', 'settings', 'exams', 'students', 'transactions']);
+/* Which records each person's notifications are built from. */
+const NEEDS = Object.freeze({
+  student: { students: true, transactions: true, exams: true },
+  admin: { students: true },
+  manager: { students: true, transactions: true, exams: true },
+  teacher: { exams: true },
+  payment: { transactions: true }
+});
+/* Where a tapped item goes when the payload does not name a view. */
+const KIND_TARGET = Object.freeze({
+  exam: 'exams', 'exam-soon': 'exams', 'exam-live': 'exams', result: 'results',
+  approved: 'home', rejected: 'home',
+  'payment-review': 'cash-counter', 'exam-review': 'exams',
+  'exam-returned': 'online-exams', 'exam-approved': 'online-exams'
+});
+const NAV_ATTRIBUTE = Object.freeze({
+  student: 'data-view', manager: 'data-manager-view', teacher: 'data-teacher-view', admin: 'data-admin-view'
+});
+const MAX_TIMER_MS = 60 * 60 * 1000;
+/* The part of each panel that appears only once its login is verified. A panel
+   shows its own first view (dashboard/home) at that moment, so a tapped
+   notification waits for it instead of being overwritten by it. */
+const PANEL_SHELL = Object.freeze({
+  student: '#appShell', manager: '#managerShell', teacher: '#teacherShell', admin: '#adminShell', payment: '#payShell'
+});
+const PANEL_READY_TIMEOUT_MS = 20000;
+/* Kinds added on 2026-09-30. The first refresh after the update records them
+   silently: old approvals/payments must not buzz a phone as if they were new.
+   Their list entries still appear; only the system notification is skipped. */
+export const RULES_VERSION = 2;
+export const RULES_KEY_PREFIX = 'activePlus.notifications.rules.v1:';
+const V2_KINDS = new Set([
+  'registration', 'approved', 'rejected', 'exam-soon', 'exam-live', 'payment',
+  'payment-review', 'payment-rejected', 'exam-review', 'exam-returned', 'exam-approved'
+]);
+let boundaryTimer = null;
+/* Items waiting for the in-app card (shown once the panel is on screen). */
+let alertQueue = [];
 
 let controller = null;
 let viewer = null;
@@ -135,16 +183,211 @@ function promptHiddenUntil() {
 
 /* ---- Feed ------------------------------------------------------------------- */
 
-export function buildFeed() {
-  const config = loadAppConfig();
-  const examDb = viewer?.kind === 'student' ? readJSON(KEYS.exams, null) : null;
+function reviewsRegistrations() {
+  return viewer?.kind === 'staff' && REGISTRATION_REVIEWERS.includes(viewer.role);
+}
+
+function readCleared() {
+  const record = readJSON(CLEARED_KEY_PREFIX + viewerKey, null);
+  return Array.isArray(record?.keys) ? record.keys.filter(key => typeof key === 'string') : [];
+}
+
+function needs() {
+  return NEEDS[viewer?.kind === 'staff' ? viewer.role : 'student'] || {};
+}
+
+function safely(read) {
+  try { return read(); } catch { return null; }
+}
+
+function rawFeed(cleared = null) {
+  const want = needs();
   return notificationFeed({
     notices: loadNotices(),
-    config,
-    examDb,
+    config: loadAppConfig(),
+    examDb: want.exams ? readJSON(KEYS.exams, null) : null,
+    students: want.students ? safely(loadRoster) : null,
+    transactions: want.transactions ? safely(() => listDocuments('transactions')) : null,
     viewer,
+    cleared,
     localWrites: readJSON(LOCAL_WRITE_KEY, null)
   });
+}
+
+/* Exam reminders are time-based, not data-based: wake up at the next start /
+   reminder / end moment (browsers may delay a background timer; the refresh on
+   becoming visible covers that). */
+function scheduleExamBoundary() {
+  clearTimeout(boundaryTimer);
+  if (!needs().exams || viewer?.kind !== 'student') return;
+  const next = nextExamBoundary(readJSON(KEYS.exams, null), viewer, Date.now());
+  if (!next) return;
+  const delay = Math.min(MAX_TIMER_MS, Math.max(1000, next - Date.now() + 500));
+  boundaryTimer = setTimeout(() => refreshNotifications(), delay);
+}
+
+export function buildFeed() {
+  return rawFeed(readCleared());
+}
+
+/**
+ * Empty the list: the given keys, or everything currently shown. Cleared items
+ * are also marked seen, so they never come back as a system notification.
+ */
+export function clearNotifications(keys = null) {
+  const all = rawFeed(null).map(item => item.key);
+  const target = Array.isArray(keys) ? keys : buildFeed().map(item => item.key);
+  const saved = writeJSON(CLEARED_KEY_PREFIX + viewerKey, clearedRecord([...readCleared(), ...target], all));
+  writeSeen([...new Set([...readSeen(), ...target])]);
+  window.dispatchEvent(new CustomEvent('apc-notifications-updated', { detail: { cleared: target.length, saved } }));
+  return { cleared: target.length, saved };
+}
+
+/** Put one cleared item back (e.g. "পরে দেখব" on a registration review). */
+export function restoreNotification(key) {
+  const all = rawFeed(null).map(item => item.key);
+  const keys = readCleared().filter(item => item !== key);
+  writeJSON(CLEARED_KEY_PREFIX + viewerKey, clearedRecord(keys, all));
+  window.dispatchEvent(new CustomEvent('apc-notifications-updated', { detail: { restored: key } }));
+}
+
+/**
+ * Open a registration for review from a notification (inbox or tray). The item
+ * is cleared as soon as it has been looked at; "পরে দেখব" puts it back, and a
+ * decision removes it for good (the student is no longer pending anywhere).
+ */
+export async function openRegistration(studentId) {
+  const id = String(studentId || '').trim();
+  if (!id || !reviewsRegistrations()) return false;
+  if (!(await whenPanelReady())) return false;
+  const key = `registration:${id}`;
+  clearNotifications([key]);
+  try {
+    const module = await import('./registration-review.js');
+    const opened = await module.openRegistrationReview(id, {
+      role: viewer.role,
+      onLater: () => restoreNotification(key),
+      onDone: () => scheduleRefresh()
+    });
+    if (!opened) restoreNotification(key);
+    return opened;
+  } catch (error) {
+    console.warn('[Active Plus] registration review unavailable:', error?.name || 'unknown');
+    restoreNotification(key);
+    return false;
+  }
+}
+
+function panelVisible() {
+  const shell = document.querySelector(PANEL_SHELL[viewer?.kind === 'staff' ? viewer.role : 'student'] || '');
+  return Boolean(shell && !shell.hidden);
+}
+
+/** Resolves once the signed-in panel is on screen (false if it never shows). */
+export async function whenPanelReady(timeout = PANEL_READY_TIMEOUT_MS) {
+  if (panelVisible()) return true;
+  const started = Date.now();
+  while (!panelVisible()) {
+    if (Date.now() - started > timeout) return false;
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  // Let the panel finish its own first render (same task as un-hiding).
+  await new Promise(resolve => setTimeout(resolve, 50));
+  return true;
+}
+
+/* ---- In-app card: new notifications shown inside the app -------------------- */
+
+function readInApp() {
+  const record = readJSON(INAPP_KEY_PREFIX + viewerKey, null);
+  return Array.isArray(record?.keys) ? record.keys.filter(key => typeof key === 'string') : null;
+}
+
+function writeInApp(keys) {
+  return writeJSON(INAPP_KEY_PREFIX + viewerKey, { version: 1, at: Date.now(), keys });
+}
+
+function queueInAppAlerts(feed, full) {
+  const stored = readInApp();
+  const queued = alertQueue.map(item => item.key);
+  const plan = planInAppAlerts({
+    feed, known: full, initialise: stored === null,
+    shown: stored === null ? null : [...stored, ...queued]
+  });
+  // Queued keys are not receipts yet: only the stored ones are kept (pruned).
+  const known = new Set(full.map(item => item.key));
+  writeInApp(stored === null ? plan.record : stored.filter(key => known.has(key)));
+  const visible = new Set(feed.map(item => item.key));
+  const fresh = plan.show.filter(item => !queued.includes(item.key));
+  alertQueue = [...fresh, ...alertQueue.filter(item => visible.has(item.key))];
+  if (alertQueue.length) window.dispatchEvent(new CustomEvent('apc-inapp-alerts', { detail: { count: alertQueue.length } }));
+}
+
+/**
+ * The card takes the waiting items when it can really show them; only then do
+ * they count as shown (a lock screen or reload in between loses nothing).
+ */
+export function takeInAppAlerts() {
+  if (!viewer || !alertQueue.length) return [];
+  const current = new Map(buildFeed().map(item => [item.key, item]));
+  const items = alertQueue.map(item => current.get(item.key)).filter(Boolean);
+  alertQueue = [];
+  if (items.length) writeInApp([...new Set([...(readInApp() || []), ...items.map(item => item.key)])]);
+  return items;
+}
+
+/** Open the panel view a notification belongs to (bottom-bar button). */
+function navigateTo(target) {
+  const attribute = NAV_ATTRIBUTE[viewer?.kind === 'staff' ? viewer.role : 'student'];
+  if (!attribute || !target) return false;
+  const button = [...document.querySelectorAll(`[${attribute}]`)].find(item => item.getAttribute(attribute) === target);
+  if (!button) return false;
+  button.click();
+  return true;
+}
+
+/**
+ * A tapped notification (inbox or tray). A registration opens its review
+ * dialog; every other item opens its view. Either way the item has now been
+ * seen, so it is cleared from the list.
+ */
+export function openNotificationTarget(data) {
+  const key = String(data?.key || '');
+  if (data?.kind === 'registration' || key.startsWith('registration:')) {
+    return openRegistration(data.id || key.slice('registration:'.length));
+  }
+  const item = key ? rawFeed(null).find(entry => entry.key === key) : null;
+  const target = data?.target || item?.target || KIND_TARGET[data?.kind] || '';
+  if (key && item) clearNotifications([key]);
+  if (panelVisible()) return Promise.resolve(navigateTo(target));
+  // Tapped in the tray while the app was starting: go there once it is open.
+  return whenPanelReady().then(ready => ready && navigateTo(target));
+}
+
+async function takePendingClick() {
+  try {
+    if (!('caches' in window)) return null;
+    const cache = await caches.open(PANEL_HINT_CACHE);
+    const response = await cache.match(PENDING_CLICK_PATH);
+    if (!response) return null;
+    await cache.delete(PENDING_CLICK_PATH);
+    const record = JSON.parse(await response.text());
+    if (!record || Date.now() - Number(record.at) > PENDING_CLICK_MAX_AGE_MS) return null;
+    return record.data || null;
+  } catch { return null; }
+}
+
+function watchNotificationClicks() {
+  try {
+    navigator.serviceWorker?.addEventListener?.('message', event => {
+      if (event.data?.type === 'apc-notification-click') void openNotificationTarget(event.data.data);
+    });
+  } catch { /* no service worker: the inbox still works */ }
+  // The panel restores its session asynchronously; give it a moment first.
+  setTimeout(async () => {
+    const data = await takePendingClick();
+    if (data) void openNotificationTarget(data);
+  }, 800);
 }
 
 /** The receipt keys this device already knows about (inbox + tray agree). */
@@ -202,7 +445,7 @@ async function showSystemNotification(title, options) {
 }
 
 function deliver(item) {
-  const { claim, record } = claimDelivery(readJSON(SHOWN_KEY, null), item.sourceId || item.key);
+  const { claim, record } = claimDelivery(readJSON(SHOWN_KEY, null), item.key || item.sourceId);
   writeJSON(SHOWN_KEY, record);
   if (!claim) return;                      // the push already showed this one
   const payload = pushPayload(item);
@@ -216,16 +459,30 @@ function deliver(item) {
 
 export function refreshNotifications() {
   if (!viewer) return { delivered: 0 };
-  const feed = buildFeed();
+  // Receipts are kept for the whole feed, cleared items included: an item put
+  // back with "পরে দেখব" must not be announced a second time.
+  const cleared = new Set(readCleared());
+  const full = rawFeed(null);
+  const feed = full.filter(item => !cleared.has(item.key));
   // While the device is not "armed" (see below) the list is only recorded, so a
   // fresh install or a half-finished cloud load cannot fire old news.
-  const plan = planDeliveries({ feed, seen: readSeen(), firstRun: !armed });
+  const plan = planDeliveries({ feed: full, seen: readSeen(), firstRun: !armed });
+  plan.notify = plan.notify.filter(item => !cleared.has(item.key));
+  const rulesVersion = Number(readJSON(RULES_KEY_PREFIX + viewerKey, null)?.version) || 1;
+  if (rulesVersion < RULES_VERSION) {
+    // Time-based exam reminders are always current, so they may still ring.
+    plan.notify = plan.notify.filter(item => !V2_KINDS.has(item.kind) || item.kind === 'exam-soon' || item.kind === 'exam-live');
+    if (armed) writeJSON(RULES_KEY_PREFIX + viewerKey, { version: RULES_VERSION, at: Date.now() });
+  }
   writeSeen(plan.seen);
+  // The in-app card needs no phone permission (owner decision 2026-09-30).
+  if (armed) queueInAppAlerts(feed, full);
   let delivered = 0;
   if (armed && notificationsEnabled() && permission() === 'granted') {
     for (const item of plan.notify) { deliver(item); delivered += 1; }
   }
   paintPill();
+  scheduleExamBoundary();
   window.dispatchEvent(new CustomEvent('apc-notifications-updated', { detail: { delivered } }));
   return { delivered, feed };
 }
@@ -385,7 +642,10 @@ export function initNotifications() {
     viewer = currentViewer();
     viewerKey = viewerKeyOf(viewer);
     const firstRun = !Number(readJSON(BOOT_KEY_PREFIX + viewerKey, null)?.at);
-    if (firstRun) writeJSON(BOOT_KEY_PREFIX + viewerKey, { version: 1, at: Date.now() });
+    if (firstRun) {
+      writeJSON(BOOT_KEY_PREFIX + viewerKey, { version: 1, at: Date.now() });
+      writeJSON(RULES_KEY_PREFIX + viewerKey, { version: RULES_VERSION, at: Date.now() });
+    }
     armed = !firstRun;                       // a device with data notifies at once
     // Permission remains available in the notice inbox; no unsolicited banner.
     const register = () => { refreshNotifications(); };
@@ -401,8 +661,11 @@ export function initNotifications() {
     });
     window.addEventListener('apc-sync-updated', event => {
       const collection = event.detail?.collection;
-      if (!collection || ['notices', 'settings', 'exams'].includes(collection)) scheduleRefresh();
+      if (!collection || WATCHED_COLLECTIONS.includes(collection)) scheduleRefresh();
     });
+    // A decision taken on this device does not fire a storage event here.
+    window.addEventListener('apc-registration-decided', scheduleRefresh);
+    watchNotificationClicks();
     window.addEventListener('apc-sync-status', () => { if (!armed) return; paintPill(); });
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible' && armed) refreshNotifications();
@@ -413,6 +676,11 @@ export function initNotifications() {
       feed: buildFeed,
       seen: seenKeys,
       markAllSeen,
+      clear: clearNotifications,
+      restore: restoreNotification,
+      takeAlerts: takeInAppAlerts,
+      whenReady: () => whenPanelReady(),
+      openItem: item => openNotificationTarget({ kind: item?.kind, id: item?.sourceId, key: item?.key, target: item?.target }),
       enable: enableNotifications,
       disable: disableNotifications,
       pushSupport: async () => (await import('./push-notifications.js')).pushSupport(),
