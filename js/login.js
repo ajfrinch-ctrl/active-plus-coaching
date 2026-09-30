@@ -15,7 +15,7 @@ import { $, $$, setAuthMessage, scrollToTop, toBanglaNumber } from './ui.js';
 import { contactNumber, normalizeUsername } from './account-policy.js';
 import { matchesLoginIdentifier, studentIdOf } from './sync-merge.js';
 import {
-  loadAccount, saveStudent, persistSession, setTrustedDevice,
+  loadAccount, saveAccount, saveStudent, persistSession, setTrustedDevice,
   loadAppConfig, verifyAccountPassword, upgradeAccountSecrets
 } from './storage.js';
 import {
