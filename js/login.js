@@ -28,7 +28,7 @@ import { openStaffPasswordDialog } from './staff-password-dialog.js';
 import { authenticateDirectoryStaff, changeDirectoryStaffPassword } from './staff-directory.js';
 import { generateLoginId } from './user-id.js';
 import { isPasswordRecord, hashPassword } from './password-hash.js';
-import { signInCloudUsername } from '../sync/cloud-auth.js';
+import { signInCloudUsername, createFirstAdminCloud } from '../sync/cloud-auth.js';
 
 const STAFF_PANEL = Object.freeze({ admin: 'admin.html', manager: 'manager.html', teacher: 'teacher.html', payment: 'payment.html' });
 const STAFF_LABEL = Object.freeze({ admin: 'এডমিন প্যানেল', manager: 'ম্যানেজার প্যানেল', teacher: 'শিক্ষক প্যানেল', payment: 'পেমেন্ট রিসিভ প্যানেল' });
@@ -109,6 +109,34 @@ async function handleStaffLogin(role, typedId, pin) {
     return;
   }
   const remember = $('#rememberMe')?.checked !== false;
+  // A legacy/local first Admin is upgraded to the same Firebase identity on
+  // the first successful online login. The callable is idempotently rejected
+  // when a cloud Admin already exists, so the local account remains intact.
+  if (role === 'admin' && navigator.onLine && result.ok) {
+    const localAccount = await import('../js/staff-auth.js').then(m => m.readStaffAccount(role));
+    if (localAccount?.username && localAccount?.password && typeof localAccount.password === 'string') {
+      try {
+        // Plaintext is used only transiently from the legacy local record and
+        // is never sent to RTDB/Firestore; Firebase Auth receives it directly.
+        const password = pin;
+        const bootstrap = await createFirstAdminCloud({
+          fullName: localAccount.fullName || 'Admin',
+          mobile: localAccount.mobile || '',
+          email: localAccount.email || '',
+          username: localAccount.username,
+          password
+        });
+        if (bootstrap?.uid) {
+          await import('../js/staff-auth.js').then(m => m.importCloudStaffAccount('admin', {
+            ...localAccount, uid: bootstrap.uid, pinHash: await hashPassword(password)
+          }));
+        }
+      } catch (error) {
+        console.warn('[Active Plus] local Admin cloud upgrade unavailable:', error?.message || error);
+      }
+    }
+  }
+
   if (result.needsPasswordChange) {
     openStaffPasswordDialog({
       role,
