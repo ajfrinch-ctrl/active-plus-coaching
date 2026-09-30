@@ -146,6 +146,23 @@ async function handleStaffLogin(role, typedId, pin) {
     });
     return;
   }
+  // After local staff authentication, establish the matching Firebase Auth session
+  // so this device can immediately participate in the same cross-device sync.
+  if (navigator.onLine) {
+    try {
+      const cloud = await signInCloudUsername(typedId, pin);
+      if (cloud.ok) {
+        const cloudRole = String(cloud.claims?.role || cloud.userProfile?.role || role);
+        if (cloudRole === role) {
+          await enterStaffPanel(role, remember);
+          void runBackgroundLoginSync();
+          return;
+        }
+      }
+    } catch (error) {
+      console.warn('[Active Plus] staff cloud sign-in unavailable:', error?.message || error);
+    }
+  }
   await enterStaffPanel(role, remember);
 }
 
