@@ -1,10 +1,11 @@
 /* Active Plus — authenticated Firebase identity bridge.
- * Usernames are mapped to the private Auth email namespace used by Cloud Functions.
- * This module never stores or returns passwords. Firebase Auth owns credentials.
+ * Usernames map to the private Auth email namespace created by trusted Functions.
+ * Passwords are handled only by Firebase Auth and are never stored here.
  */
 import { firebaseApp, appCheckReady } from '../firebase/firebase-init.js';
 import {
-  getAuth, signInWithEmailAndPassword, setPersistence, browserLocalPersistence
+  getAuth, signInWithEmailAndPassword, setPersistence, browserLocalPersistence,
+  getFirestore, doc, getDoc
 } from '../firebase/firebase-services.js';
 
 const DOMAIN = 'accounts.activeplus.app';
@@ -30,7 +31,15 @@ export async function signInCloudUsername(username, password) {
     if (claims.mustChangePassword === true) {
       return { ok: false, reason: 'must-change-password', claims, user: credential.user };
     }
-    return { ok: true, user: credential.user, claims };
+    const firestore = getFirestore(firebaseApp);
+    const userSnapshot = await getDoc(doc(firestore, 'users', credential.user.uid));
+    const userProfile = userSnapshot.exists() ? userSnapshot.data() : null;
+    let studentProfile = null;
+    if (claims.role === 'student') {
+      const studentSnapshot = await getDoc(doc(firestore, 'students', credential.user.uid));
+      studentProfile = studentSnapshot.exists() ? studentSnapshot.data() : null;
+    }
+    return { ok: true, user: credential.user, claims, userProfile, studentProfile };
   } catch (error) {
     return { ok: false, reason: error?.code || 'auth-failed', error };
   }
@@ -44,6 +53,5 @@ export async function currentCloudUser() {
 }
 
 export async function signOutCloud() {
-  const auth = getAuth(firebaseApp);
-  return auth.signOut();
+  return getAuth(firebaseApp).signOut();
 }
