@@ -88,6 +88,7 @@ before(async () => {
   seedStaffSession(ctx.window, 'admin');
   // A device that already ran the engine announces at once.
   ctx.window.localStorage.setItem('activePlus.notifications.boot.v1:staff:admin.apc', JSON.stringify({ version: 1, at: Date.now() - 60000 }));
+  ctx.window.localStorage.setItem('activePlus.notifications.rules.v1:staff:admin.apc', JSON.stringify({ version: 2, at: Date.now() - 60000 }));
   await import('../js/admin.js');
   await ctx.waitFor(() => ctx.$('#adminShell').hidden === false);
   const module = await import('../js/notifications.js');

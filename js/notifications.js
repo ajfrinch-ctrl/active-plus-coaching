@@ -17,13 +17,13 @@ import { mountStatusNotice } from './status-surface.js';
    must never replay old news as a burst of notifications. */
 
 import { readJSON, writeJSON, loadAppConfig, loadAccount } from './storage.js';
-import { KEYS, STAFF_KEYS } from './database.js';
+import { KEYS, STAFF_KEYS, listDocuments } from './database.js';
 import { loadNotices, loadRoster } from './office-data.js';
 import { getDeviceId } from './session.js';
 import {
   BOOT_KEY_PREFIX, CLEARED_KEY_PREFIX, LOCAL_WRITE_KEY, PROMPT_HIDDEN_KEY, REGISTRATION_REVIEWERS,
-  SEEN_KEY_PREFIX, SHOWN_KEY, claimDelivery, clearedRecord, notificationFeed, planDeliveries,
-  pushPayload, seenRecord, viewerKeyOf
+  SEEN_KEY_PREFIX, SHOWN_KEY, claimDelivery, clearedRecord, nextExamBoundary, notificationFeed,
+  planDeliveries, pushPayload, seenRecord, viewerKeyOf
 } from './notification-rules.js';
 
 /* A notification tapped while no app window was open: the service worker
@@ -54,8 +54,37 @@ const PROMPT_HIDE_MS = 7 * 24 * 60 * 60 * 1000;
 const REFRESH_DEBOUNCE_MS = 400;
 const ARM_FALLBACK_MS = 12000;
 const SW_READY_TIMEOUT_MS = 2500;
-const WATCHED_KEYS = new Set([KEYS.notices, KEYS.settings, KEYS.exams, KEYS.students]);
-const WATCHED_COLLECTIONS = Object.freeze(['notices', 'settings', 'exams', 'students']);
+const WATCHED_KEYS = new Set([KEYS.notices, KEYS.settings, KEYS.exams, KEYS.students, KEYS.transactions]);
+const WATCHED_COLLECTIONS = Object.freeze(['notices', 'settings', 'exams', 'students', 'transactions']);
+/* Which records each person's notifications are built from. */
+const NEEDS = Object.freeze({
+  student: { students: true, transactions: true, exams: true },
+  admin: { students: true },
+  manager: { students: true, transactions: true, exams: true },
+  teacher: { exams: true },
+  payment: { transactions: true }
+});
+/* Where a tapped item goes when the payload does not name a view. */
+const KIND_TARGET = Object.freeze({
+  exam: 'exams', 'exam-soon': 'exams', 'exam-live': 'exams', result: 'results',
+  approved: 'home', rejected: 'home',
+  'payment-review': 'cash-counter', 'exam-review': 'exams',
+  'exam-returned': 'online-exams', 'exam-approved': 'online-exams'
+});
+const NAV_ATTRIBUTE = Object.freeze({
+  student: 'data-view', manager: 'data-manager-view', teacher: 'data-teacher-view', admin: 'data-admin-view'
+});
+const MAX_TIMER_MS = 60 * 60 * 1000;
+/* Kinds added on 2026-09-30. The first refresh after the update records them
+   silently: old approvals/payments must not buzz a phone as if they were new.
+   Their list entries still appear; only the system notification is skipped. */
+export const RULES_VERSION = 2;
+export const RULES_KEY_PREFIX = 'activePlus.notifications.rules.v1:';
+const V2_KINDS = new Set([
+  'registration', 'approved', 'rejected', 'exam-soon', 'exam-live', 'payment',
+  'payment-review', 'payment-rejected', 'exam-review', 'exam-returned', 'exam-approved'
+]);
+let boundaryTimer = null;
 
 let controller = null;
 let viewer = null;
@@ -154,20 +183,38 @@ function readCleared() {
   return Array.isArray(record?.keys) ? record.keys.filter(key => typeof key === 'string') : [];
 }
 
+function needs() {
+  return NEEDS[viewer?.kind === 'staff' ? viewer.role : 'student'] || {};
+}
+
+function safely(read) {
+  try { return read(); } catch { return null; }
+}
+
 function rawFeed(cleared = null) {
-  const config = loadAppConfig();
-  const examDb = viewer?.kind === 'student' ? readJSON(KEYS.exams, null) : null;
-  let students = null;
-  if (reviewsRegistrations()) { try { students = loadRoster(); } catch { students = null; } }
+  const want = needs();
   return notificationFeed({
     notices: loadNotices(),
-    config,
-    examDb,
+    config: loadAppConfig(),
+    examDb: want.exams ? readJSON(KEYS.exams, null) : null,
+    students: want.students ? safely(loadRoster) : null,
+    transactions: want.transactions ? safely(() => listDocuments('transactions')) : null,
     viewer,
-    students,
     cleared,
     localWrites: readJSON(LOCAL_WRITE_KEY, null)
   });
+}
+
+/* Exam reminders are time-based, not data-based: wake up at the next start /
+   reminder / end moment (browsers may delay a background timer; the refresh on
+   becoming visible covers that). */
+function scheduleExamBoundary() {
+  clearTimeout(boundaryTimer);
+  if (!needs().exams || viewer?.kind !== 'student') return;
+  const next = nextExamBoundary(readJSON(KEYS.exams, null), viewer, Date.now());
+  if (!next) return;
+  const delay = Math.min(MAX_TIMER_MS, Math.max(1000, next - Date.now() + 500));
+  boundaryTimer = setTimeout(() => refreshNotifications(), delay);
 }
 
 export function buildFeed() {
@@ -221,12 +268,30 @@ export async function openRegistration(studentId) {
   }
 }
 
-/** A tapped notification: only actionable kinds need more than focusing the app. */
+/** Open the panel view a notification belongs to (bottom-bar button). */
+function navigateTo(target) {
+  const attribute = NAV_ATTRIBUTE[viewer?.kind === 'staff' ? viewer.role : 'student'];
+  if (!attribute || !target) return false;
+  const button = [...document.querySelectorAll(`[${attribute}]`)].find(item => item.getAttribute(attribute) === target);
+  if (!button) return false;
+  button.click();
+  return true;
+}
+
+/**
+ * A tapped notification (inbox or tray). A registration opens its review
+ * dialog; every other item opens its view. Either way the item has now been
+ * seen, so it is cleared from the list.
+ */
 export function openNotificationTarget(data) {
-  if (data?.kind === 'registration' || String(data?.key || '').startsWith('registration:')) {
-    return openRegistration(data.id || String(data.key).slice('registration:'.length));
+  const key = String(data?.key || '');
+  if (data?.kind === 'registration' || key.startsWith('registration:')) {
+    return openRegistration(data.id || key.slice('registration:'.length));
   }
-  return Promise.resolve(false);
+  const item = key ? rawFeed(null).find(entry => entry.key === key) : null;
+  const target = data?.target || item?.target || KIND_TARGET[data?.kind] || '';
+  if (key && item) clearNotifications([key]);
+  return Promise.resolve(navigateTo(target));
 }
 
 async function takePendingClick() {
@@ -310,7 +375,7 @@ async function showSystemNotification(title, options) {
 }
 
 function deliver(item) {
-  const { claim, record } = claimDelivery(readJSON(SHOWN_KEY, null), item.sourceId || item.key);
+  const { claim, record } = claimDelivery(readJSON(SHOWN_KEY, null), item.key || item.sourceId);
   writeJSON(SHOWN_KEY, record);
   if (!claim) return;                      // the push already showed this one
   const payload = pushPayload(item);
@@ -333,12 +398,19 @@ export function refreshNotifications() {
   // fresh install or a half-finished cloud load cannot fire old news.
   const plan = planDeliveries({ feed: full, seen: readSeen(), firstRun: !armed });
   plan.notify = plan.notify.filter(item => !cleared.has(item.key));
+  const rulesVersion = Number(readJSON(RULES_KEY_PREFIX + viewerKey, null)?.version) || 1;
+  if (rulesVersion < RULES_VERSION) {
+    // Time-based exam reminders are always current, so they may still ring.
+    plan.notify = plan.notify.filter(item => !V2_KINDS.has(item.kind) || item.kind === 'exam-soon' || item.kind === 'exam-live');
+    if (armed) writeJSON(RULES_KEY_PREFIX + viewerKey, { version: RULES_VERSION, at: Date.now() });
+  }
   writeSeen(plan.seen);
   let delivered = 0;
   if (armed && notificationsEnabled() && permission() === 'granted') {
     for (const item of plan.notify) { deliver(item); delivered += 1; }
   }
   paintPill();
+  scheduleExamBoundary();
   window.dispatchEvent(new CustomEvent('apc-notifications-updated', { detail: { delivered } }));
   return { delivered, feed };
 }
@@ -498,7 +570,10 @@ export function initNotifications() {
     viewer = currentViewer();
     viewerKey = viewerKeyOf(viewer);
     const firstRun = !Number(readJSON(BOOT_KEY_PREFIX + viewerKey, null)?.at);
-    if (firstRun) writeJSON(BOOT_KEY_PREFIX + viewerKey, { version: 1, at: Date.now() });
+    if (firstRun) {
+      writeJSON(BOOT_KEY_PREFIX + viewerKey, { version: 1, at: Date.now() });
+      writeJSON(RULES_KEY_PREFIX + viewerKey, { version: RULES_VERSION, at: Date.now() });
+    }
     armed = !firstRun;                       // a device with data notifies at once
     // Permission remains available in the notice inbox; no unsolicited banner.
     const register = () => { refreshNotifications(); };
@@ -531,7 +606,7 @@ export function initNotifications() {
       markAllSeen,
       clear: clearNotifications,
       restore: restoreNotification,
-      openItem: item => openNotificationTarget({ kind: item?.kind, id: item?.sourceId, key: item?.key }),
+      openItem: item => openNotificationTarget({ kind: item?.kind, id: item?.sourceId, key: item?.key, target: item?.target }),
       enable: enableNotifications,
       disable: disableNotifications,
       pushSupport: async () => (await import('./push-notifications.js')).pushSupport(),

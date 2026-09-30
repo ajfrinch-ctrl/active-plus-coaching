@@ -444,7 +444,7 @@ export const examRepository = {
   },
   async requestApproval(id, actor = TEACHER_ACTOR) {
     await requireRoleSession('teacher');
-    const db = await mutate(db => { const e = examById(db, id); teacherOwns(e, actor); if (!['draft', 'rejected'].includes(e.status)) fail('এই পরীক্ষা ইতিমধ্যে পাঠানো/প্রকাশ করা হয়েছে।'); validateExam(e); if (e.startAt <= Date.now()) fail('পরীক্ষার শুরুর সময় ভবিষ্যতে দিন।'); e.status = 'pending'; e.reviewNote = ''; });
+    const db = await mutate(db => { const e = examById(db, id); teacherOwns(e, actor); if (!['draft', 'rejected'].includes(e.status)) fail('এই পরীক্ষা ইতিমধ্যে পাঠানো/প্রকাশ করা হয়েছে।'); validateExam(e); if (e.startAt <= Date.now()) fail('পরীক্ষার শুরুর সময় ভবিষ্যতে দিন।'); e.status = 'pending'; e.reviewNote = ''; e.submittedAt = Date.now(); });
     return teacherExamSnapshot(db, actor);
   },
   async review(id, decision, options = {}, actor) {
@@ -460,7 +460,7 @@ export const examRepository = {
         e.participants = students.filter(student => examMatchesStudent(e, student)).map(s => ({ id: s.id, name: s.name, className: s.className, group: s.group || '' }));
       } else if (decision === 'reject') {
         const note = String(options.note || '').trim(); if (!note || note.length > 500) fail('সংশোধনের কারণ লিখুন (সর্বোচ্চ ৫০০ অক্ষর)।');
-        e.status = 'rejected'; e.reviewNote = note;
+        e.status = 'rejected'; e.reviewNote = note; e.reviewedAt = Date.now();
       } else fail('সঠিক সিদ্ধান্ত নির্বাচন করুন।');
     });
   },

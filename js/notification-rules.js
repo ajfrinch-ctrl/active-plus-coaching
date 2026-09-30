@@ -144,6 +144,7 @@ export function examItems(examDb, viewer, now = Date.now()) {
         source: 'exams',
         sourceId: text(exam.id),
         kind: 'result',
+        target: 'results',
         title: 'ফলাফল প্রকাশিত হয়েছে',
         body: `${name}${subject ? ` — ${subject}` : ''} পরীক্ষার ফলাফল এখন অ্যাপে দেখা যাচ্ছে।`,
         at: Number(exam.resultsPublishedAt) || Number(exam.updatedAt) || 0,
@@ -160,6 +161,7 @@ export function examItems(examDb, viewer, now = Date.now()) {
         source: 'exams',
         sourceId: text(exam.id),
         kind: 'exam',
+        target: 'exams',
         title: 'নতুন পরীক্ষা নির্ধারিত হয়েছে',
         body: `${name}${subject ? ` — ${subject}` : ''} · ${startsAt > now ? `শুরু ${bnWhen(startsAt)}` : 'এখন চলছে'}`,
         at: Number(exam.publishedAt) || Number(exam.updatedAt) || 0,
@@ -203,13 +205,199 @@ export function registrationItems(students, viewer) {
   return items;
 }
 
+/* ---- Role notifications (owner request 2026-09-30: "all necessary ones") ----
+
+   Every rule below is derived from records that already sync to the device, so
+   no new cloud node is needed. Items that ask someone to act are `actionable`
+   (they keep the bell dot until opened, decided or cleared) and every item may
+   carry a `target` — the panel view a tap opens. */
+
+/** How long before the start a participant is reminded. */
+export const EXAM_REMINDER_MS = 10 * 60 * 1000;
+
+const examName = exam => {
+  const name = text(exam?.title) || 'পরীক্ষা';
+  const subject = text(exam?.subject);
+  return `${name}${subject ? ` — ${subject}` : ''}`;
+};
+const money = value => `৳${Number(value) || 0}`;
+const stamp = value => Date.parse(text(value)) || Number(value) || 0;
+
+/** Student: the office decided on this student's own registration. */
+export function studentDecisionItems(students, viewer) {
+  if (viewer?.kind !== 'student') return [];
+  const id = text(viewer.studentId);
+  if (!id) return [];
+  const row = (Array.isArray(students) ? students : []).find(item => isObject(item) && text(item.id) === id);
+  // Only a real review (it carries reviewedAt) is news; old rows stay quiet.
+  if (!row || !text(row.reviewedAt) || !['approved', 'rejected'].includes(row.status)) return [];
+  const approved = row.status === 'approved';
+  const note = text(row.reviewNote);
+  return [{
+    key: `decision:${id}:${row.status}:${text(row.reviewedAt)}`,
+    source: 'students',
+    sourceId: id,
+    kind: approved ? 'approved' : 'rejected',
+    title: approved ? 'রেজিস্ট্রেশন অনুমোদিত হয়েছে' : 'রেজিস্ট্রেশন বাতিল হয়েছে',
+    body: approved
+      ? 'অভিনন্দন! এখন অ্যাপের সব ফিচার ব্যবহার করতে পারবে।'
+      : `কারণ: ${note || 'অফিসে যোগাযোগ করো।'}`,
+    at: stamp(row.reviewedAt),
+    target: 'home',
+    audience: 'নিজের অ্যাকাউন্ট'
+  }];
+}
+
+/**
+ * Student: "starts soon" in the reminder window and "started" while the paper
+ * is open. A student who already started (or submitted) is not told to start.
+ */
+export function examTimingItems(examDb, viewer, now = Date.now(), reminderMs = EXAM_REMINDER_MS) {
+  if (viewer?.kind !== 'student' || !isObject(examDb)) return [];
+  const studentId = text(viewer.studentId);
+  if (!studentId) return [];
+  const done = new Set((Array.isArray(examDb.attempts) ? examDb.attempts : [])
+    .filter(attempt => isObject(attempt) && text(attempt.studentId) === studentId &&
+      ['active', 'queued', 'submitted'].includes(text(attempt.status)))
+    .map(attempt => text(attempt.examId)));
+  const items = [];
+  for (const exam of Array.isArray(examDb.exams) ? examDb.exams : []) {
+    if (!isObject(exam) || !text(exam.id) || exam.status !== 'published' || exam.resultsPublished === true) continue;
+    if (!participantIds(exam).includes(studentId) || done.has(text(exam.id))) continue;
+    const startAt = Number(exam.startAt) || 0;
+    const endAt = Number(exam.endAt) || 0;
+    if (!startAt) continue;
+    if (now >= startAt - reminderMs && now < startAt) {
+      const minutes = Math.max(1, Math.ceil((startAt - now) / 60000));
+      items.push({
+        key: `exam-soon:${text(exam.id)}:${startAt}`,
+        source: 'exams', sourceId: text(exam.id), kind: 'exam-soon',
+        title: 'পরীক্ষা শীঘ্রই শুরু হবে',
+        body: `${examName(exam)} · ${minutes} মিনিট পর শুরু (${bnWhen(startAt)})`,
+        at: startAt - reminderMs, target: 'exams', audience: 'অংশগ্রহণকারী'
+      });
+    } else if (now >= startAt && (!endAt || now < endAt)) {
+      items.push({
+        key: `exam-live:${text(exam.id)}:${startAt}`,
+        source: 'exams', sourceId: text(exam.id), kind: 'exam-live',
+        title: 'পরীক্ষা শুরু হয়েছে — এখনই অংশ নাও',
+        body: `${examName(exam)}${endAt ? ` · শেষ ${bnWhen(endAt)}` : ''}`,
+        at: startAt, target: 'exams', audience: 'অংশগ্রহণকারী'
+      });
+    }
+  }
+  return items;
+}
+
+/** The next moment an exam timing item appears or changes (for a timer). */
+export function nextExamBoundary(examDb, viewer, now = Date.now(), reminderMs = EXAM_REMINDER_MS) {
+  if (viewer?.kind !== 'student' || !isObject(examDb)) return 0;
+  const studentId = text(viewer.studentId);
+  let next = 0;
+  for (const exam of Array.isArray(examDb.exams) ? examDb.exams : []) {
+    if (!isObject(exam) || exam.status !== 'published' || !participantIds(exam).includes(studentId)) continue;
+    const startAt = Number(exam.startAt) || 0;
+    for (const moment of [startAt - reminderMs, startAt, Number(exam.endAt) || 0]) {
+      if (moment > now && (!next || moment < next)) next = moment;
+    }
+  }
+  return next;
+}
+
+/** Student: a fee the counter recorded was confirmed by the Manager. */
+export function studentPaymentItems(transactions, viewer) {
+  if (viewer?.kind !== 'student') return [];
+  const id = text(viewer.studentId);
+  if (!id) return [];
+  return (Array.isArray(transactions) ? transactions : [])
+    .filter(tx => isObject(tx) && text(tx.id) && text(tx.studentId) === id && tx.status === 'approved' && text(tx.reviewedAt))
+    .map(tx => ({
+      key: `payment:${text(tx.id)}:approved`,
+      source: 'transactions', sourceId: text(tx.id), kind: 'payment',
+      title: 'ফি জমা নিশ্চিত হয়েছে',
+      body: `${text(tx.feeType) || 'ফি'}${text(tx.month) ? ` (${text(tx.month)})` : ''} — ${money(tx.amount)}${text(tx.receiptNo) ? ` · রসিদ ${text(tx.receiptNo)}` : ''}`,
+      at: stamp(tx.reviewedAt), audience: 'নিজের অ্যাকাউন্ট'
+    }));
+}
+
+/** Manager: a fee entry waiting for approval (disappears once decided). */
+export function paymentReviewItems(transactions, viewer) {
+  if (viewer?.kind !== 'staff' || text(viewer.role) !== 'manager') return [];
+  return (Array.isArray(transactions) ? transactions : [])
+    .filter(tx => isObject(tx) && text(tx.id) && tx.status === 'pending')
+    .map(tx => ({
+      key: `payment-review:${text(tx.id)}`,
+      source: 'transactions', sourceId: text(tx.id), kind: 'payment-review', actionable: true,
+      title: 'পেমেন্ট অনুমোদনের অপেক্ষায়',
+      body: `${text(tx.studentName) || 'শিক্ষার্থী'}${text(tx.studentId) ? ` (${text(tx.studentId)})` : ''} · ${text(tx.feeType) || 'ফি'}${text(tx.month) ? ` ${text(tx.month)}` : ''} — ${money(tx.amount)}`,
+      at: Number(tx.recordedAt) || stamp(tx.createdAt), target: 'cash-counter', audience: 'ম্যানেজার'
+    }));
+}
+
+/** Payment counter: an entry the Manager rejected, with the reason. */
+export function paymentRejectedItems(transactions, viewer) {
+  if (viewer?.kind !== 'staff' || text(viewer.role) !== 'payment') return [];
+  return (Array.isArray(transactions) ? transactions : [])
+    .filter(tx => isObject(tx) && text(tx.id) && tx.status === 'rejected')
+    .map(tx => ({
+      key: `payment-rejected:${text(tx.id)}:${text(tx.reviewedAt)}`,
+      source: 'transactions', sourceId: text(tx.id), kind: 'payment-rejected',
+      title: 'পেমেন্ট এন্ট্রি বাতিল হয়েছে',
+      body: `${text(tx.studentName) || 'শিক্ষার্থী'} · ${money(tx.amount)} · কারণ: ${text(tx.reviewNote) || 'উল্লেখ নেই'}`,
+      at: stamp(tx.reviewedAt), audience: 'পেমেন্ট কাউন্টার'
+    }));
+}
+
+/** Manager: a teacher sent a paper for approval. */
+export function examReviewItems(examDb, viewer) {
+  if (viewer?.kind !== 'staff' || text(viewer.role) !== 'manager' || !isObject(examDb)) return [];
+  return (Array.isArray(examDb.exams) ? examDb.exams : [])
+    .filter(exam => isObject(exam) && text(exam.id) && exam.status === 'pending')
+    .map(exam => ({
+      // submittedAt: a paper sent again (even unchanged) is a new request.
+      key: `exam-review:${text(exam.id)}:${Number(exam.submittedAt) || Number(exam.updatedAt) || 0}`,
+      source: 'exams', sourceId: text(exam.id), kind: 'exam-review', actionable: true,
+      title: 'পরীক্ষা অনুমোদনের অপেক্ষায়',
+      body: `${examName(exam)} · ${text(exam.className) || ''}${text(exam.teacherName) ? ` · ${text(exam.teacherName)}` : ''}${Number(exam.startAt) ? ` · শুরু ${bnWhen(exam.startAt)}` : ''}`,
+      at: Number(exam.submittedAt) || Number(exam.updatedAt) || 0, target: 'exams', audience: 'ম্যানেজার'
+    }));
+}
+
+/** Teacher: the Manager's answer on a paper — returned (with reason) or published. */
+export function teacherExamItems(examDb, viewer) {
+  if (viewer?.kind !== 'staff' || text(viewer.role) !== 'teacher' || !isObject(examDb)) return [];
+  const items = [];
+  for (const exam of Array.isArray(examDb.exams) ? examDb.exams : []) {
+    if (!isObject(exam) || !text(exam.id)) continue;
+    if (exam.status === 'rejected') {
+      items.push({
+        // reviewedAt: returned a second time is a new notification.
+        key: `exam-returned:${text(exam.id)}:${Number(exam.reviewedAt) || Number(exam.updatedAt) || 0}:${text(exam.reviewNote).slice(0, 40)}`,
+        source: 'exams', sourceId: text(exam.id), kind: 'exam-returned', actionable: true,
+        title: 'পরীক্ষা সংশোধনের জন্য ফেরত এসেছে',
+        body: `${examName(exam)} · কারণ: ${text(exam.reviewNote) || 'উল্লেখ নেই'}`,
+        at: Number(exam.reviewedAt) || Number(exam.updatedAt) || 0, target: 'online-exams', audience: 'শিক্ষক'
+      });
+    } else if (exam.status === 'published' && exam.resultsPublished !== true && Number(exam.publishedAt)) {
+      items.push({
+        key: `exam-approved:${text(exam.id)}:${Number(exam.publishedAt)}`,
+        source: 'exams', sourceId: text(exam.id), kind: 'exam-approved',
+        title: 'আপনার পরীক্ষা প্রকাশিত হয়েছে',
+        body: `${examName(exam)}${Number(exam.startAt) ? ` · শুরু ${bnWhen(exam.startAt)}` : ''}`,
+        at: Number(exam.publishedAt), target: 'online-exams', audience: 'শিক্ষক'
+      });
+    }
+  }
+  return items;
+}
+
 /** Newest first, stable for equal timestamps. */
 export function sortNewestFirst(items) {
   return [...items].sort((left, right) => (right.at || 0) - (left.at || 0));
 }
 
 /** The complete notification list for one device, deduplicated by key. */
-export function notificationFeed({ notices = [], config = null, examDb = null, viewer = null, now = Date.now(), localWrites = null, students = null, cleared = null } = {}) {
+export function notificationFeed({ notices = [], config = null, examDb = null, viewer = null, now = Date.now(), localWrites = null, students = null, transactions = null, cleared = null } = {}) {
   const items = [];
   const broadcast = broadcastItem(config);
   if (broadcast) items.push(broadcast);
@@ -219,6 +407,13 @@ export function notificationFeed({ notices = [], config = null, examDb = null, v
   }
   items.push(...examItems(examDb, viewer, now));
   items.push(...registrationItems(students, viewer));
+  items.push(...studentDecisionItems(students, viewer));
+  items.push(...examTimingItems(examDb, viewer, now));
+  items.push(...studentPaymentItems(transactions, viewer));
+  items.push(...paymentReviewItems(transactions, viewer));
+  items.push(...paymentRejectedItems(transactions, viewer));
+  items.push(...examReviewItems(examDb, viewer));
+  items.push(...teacherExamItems(examDb, viewer));
   // Items this person cleared from the list stay cleared on this device.
   const hidden = new Set(Array.isArray(cleared) ? cleared : []);
   const unique = new Map();

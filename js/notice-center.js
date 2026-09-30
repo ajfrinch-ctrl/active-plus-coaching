@@ -24,10 +24,28 @@ const KIND_ICON = Object.freeze({
   broadcast: 'icon-bell',
   exam: 'icon-clipboard',
   result: 'icon-award',
-  registration: 'icon-users'
+  registration: 'icon-users',
+  'exam-soon': 'icon-clipboard',
+  'exam-live': 'icon-clipboard',
+  'exam-review': 'icon-clipboard',
+  'exam-returned': 'icon-clipboard',
+  'exam-approved': 'icon-clipboard',
+  approved: 'icon-award',
+  rejected: 'icon-bell',
+  payment: 'icon-bell',
+  'payment-review': 'icon-bell',
+  'payment-rejected': 'icon-bell'
 });
-const REFRESH_KEYS = Object.freeze(['activePlus.admin.notices.v1', 'activePlus.app.config.v1', 'activePlus.exams.v1', 'activePlus.admin.students.v1']);
-const REFRESH_COLLECTIONS = Object.freeze(['notices', 'settings', 'exams', 'students']);
+/* The button on an item that asks someone to act. */
+const ACTION_LABEL = Object.freeze({
+  registration: 'রিভিউ ও অনুমোদন',
+  'payment-review': 'পেমেন্ট দেখুন',
+  'exam-review': 'পরীক্ষা দেখুন',
+  'exam-returned': 'সংশোধন করুন',
+  'exam-live': 'পরীক্ষায় যাও'
+});
+const REFRESH_KEYS = Object.freeze(['activePlus.admin.notices.v1', 'activePlus.app.config.v1', 'active-plus-app-config-v1', 'activePlus.exams.v1', 'activePlus.admin.students.v1', 'activePlus.admin.transactions.v1']);
+const REFRESH_COLLECTIONS = Object.freeze(['notices', 'settings', 'exams', 'students', 'transactions']);
 
 const BN_DIGITS = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
 const bn = value => String(value).replace(/\d/g, digit => BN_DIGITS[Number(digit)]);
@@ -154,11 +172,13 @@ export function mountNoticeCenter(api) {
     listBox.innerHTML = feed.length
       ? feed.map(item => {
         const isUnread = !seen.has(item.key) || item.actionable;
-        const action = item.actionable
-          ? '<button type="button" class="mini-btn approve" data-apc-notice-open="' + escapeHtml(item.key) + '">রিভিউ ও অনুমোদন</button>'
+        const opens = item.actionable || Boolean(item.target);
+        const label = ACTION_LABEL[item.kind] || (item.actionable ? 'দেখুন' : '');
+        const action = label
+          ? '<button type="button" class="mini-btn approve" data-apc-notice-open="' + escapeHtml(item.key) + '">' + escapeHtml(label) + '</button>'
           : '';
-        return '<article class="notice-detail' + (isUnread ? ' unread' : '') + (item.actionable ? ' actionable' : '') + '"' +
-          (item.actionable ? ' data-apc-notice-open="' + escapeHtml(item.key) + '" role="button" tabindex="0"' : '') + '>' +
+        return '<article class="notice-detail' + (isUnread ? ' unread' : '') + (opens ? ' actionable' : '') + '"' +
+          (opens ? ' data-apc-notice-open="' + escapeHtml(item.key) + '" role="button" tabindex="0"' : '') + '>' +
           '<span class="notice-detail-icon' + (item.kind === 'broadcast' ? ' light' : '') + '">' + iconMarkup(item.kind) + '</span>' +
           '<div><span class="notice-time">' + escapeHtml(whenText(item)) + '</span>' +
           '<h3>' + escapeHtml(item.title) + '</h3>' +
