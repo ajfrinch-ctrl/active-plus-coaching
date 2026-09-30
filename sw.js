@@ -1,8 +1,9 @@
-const CACHE_VERSION = 131;
+const CACHE_VERSION = 132;
 const CACHE_NAME = `active-plus-student-v${CACHE_VERSION}-minimal-education`;
 const APP_SHELL = [
   './css/app-polish.css',
   './css/student-record.css',
+  './css/ui-interior.css',
   './js/student-record.js',
   './sync/cloud-access.js',
   './js/app-entry.js',

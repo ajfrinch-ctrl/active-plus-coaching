@@ -163,3 +163,48 @@ test('the theme switch shows exactly the theme the app is in', () => {
       `${page}.html: the switch label no longer stacks title over sub-label`);
   }
 });
+
+test('the glass skin is a layer on top, never the only rendering path', () => {
+  const skin = read('css/ui-interior.css');
+  // Screen only: print keeps the flat, ink-friendly document, and the ambient
+  // wash can never end up on paper.
+  assert.match(skin.trimStart(), /^\/\*[\s\S]*?\*\/\s*@media screen \{/,
+    'the skin must be wrapped in @media screen');
+  // Every drop of translucency sits behind the capability check…
+  const supports = skin.indexOf('@supports ((-webkit-backdrop-filter');
+  assert.ok(supports > -1, 'the glass rules are no longer behind @supports');
+  // The wash itself is a plain background layer, declared before (not inside)
+  // the capability check, and it never blurs anything.
+  assert.ok(skin.indexOf('body::before') < supports,
+    'the ambient wash must not depend on blur support');
+  assert.doesNotMatch(skin.slice(skin.indexOf('body::before'), supports), /backdrop-filter/,
+    'the ambient wash is being blurred; it is the thing being blurred through');
+  // …and people who ask for less transparency get the flat app back.
+  assert.match(skin, /@media \(prefers-reduced-transparency: reduce\)/,
+    'no reduced-transparency fallback');
+  assert.match(skin, /@media \(prefers-reduced-transparency: reduce\)[\s\S]*display: none/,
+    'the ambient layer is not dropped when transparency is reduced');
+  // The skin is the last word on the material.
+  const imports = [...read('css/design-system.css').matchAll(/@import\s+url\(\s*['"]\.\/([^'"]+)['"]\s*\)/g)].map(m => m[1]);
+  assert.equal(imports[imports.length - 1], 'ui-interior.css', 'the skin no longer loads last');
+});
+
+test('AMOLED glass keeps the canvas black and the text readable', () => {
+  const css = read('css/foundation.css');
+  const dark = name => token(css, 'html[data-theme=dark]', `--${name}`);
+  const alpha = value => {
+    const match = value.match(/rgba\([^)]*?,\s*([\d.]+)\s*\)/);
+    assert.ok(match, `${value} is not an rgba() value`);
+    return Number(match[1]);
+  };
+  // A frosted card on true black is still mostly the canvas: 5–8 % white keeps
+  // the pixels off AND keeps #f4f6fa on it far above AA (see the contrast test).
+  assert.ok(alpha(dark('glass-surface')) <= 0.08,
+    'the dark glass pane is too bright for a true-black canvas');
+  assert.ok(alpha(dark('glass-chip')) <= 0.1,
+    'the dark glass chip is too bright for a true-black canvas');
+  // The one lift that must stay visible on black is the glass rim.
+  assert.ok(alpha(dark('glass-border')) >= 0.08, 'the glass rim disappears on black');
+  assert.match(dark('glass-shadow'), /rgba\(0,0,0,0\)/,
+    'a black shadow on black is only paint work — the card shadow must stay transparent');
+});

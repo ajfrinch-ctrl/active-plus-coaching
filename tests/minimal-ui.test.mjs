@@ -10,20 +10,24 @@ test('every page has one new entry and no legacy icon dependencies',()=>{
 });
 test('new presentation has no storage or Firebase API and no legacy imports',()=>{
  const s=read('js/icons.js');assert.doesNotMatch(s,/localStorage|indexedDB|firebase|realtime-sync/);
- // The rule is the look, not a file name: every stylesheet the app loads through
- // design-system.css (app-polish.css is today's shared visual language) must be
- // flat — no gradients, no glass blur — and the old aurora/glass themes stay out.
+ // The baseline is still the flat look — gradients and glass blur are allowed in
+ // exactly ONE file, css/ui-interior.css, the skin the school asked for (see
+ // docs/GLASS-INTERIOR-131.md). The aurora-era theme names stay banned, every
+ // other sheet stays flat, and the skin itself is guarded for its fallbacks in
+ // tests/amoled-theme.test.mjs so glass can never be the only rendering path.
+ const SKIN='ui-interior.css';
  const imports=[...read('css/design-system.css').matchAll(/@import\s+url\(\s*['"]\.\/([^'"]+)['"]\s*\)/g)].map(m=>m[1]);
  for(const f of ['foundation','ui-layout','ui-components','ui-forms','ui-features'])assert.ok(imports.includes(`${f}.css`),`design-system.css no longer loads ${f}.css`);
+ assert.ok(imports.includes(SKIN),'design-system.css no longer loads the interior skin');
  for(const f of imports){assert.doesNotMatch(f,/aurora|glass/,`legacy theme imported: ${f}`);assert.ok(existsSync(`css/${f}`),`missing stylesheet: ${f}`);}
- for(const f of ['design-system.css',...imports])assert.doesNotMatch(read(`css/${f}`),/gradient\(|backdrop-filter/,`${f} brings back gradients or glass blur`);
+ for(const f of ['design-system.css',...imports].filter(f=>f!==SKIN))assert.doesNotMatch(read(`css/${f}`),/gradient\(|backdrop-filter/,`${f} brings back gradients or glass blur outside the skin`);
 });
 // Baseline includes upstream single-flight sync fix merged from main; the UI does not modify it.
 test('protected core and all new and protected assets cached',()=>{
  const sw=read('sw.js');
  for(const dir of ['firebase','sync'])for(const file of readdirSync(dir).filter(f=>f.endsWith('.js'))){const p=`${dir}/${file}`;assert.ok(sw.includes(`'./${p}'`),p);} // byte-equality with baseline 13ab90a dropped: that commit is not in this repository's history, and sync/cloud-access.js now changes by owner decision (docs/INTERIM-ANONYMOUS-SYNC.md)
  for(const f of ['design-system','foundation','ui-layout','ui-components','ui-forms','ui-features'])assert.ok(sw.includes(`'./css/${f}.css'`));
- assert.ok(sw.includes("'./js/realtime-sync.js'"));assert.ok(sw.includes("'./js/icons.js'"));assert.match(sw,/CACHE_VERSION = 131/);
+ assert.ok(sw.includes("'./js/realtime-sync.js'"));assert.ok(sw.includes("'./js/icons.js'"));assert.match(sw,/CACHE_VERSION = 132/);
  const added=execFileSync('git',['diff','--unified=0','--','js','sw.js'],{encoding:'utf8'}).split('\n').filter(l=>l.startsWith('+')).join('\n');assert.doesNotMatch(added,/localStorage\.clear\s*\(|indexedDB\.deleteDatabase\s*\(/);
 });
 test('no panel keeps a standing offline-workspace or sync-not-connected notice',()=>{

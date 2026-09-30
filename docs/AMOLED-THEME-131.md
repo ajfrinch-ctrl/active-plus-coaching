@@ -36,9 +36,13 @@ persistence, sync, routing and the PDF/receipt renderers are untouched.
   page because it mirrors the printable document; only the gutters around it
   follow the theme. `js/print-tokens.js`, `js/material-pdf.js` and
   `js/exam-pdf.js` are unchanged.
-- **Labels.** The profile switch row now reads "AMOLED থিম" with the sub-label
-  "গভীর কালো — চোখের আরাম ও ব্যাটারি সাশ্রয়"; the toggles' `aria-label`s and the
-  `theme-color` meta (`#f3f6fb` light / `#000000` dark) follow.
+- **Labels.** The profile switch row reads "গাঢ় থিম" with the AMOLED sub-label
+  "AMOLED কালো — চোখের আরাম ও ব্যাটারি সাশ্রয়" (a short stable name for tests
+  and screen readers; `js/appearance.js` exposes `THEME_LABEL` for the full
+  name), and the `theme-color` meta (`#f3f6fb` light / `#000000` dark) follows.
+- **Glass interior.** `css/ui-interior.css` (loaded last, screen-only, guarded
+  by `@supports`) gives the interior its frosted material — see
+  `docs/GLASS-INTERIOR-131.md`.
 - **Smaller fixes found on the way.** The student ledger due-amount colour is a
   token now (`var(--color-danger)` instead of `#c05b4b`), and asset version pins
   moved to `?v=131` with `CACHE_VERSION = 131` so every device picks the new

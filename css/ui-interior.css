@@ -1,0 +1,147 @@
+/* Glass interior skin — the material the app's inner pages are made of.
+   Frosted panels over a soft ambient wash, so a dashboard, a roster or a form
+   reads as one pane of glass instead of a stack of flat sheets.
+
+   Rules this file keeps:
+   • Additive only. The flat layer underneath (foundation/ui-*) stays the
+     fallback for engines without backdrop-filter and for people who ask for
+     less transparency, so nothing breaks where glass cannot render.
+   • One blur pass per surface. Bars, cards, tiles, toolbars, dialogs and
+     toasts get the blur; the rows, chips, avatars and badges inside them get
+     translucency only — a long roster must still scroll on a low-end phone.
+   • Screen only. Print keeps the flat, ink-friendly document (and the
+     report/receipt preview keeps its white paper: it mirrors the PDF).
+   • Flat selectors, no CSS nesting — the app runs in older WebViews too. */
+@media screen {
+
+  /* 1 ── Ambient wash. Without something behind them, frosted panels have
+     nothing to blur and just look dusty grey. Three low-contrast pools of
+     colour, fixed to the viewport so scrolling never re-renders them. */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: -12%;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(42% 34% at 16% 4%, var(--ambient-1), transparent 72%),
+      radial-gradient(40% 32% at 88% 8%, var(--ambient-2), transparent 74%),
+      radial-gradient(46% 40% at 64% 98%, var(--ambient-3), transparent 76%);
+  }
+  /* The portals stop painting their own canvas so the wash shows through;
+     the page colour itself still comes from body. */
+  .auth-screen, .app-shell, .admin-shell, .pay-shell { background: transparent; }
+
+  /* 2 ── The glass itself, only where it can actually render. */
+  @supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+
+    /* 2a. Bars stay put and stay frosted. Their existing hairline border keeps
+       doing the separating; the inner top highlight is the glass edge. */
+    .app-topbar, #appStatusSurface {
+      background: var(--glass-bar);
+      -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+      backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+      border-bottom-color: var(--glass-border);
+    }
+    .bottom-nav, .admin-bottom {
+      background: var(--glass-bar);
+      -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+      backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+      border-top-color: var(--glass-border);
+    }
+    .app-topbar, .bottom-nav, .admin-bottom { box-shadow: inset 0 1px 0 var(--glass-edge); }
+    .bottom-nav, .admin-bottom { box-shadow: inset 0 1px 0 var(--glass-edge); }
+
+    /* 2b. Cards and tiles — the body of every interior page. */
+    .auth-card, .admin-card, .pay-card, .study-progress-card, .dashboard-exam-card,
+    .dashboard-fee-card, .challenge-card, .teaching-board, .profile-card, .result-card,
+    .course-card, .learning-card, .routine-card, .staff-card, .student-card, .rc-head,
+    .admin-feature-tile, .admin-stat-tile, .dash-finance-tile, .admin-stat,
+    .staff-stat-tile, .staff-toolbar, .student-filter-panel, .student-filter-toggle,
+    .class-context, .exam-question, .mcq-question, .exam-form, .exam-timer,
+    .exam-template-panel, .teacher-toolbar, .teacher-summary>div, .rc-form,
+    .recovery-summary, .notice-detail, .pay-pulse-tile, .pay-search-card,
+    .settings-list, .admin-more-menu, .student-row, .student-record-identity,
+    .student-record-actions, .profile-stats>div, .fee-balance-grid>div,
+    .backup-tool section, .entry-error, .maintenance-alert-card, .pending-info,
+    .admin-empty, .dashboard-empty, .dashboard-empty-card, .empty-state,
+    .rc-preview-empty, .teacher-empty, #records>article {
+      background: var(--glass-surface);
+      -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+      backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+      border: 1px solid var(--glass-border);
+      box-shadow: inset 0 1px 0 var(--glass-edge), var(--glass-shadow);
+    }
+
+    /* 2c. Dialogs float higher than cards, so they get the deeper shadow and
+       the stronger pane; their sticky headers frost with them. */
+    .modal, .admin-modal, .staff-pw-card, .apc-lock-card, .student-record-modal,
+    .receipt-modal-box, .install-toast, .feedback-toast, .pay-toast,
+    .apc-lock-notice, .apc-inapp-alert, .pull-refresh-indicator, .pay-stickybar {
+      background: var(--glass-strong);
+      -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+      backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+      border: 1px solid var(--glass-border);
+      box-shadow: inset 0 1px 0 var(--glass-edge), var(--glass-shadow-strong);
+    }
+    .modal-header, .admin-modal-header { background: var(--glass-strong); }
+    .modal-backdrop, .admin-modal-backdrop, .staff-pw-backdrop, .apc-lock-overlay {
+      -webkit-backdrop-filter: blur(var(--glass-blur-thin));
+      backdrop-filter: blur(var(--glass-blur-thin));
+    }
+
+    /* 2d. Rows that live inside a card: translucency, no second blur pass. */
+    .routine-item, .ledger-row, .manager-record, .staff-list-item,
+    .dashboard-routine-card, .pay-activity-list>* {
+      background: var(--glass-chip);
+    }
+    .receipt-amount-block, .registration-progress, .auto-id-preview,
+    .staff-section-number, .exam-option:has(input:checked) { background: var(--glass-chip); }
+
+    /* 2e. Small pieces — avatars, chips, badges, the switch track. */
+    .student-avatar, .mini-avatar, .profile-avatar, .staff-avatar,
+    .badge, .status-badge, .nav-chip, .audit-id-badge, .staff-id-badge, .staff-tag,
+    .exam-tag, .student-record-class-code, .toggle-switch, .step-progress-track,
+    .app-topbar-icon { background: var(--glass-chip); }
+
+    /* 2f. Controls. Inputs frost so the wash stays visible through a form;
+       focus keeps its existing ring, contrast is unchanged. */
+    input, select, textarea { background: var(--glass-chip); }
+    input:disabled, input[readonly] { background: var(--glass-surface); }
+    button, .admin-btn, .mini-btn, .rc-back { background: var(--glass-chip); }
+    button:hover { background: var(--glass-surface); }
+    .link-button, .inline-link, .dashboard-text-link { background: transparent; }
+
+    /* The primary action is the one solid thing on the page: the same accent
+       colour, deepened at the bottom so it looks pressed rather than painted,
+       and lifted just enough to sit above the glass. */
+    button.primary, button[type=submit], .auth-submit, .modal-action,
+    .rc-generate, .rc-download, .dashboard-primary-action, .step-next {
+      background-image: linear-gradient(180deg, rgba(0,0,0,0), rgba(0,0,0,.16));
+      border-color: transparent;
+      box-shadow: 0 10px 24px rgba(23,42,71,.18), inset 0 1px 0 rgba(255,255,255,.28);
+    }
+    button.primary:hover, button[type=submit]:hover {
+      background-image: linear-gradient(180deg, rgba(0,0,0,0), rgba(0,0,0,.08));
+    }
+
+    /* Selected tabs and filters are glass pills, not filled blocks. */
+    .active:is(.chip, .day-tab, .auth-tab), [aria-pressed=true],
+    .bottom-link.active, .admin-bottom-item.active,
+    .bottom-link.active .nav-chip, .admin-bottom-item.active .nav-chip {
+      background: var(--glass-surface);
+      -webkit-backdrop-filter: blur(var(--glass-blur-thin));
+      backdrop-filter: blur(var(--glass-blur-thin));
+    }
+    .auth-tabs { background: var(--glass-chip); }
+  }
+
+  /* 3 ── Asked for less transparency: give the flat, opaque app back. */
+  @media (prefers-reduced-transparency: reduce) {
+    body::before { display: none; }
+    .auth-screen, .app-shell, .admin-shell, .pay-shell { background: var(--color-bg); }
+    .app-topbar, .bottom-nav, .admin-bottom, #appStatusSurface { background: var(--color-surface); }
+    .modal-backdrop, .admin-modal-backdrop, .staff-pw-backdrop, .apc-lock-overlay,
+    .app-topbar, .bottom-nav, .admin-bottom, #appStatusSurface { -webkit-backdrop-filter: none; backdrop-filter: none; }
+  }
+}

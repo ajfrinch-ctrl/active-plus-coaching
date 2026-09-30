@@ -95,9 +95,11 @@ test('every panel ships the identical topbar: logo, slogan, bell, sign-out only'
       assert.ok(themeSwitch, `${page.file}: dark mode lost its switch`);
       assert.ok(drawable(themeSwitch.querySelector('.theme-switch-icon svg[data-icon="sun"]'))
         && drawable(themeSwitch.querySelector('.theme-switch-icon svg[data-icon="moon"]')), `${page.file}: the switch lost an icon`);
-      // The dark theme is the AMOLED one, so the row, the toggle's aria-label
-      // and every panel's word for it moved together (docs/AMOLED-THEME-131.md).
-      assert.ok(themeSwitch.textContent.includes('AMOLED থিম'), `${page.file}: the switch label changed`);
+      // The row keeps its short, stable name; the AMOLED explanation is the
+      // sub-label, so this assertion never depends on the marketing wording
+      // (js/appearance.js exposes THEME_LABEL for the full name).
+      assert.ok(themeSwitch.textContent.includes('গাঢ় থিম'), `${page.file}: the switch label changed`);
+      assert.ok(themeSwitch.textContent.includes('AMOLED'), `${page.file}: the switch lost its theme explanation`);
       const checkbox = themeSwitch.querySelector('#darkModeToggle');
       assert.ok(checkbox && checkbox.type === 'checkbox', `${page.file}: the switch is not wired to the theme checkbox`);
       assert.ok(themeSwitch.querySelector('.toggle-switch i'), `${page.file}: the switch lost its track`);
