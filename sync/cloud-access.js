@@ -1,8 +1,1 @@
-/* Authenticated cloud sync gate.
- * The legacy anonymous bridge is permanently retired. Cloud sync now requires
- * a real Firebase Auth session; credential-bearing legacy RTDB nodes are denied.
- */
-export const LEGACY_CLOUD_ENABLED = true;
-export const CLOUD_PAUSED_MESSAGE = 'ক্লাউড সিঙ্কের জন্য Firebase লগইন প্রয়োজন।';
-export const cloudPausedResult = () => ({ ok: false, reason: 'authentication-required', retryable: true });
-export function assertCloudAccess() { return true; }
+/* Active Plus — cloud sync is available whenever the user has a real Firebase Auth session.\n * There is no temporary/pause switch in production: login and sync must stay\n * available so the same account can work across devices.\n */\nexport const LEGACY_CLOUD_ENABLED = true;\nexport const CLOUD_PAUSED_MESSAGE = '';\nexport const cloudPausedResult = () => ({ ok: false, reason: 'authentication-required', retryable: true });\nexport function assertCloudAccess() { return true; }\n
