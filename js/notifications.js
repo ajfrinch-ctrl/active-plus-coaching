@@ -562,11 +562,8 @@ function mountPill() {
   pill.hidden = true;
   pill.addEventListener('click', () => {
     if (pillNote) { pillNote = ''; paintPill(); return; }
-    if (permission() === 'denied') {
-      pillNote = 'ব্রাউজার সেটিংসে এই সাইটের নোটিফিকেশন ব্লক করা আছে — Chrome/Safari সেটিংস থেকে অনুমতি দিন।';
-      paintPill();
-      return;
-    }
+    if (permission() === 'denied') { explainOff('denied'); return; }
+    if (permission() === 'unsupported') { explainOff('unsupported'); return; }
     void enableNotifications();
   });
   bar.append(pill, pillDismiss);
@@ -589,7 +586,7 @@ async function registerPushTransport({ ask = false } = {}) {
 export async function enableNotifications() {
   try {
     if (!('Notification' in window)) {
-      noteThenHide('এই ব্রাউজারে সিস্টেম নোটিফিকেশন নেই।');
+      if (!explainOff('unsupported')) noteThenHide('এই ব্রাউজারে সিস্টেম নোটিফিকেশন নেই।');
       return { ok: false, status: 'unsupported' };
     }
     const permission = await window.Notification.requestPermission();
@@ -617,7 +614,7 @@ export async function disableNotifications() {
   try {
     const module = await import('./push-notifications.js');
     const result = await module.disablePush({ viewer });
-    noteThenHide('নোটিফিকেশন বন্ধ করা হয়েছে।');
+    if (!explainOff('disabled')) noteThenHide('নোটিফিকেশন বন্ধ করা হয়েছে।');
     return result;
   } catch {
     return { ok: false, status: 'unavailable' };
@@ -628,10 +625,26 @@ export async function disableNotifications() {
 
 /** The bell and its inbox. Optional: if this import fails, notifications still
     arrive in the tray and the pill still works. */
+let noticeCenter = null;
+
 function mountNoticeCenter() {
   import('./notice-center.js')
-    .then(module => module.mountNoticeCenter(controller))
+    .then(module => { noticeCenter = module.mountNoticeCenter(controller); })
     .catch(error => console.warn('[Active Plus] notification inbox unavailable:', error?.name || 'unknown'));
+}
+
+/** The popup that explains an off switch: same sheet as a fresh notification,
+    with ক্যান্সেল / বুঝেছি, over the blurred backdrop. Falls back to the bar
+    note when the inbox module has not loaded (it is optional on purpose). */
+function explainOff(kind) {
+  if (noticeCenter && typeof noticeCenter.showInfo === 'function' && noticeCenter.showInfo(kind)) return true;
+  pillNote = kind === 'unsupported'
+    ? 'এই ব্রাউজারে সিস্টেম নোটিফিকেশন নেই — নোটিশ তবুও এই তালিকায় জমা হবে।'
+    : kind === 'disabled'
+      ? 'নোটিফিকেশন বন্ধ করা হয়েছে।'
+      : 'ব্রাউজার সেটিংসে এই সাইটের নোটিফিকেশন ব্লক করা আছে — Chrome/Safari সেটিংস থেকে অনুমতি দিন।';
+  paintPill();
+  return false;
 }
 
 

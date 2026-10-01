@@ -85,7 +85,8 @@
       box-shadow: inset 0 1px 0 var(--glass-edge), var(--glass-shadow-strong);
     }
     .modal-header, .admin-modal-header { background: var(--glass-strong); }
-    .modal-backdrop, .admin-modal-backdrop, .staff-pw-backdrop, .apc-lock-overlay {
+    .modal-backdrop, .admin-modal-backdrop, .staff-pw-backdrop, .apc-lock-overlay,
+    .apc-alert-backdrop {
       -webkit-backdrop-filter: blur(var(--glass-blur-thin));
       backdrop-filter: blur(var(--glass-blur-thin));
     }
@@ -96,7 +97,8 @@
       background: var(--glass-chip);
     }
     .receipt-amount-block, .registration-progress, .auto-id-preview,
-    .staff-section-number, .exam-option:has(input:checked) { background: var(--glass-chip); }
+    .staff-section-number, .exam-option:has(input:checked),
+    .apc-inapp-alert-item, .apc-alert-icon { background: var(--glass-chip); }
 
     /* 2e. Small pieces — avatars, chips, badges, the switch track. */
     .student-avatar, .mini-avatar, .profile-avatar, .staff-avatar,
@@ -142,6 +144,7 @@
     .auth-screen, .app-shell, .admin-shell, .pay-shell { background: var(--color-bg); }
     .app-topbar, .bottom-nav, .admin-bottom, #appStatusSurface { background: var(--color-surface); }
     .modal-backdrop, .admin-modal-backdrop, .staff-pw-backdrop, .apc-lock-overlay,
+    .apc-alert-backdrop,
     .app-topbar, .bottom-nav, .admin-bottom, #appStatusSurface { -webkit-backdrop-filter: none; backdrop-filter: none; }
   }
 }

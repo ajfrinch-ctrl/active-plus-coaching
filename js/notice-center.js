@@ -73,16 +73,12 @@ function whenText(item) {
   return String(item?.audience || '');
 }
 
-/** A symbol may be missing from a page's sprite: fall back, never show a blank. */
-function iconId(kind) {
-  const wanted = KIND_ICON[kind] || 'icon-bell';
-  if (document.getElementById(wanted)) return wanted;
-  return document.getElementById('icon-bell') ? 'icon-bell' : '';
-}
-
 function iconMarkup(kind) {
-  const id = iconId(kind);
-  return id ? `${minimalIcon(id)}` : '';
+  /* A page sprite wins when it has the symbol; js/icons.js otherwise draws the
+     same glyph from its own paths, so no icon is ever a blank square. */
+  const wanted = KIND_ICON[kind] || 'icon-bell';
+  if (document.getElementById(wanted)) return minimalIcon(wanted);
+  return minimalIcon(document.getElementById('icon-bell') ? 'icon-bell' : wanted);
 }
 
 /* ---- modal ------------------------------------------------------------------ */
@@ -292,52 +288,114 @@ export function mountNoticeCenter(api) {
     else modal.hidden = true;
   }
 
-  /* ---- In-app card: new notifications, shown inside the app -------------
-     No phone permission needed. Tapping an item opens it (its view or review
-     dialog; plain news opens the list); "সব দেখুন" opens the list. */
+  /* ---- Popup: new notifications, and the "notifications are off" story ----
+     One sheet serves both. It sits on a blurred backdrop (css/ui-features.css +
+     the glass skin), carries ক্যান্সেল and বুঝেছি wherever it opens, and never
+     needs the phone's notification permission: it is the in-app half. */
   let alertCard = null;
+  let alertBackdrop = null;
   let alertItems = [];
+  let alertMode = 'items';
+  let infoKind = 'denied';
+
+  const INFO_COPY = {
+    denied: 'ব্রাউজার সেটিংসে এই সাইটের নোটিফিকেশন ব্লক করা আছে — Chrome/Safari সেটিংস থেকে অনুমতি দিলে নতুন নোটিশ, পরীক্ষা ও ফলাফলের খবর ফোনেই আসবে।',
+    disabled: 'ডিভাইসের নোটিফিকেশন বন্ধ করা হয়েছে। অ্যাপ খোলা থাকলে নোটিশ তবুও এই তালিকায় জমা হবে — চাইলে আবার চালু করতে পারবেন।',
+    unsupported: 'এই ব্রাউজারে সিস্টেম নোটিফিকেশন নেই। অ্যাপ খোলা থাকলেই নতুন নোটিশ, পরীক্ষা ও ফলাফলের খবর এখানে দেখা যাবে।'
+  };
 
   function hideAlerts() {
     alertItems = [];
+    alertMode = 'items';
     if (alertCard) alertCard.hidden = true;
+    if (alertBackdrop) alertBackdrop.hidden = true;
+  }
+
+  function ensureAlertShell() {
+    if (alertCard) return;
+    alertBackdrop = document.createElement('div');
+    alertBackdrop.className = 'apc-alert-backdrop';
+    alertBackdrop.id = 'apcAlertBackdrop';
+    alertBackdrop.hidden = true;
+    alertCard = document.createElement('section');
+    alertCard.className = 'apc-inapp-alert';
+    alertCard.id = 'apcInAppAlert';
+    alertCard.setAttribute('role', 'dialog');
+    alertCard.setAttribute('aria-modal', 'true');
+    alertCard.setAttribute('aria-labelledby', 'apcAlertTitle');
+    alertBackdrop.append(alertCard);
+    document.body.append(alertBackdrop);
+    alertBackdrop.addEventListener('click', event => {
+      if (event.target === alertBackdrop) { hideAlerts(); return; }
+      if (event.target.closest('[data-apc-alert-close], [data-apc-alert-cancel], [data-apc-alert-ok]')) { hideAlerts(); return; }
+      if (event.target.closest('[data-apc-alert-all]')) { hideAlerts(); open(); return; }
+      const row = event.target.closest('[data-apc-alert-open]');
+      if (!row) return;
+      const item = alertItems.find(entry => entry.key === row.dataset.apcAlertOpen);
+      alertItems = alertItems.filter(entry => entry !== item);
+      paintAlerts();
+      if (!item) return;
+      if ((item.actionable || item.target) && typeof api.openItem === 'function') {
+        void Promise.resolve(api.openItem(item)).finally(() => paint());
+      } else open();
+    });
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && alertBackdrop && !alertBackdrop.hidden) hideAlerts();
+    });
+  }
+
+  function alertHeader(eyebrow, title) {
+    return '<header>' +
+        '<span class="apc-alert-icon" aria-hidden="true">' + iconMarkup('notice') + '</span>' +
+        '<div class="apc-alert-head-copy"><p class="eyebrow">' + eyebrow + '</p>' +
+        '<h2 class="apc-alert-title" id="apcAlertTitle">' + title + '</h2></div>' +
+        '<button type="button" class="apc-inapp-alert-close" data-apc-alert-close aria-label="বন্ধ করুন">×</button>' +
+      '</header>';
+  }
+
+  function alertFooter(showAll) {
+    return '<footer class="apc-alert-actions">' +
+        (showAll || '') +
+        '<div class="apc-alert-choice">' +
+          '<button type="button" class="mini-btn" data-apc-alert-cancel>ক্যান্সেল</button>' +
+          '<button type="button" class="mini-btn primary" data-apc-alert-ok>বুঝেছি</button>' +
+        '</div>' +
+      '</footer>';
   }
 
   function paintAlerts() {
     if (!alertItems.length) { hideAlerts(); return; }
-    if (!alertCard) {
-      alertCard = document.createElement('section');
-      alertCard.className = 'apc-inapp-alert';
-      alertCard.id = 'apcInAppAlert';
-      alertCard.setAttribute('role', 'status');
-      alertCard.setAttribute('aria-live', 'polite');
-      document.body.append(alertCard);
-      alertCard.addEventListener('click', event => {
-        if (event.target.closest('[data-apc-alert-close]')) { hideAlerts(); return; }
-        if (event.target.closest('[data-apc-alert-all]')) { hideAlerts(); open(); return; }
-        const row = event.target.closest('[data-apc-alert-open]');
-        if (!row) return;
-        const item = alertItems.find(entry => entry.key === row.dataset.apcAlertOpen);
-        alertItems = alertItems.filter(entry => entry !== item);
-        paintAlerts();
-        if (!item) return;
-        if ((item.actionable || item.target) && typeof api.openItem === 'function') {
-          void Promise.resolve(api.openItem(item)).finally(() => paint());
-        } else open();
-      });
-    }
+    ensureAlertShell();
     const rows = alertItems.slice(0, 3).map(item =>
       '<li><button type="button" class="apc-inapp-alert-item" data-apc-alert-open="' + escapeHtml(item.key) + '">' +
         '<span class="apc-inapp-alert-icon">' + iconMarkup(item.kind) + '</span>' +
         '<span><b>' + escapeHtml(item.title) + '</b>' + (item.body ? '<small>' + escapeHtml(item.body) + '</small>' : '') + '</span>' +
       '</button></li>').join('');
-    const more = alertItems.length > 3 ? ' (আরও ' + bn(alertItems.length - 3) + 'টি)' : '';
+    const more = alertItems.length > 3 ? 'আরও ' + bn(alertItems.length - 3) + 'টি' : '';
     alertCard.innerHTML =
-      '<header><strong>নতুন নোটিফিকেশন' + (alertItems.length > 1 ? ' · ' + bn(alertItems.length) + 'টি' : '') + '</strong>' +
-        '<button type="button" class="apc-inapp-alert-close" data-apc-alert-close aria-label="বন্ধ করুন">×</button></header>' +
+      alertHeader('Active Plus আপডেট', 'নতুন নোটিফিকেশন' + (alertItems.length > 1 ? ' · ' + bn(alertItems.length) + 'টি' : '')) +
       '<ul>' + rows + '</ul>' +
-      '<footer><button type="button" class="mini-btn" data-apc-alert-all>সব দেখুন' + more + '</button></footer>';
+      (more ? '<p class="apc-alert-note">' + more + ' নোটিফিকেশন অপেক্ষা করছে।</p>' : '') +
+      alertFooter('<button type="button" class="mini-btn" data-apc-alert-all>সব দেখুন' + (more ? ' (' + more + ')' : '') + '</button>');
+    alertMode = 'items';
+    alertBackdrop.hidden = false;
     alertCard.hidden = false;
+  }
+
+  /* The same sheet, explaining that system notifications are off. Used by the
+     bell and by the notification pill (js/notifications.js). */
+  function showInfo(kind = 'denied') {
+    if (!document.body) return false;
+    infoKind = INFO_COPY[kind] ? kind : 'denied';
+    ensureAlertShell();
+    alertCard.innerHTML =
+      alertHeader('Active Plus', 'নোটিফিকেশন বন্ধ') +
+      '<p class="apc-alert-copy">' + INFO_COPY[infoKind] + '</p>' +
+      alertFooter('');
+    alertMode = 'info';
+    alertBackdrop.hidden = false;
+    alertCard.hidden = false;
+    return true;
   }
 
   let pumping = false;
@@ -374,6 +432,7 @@ export function mountNoticeCenter(api) {
   center = {
     paint,
     open,
+    showInfo,
     close: () => show(false),
     refresh: () => { try { api.refresh?.(); } catch { /* ignore */ } paint(); },
     isOpen: () => !modal.hidden
