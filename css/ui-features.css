@@ -41,3 +41,106 @@
 .apc-alert-actions{display:grid;gap:var(--space-2);margin-top:var(--space-4)}
 .apc-alert-actions [data-apc-alert-all]{width:100%}
 .apc-inapp-alert .apc-alert-choice{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-2)}
+/* Student "আরও" (profile) view: the view was built in markup but its pieces had
+   no arrangement at all, so it read as a loose pile next to the tidy panels.
+   Layout only here; the colour and the glass come from the skin layer. */
+.profile-intro{margin-bottom:var(--space-4)}
+.profile-card{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:var(--space-4)}
+.profile-card>div{min-width:0}
+.profile-card h2{margin:0 0 var(--space-1)}
+.profile-card p{margin:0}
+.identity-chips{display:flex;flex-wrap:wrap;gap:var(--space-2);margin-top:var(--space-3)}
+.student-id,.username-chip{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:0 var(--space-3);border:1px solid var(--color-border);border-radius:999px;font-size:var(--font-xs);color:var(--color-text-secondary);cursor:pointer}
+.student-id b,.username-chip b{color:var(--color-text);font-weight:600}
+.edit-button{width:44px;height:44px;display:grid;place-items:center;border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-surface);color:var(--color-primary)}
+.contact-card{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:var(--space-4)}
+.contact-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:var(--radius-sm);background:var(--color-surface-muted);color:var(--color-primary)}
+.contact-copy{display:grid;gap:2px;min-width:0}
+.contact-copy span{font-size:var(--font-xs);color:var(--color-text-secondary)}
+.contact-copy strong{font-size:var(--font-md)}
+.contact-copy small{color:var(--color-text-secondary)}
+.whatsapp-button{display:inline-flex;align-items:center;gap:var(--space-2);min-height:40px;padding:0 var(--space-4);border:1px solid var(--color-border);border-radius:999px;background:var(--color-surface);color:var(--color-success);font-size:var(--font-sm);font-weight:500;white-space:nowrap}
+.profile-section{padding:var(--space-4);border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface);margin-bottom:var(--space-4)}
+.profile-section>.eyebrow{margin:0 0 var(--space-3)}
+.profile-section .settings-list{border-color:var(--color-border)}
+.settings-icon.mint,.settings-icon.green,.settings-icon.purple,.settings-icon.danger{border-radius:10px}
+.setting-arrow{width:18px;height:18px;color:var(--color-text-muted);flex:none}
+.saved-tag{flex:none;padding:2px var(--space-2);border-radius:999px;background:var(--color-surface-muted);color:var(--color-success);font-size:var(--font-xs)}
+.logout-button{color:var(--color-danger)}
+.help-card{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:var(--space-3)}
+.help-card>div{min-width:0}
+.help-card p{margin:0;font-size:var(--font-sm);color:var(--color-text-secondary)}
+.help-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:var(--radius-sm);background:var(--color-surface-muted);color:var(--color-primary)}
+.help-card button{width:44px;height:44px;display:grid;place-items:center;border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-surface);color:var(--color-primary)}
+.rp-mount{display:grid;gap:var(--space-3)}
+.app-version{margin:var(--space-5) 0 0;padding-top:var(--space-4);border-top:1px solid var(--color-border);text-align:center;font-size:var(--font-xs);color:var(--color-text-muted)}
+/* One row shape inside a settings card: separators, not a box inside a box. The
+   rows that are plain buttons were picking up the button chrome (own border and
+   radius) while the label rows were flat, so a list looked like a pile of chips. */
+.settings-list>*{background:transparent;border:0;border-bottom:1px solid var(--color-border);border-radius:0;text-align:left}
+.settings-list>*:last-child{border-bottom:0}
+.settings-list>*:hover{background:var(--color-surface-muted)}
+/* An empty report mount must not leave a hollow card behind. */
+.profile-section:has(.rp-mount:empty){display:none}
+@media(max-width:360px){
+  .profile-card,.contact-card{grid-template-columns:auto minmax(0,1fr)}
+  .edit-button{grid-column:2;justify-self:start}
+  .whatsapp-button{grid-column:1/-1;justify-self:start;margin-top:var(--space-2)}
+}
+/* Student views, groomed: the intro block, the routine date strip, the empty
+   state and the learning pieces were markup-only (no arrangement at all), which
+   is why they read as a loose pile next to the staff panels. */
+.page-intro h1{margin:0 0 var(--space-1)}
+.page-intro p{margin:0;color:var(--color-text-secondary)}
+.exam-link{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;padding:var(--space-3) var(--space-4);margin-bottom:var(--space-4);text-align:left;border:1px solid var(--color-border);border-radius:var(--radius-md);background:var(--color-surface);color:inherit}
+.exam-link small{color:var(--color-text-secondary)}
+.learning-heading{display:flex;align-items:center;gap:var(--space-3);margin-bottom:var(--space-3)}
+.learning-heading h2{margin:0}
+.learning-heading p{margin:0;font-size:var(--font-sm);color:var(--color-text-secondary)}
+.learning-home-icon{display:grid;place-items:center;width:40px;height:40px;flex:none;border-radius:var(--radius-sm);background:var(--color-surface-muted);color:var(--color-primary)}
+.learning-filter{display:flex;flex-wrap:wrap;gap:var(--space-2)}
+.learning-filter button{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 var(--space-3);border:1px solid var(--color-border);border-radius:999px;background:var(--color-surface);color:var(--color-text-secondary);font-size:var(--font-sm)}
+.learning-filter-count{color:var(--color-text-muted)}
+.learning-error{padding:var(--space-3);border:1px solid var(--color-danger);border-radius:var(--radius-sm);color:var(--color-danger)}
+.routine-date{display:flex;align-items:center;gap:var(--space-2);margin-bottom:var(--space-4);font-size:var(--font-sm);color:var(--color-text-secondary)}
+.calendar-dot{display:grid;place-items:center;width:32px;height:32px;flex:none;border-radius:var(--radius-sm);background:var(--color-surface-muted);color:var(--color-primary)}
+.calendar-dot svg{width:18px;height:18px}
+.class-count{margin-left:auto;padding:2px var(--space-3);border-radius:999px;background:var(--color-surface-muted);font-size:var(--font-xs)}
+.empty-routine{display:grid;justify-items:center;gap:var(--space-1);padding:var(--space-6) var(--space-4);text-align:center;border:1px dashed var(--color-border);border-radius:var(--radius-md)}
+.empty-routine span{font-size:28px}
+.empty-routine p{margin:0;font-size:var(--font-sm);color:var(--color-text-secondary)}
+.challenge-progress-track{display:block;height:6px;margin-top:var(--space-2);border-radius:99px;background:var(--color-surface-muted);overflow:hidden}
+.challenge-progress-track i{display:block;height:100%;border-radius:inherit;background:var(--color-primary)}
+.fee-alert-icon,.exam-feature-icon{display:grid;place-items:center;width:40px;height:40px;flex:none;border-radius:var(--radius-sm);background:var(--color-surface-muted);color:var(--color-primary)}
+.fee-alert-icon{font-size:var(--font-lg);font-weight:600}
+.exam-feature-icon svg{width:20px;height:20px}
+.dashboard-fee-amount{margin-left:auto;font-size:var(--font-lg);font-weight:600}
+.daily-challenge-section{margin-block:var(--space-6)}
+.announcement-bar{display:flex;gap:var(--space-2);padding:var(--space-3) var(--space-4);margin-bottom:var(--space-4);border:1px solid var(--color-border);border-left:4px solid var(--color-primary);border-radius:var(--radius-sm);background:var(--color-surface);font-size:var(--font-sm)}
+/* Learning cards (student "পড়াশোনা" board, routine board and ফলাফল list).
+   The card was one big unstyled button: the title, subject, date line and the
+   chevron all ran together. */
+.learning-card-toggle{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--space-1) var(--space-3);width:100%;padding:0;text-align:left;background:transparent;border:0}
+.learning-card-title{grid-column:1;font-size:var(--font-md);font-weight:600}
+.learning-subject{grid-column:1;font-size:var(--font-sm);color:var(--color-text-secondary)}
+.learning-subject span{color:var(--color-text-muted)}
+.learning-brief{grid-column:1;font-size:var(--font-xs);color:var(--color-text-secondary)}
+.teaching-card-head{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);flex-wrap:wrap;margin-bottom:var(--space-1)}
+.learning-chevron{grid-column:2;grid-row:2/5;align-self:center;display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--color-surface-muted);color:var(--color-text-secondary)}
+.learning-chevron svg{width:18px;height:18px}
+.learning-card-toggle[aria-expanded=true] .learning-chevron{transform:rotate(180deg)}
+.learning-state{padding:2px var(--space-3);border-radius:999px;background:var(--color-surface-muted);font-size:var(--font-xs);color:var(--color-text-secondary);white-space:nowrap}
+.learning-card-details{margin-top:var(--space-3);padding-top:var(--space-3);border-top:1px solid var(--color-border)}
+.learning-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:var(--space-3);margin-bottom:var(--space-3)}
+.learning-meta small{display:block;color:var(--color-text-secondary)}
+.learning-meta strong{display:block}
+.learning-outcome{padding:var(--space-2) var(--space-3);border-radius:var(--radius-sm);background:var(--color-surface-muted);font-size:var(--font-sm)}
+.learning-teacher{display:flex;align-items:center;gap:var(--space-2);margin-top:var(--space-3);font-size:var(--font-xs);color:var(--color-text-secondary)}
+.learning-teacher>span{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--color-surface-muted);color:var(--color-primary);font-weight:600}
+.learning-card-actions{display:grid;gap:var(--space-2);margin-top:var(--space-3)}
+.learning-action-note{color:var(--color-text-secondary);font-size:var(--font-xs)}
+.learning-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-2);text-align:center}
+.learning-summary>div{display:grid;gap:2px;padding:var(--space-2);border-radius:var(--radius-sm);background:var(--color-surface-muted)}
+.learning-summary strong{font-size:var(--font-lg)}
+.learning-summary span{font-size:var(--font-xs);color:var(--color-text-secondary)}
+@media(max-width:380px){.learning-summary{grid-template-columns:1fr}}
