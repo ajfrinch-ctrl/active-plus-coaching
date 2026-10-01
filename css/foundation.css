@@ -23,7 +23,20 @@
  --glass-border:rgba(32,54,83,.10);--glass-edge:rgba(255,255,255,.9);
  --glass-shadow:0 10px 30px rgba(23,42,71,.10);--glass-shadow-strong:0 24px 60px rgba(23,42,71,.20);
  --glass-blur-thin:6px;
- --ambient-1:rgba(64,131,255,.16);--ambient-2:rgba(146,110,255,.14);--ambient-3:rgba(69,201,161,.10);
+ --ambient-1:rgba(64,131,255,.22);--ambient-2:rgba(146,110,255,.19);--ambient-3:rgba(69,201,161,.14);
+ --ambient-4:rgba(255,138,110,.13);
+ /* Modern colour: one second brand hue for gradients, and the five tints the
+    dashboard tiles carry in their class names. They never replace the palette
+    above — they are the colour that keeps the flat baseline from looking like a
+    form on paper. Tints sit on top of a surface as a wash, never as a new one. */
+ --brand-2:#6b5bff;
+ --tone-blue:#2b6fe0;--tone-blue-soft:rgba(43,111,224,.13);
+ --tone-mint:#0e9f6e;--tone-mint-soft:rgba(14,159,110,.14);
+ --tone-amber:#c0800c;--tone-amber-soft:rgba(200,133,15,.16);
+ --tone-violet:#6d4dfa;--tone-violet-soft:rgba(122,92,255,.14);
+ --tone-rose:#d6415d;--tone-rose-soft:rgba(219,77,103,.14);
+ --ring-track:rgba(43,111,224,.16);
+ --accent-glow:0 12px 28px rgba(43,111,224,.28);--card-glow:0 14px 34px rgba(37,84,161,.10);
  --safe-bottom:env(safe-area-inset-bottom,0px);
  /* Compatibility for JS-rendered content, not a legacy stylesheet dependency. */
  --ink:var(--color-text);--muted:var(--color-text-secondary);--muted-2:var(--color-text-muted);--surface:var(--color-surface);--white:var(--color-surface);--line:var(--color-border);--forest:var(--color-primary);--forest-text:var(--color-primary);--mint:var(--color-surface-muted);--cream:var(--color-bg);--coral:var(--color-danger);
@@ -48,7 +61,18 @@ html[data-theme=dark]{
  --glass-border:rgba(255,255,255,.12);--glass-edge:rgba(255,255,255,.10);
  --glass-shadow:0 0 0 rgba(0,0,0,0);--glass-shadow-strong:0 28px 70px rgba(0,0,0,.75);
  --glass-blur-thin:8px;
- --ambient-1:rgba(94,169,255,.13);--ambient-2:rgba(146,110,255,.11);--ambient-3:rgba(0,0,0,0);
+ --ambient-1:rgba(94,169,255,.16);--ambient-2:rgba(146,110,255,.14);--ambient-3:rgba(69,201,161,.09);
+ --ambient-4:rgba(255,138,110,.08);
+ /* Same five tints, lifted for the black canvas: colour is what keeps an AMOLED
+    screen from reading as a grey-on-black terminal. */
+ --brand-2:#a08cff;
+ --tone-blue:#6fb2ff;--tone-blue-soft:rgba(111,178,255,.16);
+ --tone-mint:#54e0a4;--tone-mint-soft:rgba(84,224,164,.14);
+ --tone-amber:#ffcf70;--tone-amber-soft:rgba(255,207,112,.14);
+ --tone-violet:#b3a3ff;--tone-violet-soft:rgba(179,163,255,.16);
+ --tone-rose:#ff9aab;--tone-rose-soft:rgba(255,154,171,.14);
+ --ring-track:rgba(94,169,255,.22);
+ --accent-glow:0 16px 40px rgba(94,169,255,.30);--card-glow:0 0 0 rgba(0,0,0,0);
 }
 *{box-sizing:border-box}html{scroll-padding-block:90px}body{margin:0;background:var(--color-bg);color:var(--color-text);font:400 var(--font-md)/1.65 'Noto Sans Bengali',system-ui,sans-serif}h1,h2,h3,p{margin:0 0 var(--space-3)}h1{font-size:var(--font-xl);line-height:1.4;font-weight:650}h2{font-size:var(--font-lg);line-height:1.5;font-weight:600}h3{font-size:var(--font-md);font-weight:600}strong,b{font-weight:600}small,.eyebrow{font-size:var(--font-xs);color:var(--color-text-secondary)}.eyebrow{letter-spacing:.06em;margin-bottom:var(--space-2)}a{color:var(--color-primary)}img{max-width:100%;object-fit:contain}svg{width:22px;height:22px;flex-shrink:0;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}button,a,input,select,textarea{touch-action:manipulation}button{font:inherit;cursor:pointer}button:disabled{opacity:.55;cursor:not-allowed}:focus-visible{outline:3px solid var(--color-primary);outline-offset:3px}[hidden]{display:none!important}pre,code{white-space:pre-wrap;overflow-wrap:anywhere}p,small,strong,label{overflow-wrap:anywhere}::selection{background:var(--color-surface-muted)}
 html[data-theme=dark] ::selection{background:#5ea9ff38;color:var(--color-text)}
