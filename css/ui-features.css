@@ -143,4 +143,4 @@
 .learning-summary>div{display:grid;gap:2px;padding:var(--space-2);border-radius:var(--radius-sm);background:var(--color-surface-muted)}
 .learning-summary strong{font-size:var(--font-lg)}
 .learning-summary span{font-size:var(--font-xs);color:var(--color-text-secondary)}
-@media(max-width:380px){.learning-summary{grid-template-columns:1fr}}
+@media(max-width:300px){.learning-summary{grid-template-columns:1fr}}
