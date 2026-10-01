@@ -208,3 +208,39 @@ test('AMOLED glass keeps the canvas black and the text readable', () => {
   assert.match(dark('glass-shadow'), /rgba\(0,0,0,0\)/,
     'a black shadow on black is only paint work — the card shadow must stay transparent');
 });
+
+test('the logo follows the theme instead of staying a white plate', () => {
+  // Two artworks, same drawing: the light one is the original, the dark one is
+  // the same ink re-painted for a black canvas (light strokes, lifted accents).
+  const png = name => readFileSync(new URL(`../assets/icons/${name}`, import.meta.url));
+  const [light, dark] = [png('logo-128.png'), png('logo-128-dark.png')];
+  for (const [name, bytes] of [['logo-128.png', light], ['logo-128-dark.png', dark]]) {
+    // IHDR: width, height, bit depth, colour type. Colour type 6 = RGBA, so the
+    // mark can sit on any background (no baked-in white).
+    const width = bytes.readUInt32BE(16), height = bytes.readUInt32BE(20);
+    assert.equal(width, 128, `${name}: width changed`);
+    assert.equal(height, 128, `${name}: height changed`);
+    assert.equal(bytes[25], 6, `${name}: the plate is still baked in (not RGBA)`);
+  }
+  assert.notDeepEqual([...light.subarray(0, 500)], [...dark.subarray(0, 500)],
+    'the dark artwork is a copy of the light one');
+
+  // Every page paints the logo through the same swapper, early in <head>, and
+  // the swapper is the only place that knows both file names.
+  const swapper = readFileSync(new URL('../js/theme-logos.js', import.meta.url), 'utf8');
+  assert.match(swapper, /logo-128\.png/);
+  assert.match(swapper, /logo-128-dark\.png/);
+  assert.match(swapper, /active-plus-appearance-v2/, 'the swapper must read the same stored theme as the app');
+  assert.match(swapper, /apc:theme/, 'the swapper must follow live theme changes');
+  for (const page of PAGES) {
+    const html = read(`${page}.html`);
+    const boot = html.indexOf('js/appearance-boot.js');
+    const logos = html.indexOf('js/theme-logos.js');
+    assert.ok(boot > -1 && logos > boot, `${page}.html: the logo swapper must load with the pre-paint boot`);
+    assert.ok(html.indexOf('js/theme-logos.js') < html.indexOf('</head>'), `${page}.html: the swapper loads too late`);
+  }
+  // And the shell ships both files, or an offline install would fall back.
+  const sw = read('sw.js');
+  assert.ok(sw.includes("'./assets/icons/logo-128.png'"), 'the light logo left the precache');
+  assert.ok(sw.includes("'./assets/icons/logo-128-dark.png'"), 'the dark logo is not precached');
+});

@@ -345,12 +345,10 @@ html[data-theme="dark"] .apc-lock-notice {
 }
 html[data-theme="dark"] .apc-inapp-alert { box-shadow: 0 16px 40px #000; }
 html[data-theme="dark"] .topbar-sync-chip { background: #0f3d29; color: #7fe0a8; border-color: #3f8a63; }
-/* The brand mark keeps its light-paper artwork, but never glares full-on: a
-   slight dim is the whole AMOLED treatment for it. */
-html[data-theme="dark"] .app-brand-logo,
-html[data-theme="dark"] .auth-brand img,
-html[data-theme="dark"] .pending-logo img,
-html[data-theme="dark"] .launch-screen img { filter: brightness(.94); }
+/* The brand mark is theme-aware now: js/theme-logos.js swaps in the dark
+   artwork (light strokes, lifted green/red — assets/icons/logo-128-dark.png),
+   so both themes show the logo on their own background. No filter, no white
+   plate: this rule is gone on purpose (docs/LOGO-THEME-134.md). */
 /* Report/receipt preview keeps white paper on purpose (it mirrors the PDF);
    only the gutters around it follow the theme. */
 html[data-theme="dark"] .rc-pdf-preview { background: var(--color-bg); }
