@@ -11,7 +11,7 @@
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadPage } from './jsdom-harness.mjs';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { adminStudents } from '../js/admin-data.js';
 import { ROSTER_KEY } from '../js/office-data.js';
 import { provisionStaff, seedStaffSession } from './staff-harness.mjs';
@@ -99,6 +99,45 @@ test('every action row shares the screen width evenly, in every viewport', () =>
   const phone = css.match(/@media\(max-width:560px\)\{([\s\S]*?)\}\s*$/);
   assert.ok(phone, 'the phone media query stays');
   assert.ok(!phone[1].includes('.step-actions'), 'the even-share rule is not confined to the phone query');
+});
+
+/* The feature rows (staff cards, exam authoring, teaching, manager lists, the
+   student's own rows, receipt/lock actions) used to declare `display:flex` with
+   `flex:1` buttons: with three buttons they squeezed into equal thirds — the
+   exact thing the school rule forbids. They are in the same one rule now. */
+
+test('every feature action row follows the same school rule, and none re-declares a layout', () => {
+  const css = read('css/ui-forms.css');
+  const featureRows = ['.exam-actions', '.teaching-actions', '.manager-actions', '.staff-card-actions',
+    '.staff-form-footer', '.student-actions', '.teacher-quick-actions', '.receipt-actions',
+    '.learning-card-actions', '.rc-actions', '.apc-lock-actions', '.student-record-actions'];
+  assert.ok(css.includes(`${featureRows.join(',')}{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))`),
+    'a feature row is missing from the school rule');
+  // The rows live in shared comma-separated rules, so read the rule that carries
+  // the trailing-odd handling and check every feature row is in it.
+  const blockOf = marker => {
+    const rest = css.slice(css.indexOf(marker));
+    return rest.slice(0, rest.indexOf('}'));
+  };
+  const trailing = blockOf('.exam-actions>:nth-child(odd):last-child');
+  const lone = blockOf('.exam-actions>:only-child');
+  for (const row of featureRows) {
+    assert.ok(trailing.includes(`${row}>:nth-child(odd):last-child`), `${row}: a trailing odd button must end on its own line`);
+    assert.ok(lone.includes(`${row}>:only-child`), `${row}: a lone button must take the full width`);
+  }
+  // No other sheet may take the layout back, and no leftover flex rule may
+  // squeeze the buttons into equal columns again.
+  for (const file of readdirSync(new URL('../css', import.meta.url))) {
+    if (!file.endsWith('.css')) continue;
+    const text = read(`css/${file}`);
+    for (const row of featureRows) {
+      const bare = row.slice(1);
+      const layout = new RegExp(`\\.${bare}\\s*[^{}]*\\{[^}]*display:\\s*(flex|inline-flex)`);
+      assert.ok(!layout.test(text), `${file} gives .${bare} its own flex layout again`);
+      const squeeze = new RegExp(`\\.${bare}\\s+button[^{}]*\\{[^}]*flex:\\s*1`);
+      assert.ok(!squeeze.test(text), `${file} squeezes .${bare} buttons with flex:1 again`);
+    }
+  }
 });
 
 test('registration step one closes with one full-width button', () => {

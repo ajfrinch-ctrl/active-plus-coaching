@@ -54,8 +54,8 @@
   .student-copy>small { display:flex;align-items:center;gap:6px;margin-top:8px; }
   .student-copy>small svg { width:16px;height:16px; }
   .audit-id-badge,.staff-id-badge { overflow-wrap:anywhere;font-size:12px;background:var(--color-surface-muted);padding:3px 7px;border-radius:6px;max-width:100%; }
-  .student-actions { display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid var(--color-border); }
-  .student-actions button { flex:1;padding-inline:10px; }
+  .student-actions { gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid var(--color-border); }
+  .student-actions button { padding-inline:10px; }
   .detail-grid { grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 24px;margin:0; }
   .detail-grid>div { min-width:0; }
   .detail-grid dt,.receipt-meta-grid dt { font-size:12px;color:var(--color-text-secondary);margin-bottom:4px; }
@@ -95,7 +95,6 @@
   @media (max-width:360px) {
     .app-main,.admin-main,.pay-main { padding-inline:12px; }
     .admin-feature-tile { flex-direction:column;align-items:flex-start; }
-    .student-actions { flex-direction:column; }
   }
 }
 /* Feature-level layouts share the same rhythm as the student record. */
@@ -145,11 +144,12 @@
   .staff-protected-note,.staff-password-note,.staff-form-notice,.staff-create-guide {
     font-size:13px;color:var(--color-text-secondary);background:var(--color-bg);border-radius:10px;padding:12px;margin-block:16px;line-height:1.8;
   }
+  /* Layout belongs to the one school rule in css/ui-forms.css; these rows only
+     keep their own spacing. */
   .staff-card-actions,.staff-form-footer,.manager-actions,.teaching-actions,.exam-actions {
-    display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:16px;
+    margin-top:16px;
   }
   .staff-card-actions { border-top:1px solid var(--color-border);padding-top:12px; }
-  .staff-card-actions button { flex:1; }
   .staff-more-menu { padding:8px;margin-top:12px;border:1px solid var(--color-border);border-radius:12px;background:var(--color-bg); }
   .staff-more-item { width:100%;justify-content:flex-start;border:0;text-align:left; }
   .staff-form-section { margin-top:24px; }
@@ -206,7 +206,6 @@
     .staff-toolbar,.exam-form,.teaching-card,.exam-card,.exam-summary { padding:16px; }
     .manager-profile-list { grid-template-columns:minmax(0,1fr);gap:16px; }
     .manager-filter-row { grid-template-columns:minmax(0,1fr); }
-    .staff-form-footer button,.manager-actions button,.teaching-actions button,.exam-actions button { flex:1; }
     .exam-summary dl { grid-template-columns:minmax(0,1fr); }
     .staff-card-head>.badge { margin-left:56px; }
   }
@@ -222,7 +221,7 @@
   .teacher-toolbar { padding:16px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:14px;margin-block:20px; }
   .teacher-toolbar label:first-child { margin-top:0; }
   .teacher-section-heading { display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px;margin-top:28px; }
-  .teacher-quick-actions { display:flex;gap:10px;flex-wrap:wrap; }
+  .teacher-quick-actions { gap:10px; }
   .teacher-local-note { font-size:13px;color:var(--color-text-secondary);line-height:1.85; }
   .profile-section { margin-top:24px;padding-top:20px;border-top:1px solid var(--color-border); }
   .profile-section h3 { margin-bottom:16px; }
