@@ -8,7 +8,8 @@
    tests/appearance.test.mjs). */
 
 export const APPEARANCE_KEY = 'active-plus-appearance-v2';
-export const THEME_COLOR = Object.freeze({ light: '#04795a', dark: '#000000' });
+export const THEME_COLOR = Object.freeze({ light: '#f3f6fb', dark: '#000000' });
+export const THEME_LABEL = Object.freeze({ light: 'লাইট থিম', dark: 'AMOLED থিম' });
 
 function normalize(theme) {
   return theme === 'dark' ? 'dark' : 'light';
@@ -39,7 +40,7 @@ function paintThemeColor(theme) {
 function syncControls(theme) {
   for (const control of document.querySelectorAll('[data-theme-toggle]')) {
     control.setAttribute('aria-pressed', String(theme === 'dark'));
-    control.setAttribute('aria-label', theme === 'dark' ? 'লাইট মোড চালু করুন' : 'ডার্ক মোড চালু করুন');
+    control.setAttribute('aria-label', theme === 'dark' ? 'লাইট থিম চালু করুন' : 'AMOLED থিম চালু করুন');
   }
   const checkbox = document.getElementById('darkModeToggle');
   if (checkbox) checkbox.checked = theme === 'dark';

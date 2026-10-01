@@ -767,7 +767,7 @@ function renderStudentLedger() {
         <div class="student-copy">
           <strong>${student.name}</strong>
           <small>${student.className} • ${student.group} • 📞 ${bn(student.mobile)}</small>
-          <small style="margin-top:2px;color:${student.isPaid ? 'var(--forest)' : '#c05b4b'};font-weight:700;">
+          <small style="margin-top:2px;color:${student.isPaid ? 'var(--color-success)' : 'var(--color-danger)'};font-weight:700;">
             ${monthLabel()}: ${student.isPaid ? 'পরিশোধিত (৳' + bn(student.paidAmount) + ')' : 'বকেয়া: ৳' + bn(student.dueAmount)}
           </small>
         </div>

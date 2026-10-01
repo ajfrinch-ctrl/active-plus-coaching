@@ -10,10 +10,10 @@ import { searchStudentsByQuery } from './student-search.js';
 export const TEACHING_KEY = KEYS.teaching;
 export const DEMO_TEACHER = Object.freeze({ id: 'TCH-001', name: 'মো. সাইফুল ইসলাম' });
 export const ACTIVITY_TYPES = Object.freeze({
-  exam: { label: 'Marks/Results', plural: 'Marks/Results', progress: '' },
+  exam: { label: 'নম্বর ও ফলাফল', plural: 'নম্বর ও ফলাফল', progress: '' },
   homework: { label: 'বাড়ির কাজ', plural: 'বাড়ির কাজ', progress: 'জমার অবস্থা' },
-  suggestion: { label: 'Academic notice', plural: 'Academic notices', progress: '' },
-  routine: { label: 'Attendance session', plural: 'Attendance', progress: 'উপস্থিতি' }
+  suggestion: { label: 'একাডেমিক নোটিশ', plural: 'একাডেমিক নোটিশ', progress: '' },
+  routine: { label: 'উপস্থিতি ক্লাস', plural: 'উপস্থিতি ক্লাস', progress: 'উপস্থিতি' }
 });
 export const PROGRESS_LABELS = Object.freeze({ pending: 'বাকি', done: 'সম্পন্ন জানিয়েছে', reviewed: 'দেখা হয়েছে', present: 'উপস্থিত', absent: 'অনুপস্থিত', late: 'দেরিতে উপস্থিত' });
 export { escapeHtml as escapeText } from './sanitize.js';
@@ -164,7 +164,7 @@ export const teachingRepository = {
     await requireRoleSession('teacher');
     const db = await mutate(db => {
       const activity = ownedActivity(db, id);
-      if (activity.type === 'exam') fail('Marks/Results কেবল Manager-approved Examination workflow-এ পরিবর্তন করা যাবে।');
+      if (activity.type === 'exam') fail('নম্বর ও ফলাফল কেবল Manager-approved Examination workflow-এ পরিবর্তন করা যাবে।');
       if (activity.status !== 'published' || activity.type === 'suggestion') fail('আগে কাজটি প্রকাশ করুন।');
       const allowed = roster().filter(s => matchesStudent(activity, s));
       for (const [studentId, raw] of Object.entries(entries)) {

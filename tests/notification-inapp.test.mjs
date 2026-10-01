@@ -4,6 +4,7 @@
    once the signed-in app is on screen, once per item, and tapping opens them. */
 import test, { before } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { loadPage } from './jsdom-harness.mjs';
 import { KEYS } from '../js/database.js';
 import { planInAppAlerts } from '../js/notification-rules.js';
@@ -114,6 +115,65 @@ test('"সব দেখুন" opens the list', async () => {
   ctx.click(ctx.$('#apcInAppAlert [data-apc-alert-all]'));
   assert.equal(cardVisible(), false);
   assert.equal(inbox().hidden, false);
+});
+
+test('the popup always offers ক্যান্সেল and বুঝেছি, on a blurred backdrop', async () => {
+  ctx.window.localStorage.setItem(KEYS.notices, JSON.stringify([notice('N-9', 'নবম নোটিশ')]));
+  controller.refresh();
+  await ctx.waitFor(() => cardVisible(), 3000);
+  const backdrop = ctx.$('#apcAlertBackdrop');
+  assert.ok(backdrop && !backdrop.hidden, 'the popup sits on its own backdrop');
+  assert.equal(backdrop.contains(card()), true, 'the sheet lives inside the backdrop');
+  assert.equal(card().getAttribute('role'), 'dialog');
+  assert.equal(card().getAttribute('aria-modal'), 'true');
+  const cancel = ctx.$('#apcInAppAlert [data-apc-alert-cancel]');
+  const ok = ctx.$('#apcInAppAlert [data-apc-alert-ok]');
+  assert.ok(cancel && ok, 'both answers are in the popup');
+  assert.match(cancel.textContent, /ক্যান্সেল/);
+  assert.match(ok.textContent, /বুঝেছি/);
+  // The backdrop is what blurs the page behind the sheet.
+  const css = readFileSync(new URL('../css/ui-features.css', import.meta.url), 'utf8');
+  assert.match(css, /\.apc-alert-backdrop\{[^}]*background:var\(--modal-backdrop\)/, 'the backdrop has no dim layer');
+  const skin = readFileSync(new URL('../css/ui-interior.css', import.meta.url), 'utf8');
+  assert.match(skin, /\.apc-alert-backdrop/, 'the glass skin does not blur the popup backdrop');
+  // ক্যান্সেল closes it and leaves the item in the bell list, like × does.
+  ctx.click(cancel);
+  assert.equal(cardVisible(), false, 'ক্যান্সেল did not close the popup');
+  assert.equal(backdrop.hidden, true, 'the blurred backdrop stayed over the page');
+  assert.ok(controller.feed().some(item => item.key.startsWith('notice:N-9')));
+});
+
+test('বুঝেছি closes the popup too, and Escape always works', async () => {
+  ctx.window.localStorage.setItem(KEYS.notices, JSON.stringify([notice('N-10', 'দশম নোটিশ')]));
+  controller.refresh();
+  await ctx.waitFor(() => cardVisible(), 3000);
+  ctx.click(ctx.$('#apcInAppAlert [data-apc-alert-ok]'));
+  assert.equal(cardVisible(), false, 'বুঝেছি did not close the popup');
+  ctx.window.localStorage.setItem(KEYS.notices, JSON.stringify([notice('N-11', 'এগারোতম নোটিশ')]));
+  controller.refresh();
+  await ctx.waitFor(() => cardVisible(), 3000);
+  ctx.window.document.dispatchEvent(new ctx.window.KeyboardEvent('keydown', { key: 'Escape' }));
+  assert.equal(cardVisible(), false, 'Escape did not close the popup');
+});
+
+test('the off switch is explained in the same popup, on the same blurred backdrop', () => {
+  const center = ctx.window.apcNoticeCenter;
+  assert.ok(center && typeof center.showInfo === 'function', 'the popup has no off-state');
+  assert.equal(center.showInfo('denied'), true);
+  assert.equal(cardVisible(), true);
+  assert.match(card().textContent, /নোটিফিকেশন বন্ধ/);
+  assert.match(card().textContent, /ব্রাউজার সেটিংস/);
+  assert.match(card().textContent, /ক্যান্সেল/);
+  assert.match(card().textContent, /বুঝেছি/);
+  assert.equal(ctx.$('#apcAlertBackdrop').hidden, false, 'the off-state popup has no backdrop');
+  ctx.click(ctx.$('#apcInAppAlert [data-apc-alert-ok]'));
+  assert.equal(cardVisible(), false);
+  // Turning notifications off tells the same story (the pill path).
+  ctx.window.document.dispatchEvent(new ctx.window.CustomEvent('apc-notifications-updated'));
+  assert.equal(center.showInfo('disabled'), true);
+  assert.match(card().textContent, /বন্ধ করা হয়েছে/);
+  ctx.click(ctx.$('#apcInAppAlert [data-apc-alert-cancel]'));
+  assert.equal(cardVisible(), false);
 });
 
 test('no page errors', () => assert.deepEqual(ctx.jsdomErrors, []));

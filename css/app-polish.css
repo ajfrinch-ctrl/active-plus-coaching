@@ -1,16 +1,7 @@
 /* Shared visual language for every portal. No visibility, routing or permission
    selectors here; document/PDF geometry remains owned by its renderer. */
-:root {
-  --color-bg:#f3f6fb; --color-surface-muted:#edf3fc;
-  --color-border:#dce5f0; --color-text:#213047; --color-text-secondary:#56677e;
-  --color-primary:#2864bd; --radius-sm:9px; --radius-md:14px; --radius-lg:18px;
-  --shadow-sm:0 3px 14px #20365306;
-}
-html[data-theme=dark] {
-  --color-bg:#121c2b; --color-surface:#1b293c; --color-surface-muted:#253750;
-  --color-border:#374b64; --color-text:#edf3fc; --color-text-secondary:#bfccdf;
-  --color-primary:#96bcff;
-}
+/* Tokens live in css/foundation.css — one palette for every portal, light and
+   dark (the dark one is the AMOLED black theme). This file only arranges them. */
 @media screen {
   .app-topbar-inner { min-height:72px; }
   .app-brand-logo { border-radius:10px; }
@@ -63,8 +54,8 @@ html[data-theme=dark] {
   .student-copy>small { display:flex;align-items:center;gap:6px;margin-top:8px; }
   .student-copy>small svg { width:16px;height:16px; }
   .audit-id-badge,.staff-id-badge { overflow-wrap:anywhere;font-size:12px;background:var(--color-surface-muted);padding:3px 7px;border-radius:6px;max-width:100%; }
-  .student-actions { display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid var(--color-border); }
-  .student-actions button { flex:1;padding-inline:10px; }
+  .student-actions { gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid var(--color-border); }
+  .student-actions button { padding-inline:10px; }
   .detail-grid { grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 24px;margin:0; }
   .detail-grid>div { min-width:0; }
   .detail-grid dt,.receipt-meta-grid dt { font-size:12px;color:var(--color-text-secondary);margin-bottom:4px; }
@@ -104,7 +95,6 @@ html[data-theme=dark] {
   @media (max-width:360px) {
     .app-main,.admin-main,.pay-main { padding-inline:12px; }
     .admin-feature-tile { flex-direction:column;align-items:flex-start; }
-    .student-actions { flex-direction:column; }
   }
 }
 /* Feature-level layouts share the same rhythm as the student record. */
@@ -154,11 +144,12 @@ html[data-theme=dark] {
   .staff-protected-note,.staff-password-note,.staff-form-notice,.staff-create-guide {
     font-size:13px;color:var(--color-text-secondary);background:var(--color-bg);border-radius:10px;padding:12px;margin-block:16px;line-height:1.8;
   }
+  /* Layout belongs to the one school rule in css/ui-forms.css; these rows only
+     keep their own spacing. */
   .staff-card-actions,.staff-form-footer,.manager-actions,.teaching-actions,.exam-actions {
-    display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:16px;
+    margin-top:16px;
   }
   .staff-card-actions { border-top:1px solid var(--color-border);padding-top:12px; }
-  .staff-card-actions button { flex:1; }
   .staff-more-menu { padding:8px;margin-top:12px;border:1px solid var(--color-border);border-radius:12px;background:var(--color-bg); }
   .staff-more-item { width:100%;justify-content:flex-start;border:0;text-align:left; }
   .staff-form-section { margin-top:24px; }
@@ -215,7 +206,6 @@ html[data-theme=dark] {
     .staff-toolbar,.exam-form,.teaching-card,.exam-card,.exam-summary { padding:16px; }
     .manager-profile-list { grid-template-columns:minmax(0,1fr);gap:16px; }
     .manager-filter-row { grid-template-columns:minmax(0,1fr); }
-    .staff-form-footer button,.manager-actions button,.teaching-actions button,.exam-actions button { flex:1; }
     .exam-summary dl { grid-template-columns:minmax(0,1fr); }
     .staff-card-head>.badge { margin-left:56px; }
   }
@@ -231,7 +221,7 @@ html[data-theme=dark] {
   .teacher-toolbar { padding:16px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:14px;margin-block:20px; }
   .teacher-toolbar label:first-child { margin-top:0; }
   .teacher-section-heading { display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px;margin-top:28px; }
-  .teacher-quick-actions { display:flex;gap:10px;flex-wrap:wrap; }
+  .teacher-quick-actions { gap:10px; }
   .teacher-local-note { font-size:13px;color:var(--color-text-secondary);line-height:1.85; }
   .profile-section { margin-top:24px;padding-top:20px;border-top:1px solid var(--color-border); }
   .profile-section h3 { margin-bottom:16px; }
@@ -324,3 +314,41 @@ html[data-theme=dark] {
   color: #bbf7d0;
   border-color: #4ade80;
 }
+
+/* ── AMOLED dark: component tuning ─────────────────────────────────────────
+   The palette lives in css/foundation.css and is shared by every portal; this
+   block only adjusts the pieces a pure-black canvas changes the meaning of —
+   surfaces that would otherwise glare, and the few separations that were done
+   with a shadow (invisible on black) instead of a border. Flat selectors only:
+   the app also runs in WebViews without CSS nesting. */
+html[data-theme="dark"] .app-topbar,
+html[data-theme="dark"] .bottom-nav,
+html[data-theme="dark"] .admin-bottom { background: var(--color-bg); }
+html[data-theme="dark"] .app-topbar-icon { background: var(--color-surface-muted); }
+/* A drop shadow has nothing to fall on here — the border does the work. */
+html[data-theme="dark"] .auth-card,
+html[data-theme="dark"] .pay-stickybar,
+html[data-theme="dark"] .admin-card,
+html[data-theme="dark"] .pay-card { box-shadow: none; }
+html[data-theme="dark"] .admin-modal,
+html[data-theme="dark"] .modal,
+html[data-theme="dark"] .staff-pw-card,
+html[data-theme="dark"] .student-record-modal { box-shadow: var(--shadow-dialog); }
+html[data-theme="dark"] .student-record-modal .admin-modal-close { background: var(--color-surface-muted); }
+/* Toasts invert to near-white in light mode; on black that is a flashlight, so
+   they become a raised surface with a border instead. */
+html[data-theme="dark"] .feedback-toast,
+html[data-theme="dark"] .pay-toast,
+html[data-theme="dark"] .apc-lock-notice {
+  background: var(--color-surface-muted); color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+html[data-theme="dark"] .apc-inapp-alert { box-shadow: 0 16px 40px #000; }
+html[data-theme="dark"] .topbar-sync-chip { background: #0f3d29; color: #7fe0a8; border-color: #3f8a63; }
+/* The brand mark is theme-aware now: js/theme-logos.js swaps in the dark
+   artwork (light strokes, lifted green/red — assets/icons/logo-128-dark.png),
+   so both themes show the logo on their own background. No filter, no white
+   plate: this rule is gone on purpose (docs/LOGO-THEME-134.md). */
+/* Report/receipt preview keeps white paper on purpose (it mirrors the PDF);
+   only the gutters around it follow the theme. */
+html[data-theme="dark"] .rc-pdf-preview { background: var(--color-bg); }
