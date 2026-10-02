@@ -5,6 +5,7 @@
 const CACHE_VERSION = 148;
 const CACHE_NAME = `active-plus-student-v${CACHE_VERSION}-minimal-education`;
 const APP_SHELL = [
+  './css/academics.css',
   './css/exam-archive.css',
   './css/app-polish.css',
   './css/student-record.css',
@@ -98,6 +99,8 @@ const APP_SHELL = [
   './js/sanitize.js',
   './js/sanitize-url.js',
   './js/staff-password-dialog.js',
+  './js/academics.js',
+  './js/admin-academics.js',
   './js/exam-data.js',
   './js/exam-ui.js',
   './js/exam-manager.js',

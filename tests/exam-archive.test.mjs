@@ -27,7 +27,7 @@ const start = new Date('2026-10-01T10:00:00Z').getTime(), end = start + 3600000;
 const [one, two] = adminStudents.filter(student => student.status === 'approved');
 
 function setup() {
-  const assignments = enabledClasses.map((className, index) => ({ id: `TAS-${index}`, teacherUsername: 'teacher.apc', teacherName: 'Test Teacher', className, group: '', subject: 'Test' }));
+  const assignments = enabledClasses.map((className, index) => ({ id: `TAS-${index}`, teacherUsername: 'teacher.apc', teacherName: 'Test Teacher', className, group: '', subject: 'Test', subjects: ['গণিত', 'ইংরেজি', 'বিজ্ঞান', 'Test'] }));
   const store = new Map([
     [ROSTER_KEY, JSON.stringify(adminStudents)],
     [TEACHER_ASSIGNMENTS_KEY, JSON.stringify(assignments)],

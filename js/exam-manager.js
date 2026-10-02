@@ -8,6 +8,8 @@ import { examRepository as repo, EXAM_TYPES, EXAM_STATUSES, TEACHER_ACTOR, ADMIN
 import { examRecord, questionPreview, resultMarkup, downloadResults, statusTag, typeTag, esc, num, when, shortExamId } from './exam-ui.js';
 import { downloadExamPDF } from './exam-pdf.js';
 import { enabledClasses } from './config.js';
+import { listClasses, subjectsForClass, isSubjectEnabled } from './academics.js';
+import { subjectsForTeacherClass } from './teacher-assignments.js';
 import { listTeacherAssignments } from './teacher-assignments.js';
 import {
   EXAM_FILTERS, normalizeFilters, activeFilterCount, examPermissions, filterExams,
@@ -18,7 +20,12 @@ import {
 export function initExamManager(container, role) {
   const root = document.querySelector(container); if (!root) return;
   const actor = role === 'admin' ? ADMIN_ACTOR : role === 'manager' ? MANAGER_ACTOR : TEACHER_ACTOR;
-  const roleClasses = role === 'teacher' ? [...new Set(listTeacherAssignments('teacher.apc').map(item => item.className))] : enabledClasses;
+  const academicClasses = () => listClasses().map(item => item.name);
+  const roleClasses = () => {
+    if (role !== 'teacher') { const names = academicClasses(); return names.length ? names : [...enabledClasses]; }
+    const assigned = [...new Set(listTeacherAssignments('teacher.apc').map(item => item.className))];
+    return assigned.length ? assigned : academicClasses();
+  };
   let db = { exams: [], attempts: [] }, view = 'home', selected = null, openQuestion = null;
   let filters = { ...EXAM_FILTERS }, busy = false, ready = false;
   root.classList.add('exam-workspace');
@@ -63,7 +70,7 @@ export function initExamManager(container, role) {
   }
   /** Date + class + subject + name + status, in one filter bar. */
   function filterMarkup(exams) {
-    const classes = [...new Set([...roleClasses, ...classOptions(exams)])];
+    const classes = [...new Set([...roleClasses(), ...classOptions(exams)])];
     const subjects = subjectOptions(exams);
     const active = activeFilterCount(filters);
     return `<form class="exam-filters" data-exam-filters>
@@ -248,12 +255,27 @@ export function initExamManager(container, role) {
   }
   /* The authoring form is unchanged field-for-field (teachers know it), with
      the date-wise identity of the record shown underneath. */
+  /** Subjects a teacher may offer: the Admin structure first, the teacher's own
+      assignment next; a Manager/Admin sees the whole class list. A legacy value
+      already stored on the record stays selectable so nothing is lost. */
+  function subjectNamesFor(className, legacy = '') {
+    const enabled = subjectsForClass(className).map(item => item.name);
+    const assigned = role === 'teacher' ? subjectsForTeacherClass('teacher.apc', className) : [];
+    const list = role === 'teacher' && assigned.length ? enabled.filter(name => assigned.includes(name)) : enabled;
+    return [...new Set([...list, ...(legacy ? [legacy] : [])])];
+  }
+  function subjectSelectMarkup(className, value) {
+    const options = subjectNamesFor(className, value);
+    if (!options.length) return '<p class="exam-note">এই ক্লাসের জন্য Admin কোনো বিষয় চালু করেননি — Admin → ক্লাসের বিষয় ঠিক করুন থেকে চালু করুন।</p>';
+    return `<select name="subject" required>${options.map(name => `<option value="${esc(name)}" ${name === value ? 'selected' : ''}>${esc(name)}</option>`).join('')}</select>`;
+  }
   function editor(type, e = null) {
     view = 'edit'; selected = e?.id || null; openQuestion = null;
     const nextDay = new Date(Date.now() + 86400000); nextDay.setHours(18, 0, 0, 0);
     const localTime = ms => { const d = new Date(ms); return new Date(ms - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); };
-    const data = e || { type, title: '', subject: '', className: roleClasses[0] || '', group: '', startAt: nextDay.getTime(), endAt: nextDay.getTime() + 3600000, lateMinutes: 10, negative: 0, passPercent: 33, template: '', instructions: '' };
-    const classOptions2 = value => `<option value="">শ্রেণি নির্বাচন করুন</option>${roleClasses.map(c => `<option value="${esc(c)}" ${c === value ? 'selected' : ''}>${esc(c)}</option>`).join('')}`;
+    const classNames = roleClasses();
+    const data = e || { type, title: '', subject: '', className: classNames[0] || '', group: '', startAt: nextDay.getTime(), endAt: nextDay.getTime() + 3600000, lateMinutes: 10, negative: 0, passPercent: 33, template: '', instructions: '' };
+    const classOptions2 = value => `<option value="">শ্রেণি নির্বাচন করুন</option>${classNames.map(c => `<option value="${esc(c)}" ${c === value ? 'selected' : ''}>${esc(c)}</option>`).join('')}`;
     const field = (name, label, kind = 'text', extra = '') => `<label>${label}<input name="${name}" type="${kind}" value="${esc(['startAt', 'endAt'].includes(name) ? localTime(data[name]) : data[name])}" ${extra}></label>`;
     content.innerHTML = `${back()}<h2>${e ? 'সম্পাদনা' : 'নতুন পরীক্ষা'} — ${EXAM_TYPES[type]}${e ? ` <small>(${esc(shortExamId(e.id))})</small>` : ''}</h2>
     <article class="exam-card exam-identity">
@@ -262,8 +284,9 @@ export function initExamManager(container, role) {
       <p class="exam-note" data-identity-preview>তারিখ ও সময় বদলালে রেকর্ডটি সেই তারিখের তালিকায় নতুন করে সাজবে।</p>
     </article>
     <form class="exam-form" data-exam-form>
-      ${field('title', 'পরীক্ষার নাম *', 'text', 'required maxlength="150"')}${field('subject', 'একটি বিষয় *', 'text', 'required maxlength="80"')}
+      ${field('title', 'পরীক্ষার নাম *', 'text', 'required maxlength="150"')}
       <label>কোন শ্রেণির জন্য *<select name="className" required>${classOptions2(data.className)}</select></label>
+      <label>কোন বিষয়ের পরীক্ষা *<span data-exam-subject-slot>${subjectSelectMarkup(data.className, data.subject)}</span></label>
       <label>Batch / Group<input name="group" maxlength="80" list="examAssignedGroups" value="${esc(data.group || '')}" placeholder="Full-class assignment হলে ফাঁকা রাখুন"><datalist id="examAssignedGroups">${[...new Set(listTeacherAssignments('teacher.apc').filter(item => item.group).map(item => item.group))].map(group => `<option value="${esc(group)}"></option>`).join('')}</datalist></label>
       ${field('startAt', type === 'mcq' ? 'শুরুর সময় *' : 'প্রশ্ন ডাউনলোড শুরুর সময় *', 'datetime-local', 'required')}${field('endAt', type === 'mcq' ? 'সবার জন্য শেষ সময় *' : 'আজকের প্রস্তুতির শেষ সময় *', 'datetime-local', 'required')}
       <p class="exam-note">সময় এই মোবাইলের স্থানীয় সময় অনুযায়ী। পরীক্ষার তারিখ ও সময়কাল নিচে আলাদা করে দেখানো হয়। ${type === 'mcq' ? 'মোট দুইবার; চলমান প্রথম-প্রচেষ্টার গড়ের নিচে থাকলে দ্বিতীয় সুযোগ। সময় বাড়বে না। সেরা নম্বর ফলাফলে থাকবে।' : 'শুরুর তারিখের পরের দিন (বাংলাদেশ সময়) ক্লাসে পরীক্ষা হবে। শিক্ষার্থী PDF নেবে, খাতায় উত্তর দেবে।'}</p>
@@ -292,6 +315,12 @@ export function initExamManager(container, role) {
         ? `পরীক্ষার তারিখ: ${examDateShort(examDateFor(type, startAt))} • সময়কাল: ${durationLabel((endAt - startAt) / 60000)}`
         : 'সঠিক শুরু ও শেষ সময় দিন।';
     }
+    function repaintSubjects() {
+      const slot = $('[data-exam-subject-slot]');
+      if (!slot) return;
+      const current = String($('[name=subject]')?.value || data.subject || '');
+      slot.innerHTML = subjectSelectMarkup($('[name=className]').value, current);
+    }
     function preview() {
       try {
         const questions = parseQuestions($('[name=template]').value, type);
@@ -305,6 +334,8 @@ export function initExamManager(container, role) {
       const sample = selectedTemplate();
       if (sample) $('[data-copy-template]').value = sample;
     });
+    $('[name=className]').addEventListener('input', repaintSubjects);
+    $('[name=className]').addEventListener('change', repaintSubjects);
     $('[name=template]').addEventListener('input', preview);
     $('[name=startAt]')?.addEventListener('change', refreshIdentity);
     $('[name=endAt]')?.addEventListener('change', refreshIdentity);

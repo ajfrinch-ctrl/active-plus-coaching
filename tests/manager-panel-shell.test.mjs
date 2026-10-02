@@ -59,12 +59,23 @@ test('Manager alone assigns Teacher class/batch scope through the Teachers workf
   ctx.click(ctx.$('#managerMoreMenu [data-manager-view="teachers"]'));
   await ctx.waitFor(() => ctx.$('#managerTeacherAssignmentForm [name=className]')?.options.length > 1);
   const form = ctx.$('#managerTeacherAssignmentForm');
-  form.elements.className.value = 'দশম শ্রেণি'; form.elements.group.value = 'বিজ্ঞান বিভাগ'; form.elements.subject.value = 'গণিত';
+  // The subject picker is a checkbox list fed by Admin's Academic setup: it only
+  // fills once a class is chosen, which is the cascading step tested here.
+  form.elements.className.value = 'দশম শ্রেণি';
+  form.elements.className.dispatchEvent(new ctx.window.Event('change', { bubbles: true }));
+  form.elements.group.value = 'বিজ্ঞান বিভাগ';
+  await ctx.waitFor(() => form.querySelectorAll('#managerTeacherSubjectList input[name=subject]').length > 0);
+  const boxes = [...form.querySelectorAll('#managerTeacherSubjectList input[name=subject]')];
+  const maths = boxes.find(box => box.value === 'গণিত');
+  assert.ok(maths, 'Admin-enabled subject list must offer গণিত for দশম শ্রেণি');
+  maths.checked = true;
   ctx.submit(form);
   await ctx.waitFor(() => ctx.window.localStorage.getItem(TEACHER_ASSIGNMENTS_KEY) !== null);
   const saved = JSON.parse(ctx.window.localStorage.getItem(TEACHER_ASSIGNMENTS_KEY));
   assert.equal(saved.length, 1); assert.equal(saved[0].teacherUsername, 'teacher.apc');
-  assert.equal(saved[0].className, 'দশম শ্রেণি'); assert.equal(saved[0].group, 'বিজ্ঞান বিভাগ'); assert.equal(saved[0].subject, 'গণিত');
+  assert.equal(saved[0].className, 'দশম শ্রেণি'); assert.equal(saved[0].group, 'বিজ্ঞান বিভাগ');
+  assert.deepEqual(saved[0].subjects, ['গণিত']);
+  assert.equal(saved[0].subject, 'গণিত');
   assert.equal(ctx.$('#managerTeacherList').textContent.includes('দশম শ্রেণি'), true);
 });
 

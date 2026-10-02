@@ -1,7 +1,8 @@
 /* Local exam workflow adapter, NOT secure online authentication/proctoring.
    A production API must own authorization, time, answer keys and accepted submissions. */
 import { teachingRepository, DEMO_TEACHER } from './teaching-data.js';
-import { isTeacherAssigned } from './teacher-assignments.js';
+import { isTeacherAssigned, subjectsForTeacherClass } from './teacher-assignments.js';
+import { isSubjectEnabled } from './academics.js';
 import { hasStaffSession, readStaffAccount } from './staff-auth.js';
 import { enabledClasses } from './config.js';
 import { KEYS, readRaw, writeRaw, newId } from './database.js';
@@ -661,6 +662,16 @@ export const examRepository = {
     if (actor.role === 'teacher') {
       const username = String((await readStaffAccount('teacher'))?.username || 'teacher.apc');
       if (!isTeacherAssigned(username, fields.className, fields.group)) fail('এই class/batch-এর জন্য Manager assignment নেই।');
+      /* Subject-level scope: the teacher must hold the subject in that class.
+         A legacy assignment whose subjects are not part of the Admin structure
+         (or an exam that already carried this subject) keeps working — the
+         structure only gates new selections. */
+      const assignedSubjects = subjectsForTeacherClass(username, fields.className);
+      const academic = assignedSubjects.filter(name => isSubjectEnabled(fields.className, name));
+      const sameAsStored = input.id && read().exams.some(exam => exam.id === input.id && exam.subject === fields.subject);
+      if (!sameAsStored && academic.length && !academic.some(name => String(name).toLowerCase() === String(fields.subject).toLowerCase())) {
+        fail(`এই ক্লাসে আপনার “${fields.subject}” বিষয়ের বরাদ্দ নেই। Manager প্রথমে বিষয়টি বরাদ্দ করুন।`);
+      }
     }
     const db = await mutate(db => {
       const old = input.id ? examById(db, input.id) : null;

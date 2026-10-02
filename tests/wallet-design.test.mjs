@@ -62,7 +62,7 @@ test('student, manager and teacher have eight real, named service shortcuts', ()
 
 test('secondary screens have accessible home/back controls and staff More has round icons', () => {
   for (const [name, attribute, target, count] of [
-    ['index', 'data-view', 'home', 5], ['admin', 'data-admin-view', 'dashboard', 10],
+    ['index', 'data-view', 'home', 5], ['admin', 'data-admin-view', 'dashboard', 11],
     ['manager', 'data-manager-view', 'dashboard', 13], ['teacher', 'data-teacher-view', 'home', 8]
   ]) {
     const document = doc(name);

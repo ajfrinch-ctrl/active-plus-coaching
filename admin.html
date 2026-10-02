@@ -298,6 +298,14 @@
         <div class="app-control-grid" id="securityPanels"></div>
       </section>
 
+      <!-- Academic Setup: the single source of truth for classes and subjects -->
+      <section class="admin-view" data-view-panel="academics" aria-labelledby="academicSetupTitle">
+        <div class="page-intro"><button class="pay-back" type="button" data-admin-view="dashboard" aria-label="ফিরে যান"><svg class="apc-glyph-icon" data-icon="back" data-icon-set="active-plus-color" data-icon-version="1" data-icon-style="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20 12H4m6-6-6 6 6 6"/></svg></button>
+          <div><p class="eyebrow">Academic Setup</p><h1 id="academicSetupTitle">ক্লাসের বিষয় ঠিক করুন</h1><p>এখানে ঠিক করা তালিকা থেকেই পরীক্ষা, রুটিন, শিক্ষক বরাদ্দ, নোটিশ ও পড়াশোনার বিষয় আসবে।</p></div>
+        </div>
+        <div id="adminAcademics"></div>
+      </section>
+
       <!-- System Settings -->
       <section class="admin-view" data-view-panel="settings" aria-labelledby="appManagementTitle">
         <div class="page-intro"><button class="pay-back" type="button" data-admin-view="dashboard" aria-label="হোমে ফিরুন"><svg class="apc-glyph-icon" data-icon="back" data-icon-set="active-plus-color" data-icon-version="1" data-icon-style="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20 12H4m6-6-6 6 6 6"/></svg></button>
@@ -429,6 +437,11 @@
           <button class="admin-more-item" type="button" data-admin-view="security" data-admin-cap="security.manage">
             <span class="admin-more-icon" aria-hidden="true"></span>
             <span class="admin-more-copy"><strong>সিকিউরিটি</strong><small>সেশন, পাসওয়ার্ড নীতি ও সুরক্ষিত অ্যাকাউন্ট</small></span>
+            <svg class="admin-menu-arrow apc-glyph-icon" data-icon="arrow-right" data-icon-set="active-plus-color" data-icon-version="1" data-icon-style="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 12h16m-6-6 6 6-6 6"/></svg>
+          </button>
+          <button class="admin-more-item" type="button" data-admin-view="academics" data-admin-cap="settings.manage">
+            <span class="admin-more-icon" aria-hidden="true"></span>
+            <span class="admin-more-copy"><strong>ক্লাসের বিষয় ঠিক করুন</strong><small>কোন ক্লাসে কোন বিষয় পড়ানো হবে</small></span>
             <svg class="admin-menu-arrow apc-glyph-icon" data-icon="arrow-right" data-icon-set="active-plus-color" data-icon-version="1" data-icon-style="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 12h16m-6-6 6 6-6 6"/></svg>
           </button>
           <button class="admin-more-item" type="button" data-admin-view="settings" data-admin-cap="settings.manage">

@@ -16,7 +16,8 @@ import { matchesStudentQuery } from './student-search.js';
 import { registerServiceWorker } from './service-worker.js';
 import { initFixedShell } from './fixed-shell.js';
 import { initExamManager } from './exam-manager.js';
-import { listTeacherAssignments, saveTeacherAssignment, deleteTeacherAssignment, TEACHER_ASSIGNMENTS_KEY } from './teacher-assignments.js';
+import { listTeacherAssignments, saveTeacherAssignment, deleteTeacherAssignment, deleteAssignmentSubject, selectableSubjects, TEACHER_ASSIGNMENTS_KEY } from './teacher-assignments.js';
+import { listClasses } from './academics.js';
 import { mountReports, refreshReports } from './reports.js';
 import { iconElement } from './icons.js';
 
@@ -32,14 +33,14 @@ const MANAGER_VIEWS = Object.freeze(['dashboard', 'students', 'approvals', 'clas
    it is reached from. Labels stay Bangla like the bottom bar; the hint names
    what actually happens inside. */
 const MORE_MODULES = Object.freeze([
-  { view: 'classes', icon: 'book', label: 'ক্লাস ও ব্যাচ', hint: 'শ্রেণি, ব্যাচ ও বিষয় তালিকা' },
-  { view: 'teachers', icon: 'users', label: 'শিক্ষক', hint: 'Teacher assignment ও ক্লাস বণ্টন' },
+  { view: 'classes', icon: 'book', label: 'ক্লাস পরিচালনা করুন', hint: 'শ্রেণি, ব্যাচ ও বিষয় তালিকা' },
+  { view: 'teachers', icon: 'users', label: 'শিক্ষককে ক্লাস ও বিষয় দিন', hint: 'কোন শিক্ষক কোন ক্লাসে কোন বিষয় পড়াবেন' },
   { view: 'finance', icon: 'wallet', label: 'ফি ও পেমেন্ট', hint: 'পেমেন্ট যাচাই, বকেয়া ও কালেকশন' },
   { view: 'cash-counter', icon: 'receipt', label: 'ক্যাশ কাউন্টার', hint: 'কাউন্টার এন্ট্রি ও আদায়ের অবস্থা' },
-  { view: 'notices', icon: 'notice', label: 'নোটিশ', hint: 'নোটিশ তৈরি, সম্পাদনা ও মুছে ফেলা' },
-  { view: 'routine', icon: 'calendar', label: 'রুটিন', hint: 'দিনভিত্তিক ক্লাস ও শিক্ষক সাজানো' },
-  { view: 'exams', icon: 'exam', label: 'পরীক্ষা', hint: 'পরীক্ষা তৈরি, প্রশ্ন ও প্রকাশ' },
-  { view: 'results', icon: 'result', label: 'ফলাফল', hint: 'নম্বর যাচাই ও ফলাফল প্রকাশ' },
+  { view: 'notices', icon: 'notice', label: 'নোটিশ দিন', hint: 'নোটিশ তৈরি, সম্পাদনা ও মুছে ফেলা' },
+  { view: 'routine', icon: 'calendar', label: 'ক্লাস রুটিন তৈরি করুন', hint: 'দিনভিত্তিক ক্লাস ও শিক্ষক সাজানো' },
+  { view: 'exams', icon: 'exam', label: 'পরীক্ষা পরিচালনা করুন', hint: 'পরীক্ষা তৈরি, প্রশ্ন, অনুমোদন ও প্রকাশ' },
+  { view: 'results', icon: 'result', label: 'ফলাফল দেখুন', hint: 'নম্বর যাচাই ও ফলাফল প্রকাশ' },
   { view: 'reports', icon: 'reports', label: 'রিপোর্ট', hint: 'রিপোর্ট তৈরি, প্রিভিউ ও ডাউনলোড' },
   { view: 'profile', icon: 'user', label: 'ম্যানেজার প্রোফাইল', hint: 'নিজের পরিচয় ও পাসওয়ার্ড' }
 ]);
@@ -154,13 +155,36 @@ function renderClasses() {
     return `<article class="manager-record"><div class="manager-record-head"><div><h2>${escapeHtml(className)}</h2><p class="manager-meta">${escapeHtml(classCodes[className] || '')}</p></div><span class="badge badge-approved">${bn(classStudents.length)} শিক্ষার্থী</span></div><p>Batch/Group: ${escapeHtml(groups.join(', ') || 'তথ্য নেই')}</p><p>Assigned teacher: ${escapeHtml(teacherNames.join(', ') || 'রুটিনে নেই')}</p></article>`;
   }).join('');
 }
+/** Step 3 of the assignment form: only the subjects Admin enabled for the
+    chosen class (plus any legacy value already on the record, so nothing is
+    stranded). One class → several ticked subjects → several assignments. */
+function renderTeacherSubjectPicker(className, selected = []) {
+  const box = $('#managerTeacherSubjectList');
+  const note = $('[data-teacher-subject-note]');
+  if (!box) return;
+  const chosen = [...new Set([...selected, ...[...box.querySelectorAll('input[name=subject]:checked')].map(input => input.value)])];
+  if (!className) {
+    box.innerHTML = '<p class="admin-empty">আগে ক্লাস নির্বাচন করুন — তারপর সেই ক্লাসের বিষয়গুলো দেখবেন।</p>';
+    if (note) note.textContent = 'Admin-এর ক্লাস ও বিষয় সেটআপ থেকেই এই তালিকা আসে।';
+    return;
+  }
+  const options = selectableSubjects(className, { includeLegacy: chosen });
+  box.innerHTML = options.length
+    ? options.map(name => `<label class="manager-subject-option"><input type="checkbox" name="subject" value="${escapeHtml(name)}" ${chosen.includes(name) ? 'checked' : ''}> ${escapeHtml(name)}</label>`).join('')
+    : '<p class="admin-empty">এই ক্লাসের জন্য Admin কোনো বিষয় চালু করেননি — Admin → ক্লাস ও বিষয় সেটআপ থেকে চালু করুন।</p>';
+  if (note) note.textContent = options.length ? `${bn(options.length)}টি বিষয় চালু আছে — একাধিক টিক দিতে পারবেন।` : '';
+}
 async function renderTeachers() {
   const teacher = await readStaffAccount('teacher');
   const form = $('#managerTeacherAssignmentForm');
   if (form) {
     form.elements.teacherName.value = teacher?.fullName || 'Teacher profile unavailable';
     form.elements.teacherUsername.value = teacher?.username || '';
-    form.elements.className.innerHTML = `<option value="">শ্রেণি নির্বাচন</option>${enabledClasses.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('')}`;
+    const classes = listClasses().map(item => item.name);
+    const choices = classes.length ? classes : [...enabledClasses];
+    form.elements.className.innerHTML = `<option value="">শ্রেণি নির্বাচন</option>${choices.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('')}`;
+    form.elements.className.value = choices[0] || '';
+    renderTeacherSubjectPicker(form.elements.className.value);
   }
   const assignments = teacher ? listTeacherAssignments(teacher.username) : [];
   const schedule = new Map();
@@ -171,7 +195,11 @@ async function renderTeachers() {
     schedule.get(key).push(`${item.className || 'ক্লাস নেই'} • ${item.subject || 'বিষয় নেই'} • ${dayLabel[day] || day} ${item.time || ''}`);
   }));
   const activityCount = (teaching.activities || []).filter(item => item.teacherId === 'TCH-001').length;
-  const cards = assignments.map(item => `<article class="manager-record"><div class="manager-record-head"><div><h2>${escapeHtml(item.className)}${item.group ? ` • ${escapeHtml(item.group)}` : ''}</h2><p class="manager-meta">${escapeHtml(item.subject)} • ${escapeHtml(item.teacherName)}</p></div><button class="mini-btn reject" type="button" data-manager-action="delete-teacher-assignment" data-id="${escapeHtml(item.id)}">Assignment সরান</button></div></article>`);
+  const cards = assignments.map(item => {
+    const subjects = (item.subjects && item.subjects.length ? item.subjects : [item.subject]).filter(Boolean);
+    const chips = subjects.map(name => `<span class="manager-subject-chip">${escapeHtml(name)}<button class="mini-btn reject" type="button" data-manager-action="delete-teacher-subject" data-id="${escapeHtml(item.id)}" data-subject="${escapeHtml(name)}" aria-label="${escapeHtml(name)} সরান">×</button></span>`).join('');
+    return `<article class="manager-record"><div class="manager-record-head"><div><h2>${escapeHtml(item.className)}${item.group ? ` • ${escapeHtml(item.group)}` : ''}</h2><p class="manager-meta">${escapeHtml(item.teacherName)} • ${bn(subjects.length)}টি বিষয়</p><div class="manager-subject-chips">${chips}</div></div><button class="mini-btn reject" type="button" data-manager-action="delete-teacher-assignment" data-id="${escapeHtml(item.id)}">Assignment সরান</button></div></article>`;
+  });
   const routineRows = [...schedule.entries()].flatMap(([name, items]) => items.map(item => `<li>${escapeHtml(name)} — ${escapeHtml(item)}</li>`));
   $('#managerTeacherList').innerHTML = `${cards.join('') || '<p class="admin-empty">এখনো কোনো Teacher class/batch assignment নেই। Teacher panel-এ assignment না থাকলে academic data access বন্ধ থাকবে।</p>'}<article class="manager-record"><h2>Routine schedule</h2><p>নিচের routine entries আলাদা schedule data; এগুলো নিজেরা Teacher access grant করে না।</p><ul>${routineRows.join('') || '<li>কোনো routine assignment নেই।</li>'}</ul><p class="manager-meta">সংরক্ষিত teaching activities: ${bn(activityCount)}</p></article>`;
 }
@@ -413,17 +441,32 @@ $('#managerRoutineList').addEventListener('click', async event => {
     rows.splice(index, 1); if (!saveRoutine(routine)) return toast('Routine সংরক্ষণ হয়নি।', true); renderRoutine(); toast('Routine entry মুছে ফেলা হয়েছে।');
   }
 });
+$('#managerTeacherAssignmentForm').addEventListener('change', event => {
+  if (event.target.name !== 'className') return;
+  renderTeacherSubjectPicker(event.target.value);
+});
 $('#managerTeacherAssignmentForm').addEventListener('submit', async event => {
   event.preventDefault();
   const form = event.currentTarget;
   if (!(await managerGuard())) return toast('Manager session যাচাই হয়নি।', true);
   const data = new FormData(form);
   try {
-    await saveTeacherAssignment({ className: data.get('className'), group: data.get('group'), subject: data.get('subject') });
+    const subjects = data.getAll('subject').map(String).filter(Boolean);
+    await saveTeacherAssignment({ className: data.get('className'), group: data.get('group'), subjects });
     form.reset(); await renderTeachers(); await loadOperationalData(); toast('Teacher assignment সংরক্ষণ হয়েছে।');
   } catch (error) { toast(error.message || 'Assignment সংরক্ষণ হয়নি।', true); }
 });
 $('#managerTeacherList').addEventListener('click', async event => {
+  const subjectButton = event.target.closest('[data-manager-action="delete-teacher-subject"]');
+  if (subjectButton) {
+    if (!(await managerGuard())) return toast('Manager session যাচাই হয়নি।', true);
+    try {
+      await deleteAssignmentSubject(subjectButton.dataset.id, subjectButton.dataset.subject);
+      await renderTeachers();
+      toast('বিষয়টি assignment থেকে সরানো হয়েছে — বাকি বিষয় অক্ষত আছে।');
+    } catch (error) { toast(error.message || 'বিষয় সরানো হয়নি।', true); }
+    return;
+  }
   const button = event.target.closest('[data-manager-action="delete-teacher-assignment"]');
   if (!button || !window.confirm('এই Teacher assignment সরাবেন?')) return;
   if (!(await managerGuard())) return toast('Manager session যাচাই হয়নি।', true);
