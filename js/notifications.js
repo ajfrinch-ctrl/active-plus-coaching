@@ -25,6 +25,10 @@ import {
   SEEN_KEY_PREFIX, SHOWN_KEY, INAPP_KEY_PREFIX, claimDelivery, planInAppAlerts, clearedRecord, nextExamBoundary, notificationFeed,
   planDeliveries, pushPayload, seenRecord, viewerKeyOf
 } from './notification-rules.js';
+import {
+  listNotifications, markAllRead, markDelivered, markRead, notificationSettings,
+  saveNotificationSettings, syncNotifications, unreadCount, unreadNotifications
+} from './notification-store.js';
 
 /* A notification tapped while no app window was open: the service worker
    leaves the payload here and opens the panel, which picks it up once. */
@@ -330,7 +334,8 @@ function queueInAppAlerts(feed, full) {
 export function takeInAppAlerts() {
   if (!viewer || !alertQueue.length) return [];
   const current = new Map(buildFeed().map(item => [item.key, item]));
-  const items = alertQueue.map(item => current.get(item.key)).filter(Boolean);
+  // A sample the person asked for has no feed item behind it; it is shown once.
+  const items = alertQueue.map(item => current.get(item.key) || (item.preview ? item : null)).filter(Boolean);
   alertQueue = [];
   if (items.length) writeInApp([...new Set([...(readInApp() || []), ...items.map(item => item.key)])]);
   return items;
@@ -404,8 +409,26 @@ export function markAllSeen() {
   return { count: keys.length, saved };
 }
 
+/* The person's own switches (Settings → Notification Settings) sit on top of
+   the app-wide config: both have to allow a notification before it is shown. */
+function userSettings() {
+  try { return notificationSettings(viewerKey); } catch { return { ...NOTIFICATION_FALLBACK }; }
+}
+const NOTIFICATION_FALLBACK = Object.freeze({ enabled: true, sound: true, background: true, inApp: true });
+
 function notificationsEnabled() {
-  try { return loadAppConfig().pushNotifications !== false; } catch { return true; }
+  try { if (loadAppConfig().pushNotifications === false) return false; } catch { /* config unreadable */ }
+  return userSettings().enabled !== false;
+}
+
+/** Only the system/tray half is switchable by the background switch. */
+function systemNotificationsEnabled() {
+  return notificationsEnabled() && userSettings().background !== false;
+}
+
+/** The card inside the app, which needs no phone permission at all. */
+function inAppNotificationsEnabled() {
+  return notificationsEnabled() && userSettings().inApp !== false;
 }
 
 function permission() {
@@ -451,8 +474,35 @@ function deliver(item) {
   const payload = pushPayload(item);
   Promise.resolve()
     .then(() => showSystemNotification(payload.title, notificationOptions(payload)))
+    .then(() => markDelivered(viewerKey, [item.key]))
     .catch(error => console.warn('[Active Plus] notification not shown:', error?.name || 'unknown'));
   window.dispatchEvent(new CustomEvent('apc-notification', { detail: item }));
+}
+
+/* ---- Sound ------------------------------------------------------------------- */
+
+/* A two-note chime, built with the Web Audio API (no asset, no network). The
+   browser may refuse before the first tap on the page; that is expected and the
+   card still shows. */
+function playTone() {
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return false;
+    const context = new Ctx();
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.type = 'sine';
+    oscillator.frequency.value = 880;
+    gain.gain.value = 0.05;
+    oscillator.connect(gain).connect(context.destination);
+    const now = context.currentTime;
+    oscillator.start(now);
+    gain.gain.setValueAtTime(0.05, now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
+    oscillator.stop(now + 0.36);
+    oscillator.addEventListener('ended', () => { try { context.close(); } catch { /* already closed */ } });
+    return true;
+  } catch { return false; }
 }
 
 /* ---- Refresh loop ------------------------------------------------------------ */
@@ -466,7 +516,10 @@ export function refreshNotifications() {
   const feed = full.filter(item => !cleared.has(item.key));
   // While the device is not "armed" (see below) the list is only recorded, so a
   // fresh install or a half-finished cloud load cannot fire old news.
-  const plan = planDeliveries({ feed: full, seen: readSeen(), firstRun: !armed });
+  // What this device already knew BEFORE this refresh: the receipts are read
+  // state, so an item delivered for the first time now must stay unread.
+  const receiptsBefore = readSeen();
+  const plan = planDeliveries({ feed: full, seen: receiptsBefore, firstRun: !armed });
   plan.notify = plan.notify.filter(item => !cleared.has(item.key));
   const rulesVersion = Number(readJSON(RULES_KEY_PREFIX + viewerKey, null)?.version) || 1;
   if (rulesVersion < RULES_VERSION) {
@@ -475,10 +528,18 @@ export function refreshNotifications() {
     if (armed) writeJSON(RULES_KEY_PREFIX + viewerKey, { version: RULES_VERSION, at: Date.now() });
   }
   writeSeen(plan.seen);
+  // Every item this device knows about now has a record (id NOTIF-YYYYMMDD-0001).
+  // Items the engine had already announced are stored as read: updating the app
+  // never turns yesterday's news into unread notifications.
+  try {
+    syncNotifications({ userId: viewerKey, feed: full, legacyRead: [...receiptsBefore, ...cleared] });
+  } catch (error) {
+    console.warn('[Active Plus] notification records unavailable:', error?.name || 'unknown');
+  }
   // The in-app card needs no phone permission (owner decision 2026-09-30).
-  if (armed) queueInAppAlerts(feed, full);
+  if (armed && inAppNotificationsEnabled()) queueInAppAlerts(feed, full);
   let delivered = 0;
-  if (armed && notificationsEnabled() && permission() === 'granted') {
+  if (armed && systemNotificationsEnabled() && permission() === 'granted') {
     for (const item of plan.notify) { deliver(item); delivered += 1; }
   }
   paintPill();
@@ -649,6 +710,41 @@ function explainOff(kind) {
 
 
 
+/* A settings change or a read decision is visible everywhere at once. */
+function publish(detail = {}) {
+  try { window.dispatchEvent(new CustomEvent('apc-notifications-updated', { detail })); } catch { /* headless */ }
+}
+
+/** One sample card, requested from Settings → Notification Settings. */
+function previewNotification() {
+  const item = {
+    key: `preview:${Date.now()}`,
+    source: 'settings',
+    sourceId: 'preview',
+    kind: 'notice',
+    title: 'নোটিফিকেশন প্রিভিউ',
+    body: 'নতুন নোটিশ, পরীক্ষা ও ফলাফলের খবর ঠিক এভাবেই দেখতে পাবেন।',
+    at: Date.now(),
+    audience: 'সকল'
+  };
+  // A preview is asked for by hand, so it shows even with the in-app switch
+  // off: it is the sample, not a delivery. The tray sample still follows the
+  // permission and the background switch.
+  if (window.apcNoticeCenter?.showPreview) window.apcNoticeCenter.showPreview(item);
+  else {
+    alertQueue = [{ ...item, preview: true }, ...alertQueue];
+    publish({ preview: true });
+    window.dispatchEvent(new CustomEvent('apc-inapp-alerts', { detail: { count: alertQueue.length } }));
+  }
+  if (systemNotificationsEnabled() && permission() === 'granted') {
+    const payload = pushPayload(item);
+    void Promise.resolve()
+      .then(() => showSystemNotification(payload.title, notificationOptions(payload)))
+      .catch(error => console.warn('[Active Plus] preview notification not shown:', error?.name || 'unknown'));
+  }
+  return item;
+}
+
 export function initNotifications() {
   if (controller) return controller;
   try {
@@ -684,8 +780,43 @@ export function initNotifications() {
       if (document.visibilityState === 'visible' && armed) refreshNotifications();
     });
     if (permission() === 'granted') void registerPushTransport();
+    // The card has arrived: play the person's tone when they asked for one.
+    window.addEventListener('apc-inapp-alerts', () => {
+      if (!viewer || !inAppNotificationsEnabled() || userSettings().sound === false) return;
+      playTone();
+    });
     controller = {
       refresh: refreshNotifications,
+      unread: () => unreadCount(viewerKey),
+      unreadKeys: () => unreadNotifications(viewerKey).map(record => record.key),
+      records: () => listNotifications(viewerKey),
+      markRead: keys => {
+        const list = [...new Set((Array.isArray(keys) ? keys : [keys]).map(key => String(key || '')).filter(Boolean))];
+        if (!list.length) return 0;
+        // Both stores move together: the record holds the unread state and the
+        // receipt stops the tray from announcing the item a second time.
+        writeSeen([...new Set([...readSeen(), ...list])]);
+        const changed = markRead(viewerKey, list);
+        publish();
+        return changed;
+      },
+      markAllRead: () => {
+        markAllSeen();
+        const changed = markAllRead(viewerKey);
+        publish();
+        return changed;
+      },
+      settings: () => userSettings(),
+      saveSettings: patch => {
+        const next = saveNotificationSettings(viewerKey, patch);
+        if (next.enabled === false) pillNote = '';
+        paintPill();
+        if (next.enabled && next.background && permission() === 'granted') void registerPushTransport();
+        if (next.enabled) scheduleRefresh();
+        return next;
+      },
+      preview: () => previewNotification(),
+      playTone,
       feed: buildFeed,
       seen: seenKeys,
       markAllSeen,

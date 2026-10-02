@@ -18,6 +18,7 @@ import { initFixedShell } from './fixed-shell.js';
 import { initExamManager } from './exam-manager.js';
 import { listTeacherAssignments, saveTeacherAssignment, deleteTeacherAssignment, deleteAssignmentSubject, selectableSubjects, TEACHER_ASSIGNMENTS_KEY } from './teacher-assignments.js';
 import { listClasses } from './academics.js';
+import { initNotificationSettings } from './notification-settings.js';
 import { mountReports, refreshReports } from './reports.js';
 import { iconElement } from './icons.js';
 
@@ -511,6 +512,8 @@ async function enterManager() {
   renderView(MANAGER_VIEWS.includes(wanted) ? wanted : 'dashboard');
   onRouteChange(name => { if (MANAGER_VIEWS.includes(name) && name !== activeView) renderView(name); });
   await loadOperationalData();
+  // Settings → Notification Settings, inside the Manager's own profile page.
+  initNotificationSettings({ mount: '#notificationSettings' });
   mountReports($('#managerReports'), { panel: 'manager' });
   watchOwnPanelSession('manager');
 }

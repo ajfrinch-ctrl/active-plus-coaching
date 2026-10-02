@@ -63,7 +63,7 @@ export function showAuthScreen() {
    Reports is a More/profile sub-page. Browser
    and system Back walk the visited views; refresh and shared links reopen the
    exact view (pattern: hash router + back button). */
-const VIEW_ROUTES = Object.freeze(['home', 'routine', 'courses', 'exams', 'results', 'profile', 'reports']);
+const VIEW_ROUTES = Object.freeze(['home', 'routine', 'courses', 'exams', 'results', 'profile', 'reports', 'notification-settings']);
 
 export function viewRouteFromHash(hash = window.location.hash) {
   const name = String(hash || '').replace('#', '');
@@ -87,8 +87,12 @@ function syncViewHash(viewName, mode) {
   else window.history.replaceState(window.history.state, '', url);
 }
 
+/* Routes whose view id does not follow the `<route>View` rule (a hyphenated
+   route keeps its camelCase element id). */
+const VIEW_ID_OVERRIDES = Object.freeze({ 'notification-settings': 'notificationSettingsView' });
+
 export function setView(viewName, { history: historyMode = 'push' } = {}) {
-  const panel = document.getElementById(`${viewName}View`);
+  const panel = document.getElementById(`${viewName}View`) || document.getElementById(VIEW_ID_OVERRIDES[viewName] || '');
   if (!panel) return;
   $$('[data-view-panel]').forEach(item => item.classList.toggle('active', item === panel));
   $$('.bottom-link').forEach(item => {

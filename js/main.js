@@ -28,6 +28,7 @@ import { initStudentExams } from './student-exams.js';
 import { initStudentTeaching } from './student-teaching.js';
 import { initStudentDashboard } from './student-dashboard.js';
 import { mountReports, refreshReports } from './reports.js';
+import { initNotificationSettings } from './notification-settings.js';
 
 /* Always reveal the login shell before optional startup work. A failure in any
    secondary feature must never leave the entry page completely blank. */
@@ -248,6 +249,8 @@ initProfile({
   onStudentChange: student => { renderStudent(student); refreshTeaching(); refreshExams(); refreshReports($('#studentReports')); }
 });
 initRoutine();
+// Settings → Notification Settings: switches, permission, preview and history.
+initNotificationSettings({ mount: '#notificationSettings' });
 initConnectivity();
 // Firebase is optional during online testing; offline startup remains independent.
 // The connection smoke test is diagnostic-only and costs an extra SDK download,

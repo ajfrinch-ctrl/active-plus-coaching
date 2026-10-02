@@ -8,6 +8,7 @@ import { openStaffPasswordDialog } from './staff-password-dialog.js';
 import { loadAppConfig } from './storage.js';
 import { toBanglaNumber as bn } from './ui.js';
 import { initExamManager } from './exam-manager.js';
+import { initNotificationSettings } from './notification-settings.js';
 import { initFixedShell } from './fixed-shell.js';
 import { registerServiceWorker } from './service-worker.js';
 import { mountReports, refreshReports } from './reports.js';
@@ -437,6 +438,8 @@ async function showTeacherShell() {
   setView(TEACHER_VIEWS.includes(wanted) ? wanted : 'home');
   onRouteChange(name => { if (TEACHER_VIEWS.includes(name) && name !== state.view) setView(name); });
   const loaded = await reload();
+  // Settings → Notification Settings, inside the Teacher's profile page.
+  initNotificationSettings({ mount: '#notificationSettings' });
   mountReports($('#teacherReports'), { panel: 'teacher' });
   watchOwnPanelSession('teacher');
   return loaded;

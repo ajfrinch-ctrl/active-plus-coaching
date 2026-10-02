@@ -115,18 +115,24 @@ test('every panel ships the identical topbar: logo, slogan, bell, sign-out only'
   for (const shape of rest) assert.equal(shape, first, 'the panels no longer share one topbar design');
 });
 
-test('the bell paints the unread count and the inbox lists, escapes and marks read', async () => {
+test('the bell shows the unread count; the inbox filters unread/all and marks read on request', async () => {
   const ctx = await loadPage('manager.html');
   const { mountNoticeCenter, noticeCenter } = await import('../js/notice-center.js');
-  const seen = [];
+  const read = new Set();
   const items = [
     { key: 'notice:N1:r1', source: 'notices', sourceId: 'N1', kind: 'notice', title: 'ক্লাস বন্ধ', body: 'আগামীকাল ক্লাস বন্ধ।', at: Date.parse('2026-09-29T10:00:00Z'), audience: 'সকল শিক্ষার্থী' },
     { key: 'broadcast:evil', source: 'settings', sourceId: 'broadcast', kind: 'broadcast', title: 'জরুরি ঘোষণা', body: '<img src=x onerror=alert(1)> সাবধান', at: 0, audience: 'সকল' }
   ];
+  let seenAll = 0;
+  const unreadItems = () => items.filter(item => !read.has(item.key));
   const api = {
     feed: () => items,
-    seen: () => seen.slice(),
-    markAllSeen: () => { seen.push(...items.map(item => item.key)); return { count: seen.length, saved: true }; },
+    unread: () => unreadItems().length,
+    unreadKeys: () => unreadItems().map(item => item.key),
+    records: () => items.map(item => ({ ...item, read: read.has(item.key) })),
+    markRead: keys => { keys.forEach(key => read.add(key)); return keys.length; },
+    seen: () => [...read],
+    markAllSeen: () => { seenAll += 1; items.forEach(item => read.add(item.key)); return { count: seenAll, saved: true }; },
     pushSupport: async () => ({ supported: true, secureContext: true, permission: 'default', hasVapidKey: false }),
     enable: async () => ({ ok: true, status: 'granted' }),
     disable: async () => ({ ok: true, status: 'off' }),
@@ -139,19 +145,43 @@ test('the bell paints the unread count and the inbox lists, escapes and marks re
 
   const bell = ctx.$('#notificationButton');
   const dot = ctx.$('#notificationButton .notification-dot');
-  assert.equal(dot.hidden, false, 'the unread dot is hidden while two items are unread');
+  assert.equal(dot.hidden, false, 'the badge is hidden while two items are unread');
+  assert.equal(dot.textContent, '২', 'the badge shows the exact count');
   assert.equal(bell.getAttribute('aria-label'), 'নোটিফিকেশন — ২টি অপঠিত');
 
   ctx.click(bell);
   const modal = ctx.document.querySelector('#apcNoticeModal');
   assert.ok(modal, 'the inbox modal was not created on a staff panel');
   assert.equal(modal.hidden, false, 'the inbox did not open');
-  assert.deepEqual(seen, ['notice:N1:r1', 'broadcast:evil'], 'opening the inbox did not mark everything read');
-  assert.equal(dot.hidden, true, 'the unread dot survived a read');
-  assert.equal(bell.getAttribute('aria-label'), 'নোটিফিকেশন — সব পড়া হয়েছে');
+  // Opening the list is not reading it: the badge and the unread cards stay.
+  assert.equal(seenAll, 0, 'opening the inbox must not mark everything read');
+  assert.equal(dot.hidden, false, 'the badge survived opening the list');
   assert.equal(modal.querySelectorAll('.notice-detail').length, 2);
-  assert.equal(modal.querySelector('[data-apc-notice-status]').textContent, 'সব নোটিফিকেশন পড়া হয়েছে।');
+  assert.equal(modal.querySelectorAll('.notice-detail.unread').length, 2);
+  assert.equal(modal.querySelector('[data-apc-notice-status]').textContent, '২টি অপঠিত নোটিফিকেশন');
   assert.equal(modal.querySelectorAll('img').length, 0, 'an item body injected markup');
+  assert.ok(modal.querySelector('[data-apc-notice-empty]') === null, 'the empty card is not shown while items exist');
+
+  // "সব" shows the same two; the unread tab comes back to them.
+  ctx.click(modal.querySelector('[data-apc-notice-filter="all"]'));
+  assert.equal(modal.querySelectorAll('.notice-detail').length, 2);
+  ctx.click(modal.querySelector('[data-apc-notice-filter="unread"]'));
+  assert.equal(modal.querySelectorAll('.notice-detail').length, 2);
+
+  // The explicit action reads them and the badge goes away.
+  ctx.click(modal.querySelector('[data-apc-notice-read-all]'));
+  assert.equal(dot.hidden, true, 'the badge stayed after reading everything');
+  assert.equal(bell.getAttribute('aria-label'), 'নোটিফিকেশন — সব পড়া হয়েছে');
+  assert.equal(modal.querySelector('[data-apc-notice-status]').textContent, 'সব নোটিফিকেশন পড়া হিসেবে চিহ্নিত করা হয়েছে।');
+  assert.ok(modal.querySelector('[data-apc-notice-read-all]').hidden, 'the read-all action hides when nothing is unread');
+
+  // Nothing unread left: a checked card, and no acknowledgement buttons.
+  const empty = modal.querySelector('[data-apc-notice-empty]');
+  assert.ok(empty, 'the empty state is shown');
+  assert.match(empty.textContent, /সব নোটিফিকেশন দেখা হয়েছে/);
+  assert.match(empty.textContent, /নতুন কোনো নোটিফিকেশন নেই/);
+  assert.equal(empty.querySelectorAll('button').length, 0, 'the empty state offers no buttons');
+  assert.doesNotMatch(modal.textContent, /বুঝেছি|ঠিক আছে|আমি বুঝেছি/, 'no acknowledgement wording is left');
 
   // The switch for tray notifications is offered right in the inbox.
   await ctx.waitFor(() => Boolean(modal.querySelector('[data-apc-notice-push] button')));
@@ -182,8 +212,10 @@ test('a receipt that cannot be saved keeps the message list honest', async () =>
   ctx.click(ctx.$('#notificationButton'));
   const modal = ctx.document.querySelector('#apcNoticeModal');
   assert.equal(modal.hidden, false);
-  assert.equal(modal.querySelector('[data-apc-notice-status]').textContent, 'পড়ার অবস্থা এইবারের জন্য রাখা হয়েছে; ডিভাইসে সংরক্ষণ হয়নি।');
   assert.equal(modal.querySelectorAll('.notice-detail').length, 1, 'the list still renders');
+  // This engine only offers markAllSeen, and its receipt cannot be saved.
+  ctx.click(modal.querySelector('[data-apc-notice-read-all]'));
+  assert.equal(modal.querySelector('[data-apc-notice-status]').textContent, 'পড়ার অবস্থা এইবারের জন্য রাখা হয়েছে; ডিভাইসে সংরক্ষণ হয়নি।');
   // An unsupported browser is explained instead of offering a dead button.
   await ctx.waitFor(() => modal.querySelector('[data-apc-notice-push]').textContent.trim().length > 0);
   assert.equal(modal.querySelector('[data-apc-notice-push] button'), null);
