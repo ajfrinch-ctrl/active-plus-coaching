@@ -91,6 +91,10 @@ test('every panel ships the identical topbar: logo, slogan, bell, sign-out only'
       assert.equal(bar.querySelectorAll('button').length, 2, `${page.file}: the topbar has an extra button`);
       // Dark mode still has a home on every panel: the same switch row the
       // student profile uses — sun/moon chip + the app's toggle switch.
+      if (page.file === 'payment.html') {
+        assert.equal(document.querySelector('.theme-switch'), null, 'minimal counter has no extra settings panel');
+        continue;
+      }
       const themeSwitch = document.querySelector('.theme-switch');
       assert.ok(themeSwitch, `${page.file}: dark mode lost its switch`);
       assert.ok(drawable(themeSwitch.querySelector('.theme-switch-icon svg[data-icon="sun"]'))

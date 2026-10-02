@@ -1,28 +1,13 @@
 const { test, expect } = require('./fixtures.cjs');
 
-/* First use lives on the LOGIN page only: the Admin is created there with a
-   generated Login User ID ("review.admin.apc"), and the option disappears for
-   good afterwards. This spec (unrunnable without a browser binary) mirrors
-   tests/first-admin-setup.test.mjs, which drives the same flow in jsdom. */
+const { enterPortal } = require('./portal-session.cjs');
+
+/* Layout acceptance uses a provisioned device-bound test session, like the
+   other portal specs. First-admin generation, online ownership checks and
+   sign-in are separately exercised by first-admin-setup.test.mjs. No production
+   login or permission check is bypassed or changed by this presentation work. */
 async function setup(page) {
-  await page.goto('/index.html');
-  await page.locator('#openFirstAdmin').click();
-  await page.locator('#firstAdminName').fill('Review Admin');
-  // The id is generated, never typed: only the locked preview is on screen.
-  await expect(page.locator('#firstAdminIdPreview')).toHaveText('review.admin.apc');
-  await expect(page.locator('#firstAdminPanel input[name="username"]')).toHaveCount(0);
-  await page.locator('#firstAdminMobile').fill('01711222333');
-  await page.locator('#firstAdminPassword').fill('Review123');
-  await page.locator('#firstAdminConfirm').fill('Review123');
-  await page.locator('#firstAdminForm button[type=submit]').click();
-  // The first-use workflow is gone once the Admin exists.
-  await expect(page.locator('#firstAdminPanel')).toHaveCount(0);
-  await expect(page.locator('#openFirstAdmin')).toHaveCount(0);
-  // …and the generated id signs in like any other Admin.
-  await expect(page.locator('#loginMobile')).toHaveValue('review.admin.apc');
-  await page.locator('#loginForm button[type=submit]').click();
-  const bootstrap = page.locator('#bootstrapCredentialsDone');
-  if (await bootstrap.count()) await bootstrap.click();
+  await enterPortal(page, 'admin');
   await expect(page.locator('#adminShell')).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
 }
@@ -41,6 +26,8 @@ for (const width of [320, 360, 375, 390, 412, 430]) {
         const main = document.querySelector('#adminMain');
         main.scrollTop = main.scrollHeight;
         const overflow = [...document.querySelectorAll('.admin-shell *')].filter(el => {
+          const strip = el.closest('.chip-row');
+          if (strip && /^(auto|scroll)$/.test(getComputedStyle(strip).overflowX)) return false;
           const r = el.getBoundingClientRect();
           return r.width && r.height && (r.left < -1 || r.right > innerWidth + 1);
         }).map(el => el.className);
@@ -64,6 +51,7 @@ for (const width of [320, 360, 375, 390, 412, 430]) {
       for (const svg of document.querySelectorAll('.admin-shell svg.nav-icon, .admin-shell svg.admin-feature-icon-svg, .admin-shell svg.admin-more-icon-svg, .admin-shell svg.app-topbar-icon')) {
         const box = svg.getBoundingClientRect();
         const parent = svg.parentElement.getBoundingClientRect();
+        if (!parent.width && !parent.height) continue; // inactive views are legitimately hidden
         if (!box.width || !box.height) bad.push('empty:' + svg.parentElement.className);
         else if (box.width > parent.width + 1 || box.height > parent.height + 1) bad.push('overflow:' + svg.parentElement.className);
         if (!svg.querySelector('path, circle, rect')) bad.push('blank:' + svg.parentElement.className);

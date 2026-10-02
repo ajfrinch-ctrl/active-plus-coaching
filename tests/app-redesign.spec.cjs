@@ -48,6 +48,8 @@ for (const role of ['admin','manager','teacher']) test(`${role} secondary screen
   await expect(visible).toBeVisible();
   if(role!=='teacher') await expect(visible).toHaveAttribute('data-view-panel',view);
   const bad=await visible.evaluate(el=>[...el.querySelectorAll('input,select,textarea,button')].filter(x=>{
+   const strip=x.closest('.chip-row');
+   if(strip && /^(auto|scroll)$/.test(getComputedStyle(strip).overflowX)) return false;
    const r=x.getBoundingClientRect();return r.width>0&&(r.left < -1||r.right>innerWidth+1);
   }).map(el=>el.id||el.className));
   expect(bad,view).toEqual([]);

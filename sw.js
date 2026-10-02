@@ -1,9 +1,11 @@
-const CACHE_VERSION = 138;
+// v147: phone lookup with three-digit masks, running public transaction IDs
+// and readable privacy-safe payment reports. Keep today default/offline receipts.
+const CACHE_VERSION = 147;
 const CACHE_NAME = `active-plus-student-v${CACHE_VERSION}-minimal-education`;
 const APP_SHELL = [
   './css/app-polish.css',
   './css/student-record.css',
-  './css/ui-interior.css',
+  './css/ui-wallet.css',
   './js/student-record.js',
   './sync/cloud-access.js',
   './js/app-entry.js',
@@ -15,6 +17,7 @@ const APP_SHELL = [
   './js/print-tokens.js',
   './css/ui-status.css',
   './js/icons.js',
+  './js/icon-set.js',
   './css/design-system.css',
   './css/foundation.css',
   './css/ui-layout.css',
@@ -76,6 +79,13 @@ const APP_SHELL = [
   './assets/icons/app-logo.png',
   './js/appearance.js',
   './js/appearance-boot.js',
+  './js/theme-logos.js',
+  './js/copy.js',
+  './js/payment-auth.js',
+  './js/counter-data.js',
+  './js/counter-privacy.js',
+  './js/counter-report-data.js',
+  './js/counter-reports.js',
   './js/theme-entry.js',
   './assets/fonts/NotoSansBengali-Variable.ttf',
   './js/config.js',

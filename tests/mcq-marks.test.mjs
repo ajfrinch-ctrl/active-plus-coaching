@@ -10,7 +10,6 @@ import { openStaffPanel } from './staff-harness.mjs';
 
 let ctx;
 const $ = sel => ctx.$(sel);
-const settle = () => new Promise(resolve => setTimeout(resolve, 40));
 const storedExam = () => JSON.parse(ctx.window.localStorage.getItem(EXAM_KEY)).exams[0];
 
 before(async () => {
@@ -51,7 +50,7 @@ test('a saved MCQ draft stores one mark per question', async () => {
   $('input[name=endAt]').value = '2026-10-01T11:00';
   $('input[name=passPercent]').value = '33';
   ctx.submit($('#teacherExamWorkspace [data-exam-form]'));
-  await settle();
+  await ctx.waitFor(() => JSON.parse(ctx.window.localStorage.getItem(EXAM_KEY) || 'null')?.exams?.length > 0);
 
   const exam = storedExam();
   assert.equal(exam.type, 'mcq');

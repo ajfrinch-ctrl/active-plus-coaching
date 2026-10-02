@@ -140,8 +140,13 @@ function renderApprovals() {
   $('#managerPendingCount') && ( $('#managerPendingCount').textContent = bn(pending.length) );
   $('#managerStudentQueue').innerHTML = pending.length ? pending.map(student => `<article class="manager-record"><div class="manager-record-head"><div><p class="eyebrow">${escapeHtml(student.id || 'Application')}</p><h2>${escapeHtml(student.name || 'নাম নেই')}</h2></div><span class="badge badge-pending">অপেক্ষমাণ</span></div><p>শ্রেণি ${escapeHtml(student.className || '—')} • ${escapeHtml(student.group || 'Batch নেই')}</p><p>মোবাইল ${escapeHtml(student.mobile || '—')} • অভিভাবক ${escapeHtml(student.guardianMobile || '—')}</p><p class="manager-meta">আবেদন: ${escapeHtml(student.enrolledAt || 'তারিখ নেই')}</p><div class="manager-actions"><button class="mini-btn approve" type="button" data-manager-action="approve-student" data-id="${escapeHtml(student.id)}">Approve</button><button class="mini-btn reject" type="button" data-manager-action="reject-student" data-id="${escapeHtml(student.id)}">Reject</button></div></article>`).join('') : '<p class="admin-empty">এখন কোনো নিবন্ধন অনুমোদনের অপেক্ষায় নেই।</p>';
 }
+function renderRoutineClassOptions() {
+  const select = $('#managerRoutineClass'), selected = select.value;
+  select.innerHTML = `<option value="">শ্রেণি নির্বাচন</option>${enabledClasses.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('')}`;
+  select.value = enabledClasses.includes(selected) ? selected : '';
+}
 function renderClasses() {
-  $('#managerRoutineClass').innerHTML = `<option value="">শ্রেণি নির্বাচন</option>${enabledClasses.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('')}`;
+  renderRoutineClassOptions();
   $('#managerClassList').innerHTML = enabledClasses.map(className => {
     const classStudents = students.filter(student => student.className === className && student.status !== 'rejected');
     const groups = [...new Set(classStudents.map(student => student.group).filter(Boolean))];
@@ -198,6 +203,9 @@ function renderNotices() {
   $('#managerNoticeList').innerHTML = notices.length ? notices.map(item => `<article class="manager-record"><div class="manager-record-head"><div><h2>${escapeHtml(item.title)}</h2><p class="manager-meta">${escapeHtml(item.id)} • ${escapeHtml(item.audience || 'সকল শিক্ষার্থী')} • ${escapeHtml(item.date || '')}</p></div><div class="manager-actions"><button class="mini-btn" data-manager-action="edit-notice" data-id="${escapeHtml(item.id)}" type="button">Edit</button><button class="mini-btn reject" data-manager-action="delete-notice" data-id="${escapeHtml(item.id)}" type="button">Delete</button></div></div><p>${escapeHtml(item.body)}</p></article>`).join('') : '<p class="admin-empty">কোনো operational notice নেই।</p>';
 }
 function renderRoutine() {
+  // This route is reachable directly from Home/More: required class choices
+  // must not depend on visiting the unrelated Classes screen first.
+  renderRoutineClassOptions();
   $('#managerRoutineDays').innerHTML = WEEK_DAYS.map(day => `<button type="button" class="chip ${day === routineDay ? 'active' : ''}" data-routine-day="${day}">${dayLabel[day] || day}</button>`).join('');
   $('#managerRoutineDayTitle').textContent = `${dayLabel[routineDay] || routineDay} — রুটিনে ক্লাস যোগ করুন`;
   const rows = routine[routineDay]?.classes || [];

@@ -43,9 +43,13 @@ function renderRoutine(student, teachingActivities) {
   ];
   const root = $('#dashboardRoutineList');
   if (!root) return;
+  // Presentation state only: the empty home can fill the first screen without
+  // inventing classes or changing which real office/teacher records qualify.
+  $('#homeView')?.classList.toggle('is-empty-routine', cards.length === 0);
+  root.dataset.state = cards.length ? 'ready' : 'empty';
   root.innerHTML = cards.length
     ? cards.slice(0, 4).join('')
-    : `<article class="dashboard-empty-card"><span class="dashboard-empty-icon" aria-hidden="true">${iconMarkup("calendar")}</span><span><strong>আজ কোনো ক্লাস যোগ করা নেই</strong><small>নতুন ক্লাসের জন্য রুটিন দেখুন।</small></span><button type="button" data-view="routine" aria-label="রুটিন খুলুন">›</button></article>`;
+    : `<article class="challenge-card dashboard-empty-card"><span class="challenge-icon dashboard-empty-icon" aria-hidden="true">${iconMarkup("calendar")}</span><span class="challenge-copy dashboard-empty-copy"><strong>আজ কোনো ক্লাস নেই</strong><small>সময়সূচি দেখতে রুটিন খুলুন।</small></span><button class="challenge-open" type="button" data-view="routine" aria-label="রুটিন খুলুন">${iconMarkup("chevron-right", "apc-icon-svg", { variant: "glyph" })}</button></article>`;
 }
 
 function renderProgress(activities, exams, studentId) {
@@ -137,6 +141,8 @@ export function initStudentDashboard({ getStudent, getAccount }) {
       renderFees(student, account, transactions);
     } catch {
       if (current !== request) return;
+      $('#homeView')?.classList.remove('is-empty-routine');
+      $('#dashboardRoutineList').dataset.state = 'error';
       $('#dashboardRoutineList').innerHTML = '<p class="dashboard-empty">আজকের তথ্য লোড করা যায়নি। আবার চেষ্টা করুন।</p>';
     }
   }

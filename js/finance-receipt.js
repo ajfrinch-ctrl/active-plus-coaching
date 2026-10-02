@@ -1,20 +1,68 @@
-import { PRINT_COLORS } from './print-tokens.js';
 import { toBanglaNumber as bn } from './ui.js';
 import { loadAppConfig } from './storage.js';
 import { APP_TAGLINE, DEFAULT_APP_SETTINGS } from './config.js';
 import { escapeHtml as escape } from './sanitize.js';
-/* The receipt header shows the institution's own tagline and address. */
+const headerText = value => String(value ?? '').normalize('NFC').replace(/\s+/gu, ' ').trim();
+
+function firstAddressBlock(parts) {
+  const comparable = parts.map(headerText);
+  for (let size = 1; size <= parts.length / 2; size++) {
+    if (parts.length % size === 0 && comparable.every((part, index) => part === comparable[index % size])) return size;
+  }
+  return parts.length;
+}
+
+function singleAddress(value) {
+  const lines = String(value || DEFAULT_APP_SETTINGS.campusAddress)
+    .split(/\r\n?|\n/u).map(line => line.replace(/\s+/gu, ' ').trim()).filter(Boolean);
+  if (!lines.length) return DEFAULT_APP_SETTINGS.campusAddress;
+  // Collapse complete pasted address copies, not repeated city words or
+  // distinct lines. Keep the first copy's spelling and separators intact.
+  const address = lines.slice(0, firstAddressBlock(lines)).join('\n');
+  const pieces = address.split(/(\s*[•|·;—–]\s*|\s+-\s+)/u);
+  const parts = pieces.filter((_, index) => index % 2 === 0);
+  if (parts.some(part => !headerText(part))) return address;
+  const size = firstAddressBlock(parts);
+  return size < parts.length ? pieces.slice(0, size * 2 - 1).join('').trim() : address;
+}
+
+/* Older saved taglines can be "slogan • address" (or the address alone).
+ * Address now has its own line in HTML and in the shared PDF/PNG canvas.
+ * Clean only complete address components; keep custom slogans/settings intact. */
 const receiptBrand = () => {
   const cfg = loadAppConfig();
-  return { tagline: cfg.tagline || APP_TAGLINE, address: cfg.campusAddress || DEFAULT_APP_SETTINGS.campusAddress };
+  const address = singleAddress(cfg.campusAddress);
+  const original = String(cfg.tagline || APP_TAGLINE).trim();
+  const comparableOriginal = original.normalize('NFC');
+  let tagline = comparableOriginal;
+  const known = [...new Set([address, DEFAULT_APP_SETTINGS.campusAddress].map(headerText))]
+    .filter(Boolean).sort((a, b) => b.length - a.length);
+  const divider = '[•|·—–;:ঃ\\n]';
+  for (const value of known) {
+    const literal = value.split(' ').map(word => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('\\s+');
+    const component = new RegExp(`(^|\\s*${divider}\\s*)${literal}(?=\\s*(?:${divider}|$))`, 'giu');
+    tagline = tagline.replace(component, '$1');
+  }
+  if (tagline !== comparableOriginal) {
+    tagline = headerText(tagline).replace(/([•|·—–;:ঃ])(?:\s*[•|·—–;:ঃ])+/gu, '$1')
+      .replace(/^[\s•|·—–;:ঃ]+|[\s•|·—–;:ঃ]+$/gu, '');
+    if (/^(?:ঠিকানা|address)$/iu.test(tagline)) tagline = '';
+  } else {
+    tagline = original.replace(/\s+/gu, ' ');
+  }
+  return { tagline: tagline || APP_TAGLINE, address };
 };
 
 
 function receiptFields(tx) {
   return [
-    ['রসিদ নং', tx.receiptNo], ['তারিখ', tx.date],
+    ['রসিদ নং', tx.receiptNo],
+    ...(tx.transactionNo ? [['Transaction ID', tx.transactionNo]] : []),
+    ['তারিখ', tx.date],
     ['শিক্ষার্থীর নাম', tx.studentName], ['Student ID', tx.studentId],
-    ['শ্রেণি', tx.className], ['ফি এর ধরন / মাস', `${tx.feeType} • ${tx.month}`],
+    ...(tx.uniqueRoll ? [['ইউনিক রোল', tx.uniqueRoll]] : []),
+    ...(tx.className ? [['শ্রেণি', tx.className]] : []),
+    ['ফি এর ধরন / মাস', `${tx.feeType} • ${tx.month}`],
     ['পেমেন্ট মাধ্যম', tx.method], ['Trx ID / Reference', tx.trxRef || '—']
   ];
 }
@@ -38,6 +86,24 @@ export function receiptMarkup(tx, logo = 'assets/icons/app-logo.png') {
   </div>`;
 }
 
+let fontAsset;
+async function receiptFont() {
+  if (!fontAsset) fontAsset = (async () => {
+    const url = new URL('../assets/fonts/NotoSansBengali-Variable.ttf', import.meta.url).href;
+    let cached;
+    try { cached = await globalThis.caches?.match(url); }
+    catch { /* Restricted CacheStorage can still use the bundled same-origin font. */ }
+    // The installed app precaches this file. Loading cached bytes directly also
+    // works on the FIRST receipt after an offline reload: no font/PDF server,
+    // CDN, HTTP-cache priming or previously generated receipt is necessary.
+    const source = cached ? await cached.arrayBuffer() : `url("${url}")`;
+    const font = await new FontFace('ReceiptBangla', source, { weight: '100 900' }).load();
+    document.fonts.add(font);
+    return font;
+  })().catch(error => { fontAsset = null; throw error; });
+  return fontAsset;
+}
+
 let assets;
 async function receiptAssets() {
   if (!assets) assets = Promise.all([
@@ -47,17 +113,12 @@ async function receiptAssets() {
       await logo.decode();
       return logo;
     })(),
-    (async () => {
-      const url = new URL('../assets/fonts/NotoSansBengali-Variable.ttf', import.meta.url).href;
-      const font = await new FontFace('ReceiptBangla', `url("${url}")`, { weight: '100 900' }).load();
-      document.fonts.add(font);
-      return font;
-    })()
+    receiptFont()
   ]).catch(error => { assets = null; throw error; });
   return assets;
 }
 
-/** Shared logo + Bengali font loader for every offline canvas PDF (receipts and reports). */
+/** Reports/exams keep their existing logo; plain payment statements only need the font. */
 export function loadBrandAssets() { return receiptAssets(); }
 
 /** Wrap at words; split long IDs/references at grapheme boundaries, not Bangla vowel marks. */
@@ -125,79 +186,82 @@ export function imagePDF(jpeg, width, height) {
   return new Blob(chunks, { type: 'application/pdf' });
 }
 
+/** Independent, ink-saving document, never a dashboard/DOM screenshot.
+ * PDF and chat PNG share the same monochrome statement. Saved configuration
+ * is read only: the header intentionally has no slogan row to duplicate an
+ * address embedded in any legacy tagline (regardless of its punctuation). */
 export async function renderReceiptCanvas(tx) {
-  const [logo] = await receiptAssets();
+  await receiptFont(); // No logo/image dependency for offline payment statements.
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Receipt rendering unavailable');
-  const width = 760, inset = 44, columnWidth = 320;
-  const { forest, ink, muted } = PRINT_COLORS;
-  // Measure first; allocate only as much canvas as the receipt needs (mobile memory).
-  const fields = receiptFields(tx).map(([label, value]) => {
-    ctx.font = '600 18px ReceiptBangla';
-    return { label, lines: wrapText(ctx, value || '—', columnWidth) };
-  });
-  ctx.font = '400 17px ReceiptBangla';
-  const notes = wrapText(ctx, `নোট: ${tx.note || 'ফি পরিশোধ সম্পন্ন'}`, width - inset * 2);
-  const brand = receiptBrand();
-  ctx.font = '500 15px ReceiptBangla';
-  const addressLines = wrapText(ctx, brand.address, width - inset * 2);
-  const addressStep = 22; // extra address lines push the rest of the header down
-  const collector = wrapText(ctx, `আদায়কারী: ${tx.collectedBy || 'এডমিন'}`, columnWidth);
-  const rowHeights = [];
-  for (let i = 0; i < fields.length; i += 2) rowHeights.push(34 + Math.max(fields[i].lines.length, fields[i + 1].lines.length) * 27);
-  const height = 290 + (addressLines.length - 1) * addressStep + rowHeights.reduce((sum, h) => sum + h, 0) + 128 + notes.length * 26 + Math.max(68, collector.length * 26 + 24) + 44;
-  // Cap pixel count for older mobile browsers while retaining crisp text for normal receipts.
+  const width = 760, inset = 44, labelWidth = 160, valueX = inset + 180;
+  const valueWidth = width - inset - valueX;
+  const pending = tx.status === 'pending', rejected = tx.status === 'rejected';
+  const status = pending ? 'অনুমোদন বাকি' : rejected ? 'বাতিল' : 'পরিশোধিত';
+  const amountLabel = pending ? 'অনুমোদনাধীন টাকা' : rejected ? 'রেকর্ডকৃত টাকা (বাতিল)' : 'মোট পরিশোধিত টাকা';
+  const defaultNote = pending ? 'এন্ট্রি Manager-এর পর্যালোচনার অপেক্ষায়' : rejected ? 'এন্ট্রি অনুমোদিত হয়নি' : 'ফি পরিশোধ সম্পন্ন';
+  const measured = (value, available, size = 14, weight = 400) => {
+    ctx.font = `${weight} ${size}px ReceiptBangla`;
+    return wrapText(ctx, value || '—', available);
+  };
+  // Measure labels, values and footer before allocating the mobile pixel buffer.
+  const rows = [...receiptFields(tx), [amountLabel, `৳${bn(Number(tx.amount).toLocaleString('en-US'))}`]]
+    .map(([label, value], index, all) => {
+      const amount = index === all.length - 1;
+      const labels = measured(label, labelWidth);
+      const lines = measured(value, valueWidth, amount ? 18 : 16, amount ? 600 : 400);
+      return { labels, lines, amount, height: Math.max(labels.length, lines.length) * 25 + 12 };
+    });
+  const addressLines = measured(receiptBrand().address, width - inset * 2, 15);
+  const notes = [
+    ...(tx.reviewNote ? measured(`Manager-এর কারণ: ${tx.reviewNote}`, width - inset * 2) : []),
+    ...measured(`নোট: ${tx.note || defaultNote}`, width - inset * 2)
+  ];
+  const collector = measured(`আদায়কারী: ${tx.collectedBy || 'এডমিন'}`, 320);
+  const addressY = 70, addressStep = 22;
+  const titleY = addressY + (addressLines.length - 1) * addressStep + 36;
+  const statusY = titleY + 27, ruleY = statusY + 18, bodyY = ruleY + 31;
+  const notesY = bodyY + rows.reduce((sum, row) => sum + row.height, 0) + 10;
+  const footerY = notesY + notes.length * 23 + 26;
+  const height = footerY + Math.max(32, collector.length * 23) + 40;
   const scale = Math.min(2, Math.sqrt(8000000 / (width * height)), 16000 / height);
   canvas.width = Math.ceil(width * scale);
   canvas.height = Math.ceil(height * scale);
   ctx.scale(scale, scale);
-  ctx.fillStyle = PRINT_COLORS.white;
-  ctx.fillRect(0, 0, width, height);
-  ctx.strokeStyle = forest;
-  ctx.lineWidth = 2;
-  ctx.strokeRect(18, 18, width - 36, height - 36);
-  const text = (value, x, y, size = 18, color = ink, weight = 600, align = 'left') => {
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, width, height); // The only filled rectangle is white paper.
+  const text = (value, x, y, size = 14, weight = 400, align = 'left') => {
     ctx.font = `${weight} ${size}px ReceiptBangla`;
-    ctx.fillStyle = color;
+    ctx.fillStyle = '#000000';
     ctx.textAlign = align;
     ctx.fillText(value, x, y);
   };
-  const divider = y => {
-    ctx.strokeStyle = PRINT_COLORS.line;
-    ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(inset, y); ctx.lineTo(width - inset, y); ctx.stroke();
+  const rule = (y, left = inset, right = width - inset) => {
+    ctx.strokeStyle = '#555555';
+    ctx.lineWidth = 0.6;
+    ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(right, y); ctx.stroke();
   };
   try {
-    ctx.drawImage(logo, width / 2 - 42, 38, 84, 84);
-    text('Active Plus Coaching', width / 2, 160, 30, forest, 800, 'center');
-    text(brand.tagline, width / 2, 192, 17, muted, 500, 'center');
-    addressLines.forEach((line, n) => text(line, width / 2, 192 + addressStep * (n + 1), 15, muted, 400, 'center'));
-    const headerShift = addressLines.length * addressStep;
-    text('মানি রসিদ • পরিশোধিত', width / 2, 208 + headerShift, 20, forest, 700, 'center');
-    divider(228 + headerShift);
-    let y = 260 + headerShift;
-    fields.forEach((field, index) => {
-      const x = inset + (index % 2) * (columnWidth + 32);
-      text(field.label, x, y, 14, muted, 500);
-      field.lines.forEach((line, n) => text(line, x, y + 28 + n * 27));
-      if (index % 2) y += rowHeights[Math.floor(index / 2)];
+    text('Active Plus Coaching', width / 2, 42, 23, 600, 'center');
+    addressLines.forEach((line, index) => text(line, width / 2, addressY + index * addressStep, 15, 400, 'center'));
+    text('পেমেন্ট স্টেটমেন্ট', width / 2, titleY, 18, 600, 'center');
+    text(`অবস্থা: ${status}`, width / 2, statusY, 14, 400, 'center');
+    rule(ruleY);
+    let y = bodyY;
+    rows.forEach(row => {
+      if (row.amount) rule(y - 14);
+      row.labels.forEach((line, index) => text(line, inset, y + index * 25));
+      row.lines.forEach((line, index) => text(line, valueX, y + index * 25, row.amount ? 18 : 16, row.amount ? 600 : 400));
+      y += row.height;
     });
-    y += 12;
-    ctx.fillStyle = PRINT_COLORS.mint;
-    ctx.fillRect(inset, y, width - inset * 2, 94);
-    text('মোট পরিশোধিত টাকা', inset + 20, y + 32, 17, forest, 500);
-    text(`৳${bn(Number(tx.amount).toLocaleString('en-US'))}`, inset + 20, y + 72, 30, forest, 800);
-    text('পরিশোধিত', width - inset - 20, y + 56, 19, forest, 700, 'right');
-    y += 128;
-    notes.forEach((line, n) => text(line, inset, y + n * 26, 17, muted, 400));
-    y += notes.length * 26 + 12;
-    divider(y);
-    collector.forEach((line, n) => text(line, inset, y + 32 + n * 26, 17, muted, 400));
-    text('কর্তৃপক্ষের স্বাক্ষর', width - inset, y + 32, 17, muted, 500, 'right');
+    notes.forEach((line, index) => text(line, inset, notesY + index * 23));
+    collector.forEach((line, index) => text(line, inset, footerY + index * 23));
+    rule(footerY - 12, width - inset - 180, width - inset);
+    text('কর্তৃপক্ষের স্বাক্ষর', width - inset, footerY + 12, 14, 400, 'right');
     return canvas;
   } catch (error) {
-    canvas.width = canvas.height = 0; // Release the large pixel buffer on failure too.
+    canvas.width = canvas.height = 0;
     throw error;
   }
 }

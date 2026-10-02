@@ -66,14 +66,46 @@ function readTransactions() {
   return listDocumentsStrict('transactions', validTransaction);
 }
 
+// Display receipts are short and daily; transaction IDs remain collision-resistant.
+// Allocate inside the SAME ledger lock/write, using plain and historical
+// suffixed receipts as the floor. No previous receipt is renamed.
+function counterReceiptNumber(records, now) {
+  if (!(now instanceof Date) || !Number.isFinite(now.getTime())) throw new Error('রসিদের তারিখ সঠিক নয়।');
+  const prefix = `R${String(now.getFullYear()).slice(-2)}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+  const pattern = new RegExp(`^${prefix}(\\d{3,})(?:-[a-f0-9]{16})?$`, 'i');
+  const last = records.reduce((maximum, row) => {
+    const match = String(row.receiptNo || '').match(pattern);
+    return match ? Math.max(maximum, Number(match[1])) : maximum;
+  }, 0);
+  if (last >= 999) throw new Error('আজকের রসিদের ক্রমিক সীমা ৯৯৯ পূর্ণ হয়েছে। পেমেন্ট সংরক্ষণ হয়নি।');
+  return `${prefix}${String(last + 1).padStart(3, '0')}`;
+}
+
+// Public Transaction ID: T + two-digit year + a running ordinal (minimum
+// three digits), NOT a daily counter. Keep .id as the immutable sync key so
+// independent offline devices cannot overwrite rows with a short display ID.
+function publicTransactionNumber(records, now) {
+  if (!(now instanceof Date) || !Number.isFinite(now.getTime())) throw new Error('ট্রানজ্যাকশনের তারিখ সঠিক নয়।');
+  const prefix = `T${String(now.getFullYear()).slice(-2)}`;
+  const pattern = new RegExp(`^${prefix}(\\d{3,})$`);
+  const last = records.reduce((maximum, row) => {
+    const match = String(row.transactionNo || row.id || '').match(pattern);
+    return match ? Math.max(maximum, Number(match[1])) : maximum;
+  }, 0);
+  if (!Number.isSafeInteger(last + 1)) throw new Error('ট্রানজ্যাকশনের ক্রমিক সীমা পূর্ণ হয়েছে।');
+  return `${prefix}${String(last + 1).padStart(3, '0')}`;
+}
+
 export const financeRepository = {
   async listTransactions() { return readTransactions(); },
-  async saveTransaction(transaction) {
+  async saveTransaction(transaction, { counterReceipt = false, serialTransaction = false, receiptDate = new Date() } = {}) {
     const save = () => {
       // Re-read before writing so another tab's collections are not overwritten.
       const records = readTransactions();
       if (!records.some(tx => tx.id === transaction.id)) {
         const entry = { ...transaction, status: 'pending', reviewHistory: [] };
+        if (serialTransaction) entry.transactionNo = publicTransactionNumber(records, receiptDate);
+        if (counterReceipt) entry.receiptNo = counterReceiptNumber(records, receiptDate);
         // New collection attempts can never self-approve through this write path.
         delete entry.reviewedAt; delete entry.reviewedBy; delete entry.reviewNote;
         records.unshift(entry);

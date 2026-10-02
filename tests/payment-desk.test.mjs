@@ -1,211 +1,120 @@
-/* Payment Receive desk, driven through the real payment.html + js/payment.js in
-   jsdom: entry guard, search, one-tap collection (keypad + method pill), the
-   durable save, receipt modal, today summary/activity, password change and exit.
-   The Playwright spec (tests/payment-panel.spec.cjs) covers the browser-only
-   bits: PDF download, canvas PNG and the Web Share/wa.me paths. */
+/* Counter 146 acceptance: today-only ledger, identity-only query search,
+   simple input/select form and durable pending receipt with no suffix. */
 import test, { before } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadPage } from './jsdom-harness.mjs';
-import { adminStudents, initialTransactions, paymentMethods } from '../js/admin-data.js';
-import { studentFeeSummary, dateLabel, TRANSACTIONS_KEY } from '../js/finance-data.js';
-import { toBanglaNumber } from '../js/ui.js';
-import { PAYMENT_ACCOUNT_KEY, PAYMENT_SESSION_KEY, PAYMENT_USER_ID, hasPaymentSession, loadPaymentAccount } from '../js/payment-auth.js';
-import { STAFF_TEST_PASSWORD, provisionStaff, seedStaffSession } from './staff-harness.mjs';
-import { ROSTER_KEY } from '../js/office-data.js';
-
-const DEMO_OFF = {
-  'activePlus.demo.autofill.v1': 'off',
-  [ROSTER_KEY]: JSON.stringify(adminStudents),
-  [TRANSACTIONS_KEY]: JSON.stringify(initialTransactions)
-};
-const raisa = adminStudents.find(s => s.id === 'AP-1024');
-const money = value => `৳${toBanglaNumber(Number(value).toLocaleString('en-US'))}`;
+import { provisionStaff, seedStaffSession } from './staff-harness.mjs';
+import { adminStudents, paymentMethods } from '../js/admin-data.js';
+import { KEYS } from '../js/database.js';
+import { dateLabel } from '../js/finance-data.js';
 let ctx;
-
-before(async () => {
-  /* The counter signs in on the one shared login card in index.html, so the
-     desk page carries no entry form any more: it opens from the device-bound
-     session that sign-in wrote, and that session has to exist before the
-     module is imported. */
-  ctx = await loadPage('payment.html', { seed: DEMO_OFF });
-  await provisionStaff('payment');
-  seedStaffSession(ctx.window, 'payment');
-  await import('../js/payment.js');
-  await ctx.waitFor(() => ctx.$('#payShell').hidden === false);
-  // The session token is written after the desk opens; wait for the store.
-  await ctx.waitFor(() => ctx.window.localStorage.getItem(PAYMENT_SESSION_KEY) !== null);
+const person={...adminStudents.find(row=>row.id==='AP-1024'),uniqueRoll:'261001001',address:'PRIVATE-ADDRESS',fatherName:'PRIVATE-GUARDIAN'};
+const now=new Date();
+const row=(id,extra={})=>({id,receiptNo:id,studentId:person.id,studentName:person.name,amount:500,method:'নগদ (Cash)',feeType:'মাসিক বেতন',month:'নমুনা',date:dateLabel(now),recordedAt:now.getTime(),collectedBy:'পেমেন্ট কাউন্টার',status:'pending',...extra});
+before(async()=>{
+ ctx=await loadPage('payment.html',{seed:{'activePlus.demo.autofill.v1':'off',[KEYS.students]:JSON.stringify([person]),[KEYS.transactions]:JSON.stringify([row('TODAY'),row('YESTERDAY',{recordedAt:now.getTime()-86400000}),row('ADMIN',{collectedBy:'এডমিন'})])}});
+ await provisionStaff('payment');seedStaffSession(ctx.window,'payment');
+ await import('../js/payment.js');
+ await ctx.waitFor(()=>ctx.$('#paymentMain').dataset.counterReady==='true');
 });
-
-test('the desk has no entry form of its own — the shared login card is the only door', () => {
-  const { $ } = ctx;
-  assert.equal($('#payLoginForm'), null, 'the counter page carries no login form');
-  assert.equal($('#payLoginUser'), null);
-  assert.equal($('#payLoginPin'), null);
-  assert.equal($('#payShell').hidden, false, 'the desk is already open');
+test('the counter opens from a genuine session and defaults to today, not a directory/dashboard',()=>{
+ const {$,$$}=ctx;
+ assert.equal($('#payShell').hidden,false);
+ assert.equal($('#payProfileCard').hidden,true);assert.equal($('#payCollectionForm').hidden,true);
+ assert.equal($$('#paySearchResults .fee-search-result').length,0);
+ assert.equal($$('#payTodayList .pay-activity-row').length,1);
+ assert.match($('#payTodayList').textContent,/TODAY/);assert.doesNotMatch($('#payTodayList').textContent,/YESTERDAY|ADMIN/);
+ for(const selector of ['#payPulse','#payTodayAmount','#payMonthAmount','#payDueStudents','#payQuickPicks','#payKeypad','#payStickyBar','#payDeskTools','.admin-bottom','#payReceiptWhatsApp']) assert.equal($(selector),null,selector);
+ assert.equal($('#payLoginForm'),null);
+ assert.equal($('#payReportsCard').hidden,true);
+ assert.ok($('#paymentReports'));
 });
-
-test('a device-bound session opens the desk, stores the session and focuses search', async () => {
-  const { $, $$, window } = ctx;
-  // The session is a device-bound token (encrypted when the platform allows).
-  assert.equal(window.localStorage.getItem(PAYMENT_SESSION_KEY) !== null, true);
-  assert.equal(await hasPaymentSession(), true);
-  assert.equal(window.document.activeElement, $('#payStudentSearch'));
-  // Method pills come from the shared payment method list.
-  const pills = $$('#payFeeMethodGroup [data-pay-method]');
-  assert.deepEqual(pills.map(pill => pill.dataset.payMethod), [...paymentMethods]);
-  assert.equal($('#payFeeMethod').value, paymentMethods[0]);
+test('name, ID and unique roll search render only identity; phones/guardian/classes are not search keys',async()=>{
+ const {$,$$,type,click,waitFor}=ctx;
+ for(const query of ['রাইসা','AP-1024','২৬১০০১০০১']) {
+  type($('#payStudentSearch'),query);
+  await waitFor(()=>$$('#paySearchResults .fee-search-result').length===1);
+  assert.match($('#paySearchResults').textContent,/রাইসা ইসলাম/);
+  assert.match($('#paySearchResults').textContent,/AP-1024/);
+  assert.match($('#paySearchResults').textContent,/261001001/);
+  assert.doesNotMatch($('#paySearchResults').textContent,/বকেয়া|মোবাইল|অভিভাবক|দশম|PRIVATE|017|018/);
+ }
+ click($('#paySearchResults .fee-search-result'));
+ assert.equal($('#payProfileCard').hidden,false);
+ assert.doesNotMatch($('#payQuickProfile').textContent,/বকেয়া|মোবাইল|অভিভাবক|দশম|PRIVATE|017|018/);
+ for(const query of ['PRIVATE-GUARDIAN','দশম শ্রেণি']) {
+  type($('#payStudentSearch'),query);
+  await waitFor(()=>$('#paySearchStatus').textContent==='কোনো মিল পাওয়া যায়নি।');
+  assert.equal($$('#paySearchResults .fee-search-result').length,0);
+ }
 });
-
-test('search by name lists the student and the profile shows the dues', () => {
-  const { $, $$, click, type } = ctx;
-  const summary = studentFeeSummary(raisa, initialTransactions);
-  type($('#payStudentSearch'), 'রাইসা');
-  const results = $$('#paySearchResults .fee-search-result');
-  assert.equal(results.length, 1);
-  assert.equal(results[0].querySelector('strong').textContent, 'রাইসা ইসলাম');
-  assert.match($('#paySearchStatus').textContent, /১ জন শিক্ষার্থী পাওয়া গেছে/);
-  assert.match(results[0].textContent, summary.due > 0 ? /বকেয়া/ : /বকেয়া নেই/);
-
-  click(results[0]);
-  assert.match($('#payQuickProfile').textContent, /রাইসা ইসলাম/);
-  assert.match($('#payQuickProfile').textContent, /বর্তমান মাসের বকেয়া/);
-  assert.match($('#payQuickProfile').textContent, new RegExp(money(summary.due)));
-  // Sticky collect bar follows the selection.
-  assert.equal($('#payStickyBar').hidden, false);
-  assert.equal($('#payStickyName').textContent, 'রাইসা ইসলাম');
-  assert.equal($('#payStickyAction').textContent, 'টাকা নিন');
+test('query clear removes previous identity and an empty query never enumerates students',async()=>{
+ ctx.type(ctx.$('#payStudentSearch'),'রাইসা');await ctx.waitFor(()=>ctx.$('#paySearchResults .fee-search-result'));
+ ctx.click(ctx.$('#paySearchResults .fee-search-result'));
+ ctx.click(ctx.$('#paySearchClear'));
+ assert.equal(ctx.$('#payProfileCard').hidden,true);
+ assert.equal(ctx.$('#payQuickProfile').textContent,'');assert.equal(ctx.$('#paySearchResults').textContent,'');
 });
-
-test('keypad + method pill collect in a few taps and the save is durable', async () => {
-  const { $, $$, click, type, submit, waitFor, window } = ctx;
-  const summary = studentFeeSummary(raisa, initialTransactions);
-
-  // Disabled until the ledger has loaded; a click then would be a no-op.
-  await waitFor(() => $('#payProfileCollect').disabled === false);
-  click($('#payProfileCollect'));
-  assert.equal($('#payCollectionForm').hidden, false);
-  assert.equal($('#payFeeAmount').value, String(summary.due || summary.monthlyFee));
-
-  const bkash = $$('#payFeeMethodGroup [data-pay-method]').find(pill => pill.dataset.payMethod === 'বিকাশ (bKash)');
-  click(bkash);
-  assert.equal($('#payFeeMethod').value, 'বিকাশ (bKash)');
-  assert.equal(bkash.getAttribute('aria-checked'), 'true');
-
-  // Amount by keypad: wipe the prefilled value, then 8 → 0 → 0.
-  const digits = String($('#payFeeAmount').value).length;
-  for (let i = 0; i < digits; i++) click($('#payKeypad [data-pay-key="back"]'));
-  assert.equal($('#payFeeAmount').value, '');
-  ['8', '0', '0'].forEach(key => click($(`#payKeypad [data-pay-key="${key}"]`)));
-  assert.equal($('#payFeeAmount').value, '800');
-  assert.match($('#paySaveLabel').textContent, /৳৮০০/);
-
-  type($('#payFeeNote'), 'কাউন্টার টেস্ট');
-  // jsdom does not fire submit for a submit-button click; the Playwright spec
-  // clicks the real button in a browser.
-  submit($('#payCollectionForm'));
-  await waitFor(() => $('#payReceiptBackdrop').hidden === false);
-
-  const stored = JSON.parse(window.localStorage.getItem(TRANSACTIONS_KEY));
-  const added = stored.find(tx => tx.studentId === 'AP-1024' && tx.amount === 800);
-  assert.ok(added, 'the collection must be written to the shared ledger');
-  assert.equal(added.method, 'বিকাশ (bKash)');
-  assert.equal(added.collectedBy, 'পেমেন্ট কাউন্টার');
-  assert.equal(added.note, 'কাউন্টার টেস্ট');
-  // Sequential receipt numbers: prefix + YYMMDD (6 digits) + a 3-digit daily sequence.
-  assert.match(added.receiptNo, /^R\d{6}\d{3}-[a-f0-9]{16}$/);
-
-  assert.match($('#payReceiptSub').textContent, /রসিদ নং: R\d{9}/);
-  assert.match($('#payReceiptBody').textContent, /৳৮০০/);
-  assert.match($('#payToast').textContent, /Manager অনুমোদনের অপেক্ষায়/);
-  assert.equal(added.status, 'pending');
-  assert.equal($('#payToast').dataset.tone, 'success');
-  assert.equal($('#payCollectionForm').hidden, true);
+test('a forged result/hidden student ID cannot select another record',()=>{
+ const button=ctx.window.document.createElement('button');button.dataset.payStudent='NO-STUDENT';ctx.window.document.body.append(button);ctx.click(button);button.remove();
+ assert.equal(ctx.$('#payProfileCard').hidden,true);
 });
-
-test('today summary and activity list refresh after the collection', async () => {
-  const { $, $$, click, waitFor } = ctx;
-  const summary = studentFeeSummary(raisa, initialTransactions);
-  const today = dateLabel(new Date());
-  const beforeToday = initialTransactions.filter(tx => tx.date === today).reduce((sum, tx) => sum + tx.amount, 0);
-
-  // A counter entry is not counted as collection until Manager approval.
-  assert.equal($('#payTodayAmount').textContent, money(beforeToday));
-  assert.match($('#payTodayCount').textContent, /১ অপেক্ষমাণ/);
-  const rows = $$('#payTodayList .pay-activity-row');
-  assert.equal(rows.length, initialTransactions.filter(tx => tx.date === today).length + 1);
-  assert.match($('#payTodayList').textContent, /রাইসা ইসলাম/);
-
-  // Closing the receipt re-renders the profile with the new paid total.
-  click($('#payReceiptClose'));
-  await waitFor(() => $('#payReceiptBackdrop').hidden === true);
-  assert.match($('#payQuickProfile .fee-balance-grid').textContent, new RegExp(money(summary.paid)));
-
-  // Reopening a receipt from today's list uses the stored transaction.
-  click(rows[0]);
-  await waitFor(() => $('#payReceiptBackdrop').hidden === false);
-  assert.match($('#payReceiptSub').textContent, /রসিদ নং: R\d{9}/);
-  click($('#payReceiptClose'));
+test('simple payment starts with an empty amount and one method select, never a guessed due',async()=>{
+ const {$,type,click,waitFor}=ctx;
+ type($('#payStudentSearch'),'AP-1024');await waitFor(()=>$('#paySearchResults .fee-search-result'));
+ click($('#paySearchResults .fee-search-result'));await waitFor(()=>!$('#payProfileCollect').disabled);click($('#payProfileCollect'));
+ assert.equal($('#payCollectionForm').hidden,false);assert.equal($('#payFeeAmount').value,'');
+ assert.deepEqual([...$('#payFeeMethod').options].map(option=>option.value),[...paymentMethods]);
+ assert.equal($('#payFeeMethod').value,'নগদ (Cash)');
+ assert.doesNotMatch($('#payQuickProfile').textContent,/বকেয়া|মোবাইল|দশম/);
+ assert.equal($('#paySearchCard').hidden,true);
+ assert.equal($('#payProfileCollect').hidden,true);
 });
-
-test('receipt text can be copied for a quick WhatsApp paste', async () => {
-  const { $, click, waitFor, window } = ctx;
-  let copied = null;
-  Object.defineProperty(window.navigator, 'clipboard', {
-    configurable: true,
-    value: { writeText: async text => { copied = text; } }
-  });
-  const rows = ctx.$$('#payTodayList .pay-activity-row');
-  click(rows[0]);
-  await waitFor(() => $('#payReceiptBackdrop').hidden === false);
-  click($('#payReceiptCopy'));
-  await waitFor(() => copied !== null);
-  assert.match(copied, /রাইসা ইসলাম \(AP-1024\)/);
-  assert.match(copied, /রসিদ নং: R\d{9}/);
-  assert.match($('#payToast').textContent, /কপি হয়েছে/);
-  click($('#payReceiptClose'));
+test('invalid amounts/forged methods do not write a payment',async()=>{
+ const {$,type,submit,waitFor,window}=ctx;
+ const before=window.localStorage.getItem(KEYS.transactions);
+ type($('#payFeeAmount'),'-1');submit($('#payCollectionForm'));
+ await waitFor(()=>!$('#paySaveError').hidden);
+ assert.equal(window.localStorage.getItem(KEYS.transactions),before);
 });
-
-test('the password can be changed from the desk; the stored account keeps its user ID', async () => {
-  const { $, click, type, submit, waitFor, window } = ctx;
-  click($('#payPinButton'));
-  assert.equal($('#payPinBackdrop').hidden, false);
-
-  type($('#payPinCurrent'), '111111');
-  type($('#payPinNew'), '456789');
-  type($('#payPinConfirm'), '456789');
-  submit($('#payPinForm'));
-  await waitFor(() => $('#payPinError').hidden === false);
-  assert.match($('#payPinError').textContent, /বর্তমান পাসওয়ার্ড সঠিক নয়/);
-
-  type($('#payPinCurrent'), STAFF_TEST_PASSWORD);
-  submit($('#payPinForm'));
-  await waitFor(() => $('#payPinBackdrop').hidden === true);
-  // The stored record is an encrypted envelope: no username or password text
-  // is readable from storage, and the account keeps its user ID.
-  const raw = window.localStorage.getItem(PAYMENT_ACCOUNT_KEY);
-  assert.equal(/"password"/.test(raw), false);
-  assert.equal(/"username"/.test(raw), false);
-  const account = await loadPaymentAccount();
-  assert.equal(account.userId, PAYMENT_USER_ID);
-  assert.equal(account.hasPassword, true);
-  // The new password is the one that works now.
-  const { verifyPaymentCredentials } = await import('../js/payment-auth.js');
-  assert.equal(await verifyPaymentCredentials(PAYMENT_USER_ID, '456789'), true);
-  assert.equal(await verifyPaymentCredentials(PAYMENT_USER_ID, STAFF_TEST_PASSWORD), false);
-  assert.equal(await hasPaymentSession(), true, 'the desk stays signed in after the change');
-  assert.match($('#payToast').textContent, /পাসওয়ার্ড পরিবর্তন হয়েছে/);
+test('a double click produces one durable pending entry and one exact-format receipt',async()=>{
+ const {$,type,submit,waitFor,window}=ctx;
+ type($('#payFeeAmount'),'800');$('#payFeeMethod').value='বিকাশ (bKash)';type($('#payFeeTrxId'),'SAMPLE-REF');
+ submit($('#payCollectionForm'));submit($('#payCollectionForm'));
+ await waitFor(()=>!$('#payReceiptBackdrop').hidden);
+ const rows=JSON.parse(window.localStorage.getItem(KEYS.transactions));
+ const added=rows.filter(row=>row.amount===800 && row.studentId===person.id);
+ assert.equal(added.length,1);assert.match(added[0].receiptNo,/^R\d{9}$/);
+ assert.equal(added[0].status,'pending');assert.equal(added[0].method,'বিকাশ (bKash)');
+ assert.equal(added[0].trxRef,'SAMPLE-REF');assert.equal(added[0].className,person.className);
+ assert.equal(added[0].mobile,undefined);
+ assert.match($('#payReceiptSub').textContent,/^রসিদ নং: R\d{9}$/);
+ assert.match($('#payReceiptBody').textContent,/৳৮০০/);
+ assert.doesNotMatch($('#payReceiptBody').textContent,/দশম|অভিভাবক|PRIVATE|017000|018000/);
+ assert.equal($('#payProfileCard').hidden,true);assert.equal($('#payCollectionForm').hidden,true);
+ assert.equal(ctx.$$('#payTodayList .pay-activity-row').length,2);
 });
-
-test('logout clears the session and goes to the shared login page', () => {
-  const { $, click, window, jsdomErrors } = ctx;
-  assert.equal(jsdomErrors.some(e => /navigation/i.test(e)), false);
-  click($('#payExitButton'));
-  assert.equal($('#payShell').hidden, true);
-  assert.equal($('#payStickyBar').hidden, true);
-  assert.equal(window.localStorage.getItem(PAYMENT_SESSION_KEY), null);
-  assert.equal(window.sessionStorage.getItem(PAYMENT_SESSION_KEY), null);
-  // jsdom cannot navigate, so the attempt itself is the assertion.
-  assert.equal(jsdomErrors.some(e => /navigation/i.test(e)), true);
-  // And the page really targets the login page.
-  assert.match(window.document.querySelector('#payExitButton').outerHTML, /লগআউট/);
+test('today rows can reopen only their stored, sanitised receipt',async()=>{
+ ctx.click(ctx.$('#payReceiptClose'));
+ assert.equal(ctx.$('#payReceiptBackdrop').hidden,true);
+ ctx.click(ctx.$('#payTodayList .pay-activity-row'));
+ await ctx.waitFor(()=>!ctx.$('#payReceiptBackdrop').hidden);
+ assert.match(ctx.$('#payReceiptSub').textContent,/R\d{9}/);
+ ctx.click(ctx.$('#payReceiptClose'));
+});
+test('storage failure keeps the draft and never opens a receipt',async()=>{
+ const {$,type,click,submit,waitFor,window}=ctx;
+ type($('#payStudentSearch'),'AP-1024');await waitFor(()=>$('#paySearchResults .fee-search-result'));
+ click($('#paySearchResults .fee-search-result'));click($('#payProfileCollect'));type($('#payFeeAmount'),'900');
+ const original=window.localStorage.setItem.bind(window.localStorage);
+ const proto=Object.getPrototypeOf(window.localStorage), native=proto.setItem;
+ proto.setItem=function(key,value){if(key===KEYS.transactions)throw new Error('QuotaExceededError');return native.call(this,key,value)};
+ try {submit($('#payCollectionForm'));await waitFor(()=>!$('#paySaveError').hidden);assert.equal($('#payReceiptBackdrop').hidden,true);assert.equal($('#payFeeAmount').value,'900');assert.equal($('#paySaveButton').disabled,false);} finally {proto.setItem=native;}
+});
+test('corrupt ledger disables payment instead of overwriting financial history',async()=>{
+ const {$,window,waitFor}=ctx;
+ window.localStorage.setItem(KEYS.transactions,'broken');window.dispatchEvent(new window.StorageEvent('storage',{key:KEYS.transactions}));
+ await waitFor(()=>!$('#payLoadError').hidden);
+ assert.equal($('#paySaveButton').disabled,true);assert.equal($('#payTodayList .pay-activity-row'),null);
+ assert.equal(window.localStorage.getItem(KEYS.transactions),'broken');
 });

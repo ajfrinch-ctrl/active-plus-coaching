@@ -59,10 +59,11 @@ export function showAuthScreen() {
 }
 
 /* Deep-linkable student views. The URL hash always names the open view:
-   #routine, #courses, #exams, #results, #profile (home has no hash). Browser
+   #routine, #courses, #exams, #results, #profile, #reports (home has no hash).
+   Reports is a More/profile sub-page. Browser
    and system Back walk the visited views; refresh and shared links reopen the
    exact view (pattern: hash router + back button). */
-const VIEW_ROUTES = Object.freeze(['home', 'routine', 'courses', 'exams', 'results', 'profile']);
+const VIEW_ROUTES = Object.freeze(['home', 'routine', 'courses', 'exams', 'results', 'profile', 'reports']);
 
 export function viewRouteFromHash(hash = window.location.hash) {
   const name = String(hash || '').replace('#', '');
@@ -91,7 +92,8 @@ export function setView(viewName, { history: historyMode = 'push' } = {}) {
   if (!panel) return;
   $$('[data-view-panel]').forEach(item => item.classList.toggle('active', item === panel));
   $$('.bottom-link').forEach(item => {
-    const active = item.dataset.view === (viewName === 'exams' ? 'courses' : viewName);
+    const parent = viewName === 'exams' ? 'courses' : viewName === 'reports' ? 'profile' : viewName;
+    const active = item.dataset.view === parent;
     item.classList.toggle('active', active);
     if (active) item.setAttribute('aria-current', 'page'); else item.removeAttribute('aria-current');
   });

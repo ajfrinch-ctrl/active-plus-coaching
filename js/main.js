@@ -123,6 +123,14 @@ function applyAppConfig(cfg) {
     }
   }
 
+  // Home shortcuts mirror the same optional modules as the existing tabs.
+  // A disabled module must not become reachable just because it has a new tile.
+  for (const module of ['routine', 'courses', 'results']) {
+    const disabled = cfg.modules?.[module] === false;
+    const selector = `#studentServices [data-view="${module}"]` + (module === 'courses' ? ', #studentServices [data-action="homework"]' : '');
+    document.querySelectorAll(selector).forEach(button => { button.disabled = disabled; });
+  }
+
   // 6. Theme Mode Override
   if (cfg.themeMode && cfg.themeMode !== 'auto') {
     document.documentElement.dataset.timeTheme = cfg.themeMode;
@@ -167,6 +175,26 @@ function handleAction(action) {
     case 'help':
       showFeedback('অফিসে যোগাযোগের জন্য অ্যাপের নোটিশ দেখুন');
       break;
+    /* Home icon-grid shortcuts. Each one only opens something that already
+       exists: a filtered list, the bell's inbox, or the fee card on Home. */
+    case 'homework':
+      setView('courses');
+      document.querySelector('[data-learning-filter="homework"]')?.click();
+      break;
+    case 'notices':
+      document.getElementById('notificationButton')?.click();
+      break;
+    case 'fees': {
+      const card = $('#dashboardFeeCard');
+      if (card && !card.hidden) {
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        card.classList.add('is-flash');
+        setTimeout(() => card.classList.remove('is-flash'), 1600);
+      } else {
+        showFeedback('ফি-র তথ্য এখনও যোগ হয়নি — দরকার হলে অফিসে যোগাযোগ করুন');
+      }
+      break;
+    }
     case 'logout':
       requestLogout();
       break;
