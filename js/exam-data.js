@@ -2,7 +2,8 @@
    A production API must own authorization, time, answer keys and accepted submissions. */
 import { teachingRepository, DEMO_TEACHER } from './teaching-data.js';
 import { isTeacherAssigned, subjectsForTeacherClass } from './teacher-assignments.js';
-import { isSubjectEnabled } from './academics.js';
+import { isSubjectEnabled, academicCodes, chapterByName, ensureChapter } from './academics.js';
+import { allocateExamCode, examCodeParts, orderPaperForAttempt, timeLabel } from './exam-core.js';
 import { hasStaffSession, readStaffAccount } from './staff-auth.js';
 import { enabledClasses } from './config.js';
 import { KEYS, readRaw, writeRaw, newId } from './database.js';
@@ -20,6 +21,36 @@ export const EXAM_STATUSES = Object.freeze({
   completed: 'সম্পন্ন',
   archived: 'আর্কাইভ'
 });
+/* The six stages a paper is talked about in the UI. They are *views* of the
+   seven stored statuses plus the clock, so no stored record has to be rewritten
+   (and none is lost): draft → scheduled → published → running → completed →
+   archived. `rejected` stays the correction stop on the same line. */
+export const EXAM_STAGES = Object.freeze({
+  draft: 'খসড়া',
+  scheduled: 'নির্ধারিত',
+  published: 'প্রকাশিত',
+  running: 'চলছে',
+  completed: 'সম্পন্ন',
+  archived: 'সংরক্ষিত'
+});
+export function examStageKey(exam, now = Date.now()) {
+  const status = String(exam?.status || '');
+  if (status === 'rejected') return 'scheduled';
+  if (status === 'archived') return 'archived';
+  if (status === 'draft') return 'draft';
+  if (status === 'pending' || status === 'approved') return 'scheduled';
+  if (status === 'completed') return 'completed';
+  const startAt = Number(exam?.startAt), endAt = Number(exam?.endAt);
+  if (status === 'published') {
+    if (Number.isFinite(startAt) && now < startAt) return 'scheduled';
+    if (Number.isFinite(endAt) && now < endAt) return 'running';
+    return 'completed';
+  }
+  return 'draft';
+}
+export const examStageLabel = (exam, now) => EXAM_STAGES[examStageKey(exam, now)] || EXAM_STAGES.draft;
+export const isRunningExam = (exam, now) => examStageKey(exam, now) === 'running';
+export const examTimeLabel = value => timeLabel(value);
 /* The workflow line a reviewer reads on screen (rejected is a branch, not a
    step on the happy path). */
 export const EXAM_STATUS_ORDER = Object.freeze(['draft', 'pending', 'approved', 'published', 'completed', 'archived']);
@@ -431,7 +462,11 @@ export function cleanQuestion(input, type, label = 'প্রশ্ন') {
   }
   const marks = number(input?.marks);
   if (!Number.isFinite(marks) || marks <= 0 || marks > 1000 || round(marks) !== marks) fail(`${label}: নম্বর ১ থেকে ১০০০-এর মধ্যে পূর্ণসংখ্যা দিন।`);
-  return { text, marks };
+  /* A short/written question may carry the model answer (shown only in the
+     answer key). It is additive: the paste template and the stored signature
+     never depended on it, so older papers load exactly as before. */
+  const answerText = String(input?.answerText ?? '').trim().slice(0, 1200);
+  return answerText ? { text, marks, answerText } : { text, marks };
 }
 /** Rebuild the paste template from the question records, so editing or
     deleting one question keeps template and records in lock-step. */
@@ -473,6 +508,17 @@ export function normalizeExam(exam) {
   if (!Number.isFinite(exam.durationMinutes)) exam.durationMinutes = examDurationMinutes(exam);
   if (typeof exam.createdBy !== 'string' || !exam.createdBy) exam.createdBy = String(exam.teacherName || '').trim();
   if (exam.createdByRole !== 'teacher' && exam.createdByRole !== 'manager') exam.createdByRole = 'teacher';
+  if (exam.questionOrder !== 'fixed') exam.questionOrder = 'shuffle';
+  if (exam.optionOrder !== 'fixed') exam.optionOrder = 'shuffle';
+  if (typeof exam.chapterId !== 'string') exam.chapterId = '';
+  if (typeof exam.chapterName !== 'string') exam.chapterName = '';
+  if (typeof exam.topic !== 'string') exam.topic = '';
+  if (typeof exam.batchId !== 'string') exam.batchId = '';
+  if (typeof exam.batchName !== 'string') exam.batchName = String(exam.group || '');
+  if (!Number.isFinite(exam.passingMarks)) exam.passingMarks = Math.round(totalMarks(exam) * (Number(exam.passPercent) || 33) / 100);
+  if (!Number.isFinite(exam.negativeMarks)) exam.negativeMarks = Number(exam.negative) || 0;
+  if (typeof exam.startTime !== 'string') exam.startTime = timeLabel(exam.startAt);
+  if (typeof exam.endTime !== 'string') exam.endTime = timeLabel(exam.endAt);
   if (exam.questions) restampExamQuestions(exam, exam.questions);
   return exam;
 }
@@ -507,9 +553,24 @@ export function validateExam(input) {
   const instructions = String(input.instructions || '').trim();
   if (instructions.length > 2000) fail('নির্দেশনা সর্বোচ্চ ২০০০ অক্ষরে দিন।');
   const questions = parseQuestions(input.template, input.type);
+  /* New fields are all optional and length-capped, so a record saved by an
+     older build still validates untouched. */
+  const chapterName = String(input.chapterName || '').trim().slice(0, 120);
+  const chapterId = String(input.chapterId || '').trim().slice(0, 120);
+  const topic = String(input.topic || '').trim().slice(0, 120);
+  const batchName = String(input.batchName ?? input.group ?? '').trim().slice(0, 80);
+  const orderMode = value => (value === 'fixed' ? 'fixed' : 'shuffle');
+  const marks = totalMarks({ questions });
   return {
     title, subject, className, group, type: input.type, startAt, endAt, lateMinutes,
     negative: input.type === 'mcq' ? negative : 0, passPercent, instructions,
+    chapterName, chapterId, topic, batchName,
+    passingMarks: Number.isFinite(Number(input.passingMarks))
+      ? Math.max(0, Math.min(marks, round(Number(input.passingMarks))))
+      : Math.round(marks * passPercent / 100),
+    negativeMarks: input.type === 'mcq' ? negative : 0,
+    questionOrder: orderMode(input.questionOrder), optionOrder: orderMode(input.optionOrder),
+    startTime: timeLabel(startAt), endTime: timeLabel(endAt),
     template: input.template, questions,
     /* Date-wise identity of the record: the calendar date the paper belongs
        to (Asia/Dhaka) and how long the window lasts. Re-derived on every
@@ -549,7 +610,7 @@ function read() {
   return db;
 }
 async function mutate(fn) {
-  const task = () => { const db = read(); fn(db); writeRaw(EXAM_KEY, JSON.stringify(db)); window.dispatchEvent(new Event('exam-data-updated')); return db; };
+  const task = () => { const db = read(); fn(db); stampExamCodes(db); writeRaw(EXAM_KEY, JSON.stringify(db)); window.dispatchEvent(new Event('exam-data-updated')); return db; };
   return navigator.locks ? navigator.locks.request(EXAM_KEY, task) : task();
 }
 function examById(db, id) { const e = db.exams.find(e => e.id === id); if (!e) fail('পরীক্ষাটি পাওয়া যায়নি।'); return e; }
@@ -611,11 +672,47 @@ function attemptById(db, id, studentId) {
   const a = db.attempts.find(a => a.id === id && a.studentId === studentId);
   if (!a) fail('এই উত্তরপত্র পাওয়া যায়নি।'); return a;
 }
-function shuffled(array) {
-  const copy = [...array];
-  for (let i = copy.length - 1; i > 0; i--) { const j = crypto.getRandomValues(new Uint32Array(1))[0] % (i + 1); [copy[i], copy[j]] = [copy[j], copy[i]]; }
-  return copy;
+function academicCodesSafe(className, subjectName) {
+  try { return academicCodes(className, subjectName) || {}; } catch { return {}; }
 }
+/** The Exam Code a record carries; a record without one shows a preview built
+    from its own type/date/class/subject until the next write stamps it. */
+export function examCodeOf(exam) {
+  const stored = String(exam?.code || '').trim();
+  if (stored) return stored;
+  const codes = academicCodesSafe(exam?.className, exam?.subject);
+  const generated = allocateExamCode([], {
+    type: exam?.type, startAt: exam?.startAt, examDate: exam?.examDate,
+    classCode: exam?.classCode || codes.classCode, subjectCode: exam?.subjectCode || codes.subjectCode
+  });
+  return generated.code;
+}
+/** Permanent codes are handed out exactly once, oldest record first, so the
+    serials never collide and a rescheduled/renamed paper keeps its code. */
+export function stampExamCodes(db) {
+  let changed = false;
+  for (const exam of [...(db?.exams || [])].reverse()) {
+    if (String(exam.code || '').trim()) continue;
+    const codes = academicCodesSafe(exam.className, exam.subject);
+    const allocated = allocateExamCode(db.exams.filter(row => row !== exam), {
+      type: exam.type, startAt: exam.startAt, examDate: exam.examDate,
+      classCode: exam.classCode || codes.classCode, subjectCode: exam.subjectCode || codes.subjectCode
+    });
+    exam.code = allocated.code;
+    exam.classCode = exam.classCode || allocated.classCode;
+    exam.subjectCode = exam.subjectCode || allocated.subjectCode;
+    exam.codeLockedAt = Number(exam.codeLockedAt) || Date.now();
+    changed = true;
+  }
+  for (const exam of db?.exams || []) {
+    const parts = examCodeParts(exam.code);
+    if (!exam.classCode && parts.classCode) { exam.classCode = parts.classCode; changed = true; }
+    if (!exam.subjectCode && parts.subjectCode) { exam.subjectCode = parts.subjectCode; changed = true; }
+  }
+  return changed;
+}
+/** One exam located by its printed code (archive + paper search). */
+export const examByCode = (db, code) => (db?.exams || []).find(exam => String(exam.code || '').toUpperCase() === String(code || '').trim().toUpperCase()) || null;
 export function scoreAttempt(exam, attempt) {
   let score = 0, correct = 0, wrong = 0, unanswered = 0;
   for (const q of exam.questions) {
@@ -654,6 +751,18 @@ export const examRepository = {
     return db;
   },
   async listStudents() { return teachingRepository.listStudents(); },
+  /* Idempotent: gives every stored paper its permanent Exam Code. Called when
+     the examination screens open, so an old local file is ready to print. */
+  async ensureCodes() {
+    return mutate(db => { stampExamCodes(db); });
+  },
+  /* Chapters are shared with Academic Setup: an exam keeps a real chapter row
+     (id + name) instead of a free-text string. */
+  async ensureChapter(className, subjectName, chapterName) {
+    const name = String(chapterName || '').trim();
+    if (!name) return null;
+    try { return await ensureChapter(className, subjectName, name); } catch { return chapterByName(className, subjectName, name); }
+  },
   async saveDraft(input, actor = TEACHER_ACTOR) {
     /* Manager-created papers belong to the Manager; a Teacher's paper stays
        theirs, and both can be edited while the paper is still a draft. */
@@ -854,6 +963,8 @@ export const examRepository = {
       const copy = {
         ...source, ...fields,
         id: newId('E'),
+        /* A copy is a new paper: the code is issued fresh by stampExamCodes. */
+        code: '', codeLockedAt: undefined,
         teacherId: actor.role === 'teacher' ? actor.id : '',
         teacherName: actor.role === 'teacher' ? name : '',
         status: 'draft', reviewNote: '',
@@ -964,8 +1075,11 @@ export const examRepository = {
       if (own.some(a => a.status === 'active')) return;
       if (!own.length && now > e.startAt + e.lateMinutes * 60000) fail('দেরিতে প্রবেশের সময়সীমা শেষ।');
       if (own.length && !retryEligibility(db, e, person.id, now)) fail('দ্বিতীয় সুযোগের যোগ্যতা নেই বা সময় শেষ।');
-      const order = shuffled(e.questions).map(q => ({ id: q.id, options: shuffled(q.options.map(o => o.id)) }));
-      db.attempts.push({ id: newId('A'), examId, studentId: person.id, name: person.name, className: person.className, number: own.length + 1, status: 'active', startedAt: now, savedAt: now, order, answers: {} });
+      /* The same student resuming the same attempt always sees the same paper:
+         the order is seeded, not random. */
+      const attemptId = newId('A');
+      const order = orderPaperForAttempt(e, person.id, attemptId);
+      db.attempts.push({ id: attemptId, examId, studentId: person.id, name: person.name, className: person.className, number: own.length + 1, status: 'active', startedAt: now, savedAt: now, order, answers: {} });
       if (!e.participants.some(s => s.id === person.id)) e.participants.push(person);
     });
   },

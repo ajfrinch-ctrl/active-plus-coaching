@@ -8,7 +8,9 @@ import { provisionStaff, seedStaffSession } from './staff-harness.mjs';
 import {
   ACADEMICS_KEY, loadAcademics, saveClass, saveSubject, setClassActive, setSubjectActive,
   setClassSubjectByName, listClasses, listSubjects, listMappings, subjectsForClass,
-  isSubjectEnabled, classByName, subjectByName, classNames, classesForSubject
+  isSubjectEnabled, classByName, subjectByName, classNames, classesForSubject,
+  classCodeFor, subjectCodeFor, academicCodes, listChapters, listChaptersForSubject,
+  chapterByName, chapterById, saveChapter, setChapterActive, ensureChapter
 } from '../js/academics.js';
 import { KEYS } from '../js/database.js';
 import { STAFF_ACCOUNTS } from '../js/staff-auth.js';
@@ -25,7 +27,17 @@ before(async () => {
 
 test('the first read seeds every class the app already ships, with subjects per class', async () => {
   const db = loadAcademics();
-  assert.equal(db.version, 1);
+  assert.equal(db.version, 2);
+  /* Every class and subject carries its permanent code from the first read. */
+  assert.equal(classCodeFor('দশম শ্রেণি'), '10');
+  assert.equal(classCodeFor('অষ্টম শ্রেণি'), '08');
+  assert.equal(subjectCodeFor('বাংলা'), 'BN');
+  assert.equal(subjectCodeFor('ইংরেজি'), 'EN');
+  assert.equal(subjectCodeFor('গণিত'), 'MT');
+  assert.equal(subjectCodeFor('বিজ্ঞান'), 'SC');
+  assert.equal(subjectCodeFor('আইসিটি'), 'ICT');
+  assert.equal(new Set(listSubjects().map(item => item.code)).size, listSubjects().length, 'no two subjects share a code');
+  assert.equal(new Set(listClasses().map(item => item.code)).size, listClasses().length, 'no two classes share a code');
   assert.deepEqual(classNames(), ['অষ্টম শ্রেণি', 'নবম শ্রেণি', 'দশম শ্রেণি', 'একাদশ শ্রেণি', 'দ্বাদশ শ্রেণি', 'ডিগ্রি ১ম বর্ষ', 'ডিগ্রি ২য় বর্ষ', 'ডিগ্রি ৩য় বর্ষ', 'অনার্স ১ম বর্ষ', 'অনার্স ২য় বর্ষ', 'অনার্স ৩য় বর্ষ', 'অনার্স ৪র্থ বর্ষ']);
   assert.ok(subjectsForClass('অষ্টম শ্রেণি').some(item => item.name === 'গণিত'));
   assert.ok(subjectsForClass('দশম শ্রেণি').some(item => item.name === 'রসায়ন'), 'a science class runs science subjects');
@@ -35,6 +47,39 @@ test('the first read seeds every class the app already ships, with subjects per 
   const before = store().getItem(ACADEMICS_KEY);
   loadAcademics();
   assert.equal(store().getItem(ACADEMICS_KEY), before);
+});
+
+test('a code is written once and survives a rename; chapters belong to class+subject', async () => {
+  const mathsCode = subjectCodeFor('গণিত');
+  await saveSubject({ id: subjectByName('গণিত').id, name: 'গণিত (সাধারণ)' });
+  assert.equal(subjectCodeFor('গণিত (সাধারণ)'), mathsCode, 'renaming a subject kept its code');
+  assert.equal(stored().subjects.filter(item => item.code === mathsCode).length, 1, 'the code is not duplicated');
+  await saveChapter({ className: 'দশম শ্রেণি', subjectName: 'গণিত (সাধারণ)', name: 'অধ্যায় ১' });
+  await saveChapter({ className: 'দশম শ্রেণি', subjectName: 'গণিত (সাধারণ)', name: 'অধ্যায় ২' });
+  await saveChapter({ className: 'দশম শ্রেণি', subjectName: 'ইংরেজি', name: 'Chapter 1' });
+  const chapters = listChapters('দশম শ্রেণি', 'গণিত (সাধারণ)');
+  assert.deepEqual(chapters.map(item => item.name), ['অধ্যায় ১', 'অধ্যায় ২']);
+  assert.equal(listChapters('দশম শ্রেণি', 'ইংরেজি').map(item => item.name).join(), 'Chapter 1', 'chapters never leak between subjects');
+  await assert.rejects(() => saveChapter({ className: 'দশম শ্রেণি', subjectName: 'গণিত (সাধারণ)', name: 'অধ্যায় ১' }), /আগেই আছে/);
+  /* Switching a chapter off hides it from new pickers only. */
+  await setChapterActive(chapters[0].id, false);
+  assert.deepEqual(listChapters('দশম শ্রেণি', 'গণিত (সাধারণ)').map(item => item.name), ['অধ্যায় ২']);
+  assert.equal(listChapters('দশম শ্রেণি', 'গণিত (সাধারণ)', { includeInactive: true }).length, 2);
+  assert.equal(chapterById(chapters[0].id).name, 'অধ্যায় ১', 'history keeps its chapter');
+  await setChapterActive(chapters[0].id, true);
+  const found = await ensureChapter('দশম শ্রেণি', 'গণিত (সাধারণ)', 'অধ্যায় ১');
+  assert.equal(found.id, chapters[0].id, 'ensureChapter finds the existing row instead of duplicating');
+  assert.equal(listChaptersForSubject('গণিত (সাধারণ)').length, 2);
+  await saveSubject({ id: subjectByName('গণিত (সাধারণ)').id, name: 'গণিত' });
+  assert.deepEqual(academicCodes('দশম শ্রেণি', 'গণিত'), { classCode: '10', subjectCode: mathsCode });
+});
+
+test('chapters another copy already stored (course library) are adopted', async () => {
+  store().setItem(KEYS.courseContent, JSON.stringify({ version: 1, records: [
+    { id: 'CONTENT-0001', type: 'chapter', classId: classByName('অষ্টম শ্রেণি').id, subjectId: subjectByName('বিজ্ঞান').id, title: 'অধ্যায় ৩', createdAt: '2026-09-01T00:00:00.000Z' }
+  ] }));
+  loadAcademics();
+  assert.equal(chapterByName('অষ্টম শ্রেণি', 'বিজ্ঞান', 'অধ্যায় ৩')?.name, 'অধ্যায় ৩');
 });
 
 test('existing assignments, exams and teaching subjects are adopted, never dropped', async () => {

@@ -66,6 +66,7 @@ export const KEYS = Object.freeze({
   notifications: 'activePlus.notifications.records.v1',
   academics: 'activePlus.academics.v1',
   courseContent: 'activePlus.courseContent.v1',
+  questionBank: 'activePlus.questionBank.v1',
   notificationSettings: 'activePlus.notificationSettings.v1'
 });
 
