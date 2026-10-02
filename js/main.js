@@ -29,6 +29,7 @@ import { initStudentTeaching } from './student-teaching.js';
 import { initStudentDashboard } from './student-dashboard.js';
 import { mountReports, refreshReports } from './reports.js';
 import { initNotificationSettings } from './notification-settings.js';
+import { initCourseHub } from './course-hub.js';
 
 /* Always reveal the login shell before optional startup work. A failure in any
    secondary feature must never leave the entry page completely blank. */
@@ -147,6 +148,9 @@ const state = {
 const refreshExams = initStudentExams({ getStudent: () => state.student, getAccount: () => state.account });
 const refreshTeaching = initStudentTeaching({ getStudent: () => state.student });
 const refreshDashboard = initStudentDashboard({ getStudent: () => state.student, getAccount: () => state.account });
+/* The Learning Hub (Class → Subject → Chapter → Content) reads the same exams
+   and results the Examination module owns — it never keeps a second copy. */
+const refreshCourses = initCourseHub({ getStudent: () => state.student });
 
 function handleAction(action) {
   switch (action) {
@@ -213,7 +217,7 @@ function enterApp() {
   setView(viewRouteFromHash(), { history: 'replace' });
   openStudentApp(state);
   refreshDashboard();
-  refreshTeaching();
+  refreshTeaching(); refreshCourses.paint();
   refreshExams();
   refreshNotices();
   window.dispatchEvent(new Event('apc-session-ready'));
@@ -246,7 +250,7 @@ initNavigation({ onAction: handleAction });
 const refreshNotices = () => window.apcNoticeCenter?.paint?.();
 initProfile({
   state,
-  onStudentChange: student => { renderStudent(student); refreshTeaching(); refreshExams(); refreshReports($('#studentReports')); }
+  onStudentChange: student => { renderStudent(student); refreshTeaching(); refreshExams(); refreshCourses.paint(); refreshReports($('#studentReports')); }
 });
 initRoutine();
 // Settings → Notification Settings: switches, permission, preview and history.
@@ -340,7 +344,7 @@ window.addEventListener('storage', async event => {
     }
     if (!$('#appShell').hidden) openStudentApp(state);
     refreshDashboard();
-    refreshTeaching();
+    refreshTeaching(); refreshCourses.paint();
     refreshExams();
     refreshNotices();
     refreshReports($('#studentReports'));

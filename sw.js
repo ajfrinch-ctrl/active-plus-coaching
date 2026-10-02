@@ -1,12 +1,14 @@
-// v148: date-wise examination workspace — question archive, review workflow
-// (draft → review → approved → published → completed → archived) and question-
-// level editing for the Manager. v147: phone lookup with three-digit masks,
-// running public transaction IDs and readable privacy-safe payment reports.
-const CACHE_VERSION = 148;
+// v149: examination identity + question bank — permanent Exam Codes
+// (M2608BN01), seeded paper order, প্রণ্ন সংরক্ষণ করুন shelf, per-student and
+// answer-key PDFs, the student Learning Hub (class → subject → chapter) and the
+// shared brand module. v148: date-wise examination workspace — question
+// archive, review workflow and question-level editing for the Manager.
+const CACHE_VERSION = 149;
 const CACHE_NAME = `active-plus-student-v${CACHE_VERSION}-minimal-education`;
 const APP_SHELL = [
   './css/notifications.css',
   './css/academics.css',
+  './css/course-hub.css',
   './css/exam-archive.css',
   './css/app-polish.css',
   './css/student-record.css',
@@ -103,9 +105,15 @@ const APP_SHELL = [
   './js/notification-store.js',
   './js/notification-settings.js',
   './js/academics.js',
+  './js/brand.js',
   './js/admin-academics.js',
   './js/exam-data.js',
   './js/exam-ui.js',
+  './js/exam-core.js',
+  './js/question-bank.js',
+  './js/course-content.js',
+  './js/course-hub.js',
+  './js/course-editor.js',
   './js/exam-manager.js',
   './js/exam-archive.js',
   './js/exam-pdf.js',

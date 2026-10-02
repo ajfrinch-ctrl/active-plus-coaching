@@ -265,7 +265,7 @@ export async function downloadExamPDF(exam, { solutions = false, attempt = null,
      code, type, chapter, date, duration, question count and marks). */
   const drawIdentity = async () => {
     const rowH = 34, labelW = 250, colW = (CONTENT_W - labelW) / 2;
-    await drawParagraph(exam.title, { bold: true, color: '#143b30' });
+    await drawParagraph(`পরীক্ষার নাম: ${exam.title}`, { bold: true, color: '#143b30' });
     for (let index = 0; index < identity.length; index += 2) {
       if (y + rowH > BOTTOM) { await finishPage(); y = beginPage({ part: partSolutions ? 'উত্তরপত্র' : 'প্রশ্নপত্র' }); }
       for (let column = 0; column < 2; column++) {

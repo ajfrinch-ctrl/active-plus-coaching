@@ -5,11 +5,11 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/; frame-src 'self' https://www.google.com/recaptcha/; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https: wss:; manifest-src 'self'; worker-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'">
   <meta name="referrer" content="no-referrer">
   <script src="js/sanitize-url.js"></script>
-  <script src="js/app-entry.js?v=148" data-entry="student"></script>
+  <script src="js/app-entry.js?v=149" data-entry="student"></script>
   <script src="js/topbar-connectivity.js?v=20260929-topbar"></script>
   <script type="module" src="js/realtime-sync-entry.js"></script>
   <script src="js/appearance-boot.js"></script>
-  <script src="js/theme-logos.js?v=148"></script>
+  <script src="js/theme-logos.js?v=149"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
   <meta name="theme-color" content="#f3f6fb">
   <meta name="description" content="Active Plus Coaching শিক্ষার্থী অ্যাপ — অফলাইনে রুটিন, ক্লাস, ফলাফল ও নোটিশ দেখুন।">
@@ -24,7 +24,7 @@
   <link rel="icon" type="image/png" sizes="16x16" href="assets/icons/favicon-16.png">
   <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
   <link rel="preload" href="assets/fonts/NotoSansBengali-Variable.ttf" as="font" type="font/ttf" crossorigin>
-  <link rel="stylesheet" href="css/design-system.css?v=148">
+  <link rel="stylesheet" href="css/design-system.css?v=149">
   <script type="module" src="js/ui-accessibility.js"></script>
   <script src="js/launch-screen.js" defer></script>
 </head>
@@ -295,6 +295,10 @@
       <section class="view" id="coursesView" data-view-panel="courses" aria-labelledby="coursesTitle">
         <div class="page-intro"><button class="pay-back" type="button" data-view="home" aria-label="হোমে ফিরুন"><svg class="apc-glyph-icon" data-icon="arrow-left" data-icon-set="active-plus-color" data-icon-version="1" data-icon-style="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20 12H4m6-6-6 6 6 6"/></svg></button><div class="page-intro-copy"><p class="eyebrow">চলমান পড়াশোনা</p><h1 id="coursesTitle">আমার কোর্স</h1><p>প্রতিটি বিষয়ে নিজের অগ্রগতি দেখে নাও।</p></div></div>
         <button class="exam-link" type="button" data-view="exams">পরীক্ষা দাও<small>MCQ, লিখিত ও সংক্ষিপ্ত পরীক্ষা • সবার ফলাফল</small></button>
+        <section class="course-hub-block" aria-labelledby="courseHubTitle">
+          <div class="learning-heading"><div><h2 id="courseHubTitle">আমার পড়াশোনা</h2><p class="course-hub-note">শ্রেণি → বিষয় → চ্যাপ্টার → কনটেন্ট, নোট, সাজেশন, MCQ, মডেল টেস্ট ও নিজের ফলাফল</p></div></div>
+          <div id="courseHub" class="course-hub"></div>
+        </section>
         <section class="teaching-board" id="learningBoard" aria-labelledby="learningTitle">
           <div class="learning-heading"><span class="learning-home-icon" aria-hidden="true"><svg class="apc-color-icon" data-icon="book" data-icon-set="active-plus-color" data-icon-version="1" data-icon-style="color" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><g stroke="var(--icon-outline, currentColor)" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"><path d="M3.2 5.4h7.9l2.2 2v13.2H5.2a2 2 0 0 1-2-2Z" fill="var(--icon-blue-back, currentColor)" /><rect x="6" y="3.3" width="14.8" height="17.6" rx="2" fill="var(--icon-blue, currentColor)" /><path d="M6 17.6h13.4v3.3H7.8a1.7 1.7 0 0 1 0-3.3" fill="var(--icon-paper, currentColor)" /><path d="M14.8 3.3h3.1v7l-1.55-1.5-1.55 1.5Z" fill="var(--icon-mint, currentColor)" stroke="none"/><path d="M9.2 7.5h3M9.2 10.2h3" fill="none" stroke="var(--icon-on-color, currentColor)" stroke-width="1.4"/></g></svg></span><div><h2 id="learningTitle">শিক্ষকের দেওয়া কাজ</h2><p id="learningCount" role="status"></p></div></div>
           <div class="learning-summary" id="learningSummary" aria-label="কাজের সারসংক্ষেপ"></div>

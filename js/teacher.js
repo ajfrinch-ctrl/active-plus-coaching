@@ -233,7 +233,7 @@ function renderTeacherProfile() {
   host.innerHTML = `<div class="manager-profile-list"><div><small>নাম</small><strong>${esc(account.fullName || '—')}</strong></div><div><small>Username</small><strong>${esc(account.username || '—')}</strong></div><div><small>যোগাযোগ</small><strong>${esc(account.mobile || '—')}</strong></div><div><small>Role</small><strong>Teacher — Academic</strong></div><div><small>Assigned class/batch</small><strong>${bn(state.assignments.length)}</strong></div></div>`;
 }
 function render() { renderHome(); renderRecords(); renderStudents(); renderTeacherClasses(); renderTeacherRoutine(); renderAcademicReports(); renderTeacherProfile(); }
-const TEACHER_VIEWS = Object.freeze(['home', 'more', 'students', 'online-exams', 'classes', 'routine-view', 'reports', 'profile', ...Object.keys(ACTIVITY_TYPES)]);
+const TEACHER_VIEWS = Object.freeze(['home', 'more', 'students', 'online-exams', 'courses', 'classes', 'routine-view', 'reports', 'profile', ...Object.keys(ACTIVITY_TYPES)]);
 function setView(view) {
   if (!TEACHER_VIEWS.includes(view)) return;
   const previous = state.view;
@@ -244,7 +244,7 @@ function setView(view) {
     state.recordLimit = 15;
   }
   state.view = view;
-  const panel = ACTIVITY_TYPES[view] ? 'teacherRecords' : { home: 'teacherHome', more: 'teacherMore', students: 'teacherStudents', 'online-exams': 'teacherOnlineExams', classes: 'teacherClasses', 'routine-view': 'teacherRoutine', reports: 'teacherAcademicReports', profile: 'teacherProfile' }[view];
+  const panel = ACTIVITY_TYPES[view] ? 'teacherRecords' : { home: 'teacherHome', more: 'teacherMore', students: 'teacherStudents', 'online-exams': 'teacherOnlineExams', courses: 'teacherCourses', classes: 'teacherClasses', 'routine-view': 'teacherRoutine', reports: 'teacherAcademicReports', profile: 'teacherProfile' }[view];
   $$('.teacher-view').forEach(el => { el.hidden = el.id !== panel; });
   $$('.teacher-type-tabs [data-type-tab]').forEach(el => {
     const active = el.dataset.typeTab === view;
@@ -440,9 +440,18 @@ async function showTeacherShell() {
   const loaded = await reload();
   // Settings → Notification Settings, inside the Teacher's profile page.
   initNotificationSettings({ mount: '#notificationSettings' });
+  // পড়াশোনা পরিচালনা করুন — content for the Teacher's own class+subject only.
+  mountCourseEditor();
   mountReports($('#teacherReports'), { panel: 'teacher' });
   watchOwnPanelSession('teacher');
   return loaded;
+}
+/** The content editor is mounted once; its own paint() keeps it current. */
+async function mountCourseEditor() {
+  try {
+    const { initCourseEditor } = await import('./course-editor.js');
+    initCourseEditor({ mount: '#teacherCourseEditor', role: 'teacher', actor: 'TEACHER', toast: message => toast(message) });
+  } catch (error) { console.warn('[Active Plus] course editor unavailable:', error?.name || 'unknown'); }
 }
 $('#teacherChangePassword')?.addEventListener('click', () => openStaffPasswordDialog({ role: 'teacher', mode: 'change' }));
 $('#teacherExit').addEventListener('click', () => {

@@ -28,7 +28,7 @@ const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
 const bn = value => String(value ?? 0).replace(/\d/g, digit => '০১২৩৪৫৬৭৮৯'[digit]);
 const money = value => `৳${bn(Number(value || 0).toLocaleString('en-US'))}`;
-const MANAGER_VIEWS = Object.freeze(['dashboard', 'students', 'approvals', 'classes', 'teachers', 'finance', 'cash-counter', 'notices', 'routine', 'exams', 'results', 'reports', 'profile', 'more']);
+const MANAGER_VIEWS = Object.freeze(['dashboard', 'students', 'approvals', 'classes', 'teachers', 'finance', 'cash-counter', 'notices', 'routine', 'exams', 'courses', 'results', 'reports', 'profile', 'more']);
 /* The "আরও" page. One row per Manager module, in the same icon + title + hint
    language as the Admin panel's More menu, so a module looks the same wherever
    it is reached from. Labels stay Bangla like the bottom bar; the hint names
@@ -41,6 +41,7 @@ const MORE_MODULES = Object.freeze([
   { view: 'notices', icon: 'notice', label: 'নোটিশ দিন', hint: 'নোটিশ তৈরি, সম্পাদনা ও মুছে ফেলা' },
   { view: 'routine', icon: 'calendar', label: 'ক্লাস রুটিন তৈরি করুন', hint: 'দিনভিত্তিক ক্লাস ও শিক্ষক সাজানো' },
   { view: 'exams', icon: 'exam', label: 'পরীক্ষা পরিচালনা করুন', hint: 'পরীক্ষা তৈরি, প্রশ্ন, অনুমোদন ও প্রকাশ' },
+  { view: 'courses', icon: 'book', label: 'পড়াশোনা পরিচালনা করুন', hint: 'কোর্স উপকরণ, নোট ও সাজেশন' },
   { view: 'results', icon: 'result', label: 'ফলাফল দেখুন', hint: 'নম্বর যাচাই ও ফলাফল প্রকাশ' },
   { view: 'reports', icon: 'reports', label: 'রিপোর্ট', hint: 'রিপোর্ট তৈরি, প্রিভিউ ও ডাউনলোড' },
   { view: 'profile', icon: 'user', label: 'ম্যানেজার প্রোফাইল', hint: 'নিজের পরিচয় ও পাসওয়ার্ড' }
@@ -77,6 +78,7 @@ function renderView(view) {
   if (view === 'finance') renderFinance();
   if (view === 'cash-counter') renderCashCounter();
   if (view === 'notices') renderNotices();
+  if (view === 'courses') mountCourseEditor();
   if (view === 'routine') renderRoutine();
   if (view === 'results') renderResults();
   if (view === 'reports') void refreshReports($('#managerReports'));
@@ -514,8 +516,19 @@ async function enterManager() {
   await loadOperationalData();
   // Settings → Notification Settings, inside the Manager's own profile page.
   initNotificationSettings({ mount: '#notificationSettings' });
+  // পড়াশোনা পরিচালনা করুন: the same content library the Teacher writes into.
+  mountCourseEditor();
   mountReports($('#managerReports'), { panel: 'manager' });
   watchOwnPanelSession('manager');
+}
+/** The content editor is mounted once and only painted when its page opens. */
+let courseEditor = null;
+async function mountCourseEditor() {
+  try {
+    const { initCourseEditor } = await import('./course-editor.js');
+    courseEditor = initCourseEditor({ mount: '#managerCourseEditor', role: 'manager', actor: 'MANAGER', toast: message => toast(message) });
+    courseEditor.paint?.();
+  } catch (error) { console.warn('[Active Plus] course editor unavailable:', error?.name || 'unknown'); }
 }
 $('#managerLogout').addEventListener('click', () => { clearStaffSession('manager'); goToLoginPage(); });
 window.addEventListener('storage', event => {
