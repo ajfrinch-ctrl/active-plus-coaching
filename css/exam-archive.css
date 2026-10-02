@@ -58,6 +58,28 @@
 .exam-tags{display:flex;flex-wrap:wrap;gap:var(--space-2)}
 .exam-question-options p{margin:0 0 4px}
 .exam-option-correct{color:var(--color-success);font-weight:600}
+/* ---- exam code + the six stages ---------------------------------------- */
+.exam-code-tag{font-family:var(--font-mono,ui-monospace,monospace);letter-spacing:.5px;font-weight:600}
+.exam-stage{border:1px solid currentColor;background:var(--color-surface);font-weight:600}
+.exam-stage-draft{color:var(--color-text-secondary)}
+.exam-stage-scheduled{color:var(--color-warning)}
+.exam-stage-published{color:var(--color-primary)}
+.exam-stage-running{color:var(--color-success)}
+.exam-stage-completed{color:var(--color-text-secondary)}
+.exam-stage-archived{color:var(--color-text-secondary);opacity:.85}
+
+/* ---- question bank ------------------------------------------------------ */
+.exam-bank-filters{grid-template-columns:minmax(0,1fr)}
+.exam-bank-row,.exam-bank-pick{margin-bottom:var(--space-3)}
+.exam-bank-row p,.exam-bank-pick p{margin:var(--space-2) 0;overflow-wrap:anywhere}
+.exam-bank-form{display:grid;gap:var(--space-2)}
+.exam-bank-tools{flex-wrap:wrap}
+.exam-bank-picker summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;align-items:center}
+@media (max-width:720px){
+  /* The bank form never squeezes two fields into one narrow row. */
+  .exam-bank-form,.exam-bank-form label{grid-template-columns:minmax(0,1fr)}
+  .exam-bank-row .exam-actions button,.exam-bank-pick .exam-actions button{width:100%}
+}
 .exam-question-edit,.exam-question-add{margin-top:var(--space-3)}
 .exam-question-add summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;align-items:center}
 

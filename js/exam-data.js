@@ -2,7 +2,7 @@
    A production API must own authorization, time, answer keys and accepted submissions. */
 import { teachingRepository, DEMO_TEACHER } from './teaching-data.js';
 import { isTeacherAssigned, subjectsForTeacherClass } from './teacher-assignments.js';
-import { isSubjectEnabled, academicCodes, chapterByName, ensureChapter } from './academics.js';
+import { isSubjectEnabled, academicCodes, chapterByName, ensureChapter as ensureAcademicChapter } from './academics.js';
 import { allocateExamCode, examCodeParts, orderPaperForAttempt, timeLabel } from './exam-core.js';
 import { hasStaffSession, readStaffAccount } from './staff-auth.js';
 import { enabledClasses } from './config.js';
@@ -672,6 +672,15 @@ function attemptById(db, id, studentId) {
   const a = db.attempts.find(a => a.id === id && a.studentId === studentId);
   if (!a) fail('এই উত্তরপত্র পাওয়া যায়নি।'); return a;
 }
+/** Register a chapter typed into a paper into Academic Setup (idempotent).
+    The chapter then appears in every cascading picker, exam or course. */
+export async function ensureChapter(className, subjectName, chapterName, actor = 'SYSTEM') {
+  const name = String(chapterName || '').trim();
+  if (!name) return null;
+  try { return await ensureAcademicChapter(className, subjectName, name); }
+  catch { return chapterByName(className, subjectName, name); }
+}
+
 function academicCodesSafe(className, subjectName) {
   try { return academicCodes(className, subjectName) || {}; } catch { return {}; }
 }
@@ -758,10 +767,8 @@ export const examRepository = {
   },
   /* Chapters are shared with Academic Setup: an exam keeps a real chapter row
      (id + name) instead of a free-text string. */
-  async ensureChapter(className, subjectName, chapterName) {
-    const name = String(chapterName || '').trim();
-    if (!name) return null;
-    try { return await ensureChapter(className, subjectName, name); } catch { return chapterByName(className, subjectName, name); }
+  async registerChapter(className, subjectName, chapterName) {
+    return ensureChapter(className, subjectName, chapterName);
   },
   async saveDraft(input, actor = TEACHER_ACTOR) {
     /* Manager-created papers belong to the Manager; a Teacher's paper stays

@@ -4,11 +4,12 @@
    open on the screen, and no two dates ever mix in one list.
    Permissions are decided by js/exam-archive.js and enforced again in
    js/exam-data.js; this module only paints the buttons that are allowed. */
-import { examRepository as repo, EXAM_TYPES, EXAM_STATUSES, TEACHER_ACTOR, ADMIN_ACTOR, MANAGER_ACTOR, examTemplate, EXAM_SAMPLE_TEMPLATES, MCQ_30_SAMPLE, parseQuestions, totalMarks, watchExams, isLiveExam, examDateOf, examDurationMinutes, examDateFor } from './exam-data.js';
-import { examRecord, questionPreview, resultMarkup, downloadResults, statusTag, typeTag, esc, num, when, shortExamId } from './exam-ui.js';
+import { examRepository as repo, EXAM_TYPES, EXAM_STATUSES, TEACHER_ACTOR, ADMIN_ACTOR, MANAGER_ACTOR, examTemplate, EXAM_SAMPLE_TEMPLATES, MCQ_30_SAMPLE, parseQuestions, totalMarks, watchExams, isLiveExam, examDateOf, examDurationMinutes, examDateFor, examCodeOf, examStageLabel, ensureChapter } from './exam-data.js';
+import { examRecord, questionPreview, resultMarkup, downloadResults, statusTag, typeTag, stageTag, codeTag, esc, num, when, shortExamId } from './exam-ui.js';
 import { downloadExamPDF } from './exam-pdf.js';
 import { enabledClasses } from './config.js';
-import { listClasses, subjectsForClass, isSubjectEnabled } from './academics.js';
+import { listClasses, listChapters, subjectsForClass, isSubjectEnabled } from './academics.js';
+import { questionBank, searchQuestions, listQuestions, questionById, QUESTION_TYPES, QUESTION_DIFFICULTIES, QUESTION_TYPE_ORDER, QUESTION_DIFFICULTY_ORDER, watchQuestionBank, questionForExam } from './question-bank.js';
 import { subjectsForTeacherClass } from './teacher-assignments.js';
 import { listTeacherAssignments } from './teacher-assignments.js';
 import {
@@ -28,6 +29,12 @@ export function initExamManager(container, role) {
   };
   let db = { exams: [], attempts: [] }, view = 'home', selected = null, openQuestion = null;
   let filters = { ...EXAM_FILTERS }, busy = false, ready = false;
+  /* Question Bank screen state: filters, one page of rows and the row being
+     edited. Only one page is ever rendered, so a shelf of thousands of
+     questions never reaches the DOM. */
+  const BANK_PAGE = 20;
+  let bankFilters = { query: '', className: 'all', subject: 'all', chapter: 'all', type: 'all', difficulty: 'all' };
+  let bankPage = 0, bankEditing = '';
   root.classList.add('exam-workspace');
   root.innerHTML = '<p class="exam-note">লোকাল ডেমো • প্রশ্ন শিক্ষক তৈরি করবেন, Manager পর্যালোচনা/অনুমোদন/প্রকাশ করবেন। পরীক্ষা ও প্রশ্ন তারিখ অনুযায়ী আলাদা রেকর্ডে থাকে; ডেমোতে সব শ্রেণির অনুমোদিত শিক্ষার্থী অংশ নিতে পারে।</p><p class="exam-error" role="alert" data-exam-error hidden></p><p class="exam-message" role="status" data-exam-message hidden></p><div data-exam-content></div>';
   const $ = selector => root.querySelector(selector), content = $('[data-exam-content]');
@@ -56,14 +63,15 @@ export function initExamManager(container, role) {
   }
   function hubMarkup(exams) {
     const upcoming = upcomingExams(exams).length;
-    return `<section class="exam-hub" aria-label="পরীক্ষা বিভাগ">
+    return `<section class="exam-hub" aria-label="পরীক্ষা পরিচালনা করুন">
       <div class="exam-actions">
         ${button('view-history', '🧾 পরীক্ষার ইতিহাস')}
         ${button('view-upcoming', `⏳ আসন্ন পরীক্ষা${upcoming ? ` (${num(upcoming)})` : ''}`)}
-        ${button('view-archive', '🗂️ প্রশ্নের আর্কাইভ')}
+        ${button('view-archive', '🗂️ পরীক্ষার প্রশ্ন দেখুন')}
+        ${button('bank', '📚 প্রশ্ন সংরক্ষণ করুন')}
       </div>
-      <div class="exam-actions" aria-label="নতুন পরীক্ষা">
-        ${Object.entries(EXAM_TYPES).map(([type, label]) => button('new-' + type, '+ নতুন ' + label, '', 'primary')).join('')}
+      <div class="exam-actions" aria-label="পরীক্ষা তৈরি করুন">
+        ${Object.entries(EXAM_TYPES).map(([type, label]) => button('new-' + type, `পরীক্ষা তৈরি করুন — ${label}`, '', 'primary')).join('')}
       </div>
       ${countersMarkup(exams)}
     </section>`;
@@ -121,13 +129,13 @@ export function initExamManager(container, role) {
       ].filter(Boolean).join('');
       return `<tr data-managed-exam="${esc(exam.id)}">
         <td data-label="তারিখ">${esc(examDateShort(examDateOf(exam)))}</td>
-        <td data-label="পরীক্ষা"><strong>${esc(exam.title)}</strong><small class="exam-row-meta">${esc(shortExamId(exam.id))} • ${typeTag(exam)}</small>${exam.reviewNote ? `<small class="exam-review-note">${esc(exam.reviewNote)}</small>` : ''}</td>
+        <td data-label="পরীক্ষা"><strong>${esc(exam.title)}</strong><small class="exam-row-meta">${codeTag(exam)}${typeTag(exam)} • ${esc(shortExamId(exam.id))}</small>${exam.chapterName ? `<small class="exam-row-meta">অধ্যায়: ${esc(exam.chapterName)}</small>` : ''}${exam.reviewNote ? `<small class="exam-review-note">${esc(exam.reviewNote)}</small>` : ''}</td>
         <td data-label="শ্রেণি">${esc(exam.className || 'সব শ্রেণি')}${exam.group ? ` • ${esc(exam.group)}` : ''}</td>
         <td data-label="বিষয়">${esc(exam.subject)}</td>
         <td data-label="প্রশ্ন">${count((exam.questions || []).length)}</td>
         <td data-label="পূর্ণমান">${count(totalMarks(exam))}</td>
         <td data-label="সময়">${esc(examDateShort(examDateOf(exam)))}<small class="exam-row-meta">${esc(durationLabel(examDurationMinutes(exam)))}</small><small class="exam-row-meta">তৈরি: ${esc(creatorName(exam))}</small></td>
-        <td data-label="অবস্থা">${statusTag(exam)}</td>
+        <td data-label="অবস্থা">${statusTag(exam)}${stageTag(exam)}</td>
         <td data-label="অ্যাকশন"><div class="exam-row-actions">${actions}</div></td>
       </tr>`;
     }).join('');
@@ -146,6 +154,106 @@ export function initExamManager(container, role) {
         <tbody>${rowsMarkup(group.exams)}</tbody>
       </table></div>
     </section>`).join('');
+  }
+
+  /* ---------- প্রশ্ন সংরক্ষণ করুন (Question Bank) --------------------------- */
+
+  /** One page of the shelf, with every filter the brief lists. */
+  function bankMatches() {
+    const value = key => (bankFilters[key] === 'all' ? '' : bankFilters[key]);
+    return searchQuestions({
+      query: bankFilters.query,
+      className: value('className'),
+      subject: value('subject'),
+      chapterName: value('chapter'),
+      type: value('type'),
+      difficulty: value('difficulty'),
+      includeInactive: true
+    });
+  }
+  function bankFilterMarkup(result) {
+    const classes = [...new Set([...roleClasses(), ...listQuestions().map(row => row.className).filter(Boolean)])];
+    const subjects = [...new Set(listQuestions().map(row => row.subject).filter(Boolean))];
+    const chapters = [...new Set(listQuestions().map(row => row.chapterName).filter(Boolean))];
+    const option = (name, label, values, all) => `<label>${label}<select name="${name}"><option value="all">${all}</option>${values.map(item => `<option value="${esc(item)}" ${bankFilters[name] === item ? 'selected' : ''}>${esc(item)}</option>`).join('')}</select></label>`;
+    return `<form class="exam-filters exam-bank-filters" data-bank-filters>
+      <label class="exam-filter-wide">প্রশ্ন খুঁজুন (কোড / লেখা / টপিক)<input type="search" name="query" value="${esc(bankFilters.query)}" placeholder="যেমন: QUESTION-0007, ঢাকা, বহুপদী"></label>
+      ${option('className', 'শ্রেণি', classes, 'সব শ্রেণি')}
+      ${option('subject', 'বিষয়', subjects, 'সব বিষয়')}
+      ${option('chapter', 'অধ্যায়', chapters, 'সব অধ্যায়')}
+      <label>ধরন<select name="type"><option value="all">সব ধরন</option>${QUESTION_TYPE_ORDER.map(type => `<option value="${type}" ${bankFilters.type === type ? 'selected' : ''}>${esc(QUESTION_TYPES[type])}</option>`).join('')}</select></label>
+      <label>কঠিন্য<select name="difficulty"><option value="all">সব</option>${QUESTION_DIFFICULTY_ORDER.map(level => `<option value="${level}" ${bankFilters.difficulty === level ? 'selected' : ''}>${esc(QUESTION_DIFFICULTIES[level])}</option>`).join('')}</select></label>
+      <div class="exam-actions">
+        <button type="submit" class="primary">খুঁজুন</button>
+        <button type="button" data-exam-action="bank-new">+ নতুন প্রশ্ন সংরক্ষণ করুন</button>
+        <button type="button" data-exam-action="bank-reset">ফিল্টার মুছুন</button>
+      </div>
+      <p class="exam-note" data-bank-count>${num(result.total)}টি প্রশ্ন পাওয়া গেছে — এক পাতায় ${num(Math.min(BANK_PAGE, result.total) || 0)}টি দেখানো হয়।</p>
+    </form>`;
+  }
+  function bankRow(row) {
+    const editing = bankEditing === row.id;
+    return `<article class="exam-question exam-bank-row" data-bank-question="${esc(row.id)}">
+      <small>${esc(row.code)} • ${esc(QUESTION_TYPES[row.type])} • ${num(row.marks)} নম্বর • ${esc(QUESTION_DIFFICULTIES[row.difficulty])}${row.active ? '' : ' • নিষ্ক্রিয়'}</small>
+      <p>${esc(row.text)}</p>
+      <small class="exam-row-meta">${esc(row.className || 'শ্রেণি নেই')} • ${esc(row.subject || 'বিষয় নেই')}${row.chapterName ? ` • ${esc(row.chapterName)}` : ''}${row.topic ? ` • ${esc(row.topic)}` : ''}${row.source ? ` • ${esc(row.source.examTitle || '')}` : ''}</small>
+      <div class="exam-actions">
+        ${button('bank-edit', editing ? 'সম্পাদনা বন্ধ' : 'সম্পাদনা', row.id)}
+        ${button('bank-toggle', row.active ? 'নিষ্ক্রিয় করুন' : 'সক্রিয় করুন', row.id)}
+        ${button('bank-delete', 'মুছুন', row.id, 'danger')}
+      </div>
+      ${editing ? bankFormMarkup(row) : ''}
+    </article>`;
+  }
+  function bankFormMarkup(row = null, { exam = null } = {}) {
+    const data = row || {
+      type: 'mcq', text: '', className: exam?.className || roleClasses()[0] || '', subject: exam?.subject || '',
+      chapterName: exam?.chapterName || '', topic: exam?.topic || '', difficulty: 'medium', marks: 1,
+      options: [{ id: 'A', text: '' }, { id: 'B', text: '' }, { id: 'C', text: '' }, { id: 'D', text: '' }], answer: 'A', answerText: ''
+    };
+    const classNames = [...new Set([...roleClasses(), data.className].filter(Boolean))];
+    const subjectNames = [...new Set([...((data.className ? subjectsForClass(data.className).map(item => item.name) : subjectsForClass(classNames[0] || '').map(item => item.name))), data.subject].filter(Boolean))];
+    const chapters = data.className && data.subject ? listChapters(data.className, data.subject).map(item => item.name) : [];
+    return `<form class="exam-form exam-bank-form" data-bank-form="${esc(row?.id || '')}">
+      <label>প্রশ্নের ধরন<select name="type">${QUESTION_TYPE_ORDER.map(type => `<option value="${type}" ${data.type === type ? 'selected' : ''}>${esc(QUESTION_TYPES[type])}</option>`).join('')}</select></label>
+      <label>প্রশ্নের লেখা<textarea name="text" rows="4" maxlength="1200" required>${esc(data.text)}</textarea></label>
+      <label>শ্রেণি<select name="className">${classNames.map(name => `<option value="${esc(name)}" ${data.className === name ? 'selected' : ''}>${esc(name)}</option>`).join('')}</select></label>
+      <label>বিষয়<select name="subject">${subjectNames.map(name => `<option value="${esc(name)}" ${data.subject === name ? 'selected' : ''}>${esc(name)}</option>`).join('')}</select></label>
+      <label>অধ্যায়<input name="chapterName" list="bankChapters" value="${esc(data.chapterName)}" maxlength="120"><datalist id="bankChapters">${chapters.map(name => `<option value="${esc(name)}"></option>`).join('')}</datalist></label>
+      <label>টপিক<input name="topic" maxlength="120" value="${esc(data.topic)}"></label>
+      <label>কঠিন্য<select name="difficulty">${QUESTION_DIFFICULTY_ORDER.map(level => `<option value="${level}" ${data.difficulty === level ? 'selected' : ''}>${esc(QUESTION_DIFFICULTIES[level])}</option>`).join('')}</select></label>
+      ${['A', 'B', 'C', 'D'].map(id => { const option = (data.options || []).find(item => item.id === id) || { text: '' }; return `<label class="exam-bank-option" data-option-field="${id}">অপশন ${id}<input name="option-${id}" maxlength="500" value="${esc(option.text)}"></label>`; }).join('')}
+      <label data-answer-field>MCQ-এর সঠিক উত্তর (A–D)<select name="answer">${['A', 'B', 'C', 'D'].map(id => `<option value="${id}" ${data.answer === id ? 'selected' : ''}>${id}</option>`).join('')}</select></label>
+      <label>নম্বর (MCQ ছাড়া)<input name="marks" type="number" min="1" max="1000" step="1" value="${esc(data.marks)}"></label>
+      <label>মডেল উত্তর (সত্য/মিথ্যা, সংক্ষিপ্ত, লিখিত)<textarea name="answerText" rows="2" maxlength="1200">${esc(data.answerText)}</textarea></label>
+      <div class="exam-actions"><button type="submit" class="primary">${row ? 'পরিবর্তন সংরক্ষণ করুন' : 'প্রশ্ন সংরক্ষণ করুন'}</button>${button('bank-cancel', 'বাতিল')}</div>
+    </form>`;
+  }
+  function bankView() {
+    view = 'bank'; selected = null;
+    const result = bankMatches(), start = bankPage * BANK_PAGE;
+    const rows = result.rows.slice(start, start + BANK_PAGE);
+    const pages = Math.max(1, Math.ceil(result.total / BANK_PAGE));
+    content.innerHTML = `${back('← পরীক্ষা পরিচালনা করুন (তৈরি ও ইতিহাস)')}
+      <h2>📚 প্রশ্ন সংরক্ষণ করুন</h2>
+      <p class="exam-note">এখানে সংরক্ষিত প্রশ্ন যেকোনো নতুন পরীক্ষায় আবার ব্যবহার করা যায়। কোনো পরীক্ষা মুছলে বা বদলালেও এই প্রশ্ন অটুট থাকে, আর এখান থেকে মুছলেও কোনো পরীক্ষার প্রশ্ন মুছে যায় না।</p>
+      ${bankFilterMarkup(result)}
+      ${rows.map(bankRow).join('') || '<p class="exam-card">এই ফিল্টারে কোনো প্রশ্ন নেই — “+ নতুন প্রশ্ন সংরক্ষণ করুন” চেপে যোগ করুন।</p>'}
+      ${pages > 1 ? `<div class="exam-actions"><button type="button" data-exam-action="bank-page" data-page="${bankPage - 1}" ${bankPage === 0 ? 'disabled' : ''}>← আগের পাতা</button><span class="exam-note">পাতা ${num(bankPage + 1)} / ${num(pages)}</span><button type="button" data-exam-action="bank-page" data-page="${bankPage + 1}" ${bankPage + 1 >= pages ? 'disabled' : ''}>পরের পাতা →</button></div>` : ''}
+      ${bankEditing && bankEditing !== 'new' ? '' : ''}
+      ${bankEditing === 'new' ? `<section class="exam-card exam-bank-new"><h3>নতুন প্রশ্ন সংরক্ষণ করুন</h3>${bankFormMarkup()}</section>` : ''}`;
+    scrollTop();
+  }
+
+  /** The picker that puts shelved questions into the paper being edited. */
+  function bankPickerMarkup(exam) {
+    const { rows, total } = searchQuestions({
+      className: exam.className || '', subject: exam.subject || '',
+      type: exam.type === 'mcq' ? 'mcq' : '', active: true, limit: 10
+    });
+    if (!rows.length) return '<p class="exam-note">এই শ্রেণি ও বিষয়ের জন্য সংরক্ষিত প্রশ্ন নেই — “প্রশ্ন সংরক্ষণ করুন” থেকে যোগ করুন।</p>';
+    return `<p class="exam-note">সংরক্ষিত ${num(total)}টি প্রশ্নের মধ্যে প্রথম ${num(rows.length)}টি দেখানো হচ্ছে${exam.type === 'mcq' ? ' (শুধু MCQ)' : ''}।</p>
+      <div class="exam-question-list">${rows.map(row => `<article class="exam-question exam-bank-pick" data-bank-pick="${esc(row.id)}"><small>${esc(row.code)} • ${num(row.marks)} নম্বর</small><p>${esc(row.text)}</p><div class="exam-actions">${button('bank-add', 'এই পরীক্ষায় যোগ করুন', row.id, 'primary')}</div></article>`).join('')}</div>`;
   }
 
   /* ---------- views -------------------------------------------------------- */
@@ -176,6 +284,11 @@ export function initExamManager(container, role) {
       <div class="exam-actions">${button('paper', 'প্রশ্নপত্র PDF ডাউনলোড', exam.id)}${button('detail', 'বিস্তারিত ও অনুমোদন', exam.id)}${perm.edit ? button('questions', 'প্রশ্ন সম্পাদনা সহ দেখুন', exam.id) : ''}</div>
       <p class="exam-note">প্রশ্নের জন্য unique ID: <strong>${esc(exam.id)}-q1 … ${esc(exam.id)}-q${(exam.questions || []).length}</strong> — একই প্রশ্ন অন্য পরীক্ষায় গেলেও তার নিজের ID থাকবে।</p></article>
       ${problemHint(exam)}
+      <div class="exam-actions exam-bank-tools">
+        <button type="button" data-exam-action="save-to-bank" data-id="${esc(exam.id)}">📚 এই প্রশ্নগুলো প্রশ্ন ব্যাংকে সংরক্ষণ করুন</button>
+        <button type="button" data-exam-action="solutions" data-id="${esc(exam.id)}">সঠিক উত্তরপত্র PDF</button>
+      </div>
+      ${problemHint(exam).includes('বদলানো যাবে না') ? '' : `<details class="exam-card exam-bank-picker"><summary>প্রশ্ন ব্যাংক থেকে প্রশ্ন যোগ করুন</summary>${bankPickerMarkup(exam)}</details>`}
       <h3 class="exam-section-title">প্রশ্ন তালিকা (${num((exam.questions || []).length)}টি)</h3>
       <div class="exam-question-list">${exam.questions.map((question, index) => questionMarkup(exam, question, index, perm)).join('')}</div>
       ${perm.edit ? addQuestionMarkup(exam) : '<p class="exam-note">প্রকাশিত/সম্পন্ন পরীক্ষার প্রশ্ন আর বদলানো যায় না।</p>'}`;
@@ -274,7 +387,7 @@ export function initExamManager(container, role) {
     const nextDay = new Date(Date.now() + 86400000); nextDay.setHours(18, 0, 0, 0);
     const localTime = ms => { const d = new Date(ms); return new Date(ms - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); };
     const classNames = roleClasses();
-    const data = e || { type, title: '', subject: '', className: classNames[0] || '', group: '', startAt: nextDay.getTime(), endAt: nextDay.getTime() + 3600000, lateMinutes: 10, negative: 0, passPercent: 33, template: '', instructions: '' };
+    const data = e || { type, title: '', subject: '', className: classNames[0] || '', group: '', chapterName: '', topic: '', questionOrder: 'shuffle', optionOrder: 'shuffle', startAt: nextDay.getTime(), endAt: nextDay.getTime() + 3600000, lateMinutes: 10, negative: 0, passPercent: 33, template: '', instructions: '' };
     const classOptions2 = value => `<option value="">শ্রেণি নির্বাচন করুন</option>${classNames.map(c => `<option value="${esc(c)}" ${c === value ? 'selected' : ''}>${esc(c)}</option>`).join('')}`;
     const field = (name, label, kind = 'text', extra = '') => `<label>${label}<input name="${name}" type="${kind}" value="${esc(['startAt', 'endAt'].includes(name) ? localTime(data[name]) : data[name])}" ${extra}></label>`;
     content.innerHTML = `${back()}<h2>${e ? 'সম্পাদনা' : 'নতুন পরীক্ষা'} — ${EXAM_TYPES[type]}${e ? ` <small>(${esc(shortExamId(e.id))})</small>` : ''}</h2>
@@ -287,6 +400,10 @@ export function initExamManager(container, role) {
       ${field('title', 'পরীক্ষার নাম *', 'text', 'required maxlength="150"')}
       <label>কোন শ্রেণির জন্য *<select name="className" required>${classOptions2(data.className)}</select></label>
       <label>কোন বিষয়ের পরীক্ষা *<span data-exam-subject-slot>${subjectSelectMarkup(data.className, data.subject)}</span></label>
+      <label>অধ্যায়<input name="chapterName" maxlength="120" list="examChapters" value="${esc(data.chapterName || '')}" placeholder="যেমন: অধ্যায় ১ — বীজগণিত"><datalist id="examChapters" data-exam-chapters>${(data.className && data.subject ? listChapters(data.className, data.subject) : []).map(item => `<option value="${esc(item.name)}"></option>`).join('')}</datalist><small class="exam-note">এখানে লিখলে অধ্যায়টি Academic Setup-এও যুক্ত হবে, তাই পরের পরীক্ষায় তালিকায় পাবেন।</small></label>
+      <label>টপিক / অংশ<input name="topic" maxlength="120" value="${esc(data.topic || '')}" placeholder="যেমন: বহুপদী সমীকরণ"></label>
+      <label>প্রশ্নের ক্রম<select name="questionOrder"><option value="shuffle" ${data.questionOrder !== 'fixed' ? 'selected' : ''}>প্রতিটি শিক্ষার্থীর জন্য আলাদা ক্রম</option><option value="fixed" ${data.questionOrder === 'fixed' ? 'selected' : ''}>সবাই একই ক্রমে পাবে</option></select></label>
+      <label>অপশনের ক্রম<select name="optionOrder"><option value="shuffle" ${data.optionOrder !== 'fixed' ? 'selected' : ''}>প্রতিটি শিক্ষার্থীর জন্য আলাদা ক্রম</option><option value="fixed" ${data.optionOrder === 'fixed' ? 'selected' : ''}>সবাই একই ক্রমে পাবে</option></select></label>
       <label>Batch / Group<input name="group" maxlength="80" list="examAssignedGroups" value="${esc(data.group || '')}" placeholder="Full-class assignment হলে ফাঁকা রাখুন"><datalist id="examAssignedGroups">${[...new Set(listTeacherAssignments('teacher.apc').filter(item => item.group).map(item => item.group))].map(group => `<option value="${esc(group)}"></option>`).join('')}</datalist></label>
       ${field('startAt', type === 'mcq' ? 'শুরুর সময় *' : 'প্রশ্ন ডাউনলোড শুরুর সময় *', 'datetime-local', 'required')}${field('endAt', type === 'mcq' ? 'সবার জন্য শেষ সময় *' : 'আজকের প্রস্তুতির শেষ সময় *', 'datetime-local', 'required')}
       <p class="exam-note">সময় এই মোবাইলের স্থানীয় সময় অনুযায়ী। পরীক্ষার তারিখ ও সময়কাল নিচে আলাদা করে দেখানো হয়। ${type === 'mcq' ? 'মোট দুইবার; চলমান প্রথম-প্রচেষ্টার গড়ের নিচে থাকলে দ্বিতীয় সুযোগ। সময় বাড়বে না। সেরা নম্বর ফলাফলে থাকবে।' : 'শুরুর তারিখের পরের দিন (বাংলাদেশ সময়) ক্লাসে পরীক্ষা হবে। শিক্ষার্থী PDF নেবে, খাতায় উত্তর দেবে।'}</p>
@@ -320,6 +437,15 @@ export function initExamManager(container, role) {
       if (!slot) return;
       const current = String($('[name=subject]')?.value || data.subject || '');
       slot.innerHTML = subjectSelectMarkup($('[name=className]').value, current);
+      repaintChapters();
+    }
+    /** The chapter list follows the class+subject pair (cascading pickers). */
+    function repaintChapters() {
+      const list = $('[data-exam-chapters]');
+      if (!list) return;
+      const className = $('[name=className]').value, subject = $('[name=subject]')?.value || '';
+      list.innerHTML = (className && subject ? listChapters(className, subject) : [])
+        .map(item => `<option value="${esc(item.name)}"></option>`).join('');
     }
     function preview() {
       try {
@@ -336,19 +462,25 @@ export function initExamManager(container, role) {
     });
     $('[name=className]').addEventListener('input', repaintSubjects);
     $('[name=className]').addEventListener('change', repaintSubjects);
+    $('[name=subject]')?.addEventListener('change', repaintChapters);
     $('[name=template]').addEventListener('input', preview);
     $('[name=startAt]')?.addEventListener('change', refreshIdentity);
     $('[name=endAt]')?.addEventListener('change', refreshIdentity);
     refreshIdentity(); preview();
     $('[data-exam-form]').addEventListener('submit', event => {
       event.preventDefault(); const values = Object.fromEntries(new FormData(event.currentTarget));
-      run(() => repo.saveDraft({ ...values, type, id: e?.id, startAt: new Date(values.startAt).getTime(), endAt: new Date(values.endAt).getTime() }, actor), 'খসড়া সংরক্ষিত। এখন অনুমতির জন্য পাঠাতে পারেন।', () => home());
+      run(async () => {
+        /* A chapter typed into the paper is registered in Academic Setup first,
+           so every later examination can pick it from the list. */
+        if (String(values.chapterName || '').trim()) await ensureChapter(values.className, values.subject, values.chapterName, actor.role === 'teacher' ? 'TEACHER' : 'MANAGER');
+        return repo.saveDraft({ ...values, type, id: e?.id, startAt: new Date(values.startAt).getTime(), endAt: new Date(values.endAt).getTime() }, actor);
+      }, 'খসড়া সংরক্ষিত। এখন অনুমতির জন্য পাঠাতে পারেন।', () => home());
     });
     scrollTop();
   }
   function report(e, reset = true) {
     view = 'report'; selected = e.id;
-    content.innerHTML = `${back()}${examRecord(e)}<div class="exam-actions">${button('csv', 'রিপোর্ট ডাউনলোড (CSV)', e.id)}${e.type === 'mcq' && Date.now() >= e.endAt ? button('solutions', 'সঠিক উত্তরসহ PDF', e.id) : ''}</div>${resultMarkup(db, e, true)}`;
+    content.innerHTML = `${back()}${examRecord(e)}<div class="exam-actions">${button('csv', 'রিপোর্ট ডাউনলোড (CSV)', e.id)}${button('solutions', 'সঠিক উত্তরপত্র PDF', e.id)}${button('paper', 'প্রশ্নপত্র PDF', e.id)}</div>${resultMarkup(db, e, true, { pdf: true })}`;
     if (reset) scrollTop();
   }
   async function grade(e) {
@@ -367,6 +499,7 @@ export function initExamManager(container, role) {
     if (view === 'home') home();
     else if (view === 'upcoming') upcoming();
     else if (view === 'archive') archive();
+    else if (view === 'bank') bankView();
     else if (view === 'edit') { /* the open editor keeps the typed values */ }
     else if (selected) { const exam = db.exams.find(item => item.id === selected); if (exam) repaintSelected(exam); else home(); }
     else home();
@@ -384,7 +517,10 @@ export function initExamManager(container, role) {
     else if (view === 'grade') grade(exam);
   }
   async function run(operation, success, next) {
-    if (busy || !ready) return;
+    /* A second tap while the first save is still finishing must never look
+       like a silent failure — say what is happening instead. */
+    if (busy) { message('আগের কাজটি শেষ হচ্ছে — এক মুহূর্ত পর আবার চেষ্টা করুন।'); return; }
+    if (!ready) return;
     busy = true; error(''); message(''); root.setAttribute('aria-busy', 'true');
     const controls = [...root.querySelectorAll('button, input, select, textarea')]; controls.forEach(el => { el.disabled = true; });
     try {
@@ -418,7 +554,12 @@ export function initExamManager(container, role) {
 
   root.addEventListener('change', event => {
     if (busy) return;
-    if (event.target.closest('[data-exam-filters]')) { readFilterForm(); applyFilters(); }
+    if (event.target.closest('[data-exam-filters]')) { readFilterForm(); applyFilters(); return; }
+    if (event.target.closest('[data-bank-filters]')) {
+      bankFilters = { ...bankFilters, ...Object.fromEntries(new FormData(event.target.closest('[data-bank-filters]'))) };
+      bankPage = 0;
+      bankView();
+    }
   });
   root.addEventListener('input', event => {
     const field = event.target.closest('[data-exam-filters] [name=query]'); if (!field || busy) return;
@@ -431,6 +572,30 @@ export function initExamManager(container, role) {
   root.addEventListener('submit', async event => {
     const filterForm = event.target.closest('[data-exam-filters]');
     if (filterForm) { event.preventDefault(); readFilterForm(); applyFilters(); return; }
+    const bankFilterForm = event.target.closest('[data-bank-filters]');
+    if (bankFilterForm) {
+      event.preventDefault();
+      bankFilters = { ...bankFilters, ...Object.fromEntries(new FormData(bankFilterForm)) };
+      bankPage = 0; bankView(); return;
+    }
+    const bankForm = event.target.closest('[data-bank-form]');
+    if (bankForm) {
+      event.preventDefault();
+      const values = Object.fromEntries(new FormData(bankForm));
+      const id = bankForm.dataset.bankForm;
+      const payload = {
+        id: id || undefined, type: values.type, text: values.text, className: values.className, subject: values.subject,
+        chapterName: values.chapterName, topic: values.topic, difficulty: values.difficulty,
+        marks: values.marks, answer: values.answer, answerText: values.answerText,
+        options: ['A', 'B', 'C', 'D'].map(letter => ({ id: letter, text: values[`option-${letter}`] }))
+      };
+      run(async () => {
+        bankEditing = '';
+        if (String(values.chapterName || '').trim()) await ensureChapter(values.className, values.subject, values.chapterName, actor.role === 'teacher' ? 'TEACHER' : 'MANAGER');
+        return questionBank.save(payload, actor.role === 'teacher' ? 'Teacher' : 'Manager');
+      }, 'প্রশ্ন সংরক্ষণ করা হয়েছে।', () => bankView());
+      return;
+    }
     const questionForm = event.target.closest('[data-question-form]');
     if (questionForm) {
       event.preventDefault(); const payload = Object.fromEntries(new FormData(questionForm));
@@ -454,15 +619,42 @@ export function initExamManager(container, role) {
       }, actor), 'নতুন প্রশ্ন যোগ হয়েছে।', () => questions(db.exams.find(item => item.id === exam.id)));
     }
   });
+  /* Screen-only actions (opening the shelf, turning a page, opening an editor)
+     never touch storage, so they stay usable even while a save is finishing. */
+  const VIEW_ONLY_ACTIONS = new Set(['list', 'view-history', 'view-upcoming', 'view-archive', 'bank', 'bank-reset', 'bank-page', 'bank-new', 'bank-edit', 'bank-cancel']);
   root.addEventListener('click', async event => {
-    const target = event.target.closest('[data-exam-action]'); if (!target || busy) return;
-    const action = target.dataset.examAction, e = db.exams.find(item => item.id === target.dataset.id) || db.exams.find(item => item.id === selected);
+    const target = event.target.closest('[data-exam-action]'); if (!target) return;
+    const action = target.dataset.examAction;
+    if (!VIEW_ONLY_ACTIONS.has(action) && busy) return;
+    const e = db.exams.find(item => item.id === target.dataset.id) || db.exams.find(item => item.id === selected);
     error(''); message('');
     if (action === 'list') { home(); scrollTop(); }
     else if (!ready) error('ডেটা লোড হয়নি। পেজ রিফ্রেশ করুন।');
     else if (action === 'view-history') home();
     else if (action === 'view-upcoming') upcoming();
     else if (action === 'view-archive') archive();
+    else if (action === 'bank') { bankPage = 0; bankEditing = ''; bankView(); }
+    else if (action === 'bank-reset') { bankFilters = { query: '', className: 'all', subject: 'all', chapter: 'all', type: 'all', difficulty: 'all' }; bankPage = 0; bankView(); }
+    else if (action === 'bank-page') { bankPage = Math.max(0, Number(target.dataset.page) || 0); bankView(); }
+    else if (action === 'bank-new') { bankEditing = 'new'; bankView(); }
+    else if (action === 'bank-edit') { bankEditing = bankEditing === target.dataset.id ? '' : target.dataset.id; bankView(); }
+    else if (action === 'bank-cancel') { bankEditing = ''; bankView(); }
+    else if (action === 'bank-toggle') run(() => questionBank.setActive(target.dataset.id, !questionById(target.dataset.id)?.active, actor.role === 'teacher' ? 'Teacher' : 'Manager'), 'প্রশ্নটি হালনাগাদ হয়েছে।', () => bankView());
+    else if (action === 'bank-delete' && window.confirm('এই প্রশ্নটি প্রশ্ন ব্যাংক থেকে মুছবেন? কোনো পরীক্ষার প্রশ্ন বা ফলাফল মুছে যাবে না।')) run(() => questionBank.remove(target.dataset.id, actor.role === 'teacher' ? 'Teacher' : 'Manager'), 'প্রশ্নটি ব্যাংক থেকে মুছে ফেলা হয়েছে; পরীক্ষাগুলো অক্ষত আছে।', () => bankView());
+    else if (action === 'bank-add') {
+      const exam = db.exams.find(item => item.id === selected);
+      const row = questionById(target.dataset.id);
+      if (!exam || !row) error('প্রশ্ন বা পরীক্ষা খুঁজে পাওয়া যায়নি।');
+      else run(() => repo.addQuestion(exam.id, questionForExam(row, exam.type), actor), 'নির্বাচিত প্রশ্নটি পরীক্ষায় যোগ হয়েছে।', () => questions(db.exams.find(item => item.id === exam.id)));
+    }
+    else if (action === 'save-to-bank') {
+      const exam = db.exams.find(item => item.id === target.dataset.id) || e;
+      run(async () => { const result = await questionBank.saveFromExam(exam, actor.role === 'teacher' ? 'Teacher' : 'Manager'); return result; }, 'প্রশ্নগুলো প্রশ্ন ব্যাংকে সংরক্ষিত হয়েছে।', () => questions(db.exams.find(item => item.id === exam.id)));
+    }
+    else if (action === 'student-pdf') {
+      const attempt = db.attempts.find(item => item.id === target.dataset.attempt);
+      run(() => downloadExamPDF(e, { attempt, authorPreview: true }), 'শিক্ষার্থীর উত্তরপত্র PDF ডাউনলোড শুরু হয়েছে।', () => {});
+    }
     else if (action === 'filters-reset') { filters = { ...EXAM_FILTERS }; applyFilters(); }
     else if (action === 'filter-type') { const order = ['all', ...Object.keys(EXAM_TYPES)]; filters = normalizeFilters({ ...filters, type: order[(order.indexOf(filters.type) + 1) % order.length] }); applyFilters(); }
     else if (action.startsWith('new-')) editor(action.slice(4));
@@ -499,5 +691,9 @@ export function initExamManager(container, role) {
     else if (action === 'sample-30') { $('[name=template]').value = MCQ_30_SAMPLE; $('[name=template]').dispatchEvent(new Event('input')); }
   });
   watchExams(() => { if (!busy && view !== 'edit') reload(); });
+  watchQuestionBank(() => { if (!busy && view === 'bank' && !root.querySelector('[data-bank-form]')) bankView(); });
+  /* Reading the shelf once on open keeps the counters honest without ever
+     rendering the whole question list. */
+  try { repo.ensureCodes(); } catch { /* codes are stamped on the next write */ }
   reload();
 }
