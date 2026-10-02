@@ -14,7 +14,8 @@
 
 import { iconMarkup } from './icons.js';
 import { classByName, subjectsForClass } from './academics.js';
-import { assignedClasses, selectableSubjects } from './teacher-assignments.js';
+import { enabledClasses } from './config.js';
+import { assignedClasses, subjectsForTeacherClass } from './teacher-assignments.js';
 import {
   COURSE_TYPES, archiveCourseRecord, contentById, listChapters, listCourseContent,
   saveCourseRecord, setContentPublished, typeLabel, typeOf
@@ -49,7 +50,8 @@ export function initCourseEditor({ mount, role = 'teacher', actor = '', toast = 
   /* The Teacher's own username decides which classes they may write for. It is
      read from the same stored account every other teacher screen uses. */
   let teacherUser = '';
-  const assignedClassNames = () => (role === 'teacher' ? assignedClasses(teacherUser).map(item => item.className) : null);
+  /* assignedClasses() already answers with class names. */
+  const assignedClassNames = () => (role === 'teacher' ? assignedClasses(teacherUser) : null);
   if (role === 'teacher') {
     import('./staff-auth.js')
       .then(module => module.readStaffAccount('teacher'))
@@ -57,16 +59,20 @@ export function initCourseEditor({ mount, role = 'teacher', actor = '', toast = 
       .catch(error => console.warn('[Active Plus] course editor without a teacher account:', error?.name || 'unknown'));
   }
 
+  /* Teacher: only the classes Manager assigned. Manager: the whole
+     Admin-configured structure (Academic Setup), never a hard-coded list. */
   function classOptions() {
-    const allowed = assignedClassNames();
-    const names = allowed && allowed.length ? allowed : [];
+    const names = role === 'teacher' ? (assignedClassNames() || []) : [...enabledClasses];
     return names.map(name => classByName(name)).filter(Boolean);
   }
 
   function subjectOptions(className) {
     if (!className) return [];
     if (role === 'teacher') {
-      return selectableSubjects(className).filter(name => subjectsForClass(className).some(subject => subject.name === name));
+      /* Only the subjects Manager assigned to *this* teacher in *this* class —
+         never every subject Academic Setup happens to enable for the class. */
+      const assigned = subjectsForTeacherClass(teacherUser, className);
+      return assigned.filter(name => subjectsForClass(className).some(subject => subject.name === name));
     }
     return subjectsForClass(className).map(subject => subject.name);
   }
@@ -168,6 +174,10 @@ export function initCourseEditor({ mount, role = 'teacher', actor = '', toast = 
     const academic = classByName(className);
     const subject = subjectsForClass(className).find(item => item.name === subjectName);
     if (!academic || !subject) { say('আগে ক্লাস ও বিষয় নির্বাচন করুন।', true); return; }
+    if (role === 'teacher' && !subjectOptions(className).includes(subjectName)) {
+      say('এই ক্লাস বা বিষয় আপনার জন্য বরাদ্দ নয় — Manager-এর সঙ্গে কথা বলুন।', true);
+      return;
+    }
     try {
       const saved = saveCourseRecord({
         id: editing || '',

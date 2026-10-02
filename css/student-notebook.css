@@ -96,7 +96,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .dashboard-text-link{
   min-height:40px;color:var(--brand-dark);background:none;border:0;padding:4px 0;font-weight:700;
 }
-.dashboard-routine-list{display:grid;gap:8px}
+.dashboard-routine-list{display:grid;gap:8px;grid-template-columns:minmax(0,1fr)}
 .dashboard-routine-list>*{
   position:relative;background:var(--paper-2);border:1px solid var(--rule);
   border-radius:var(--radius-paper);box-shadow:none;
@@ -104,6 +104,28 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .dashboard-routine-list>*::before{
   content:"";position:absolute;left:-5px;top:50%;width:7px;height:7px;
   transform:translateY(-50%);border-radius:50%;background:var(--brand);
+}
+/* The load-failure row is a full-width card, never a compact chip: it keeps the
+   dashboard grid intact, wraps its own text on a 320px phone and carries its
+   own retry button inside the same component. */
+.dashboard-routine-list>.dashboard-routine-error{
+  grid-column:1/-1;width:100%;display:grid;gap:8px;align-items:center;
+  grid-template-columns:auto minmax(0,1fr);padding:14px;
+  background:var(--paper-2);border:1px dashed #aebdce;border-left:4px solid var(--danger);
+  border-radius:var(--radius-paper);
+}
+.dashboard-routine-list>.dashboard-routine-error::before{content:none}
+.dashboard-routine-error-icon{
+  display:grid;place-items:center;width:30px;height:30px;border-radius:50%;
+  background:var(--danger-soft);color:#8f2525;font-weight:700;
+}
+.dashboard-routine-error-copy{min-width:0}
+.dashboard-routine-error-copy strong{display:block;color:var(--ink)}
+.dashboard-routine-error-copy p{margin:2px 0 0;color:var(--ink-soft);overflow-wrap:anywhere}
+.dashboard-routine-error [data-routine-retry]{grid-column:1/-1;width:100%;min-height:44px}
+@media (min-width:721px){
+  .dashboard-routine-list>.dashboard-routine-error{grid-template-columns:auto minmax(0,1fr) auto}
+  .dashboard-routine-error [data-routine-retry]{grid-column:auto;width:auto}
 }
 .dashboard-exam-card,.dashboard-fee-card,.challenge-card{
   display:flex;align-items:center;gap:12px;margin-top:18px;padding:14px;

@@ -75,7 +75,10 @@ test('a saved own-class schedule replaces the empty entry and removing it restor
 test('unreadable academic data stays a truthful load error, not a fake no-classes result', async () => {
   const ctx = await render({ teaching:'{broken data' });
   assert.equal(ctx.$('#dashboardRoutineList').dataset.state, 'error');
-  assert.match(ctx.$('#dashboardRoutineList').textContent, /লোড করা যায়নি/);
+  /* The failure is the full-width error row (its own test lives in
+     dashboard-routine-error.test.mjs), never the compact no-class card. */
+  assert.match(ctx.$('#dashboardRoutineList').textContent, /আজকের ক্লাস আনা যায়নি/);
+  assert.ok(ctx.$('#dashboardRoutineList [data-routine-error]'), 'the full-width error row is shown');
   assert.equal(ctx.$('.dashboard-empty-card'), null);
   assert.equal(ctx.$('#homeView').classList.contains('is-empty-routine'), false);
   assert.equal(ctx.window.localStorage.getItem(TEACHING_KEY), '{broken data');
