@@ -150,7 +150,7 @@ export function examItems(examDb, viewer, now = Date.now()) {
         at: Number(exam.resultsPublishedAt) || Number(exam.updatedAt) || 0,
         audience: 'অংশগ্রহণকারী'
       });
-    } else if (exam.status === 'published' && stillOpenExam(exam, now)) {
+    } else if ((exam.status === 'published' || exam.status === 'completed') && stillOpenExam(exam, now)) {
       /* The sender pushes a paper the moment it is published. The app must be
          able to show that same news, so the rule here is "not finished yet"
          (a paper published after it started is still worth announcing), and a

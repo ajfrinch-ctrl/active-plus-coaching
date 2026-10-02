@@ -238,7 +238,9 @@ export const examDuration = exam => {
 };
 export { totalMarks, gradeFor, EXAM_TYPES, EXAM_STATUSES };
 
-export const isPublishedExam = exam => exam?.status === 'published';
+/* A finished paper keeps its results and reports: 'completed' is published
+   plus a workflow stamp, not a different visibility. */
+export const isPublishedExam = exam => exam?.status === 'published' || exam?.status === 'completed';
 export const isTakenExam = exam => isPublishedExam(exam) && (examEndTime(exam) ?? Infinity) < Date.now();
 export const isUpcomingExam = exam => isPublishedExam(exam) && (examTime(exam) ?? 0) > Date.now();
 

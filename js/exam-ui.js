@@ -1,6 +1,7 @@
 import { escapeText as esc } from './teaching-data.js';
 import { toBanglaNumber as bn } from './ui.js';
-import { EXAM_TYPES, EXAM_STATUSES, totalMarks, examResults, firstAttemptMean, classExamDate } from './exam-data.js';
+import { EXAM_TYPES, EXAM_STATUSES, totalMarks, examResults, firstAttemptMean, classExamDate, examDateOf, examDurationMinutes } from './exam-data.js';
+import { examDateLabel, examDateShort, durationLabel, statusLabel, statusTone, shortExamId } from './exam-archive.js';
 import { downloadBlob } from './exam-pdf.js';
 export { esc };
 export const num = value => esc(bn(value));
@@ -31,3 +32,36 @@ export function downloadResults(db, e) {
   });
   downloadBlob(new Blob(['\ufeff', table.map(row => row.map(cells).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8' }), `ActivePlus-results-${e.id.slice(-8)}.csv`);
 }
+
+/** The coloured workflow tag a record wears everywhere it appears. */
+export function statusTag(exam) {
+  return `<span class="exam-tag exam-status exam-status-${statusTone(exam.status)}">${esc(statusLabel(exam.status))}</span>`;
+}
+export function typeTag(exam) { return `<span class="exam-tag">${esc(EXAM_TYPES[exam.type])}</span>`; }
+/** Every field a question record must show together with the exam it belongs
+    to: name, date, subject, class/batch, totals, duration, creator and status. */
+export function examRecord(exam, { heading = true } = {}) {
+  const moment = value => Number(value) ? esc(when(value)) : '—';
+  const date = examDateOf(exam);
+  const rows = [
+    ['Exam ID', esc(exam.id)],
+    ['পরীক্ষার তারিখ', `${esc(examDateShort(date))} — ${esc(examDateLabel(date))}`],
+    ['বিষয়', esc(exam.subject)],
+    ['শ্রেণি / Batch', `${esc(exam.className || 'সব শ্রেণি')}${exam.group ? ` • ${esc(exam.group)}` : ''}`],
+    ['মোট প্রশ্ন', num((exam.questions || []).length)],
+    ['পূর্ণমান', num(totalMarks(exam))],
+    ['সময়কাল', esc(durationLabel(examDurationMinutes(exam)))],
+    ['তৈরি করেছেন', esc(exam.createdBy || exam.teacherName || '—')],
+    ['তৈরি সময়', moment(exam.createdAt)],
+    ['সর্বশেষ হালনাগাদ', moment(exam.updatedAt)],
+    ['অবস্থা', statusTag(exam)],
+    ['সময়সূচি', `${moment(exam.startAt)} → ${moment(exam.endAt)}`]
+  ];
+  return `${heading ? `<h3>${esc(exam.title)}</h3>` : ''}<p class="exam-note">${typeTag(exam)}</p><dl class="exam-record">${rows.map(([label, value]) => `<div><dt>${label}</dt><dd>${value}</dd></div>`).join('')}</dl>`;
+}
+/** One line of exam identity for compact lists ('০২-১০-২০২৬ • বিষয় • শ্রেণি'). */
+export function examLine(exam) {
+  const date = examDateOf(exam);
+  return `${esc(examDateShort(date))} • ${esc(exam.subject)} • ${esc(exam.className || 'সব শ্রেণি')}${exam.group ? ` • ${esc(exam.group)}` : ''} • প্রশ্ন ${num((exam.questions || []).length)} • পূর্ণমান ${num(totalMarks(exam))}`;
+}
+export { shortExamId, examDateOf, examDurationMinutes, durationLabel, statusLabel, statusTone };

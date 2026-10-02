@@ -3,7 +3,7 @@ import { iconMarkup } from './icons.js';
    for this student; absent classes, results or fees are never filled with demo values. */
 import { loadRoutine, WEEK_DAYS, ROUTINE_KEY } from './office-data.js';
 import { teachingRepository, publishedForStudent } from './teaching-data.js';
-import { examRepository, examMatchesStudent, watchExams } from './exam-data.js';
+import { examRepository, examMatchesStudent, watchExams, isStudentVisibleExam } from './exam-data.js';
 import { financeRepository, studentFeeSummary } from './finance-data.js';
 import { toBanglaNumber as bn } from './ui.js';
 
@@ -133,7 +133,7 @@ export function initStudentDashboard({ getStudent, getAccount }) {
       ]);
       if (current !== request) return;
       const activities = publishedForStudent(teachingDb.activities || [], student);
-      const exams = (examDb.exams || []).filter(exam => exam.status === 'published' && examMatchesStudent(exam, student));
+      const exams = (examDb.exams || []).filter(exam => isStudentVisibleExam(exam) && examMatchesStudent(exam, student));
       renderRoutine(student, activities);
       const progress = renderProgress(activities, exams, student.id);
       renderChallenge(progress.homework, progress, student.id);

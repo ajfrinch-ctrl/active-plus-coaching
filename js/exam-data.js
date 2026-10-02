@@ -7,7 +7,31 @@ import { enabledClasses } from './config.js';
 import { KEYS, readRaw, writeRaw, newId } from './database.js';
 export const EXAM_KEY = KEYS.exams;
 export const EXAM_TYPES = Object.freeze({ mcq: 'MCQ', written: 'লিখিত', short: 'সংক্ষিপ্ত উত্তর' });
-export const EXAM_STATUSES = Object.freeze({ draft: 'খসড়া', pending: 'অনুমোদনের অপেক্ষায়', rejected: 'সংশোধনের জন্য ফেরত', published: 'প্রকাশিত' });
+/* Draft → Review (pending) → Approved → Published → Completed → Archived.
+   `rejected` is the correction branch off Review, and every status that ever
+   existed stays in this map, so old records keep loading unchanged. */
+export const EXAM_STATUSES = Object.freeze({
+  draft: 'খসড়া',
+  pending: 'অনুমোদনের অপেক্ষায়',
+  approved: 'অনুমোদিত — প্রকাশের অপেক্ষায়',
+  rejected: 'সংশোধনের জন্য ফেরত',
+  published: 'প্রকাশিত',
+  completed: 'সম্পন্ন',
+  archived: 'আর্কাইভ'
+});
+/* The workflow line a reviewer reads on screen (rejected is a branch, not a
+   step on the happy path). */
+export const EXAM_STATUS_ORDER = Object.freeze(['draft', 'pending', 'approved', 'published', 'completed', 'archived']);
+/* A student may only ever see these two statuses; the rest are staff-only. */
+export const STUDENT_VISIBLE_STATUSES = Object.freeze(['published', 'completed']);
+/* Question text may change while the paper is still being prepared. */
+export const EDITABLE_STATUSES = Object.freeze(['draft', 'rejected', 'pending']);
+export const SUBMITTABLE_STATUSES = Object.freeze(['draft', 'rejected']);
+export const PUBLISHABLE_STATUSES = Object.freeze(['draft', 'pending', 'approved']);
+export const DELETABLE_STATUSES = Object.freeze(['draft', 'rejected', 'archived']);
+export const isStudentVisibleExam = exam => STUDENT_VISIBLE_STATUSES.includes(exam?.status);
+export const isLiveExam = exam => isStudentVisibleExam(exam);
+export const isEditableExam = exam => EDITABLE_STATUSES.includes(exam?.status);
 export const TEACHER_ACTOR = Object.freeze({ role: 'teacher', id: DEMO_TEACHER.id });
 export const ADMIN_ACTOR = Object.freeze({ role: 'admin', id: 'ADMIN' });
 export const MANAGER_ACTOR = Object.freeze({ role: 'manager', id: 'MANAGER' });
@@ -309,25 +333,149 @@ export function parseQuestions(text, type) {
       if (Object.hasOwn(fields, key)) fail(`প্রশ্ন ${i + 1}: একই ঘর দুবার দেওয়া হয়েছে।`);
       fields[key] = match[2];
     }
-    const marks = type === 'mcq' ? MCQ_MARKS : number(fields.marks);
-    if (!fields.question || fields.question.length > 1200) fail(`প্রশ্ন ${i + 1}: প্রশ্নের লেখা দিন (সর্বোচ্চ ১২০০ অক্ষর)।`);
-    if (type === 'mcq') {
-      if (fields.marks !== undefined && number(fields.marks) !== MCQ_MARKS) fail(`প্রশ্ন ${i + 1}: MCQ-তে প্রতি প্রশ্নের নম্বর ১ নির্ধারিত — “নম্বর:” লাইনটি বাদ দিন।`);
-    } else if (!Number.isFinite(marks) || marks <= 0 || marks > 1000 || round(marks) !== marks) {
-      fail(`প্রশ্ন ${i + 1}: নম্বর ১ থেকে ১০০০-এর মধ্যে পূর্ণসংখ্যা দিন।`);
-    }
-    const q = { id: `q${i + 1}`, text: fields.question, marks };
-    if (type === 'mcq') {
-      const keys = ['A', 'B', 'C', 'D'];
-      if (keys.some(k => !fields[k.toLowerCase()] || fields[k.toLowerCase()].length > 500) || !keys.includes((fields.answer || '').toUpperCase())) fail(`প্রশ্ন ${i + 1}: চারটি অপশন ও সঠিক উত্তর A/B/C/D দিন।`);
-      q.options = keys.map(id => ({ id, text: fields[id.toLowerCase()] })); q.answer = fields.answer.toUpperCase();
-      if (new Set(q.options.map(o => o.text)).size !== 4) fail(`প্রশ্ন ${i + 1}: একই অপশন একাধিকবার দেওয়া যাবে না।`);
-    } else if (fields.answer || ['a', 'b', 'c', 'd'].some(k => fields[k])) fail(`প্রশ্ন ${i + 1}: লিখিত/সংক্ষিপ্ত পরীক্ষায় অপশন বা উত্তর দেবেন না।`);
-    return q;
+    const label = `প্রশ্ন ${i + 1}`;
+    if (type === 'mcq' && fields.marks !== undefined && number(fields.marks) !== MCQ_MARKS) fail(`${label}: MCQ-তে প্রতি প্রশ্নের নম্বর ১ নির্ধারিত — “নম্বর:” লাইনটি বাদ দিন।`);
+    if (type !== 'mcq' && (fields.answer || ['a', 'b', 'c', 'd'].some(k => fields[k]))) fail(`${label}: লিখিত/সংক্ষিপ্ত পরীক্ষায় অপশন বা উত্তর দেবেন না।`);
+    return {
+      id: `q${i + 1}`,
+      ...cleanQuestion({
+        text: fields.question,
+        marks: type === 'mcq' ? MCQ_MARKS : fields.marks,
+        options: type === 'mcq' ? ['A', 'B', 'C', 'D'].map(id => ({ id, text: fields[id.toLowerCase()] })) : undefined,
+        answer: fields.answer
+      }, type, label)
+    };
   });
   if (totalMarks({ questions }) > 10000) fail('মোট নম্বর সর্বোচ্চ ১০,০০০ হতে পারে।');
   return questions;
 }
+/* ---------- Date-wise identity ------------------------------------------- */
+const examDateFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka', year: 'numeric', month: '2-digit', day: '2-digit' });
+
+/** The Asia/Dhaka calendar date a timestamp belongs to, as 'YYYY-MM-DD'. */
+export function dhakaDateKey(value = Date.now()) {
+  const parts = examDateFormatter.formatToParts(new Date(Number(value)));
+  const get = type => parts.find(part => part.type === type)?.value || '';
+  return `${get('year')}-${get('month')}-${get('day')}`;
+}
+/** The date the paper is actually sat: MCQ on its start date, class papers on
+    the next class day — the same rule the classroom workflow already used. */
+export function examDateFor(type, startAt) {
+  return type === 'mcq' ? dhakaDateKey(startAt) : classExamDate(startAt);
+}
+/** Which date group a stored exam belongs to. Records saved before this
+    workflow existed carry no examDate and are placed by their own schedule. */
+export function examDateOf(exam) {
+  const stored = String(exam?.examDate || '');
+  if (/^\d{4}-\d{2}-\d{2}$/.test(stored)) return stored;
+  const startAt = Number(exam?.startAt);
+  return Number.isFinite(startAt) ? examDateFor(exam?.type, startAt) : '';
+}
+export function examDurationMinutes(exam) {
+  if (Number.isFinite(exam?.durationMinutes)) return exam.durationMinutes;
+  const startAt = Number(exam?.startAt), endAt = Number(exam?.endAt);
+  return Number.isFinite(startAt) && Number.isFinite(endAt) && endAt > startAt ? Math.round((endAt - startAt) / 60000) : 0;
+}
+export const examQuestionUid = (exam, question, index = 0) => question?.uid || `${exam.id}-q${index + 1}`;
+/** One question together with the exam context the archive must show with it.
+    This is the read-only projection used by the UI and by reports — it never
+    writes anything back into the exam record. */
+export function questionRecord(exam, question) {
+  return {
+    uid: examQuestionUid(exam, question, exam.questions.indexOf(question)),
+    id: question.id,
+    examId: exam.id,
+    examName: exam.title,
+    examDate: examDateOf(exam),
+    subject: exam.subject,
+    className: exam.className,
+    group: exam.group || '',
+    totalQuestions: exam.questions.length,
+    marks: question.marks,
+    totalMarks: totalMarks(exam),
+    duration: examDurationMinutes(exam),
+    createdBy: exam.createdBy || exam.teacherName || '',
+    createdAt: Number(exam.createdAt) || 0,
+    status: exam.status,
+    text: question.text,
+    options: question.options ? question.options.map(option => ({ ...option })) : null,
+    answer: question.answer || ''
+  };
+}
+/** The canonical shape of a question — exactly what the paste template has to
+    reproduce. Extra identity fields (uid/examId/context) are additive and
+    never take part in this comparison, so old records keep loading as-is. */
+export function questionSignature(questions) {
+  return JSON.stringify((questions || []).map(question => ({
+    id: question?.id,
+    text: question?.text,
+    marks: question?.marks,
+    options: question?.options ? question.options.map(option => ({ id: option.id, text: option.text })) : null,
+    answer: question?.answer ?? null
+  })));
+}
+/** Validates one question (new or edited) against the same rules the pasted
+    template is held to. */
+export function cleanQuestion(input, type, label = 'প্রশ্ন') {
+  const text = String(input?.text ?? '').trim();
+  if (!text || text.length > 1200) fail(`${label}: প্রশ্নের লেখা দিন (সর্বোচ্চ ১২০০ অক্ষর)।`);
+  if (type === 'mcq') {
+    const options = (input?.options || [])
+      .map(option => ({ id: String(option?.id || '').trim().toUpperCase(), text: String(option?.text ?? '').trim() }))
+      .sort((a, b) => a.id.localeCompare(b.id));
+    const answer = String(input?.answer ?? '').trim().toUpperCase();
+    if (options.length !== 4 || options.map(option => option.id).join('') !== 'ABCD' || options.some(option => !option.text || option.text.length > 500) || !['A', 'B', 'C', 'D'].includes(answer)) fail(`${label}: চারটি অপশন ও সঠিক উত্তর A/B/C/D দিন।`);
+    if (new Set(options.map(option => option.text)).size !== 4) fail(`${label}: একই অপশন একাধিকবার দেওয়া যাবে না।`);
+    return { text, marks: MCQ_MARKS, options, answer };
+  }
+  const marks = number(input?.marks);
+  if (!Number.isFinite(marks) || marks <= 0 || marks > 1000 || round(marks) !== marks) fail(`${label}: নম্বর ১ থেকে ১০০০-এর মধ্যে পূর্ণসংখ্যা দিন।`);
+  return { text, marks };
+}
+/** Rebuild the paste template from the question records, so editing or
+    deleting one question keeps template and records in lock-step. */
+export function serializeQuestions(questions, type) {
+  if (!Object.hasOwn(EXAM_TYPES, type)) fail('পরীক্ষার ধরন নির্বাচন করুন।');
+  return questions.map(question => type === 'mcq'
+    ? [`প্রশ্ন: ${question.text}`, ...question.options.map(option => `${option.id}: ${option.text}`), `উত্তর: ${question.answer}`].join('\n')
+    : [`প্রশ্ন: ${question.text}`, `নম্বর: ${question.marks}`].join('\n')).join('\n---\n');
+}
+/** The exam facts a question was written against. Kept small on purpose:
+    everything that changes often (status, totals) is derived from the exam. */
+function questionContext(exam) {
+  const context = { examDate: examDateOf(exam), subject: exam.subject, className: exam.className };
+  if (exam.group) context.group = exam.group;
+  return context;
+}
+/** Gives every question a unique, stable id and a copy of its exam context.
+    Existing uids are kept, so an edited question keeps its identity. */
+export function restampExamQuestions(exam, previous = []) {
+  const keptUids = new Map((previous || [])
+    .map((question, index) => [question?.id || `q${index + 1}`, question?.uid])
+    .filter(([, uid]) => typeof uid === 'string' && uid));
+  const seen = new Set();
+  exam.questions = (exam.questions || []).map((question, index) => {
+    let uid = question.uid || keptUids.get(question.id) || '';
+    let attempt = 0;
+    while (!uid || seen.has(uid)) { attempt += 1; uid = `${exam.id}-q${index + 1}${attempt > 1 ? `-${attempt}` : ''}`; }
+    seen.add(uid);
+    return { ...question, id: `q${index + 1}`, uid, examId: exam.id, context: questionContext(exam) };
+  });
+  return exam.questions;
+}
+/** Read-time view of a stored exam: fills in the date-wise identity fields a
+    record saved before this workflow did not have. Additive only — nothing is
+    removed and the canonical question data is left untouched. */
+export function normalizeExam(exam) {
+  if (!exam || typeof exam !== 'object') return exam;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(exam.examDate || ''))) exam.examDate = examDateOf(exam);
+  if (!Number.isFinite(exam.durationMinutes)) exam.durationMinutes = examDurationMinutes(exam);
+  if (typeof exam.createdBy !== 'string' || !exam.createdBy) exam.createdBy = String(exam.teacherName || '').trim();
+  if (exam.createdByRole !== 'teacher' && exam.createdByRole !== 'manager') exam.createdByRole = 'teacher';
+  if (exam.questions) restampExamQuestions(exam, exam.questions);
+  return exam;
+}
+
 export function classExamDate(startAt) {
   const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(startAt);
   const get = type => parts.find(p => p.type === type).value;
@@ -358,7 +506,16 @@ export function validateExam(input) {
   const instructions = String(input.instructions || '').trim();
   if (instructions.length > 2000) fail('নির্দেশনা সর্বোচ্চ ২০০০ অক্ষরে দিন।');
   const questions = parseQuestions(input.template, input.type);
-  return { title, subject, className, group, type: input.type, startAt, endAt, lateMinutes, negative: input.type === 'mcq' ? negative : 0, passPercent, instructions, template: input.template, questions };
+  return {
+    title, subject, className, group, type: input.type, startAt, endAt, lateMinutes,
+    negative: input.type === 'mcq' ? negative : 0, passPercent, instructions,
+    template: input.template, questions,
+    /* Date-wise identity of the record: the calendar date the paper belongs
+       to (Asia/Dhaka) and how long the window lasts. Re-derived on every
+       save, so changing the date re-files the record on the new day. */
+    examDate: examDateFor(input.type, startAt),
+    durationMinutes: Math.round((endAt - startAt) / 60000)
+  };
 }
 function read() {
   const raw = readRaw(EXAM_KEY);
@@ -370,7 +527,10 @@ function read() {
     if (!e || typeof e.id !== 'string' || ids.has(e.id) || !Object.hasOwn(EXAM_STATUSES, e.status) || typeof e.teacherId !== 'string' || !Array.isArray(e.participants)) fail('পরীক্ষার ডেটা সঠিক নয়।');
     if (e.participants.some(p => !p || typeof p.id !== 'string' || typeof p.name !== 'string' || typeof p.className !== 'string') || (e.absentIds !== undefined && (!Array.isArray(e.absentIds) || e.absentIds.some(id => typeof id !== 'string')))) fail('পরীক্ষার শিক্ষার্থী তালিকা সঠিক নয়।');
     ids.add(e.id); const fields = validateExam(e);
-    if (JSON.stringify(fields.questions) !== JSON.stringify(e.questions)) fail('সংরক্ষিত প্রশ্ন সঠিক নয়।');
+    /* Compared field by field: a stored question may carry extra identity
+       fields (uid/examId/context) that the paste template does not produce. */
+    if (questionSignature(fields.questions) !== questionSignature(e.questions)) fail('সংরক্ষিত প্রশ্ন সঠিক নেই।');
+    normalizeExam(e);
   }
   const attemptIds = new Set(), attemptNumbers = new Set();
   for (const a of db.attempts) {
@@ -406,6 +566,41 @@ function eligibleParticipant(exam, student) {
   if (!found) fail('শুধু পরীক্ষার অনুমোদিত participant পরীক্ষা দিতে পারবে।');
   return { id: found.id, name: found.name, className: found.className, group: found.group || '' };
 }
+/* Whether an exam's questions may still be changed. Publishing (or any
+   answer already saved against it) locks the paper for good. */
+function assertCanEditPaper(exam, db, actor) {
+  if (!EDITABLE_STATUSES.includes(exam.status)) fail('প্রকাশিত/সম্পন্ন/আর্কাইভ করা পরীক্ষার প্রশ্ন বদলানো যাবে না।');
+  if (db.attempts.some(a => a.examId === exam.id)) fail('উত্তর বা ফলাফল থাকা পরীক্ষার প্রশ্ন বদলানো যাবে না।');
+  if (actor?.role === 'teacher') teacherOwns(exam, actor);
+  else if (actor?.role !== 'manager') fail('শিক্ষক বা Manager প্রশ্ন বদলাতে পারবেন।');
+}
+const examHasOpenAttempts = (db, id) => db.attempts.some(a => a.examId === id && ['active', 'queued'].includes(a.status));
+function examSnapshot(db, actor) { return actor?.role === 'teacher' ? teacherExamSnapshot(db, actor) : db; }
+/** Who is asking: a Teacher writes their own papers, a Manager every paper. */
+async function paperActor(actor) {
+  if (actor?.role !== 'teacher' && actor?.role !== 'manager') fail('শিক্ষক বা Manager প্রশ্ন তৈরি ও সম্পাদনা করতে পারবেন।');
+  await requireRoleSession(actor.role);
+  const account = await readStaffAccount(actor.role);
+  const name = String(account?.fullName || account?.username || '').trim();
+  if (!name) fail(`${actor.role === 'teacher' ? 'Teacher' : 'Manager'} profile পাওয়া যায়নি।`);
+  return name;
+}
+async function managerActor(actor) {
+  requireManager(actor);
+  await requireRoleSession('manager');
+  const account = await readStaffAccount('manager');
+  const name = String(account?.fullName || account?.username || '').trim();
+  if (!name) fail('Manager profile পাওয়া যায়নি।');
+  return name;
+}
+/** Same clock time, moved to the next day when the old slot has passed. */
+function nextOccurrence(startAt, now) {
+  const source = new Date(Number(startAt) || Number(now));
+  const next = new Date(Number(now) + 86400000);
+  next.setHours(source.getHours(), source.getMinutes(), 0, 0);
+  if (next.getTime() <= Number(now)) next.setTime(next.getTime() + 86400000);
+  return next.getTime();
+}
 function teacherExamSnapshot(db, actor = TEACHER_ACTOR) {
   const exams = db.exams.filter(exam => exam.teacherId === actor.id && isTeacherAssigned('teacher.apc', exam.className, exam.group || ''));
   const ids = new Set(exams.map(exam => exam.id));
@@ -436,7 +631,7 @@ export function retryEligibility(db, exam, studentId, now = Date.now()) {
   const attempts = db.attempts.filter(a => a.examId === exam.id && a.studentId === studentId);
   const first = attempts.find(a => a.number === 1 && a.status === 'submitted');
   const mean = firstAttemptMean(db, exam.id);
-  return exam.type === 'mcq' && exam.status === 'published' && now < exam.endAt && attempts.length === 1 && !!first && mean !== null && first.score < mean;
+  return exam.type === 'mcq' && isLiveExam(exam) && now < exam.endAt && attempts.length === 1 && !!first && mean !== null && first.score < mean;
 }
 export function gradeFor(score, total, passPercent = 33) {
   const percent = total ? score / total * 100 : 0;
@@ -459,41 +654,273 @@ export const examRepository = {
   },
   async listStudents() { return teachingRepository.listStudents(); },
   async saveDraft(input, actor = TEACHER_ACTOR) {
-    if (actor.role !== 'teacher') fail('শিক্ষক প্রশ্ন তৈরি করবেন।');
-    await requireRoleSession('teacher');
+    /* Manager-created papers belong to the Manager; a Teacher's paper stays
+       theirs, and both can be edited while the paper is still a draft. */
+    const name = await paperActor(actor);
     const fields = validateExam(input);
-    const teacher = await readStaffAccount('teacher');
-    const teacherName = String(teacher?.fullName || teacher?.username || '').trim();
-    if (!teacherName) fail('Teacher profile পাওয়া যায়নি।');
-    if (!isTeacherAssigned(teacher.username || 'teacher.apc', fields.className, fields.group)) fail('এই class/batch-এর জন্য Manager assignment নেই।');
+    if (actor.role === 'teacher') {
+      const username = String((await readStaffAccount('teacher'))?.username || 'teacher.apc');
+      if (!isTeacherAssigned(username, fields.className, fields.group)) fail('এই class/batch-এর জন্য Manager assignment নেই।');
+    }
     const db = await mutate(db => {
       const old = input.id ? examById(db, input.id) : null;
-      if (old) { teacherOwns(old, actor); if (old.status === 'published' || db.attempts.some(a => a.examId === old.id)) fail('প্রকাশিত/চালু পরীক্ষার প্রশ্ন বদলানো যাবে না।'); }
-      const exam = { ...fields, id: old?.id || newId('E'), teacherId: actor.id, teacherName, status: 'draft', reviewNote: '', createdAt: old?.createdAt || Date.now(), updatedAt: Date.now(), participants: [] };
+      if (old) assertCanEditPaper(old, db, actor);
+      const now = Date.now();
+      const exam = {
+        ...(old || {}),
+        ...fields,
+        id: old?.id || newId('E'),
+        teacherId: actor.role === 'teacher' ? actor.id : (old?.teacherId || ''),
+        teacherName: actor.role === 'teacher' ? name : (old?.teacherName || ''),
+        status: 'draft',
+        reviewNote: '',
+        createdAt: old?.createdAt || now,
+        updatedAt: now,
+        createdBy: old?.createdBy || name,
+        createdByRole: old?.createdByRole || actor.role,
+        updatedBy: name,
+        participants: old?.participants || [],
+        submittedAt: undefined,
+        approvedAt: undefined,
+        approvedBy: undefined,
+        publishedAt: undefined,
+        publishedBy: undefined,
+        unpublishedAt: undefined,
+        completedAt: undefined,
+        archivedAt: undefined,
+        archivedFrom: undefined
+      };
+      restampExamQuestions(exam, old?.questions);
       if (old) db.exams[db.exams.indexOf(old)] = exam; else db.exams.unshift(exam);
     });
-    return teacherExamSnapshot(db, actor);
+    return examSnapshot(db, actor);
   },
   async requestApproval(id, actor = TEACHER_ACTOR) {
-    await requireRoleSession('teacher');
-    const db = await mutate(db => { const e = examById(db, id); teacherOwns(e, actor); if (!['draft', 'rejected'].includes(e.status)) fail('এই পরীক্ষা ইতিমধ্যে পাঠানো/প্রকাশ করা হয়েছে।'); validateExam(e); if (e.startAt <= Date.now()) fail('পরীক্ষার শুরুর সময় ভবিষ্যতে দিন।'); e.status = 'pending'; e.reviewNote = ''; e.submittedAt = Date.now(); });
-    return teacherExamSnapshot(db, actor);
+    const name = await paperActor(actor);
+    const db = await mutate(db => {
+      const exam = examById(db, id);
+      if (actor.role === 'teacher') teacherOwns(exam, actor);
+      if (!SUBMITTABLE_STATUSES.includes(exam.status)) fail('এই পরীক্ষা ইতিমধ্যে পাঠানো/প্রকাশ করা হয়েছে।');
+      validateExam(exam);
+      if (exam.startAt <= Date.now()) fail('পরীক্ষার শুরুর সময় ভবিষ্যতে দিন।');
+      exam.status = 'pending'; exam.reviewNote = ''; exam.submittedAt = Date.now();
+      exam.updatedAt = Date.now(); exam.updatedBy = name;
+    });
+    return examSnapshot(db, actor);
   },
+  /* Manager decisions: approve (Review → Approved), publish (→ Published,
+     optionally with the final negative marking) and reject (back to the
+     teacher with a note). */
   async review(id, decision, options = {}, actor) {
-    requireManager(actor);
-    await requireRoleSession('manager');
-    const students = await teachingRepository.listApprovedStudents();
+    const name = await managerActor(actor);
+    const students = decision === 'publish' ? await teachingRepository.listApprovedStudents() : [];
     return mutate(db => {
-      const e = examById(db, id); if (e.status !== 'pending') fail('শুধু অপেক্ষমাণ পরীক্ষা পর্যালোচনা করা যাবে।');
-      if (decision === 'publish') {
-        if (e.startAt <= Date.now()) fail('শুরুর সময় পেরিয়েছে। সংশোধনের জন্য শিক্ষককে ফেরত দিন।');
-        const validated = validateExam({ ...e, negative: options.negative ?? e.negative });
-        e.negative = validated.negative; e.status = 'published'; e.publishedAt = Date.now(); e.resultsPublished = false;
-        e.participants = students.filter(student => examMatchesStudent(e, student)).map(s => ({ id: s.id, name: s.name, className: s.className, group: s.group || '' }));
+      const exam = examById(db, id);
+      if (decision === 'approve') {
+        if (!['draft', 'pending', 'rejected'].includes(exam.status)) fail('শুধু খসড়া বা পর্যালোচনার অপেক্ষায় থাকা পরীক্ষা অনুমোদন করা যাবে।');
+        validateExam(exam);
+        if (exam.startAt <= Date.now()) fail('শুরুর সময় পেরিয়ে গেছে। সময় বদলে সংশোধনের জন্য ফেরত দিন।');
+        exam.status = 'approved'; exam.approvedAt = Date.now(); exam.approvedBy = name; exam.reviewNote = '';
+      } else if (decision === 'publish') {
+        if (!PUBLISHABLE_STATUSES.includes(exam.status)) fail('এই পরীক্ষা এখন প্রকাশ করা যাবে না।');
+        if (exam.startAt <= Date.now()) fail('শুরুর সময় পেরিয়েছে। সংশোধনের জন্য শিক্ষককে ফেরত দিন।');
+        const validated = validateExam({ ...exam, negative: options.negative ?? exam.negative });
+        exam.negative = validated.negative;
+        exam.status = 'published'; exam.publishedAt = Date.now(); exam.publishedBy = name;
+        if (!exam.approvedAt) { exam.approvedAt = Date.now(); exam.approvedBy = name; }
+        if (exam.resultsPublished === undefined) exam.resultsPublished = false;
+        const matched = students.filter(student => examMatchesStudent(exam, student)).map(s => ({ id: s.id, name: s.name, className: s.className, group: s.group || '' }));
+        /* Existing participants and their answers are never dropped. */
+        exam.participants = [...new Map([...(exam.participants || []), ...matched].map(person => [person.id, person])).values()];
       } else if (decision === 'reject') {
-        const note = String(options.note || '').trim(); if (!note || note.length > 500) fail('সংশোধনের কারণ লিখুন (সর্বোচ্চ ৫০০ অক্ষর)।');
-        e.status = 'rejected'; e.reviewNote = note; e.reviewedAt = Date.now();
+        if (!['draft', 'pending', 'approved'].includes(exam.status)) fail('শুধু পর্যালোচনার অপেক্ষায় থাকা পরীক্ষা ফেরত দেওয়া যাবে।');
+        const note = String(options.note || '').trim();
+        if (!note || note.length > 500) fail('সংশোধনের কারণ লিখুন (সর্বোচ্চ ৫০০ অক্ষর)।');
+        exam.status = 'rejected'; exam.reviewNote = note; exam.reviewedAt = Date.now(); exam.reviewedBy = name;
       } else fail('সঠিক সিদ্ধান্ত নির্বাচন করুন।');
+      exam.updatedAt = Date.now(); exam.updatedBy = name;
+    });
+  },
+  async approve(id, actor = MANAGER_ACTOR) { return examRepository.review(id, 'approve', {}, actor); },
+  async publish(id, actor = MANAGER_ACTOR) { return examRepository.review(id, 'publish', {}, actor); },
+  /* Unpublish keeps the questions, participants and every saved answer — it
+     only takes the paper out of the students' list until it is published
+     again. A paper with work in flight cannot be pulled at all. */
+  async unpublish(id, actor = MANAGER_ACTOR) {
+    const name = await managerActor(actor);
+    return mutate(db => {
+      const exam = examById(db, id);
+      if (exam.status !== 'published') fail('শুধু প্রকাশিত পরীক্ষা Unpublish করা যাবে।');
+      if (examHasOpenAttempts(db, id)) fail('চলমান বা জমা অপেক্ষমাণ উত্তর থাকা অবস্থায় Unpublish করা যাবে না।');
+      exam.status = 'approved'; exam.unpublishedAt = Date.now(); exam.unpublishedBy = name;
+      exam.updatedAt = Date.now(); exam.updatedBy = name;
+    });
+  },
+  async complete(id, actor = MANAGER_ACTOR) {
+    const name = await managerActor(actor);
+    return mutate(db => {
+      const exam = examById(db, id);
+      if (!isLiveExam(exam)) fail('শুধু প্রকাশিত পরীক্ষা সম্পন্ন হিসেবে চিহ্নিত করা যাবে।');
+      if (Number(exam.endAt) > Date.now()) fail('পরীক্ষার নির্ধারিত সময় শেষ হলে সম্পন্ন করা যাবে।');
+      if (examHasOpenAttempts(db, id)) fail('অপেক্ষমাণ উত্তর জমা হওয়ার পর সম্পন্ন করুন।');
+      exam.status = 'completed'; exam.completedAt = Date.now(); exam.completedBy = name;
+      exam.updatedAt = Date.now(); exam.updatedBy = name;
+    });
+  },
+  /* Archiving is the safe way to retire a paper: nothing is deleted and the
+     status it came from is remembered for Restore. */
+  async archive(id, actor = MANAGER_ACTOR) {
+    const name = await managerActor(actor);
+    return mutate(db => {
+      const exam = examById(db, id);
+      if (exam.status === 'archived') fail('পরীক্ষাটি আগেই আর্কাইভ করা হয়েছে।');
+      if (examHasOpenAttempts(db, id)) fail('চলমান উত্তর থাকা অবস্থায় আর্কাইভ করা যাবে না।');
+      exam.archivedFrom = exam.archivedFrom || exam.status;
+      exam.status = 'archived'; exam.archivedAt = Date.now(); exam.archivedBy = name;
+      exam.updatedAt = Date.now(); exam.updatedBy = name;
+    });
+  },
+  async restore(id, actor = MANAGER_ACTOR) {
+    const name = await managerActor(actor);
+    return mutate(db => {
+      const exam = examById(db, id);
+      if (exam.status !== 'archived') fail('শুধু আর্কাইভ করা পরীক্ষা ফিরিয়ে আনা যাবে।');
+      const previous = EXAM_STATUSES[exam.archivedFrom] && exam.archivedFrom !== 'archived' ? exam.archivedFrom : 'draft';
+      exam.status = previous === 'published' ? 'approved' : previous;
+      exam.restoredAt = Date.now(); exam.restoredBy = name;
+      exam.updatedAt = Date.now(); exam.updatedBy = name;
+    });
+  },
+  /* Changing the date re-files the record under the new day; the questions,
+     participants and answers all stay exactly as they were. */
+  async reschedule(id, options = {}, actor = MANAGER_ACTOR) {
+    const name = await managerActor(actor);
+    return mutate(db => {
+      const exam = examById(db, id);
+      if (exam.status === 'archived') fail('আর্কাইভ করা পরীক্ষার তারিখ বদলানো যাবে না।');
+      if (db.attempts.some(a => a.examId === id)) fail('উত্তর বা ফলাফল থাকা পরীক্ষার তারিখ বদলানো যাবে না।');
+      const validated = validateExam({
+        ...exam,
+        startAt: Number(options.startAt ?? exam.startAt),
+        endAt: Number(options.endAt ?? exam.endAt)
+      });
+      Object.assign(exam, {
+        startAt: validated.startAt, endAt: validated.endAt,
+        examDate: validated.examDate, durationMinutes: validated.durationMinutes,
+        updatedAt: Date.now(), updatedBy: name
+      });
+      restampExamQuestions(exam, exam.questions);
+    });
+  },
+  /* Duplicate copies the whole question set into a fresh draft — the way an
+     old paper becomes next week's exam. New uids are issued, the source paper
+     is never touched. */
+  async duplicate(id, actor = MANAGER_ACTOR, options = {}) {
+    const name = await paperActor(actor);
+    const username = actor.role === 'teacher' ? String((await readStaffAccount('teacher'))?.username || 'teacher.apc') : '';
+    return mutate(db => {
+      const source = examById(db, id);
+      if (actor.role === 'teacher') {
+        if (source.teacherId && source.teacherId !== actor.id) fail('অন্য শিক্ষকের পরীক্ষা Duplicate করা যাবে না।');
+        if (!isTeacherAssigned(username, String(options.className ?? source.className ?? ''), String(options.group ?? source.group ?? ''))) fail('এই class/batch-এর জন্য Manager assignment নেই।');
+      }
+      const now = Date.now();
+      const requestedStart = Number(options.startAt);
+      const sourceStart = Number(source.startAt), sourceEnd = Number(source.endAt);
+      const startAt = Number.isFinite(requestedStart) && requestedStart > now
+        ? requestedStart
+        : (sourceStart > now + 60000 ? sourceStart : nextOccurrence(sourceStart || now, now));
+      const windowMs = Math.max(3600000, Number.isFinite(sourceEnd) && Number.isFinite(sourceStart) ? sourceEnd - sourceStart : 0);
+      const endAt = Number(options.endAt) > startAt ? Number(options.endAt) : startAt + windowMs;
+      const fields = validateExam({
+        ...source,
+        title: String(options.title || `${source.title} (কপি)`).trim().slice(0, 150),
+        className: options.className ?? source.className,
+        group: options.group ?? source.group,
+        subject: options.subject ?? source.subject,
+        startAt, endAt
+      });
+      const copy = {
+        ...source, ...fields,
+        id: newId('E'),
+        teacherId: actor.role === 'teacher' ? actor.id : '',
+        teacherName: actor.role === 'teacher' ? name : '',
+        status: 'draft', reviewNote: '',
+        createdAt: now, updatedAt: now,
+        createdBy: name, createdByRole: actor.role, updatedBy: name,
+        participants: [], absentIds: [],
+        submittedAt: undefined, approvedAt: undefined, approvedBy: undefined,
+        publishedAt: undefined, publishedBy: undefined, unpublishedAt: undefined,
+        completedAt: undefined, archivedAt: undefined, archivedFrom: undefined,
+        resultsPublished: false, resultsPublishedAt: undefined,
+        copiedFrom: source.id
+      };
+      restampExamQuestions(copy, []);
+      delete copy.demoFixture;
+      db.exams.unshift(copy);
+    });
+  },
+  /* A published paper is never deleted outright: unpublish or archive first,
+     and a paper anyone has answered cannot be deleted at all. */
+  async deleteExam(id, actor = MANAGER_ACTOR) {
+    await paperActor(actor);
+    return mutate(db => {
+      const exam = examById(db, id);
+      if (actor.role === 'teacher') teacherOwns(exam, actor);
+      /* Answered papers are never removed, whatever their workflow status. */
+      if (db.attempts.some(a => a.examId === id)) fail('উত্তর বা ফলাফল থাকা পরীক্ষা মুছে ফেলা যাবে না।');
+      if (!DELETABLE_STATUSES.includes(exam.status)) fail('প্রকাশিত পরীক্ষা সরাসরি মুছবে না — আগে Unpublish বা Archive করুন।');
+      db.exams = db.exams.filter(item => item.id !== id);
+    });
+  },
+  /* Single-question editing from the View Questions screen. The paste
+     template is rebuilt from the records, so both stay in step. */
+  async updateQuestion(id, uid, patch = {}, actor = MANAGER_ACTOR) {
+    const name = await paperActor(actor);
+    return mutate(db => {
+      const exam = examById(db, id);
+      assertCanEditPaper(exam, db, actor);
+      const index = exam.questions.findIndex((question, position) => examQuestionUid(exam, question, position) === uid);
+      if (index < 0) fail('প্রশ্নটি পাওয়া যায়নি।');
+      const current = exam.questions[index];
+      exam.questions[index] = cleanQuestion({
+        text: patch.text ?? current.text,
+        marks: patch.marks ?? current.marks,
+        options: patch.options ?? current.options,
+        answer: patch.answer ?? current.answer
+      }, exam.type, `প্রশ্ন ${index + 1}`);
+      exam.template = serializeQuestions(exam.questions, exam.type);
+      exam.updatedAt = Date.now(); exam.updatedBy = name;
+      restampExamQuestions(exam, exam.questions);
+    });
+  },
+  async addQuestion(id, question = {}, actor = MANAGER_ACTOR) {
+    const name = await paperActor(actor);
+    return mutate(db => {
+      const exam = examById(db, id);
+      assertCanEditPaper(exam, db, actor);
+      if (exam.questions.length >= 100) fail('একটি পরীক্ষায় সর্বোচ্চ ১০০টি প্রশ্ন রাখা যাবে।');
+      const clean = cleanQuestion(question, exam.type, `প্রশ্ন ${exam.questions.length + 1}`);
+      const questions = [...exam.questions, clean];
+      if (totalMarks({ questions }) > 10000) fail('মোট নম্বর সর্বোচ্চ ১০,০০০ হতে পারে।');
+      exam.questions = questions;
+      exam.template = serializeQuestions(questions, exam.type);
+      exam.updatedAt = Date.now(); exam.updatedBy = name;
+      restampExamQuestions(exam, exam.questions);
+    });
+  },
+  async deleteQuestion(id, uid, actor = MANAGER_ACTOR) {
+    const name = await paperActor(actor);
+    return mutate(db => {
+      const exam = examById(db, id);
+      assertCanEditPaper(exam, db, actor);
+      if (exam.questions.length <= 1) fail('পরীক্ষায় অন্তত একটি প্রশ্ন থাকতে হবে।');
+      const remaining = exam.questions.filter((question, position) => examQuestionUid(exam, question, position) !== uid);
+      if (remaining.length === exam.questions.length) fail('প্রশ্নটি পাওয়া যায়নি।');
+      exam.questions = remaining;
+      exam.template = serializeQuestions(remaining, exam.type);
+      exam.updatedAt = Date.now(); exam.updatedBy = name;
+      restampExamQuestions(exam, exam.questions);
     });
   },
   async publishResults(id, actor = MANAGER_ACTOR) {
@@ -501,7 +928,7 @@ export const examRepository = {
     await requireRoleSession('manager');
     return mutate(db => {
       const exam = examById(db, id);
-      if (exam.status !== 'published' || Date.now() < exam.endAt) fail('পরীক্ষা শেষ হওয়ার আগে ফলাফল প্রকাশ করা যাবে না।');
+      if (!isLiveExam(exam) || Date.now() < exam.endAt) fail('পরীক্ষা শেষ হওয়ার আগে ফলাফল প্রকাশ করা যাবে না।');
       if (exam.resultsPublished) fail('ফলাফল ইতিমধ্যে প্রকাশিত হয়েছে।');
       if (db.attempts.some(attempt => attempt.examId === id && ['active', 'queued'].includes(attempt.status))) fail('অপেক্ষমাণ/অফলাইন উত্তর জমা শেষ না হওয়া পর্যন্ত ফলাফল প্রকাশ করা যাবে না।');
       if (exam.type !== 'mcq') {
@@ -513,14 +940,13 @@ export const examRepository = {
     });
   },
   async deleteDraft(id, actor = TEACHER_ACTOR) {
-    await requireRoleSession('teacher');
-    const db = await mutate(db => { const e = examById(db, id); teacherOwns(e, actor); if (!['draft', 'rejected'].includes(e.status)) fail('প্রকাশিত/অপেক্ষমাণ পরীক্ষা মুছতে পারবেন না।'); db.exams = db.exams.filter(e => e.id !== id); });
-    return teacherExamSnapshot(db, actor);
+    /* Kept for callers of the old name; the rules now live in deleteExam. */
+    return examRepository.deleteExam(id, actor);
   },
   async startAttempt(examId, student) {
     return mutate(db => {
       const e = examById(db, examId), person = eligibleParticipant(e, student), now = Date.now();
-      if (e.type !== 'mcq' || e.status !== 'published' || now < e.startAt || now >= e.endAt) fail('এখন পরীক্ষা শুরু করা যাবে না।');
+      if (e.type !== 'mcq' || !isLiveExam(e) || now < e.startAt || now >= e.endAt) fail('এখন পরীক্ষা শুরু করা যাবে না।');
       if (!examMatchesStudent(e, person)) fail('এই পরীক্ষা তোমার শ্রেণি/ব্যাচের জন্য নয়.');
       if (!e.participants?.some(item => item.id === person.id)) fail('এই পরীক্ষার অংশগ্রহণকারী তালিকায় তোমার নাম নেই।');
       const own = db.attempts.filter(a => a.examId === e.id && a.studentId === person.id);
@@ -565,7 +991,7 @@ export const examRepository = {
       const e = examById(db, examId); teacherOwns(e, actor); const person = eligibleParticipant(e, student);
       if (!examMatchesStudent(e, person) || !e.participants.some(item => item.id === person.id)) fail('শিক্ষার্থী এই পরীক্ষার assigned class/batch roster-এ নেই।');
       if (e.resultsPublished) fail('Manager ফলাফল প্রকাশ করেছেন; নম্বর আর পরিবর্তন করা যাবে না।');
-      if (e.status !== 'published' || e.type === 'mcq' || Date.now() < new Date(`${classExamDate(e.startAt)}T00:00:00+06:00`).getTime()) fail('ক্লাসে পরীক্ষার দিন থেকে উপস্থিতি দেওয়া যাবে।');
+      if (!isLiveExam(e) || e.type === 'mcq' || Date.now() < new Date(`${classExamDate(e.startAt)}T00:00:00+06:00`).getTime()) fail('ক্লাসে পরীক্ষার দিন থেকে উপস্থিতি দেওয়া যাবে।');
       if (db.attempts.some(a => a.examId === e.id && a.studentId === person.id)) fail('এই শিক্ষার্থীর নম্বর আছে; অনুপস্থিত করা যাবে না।');
       e.absentIds = [...new Set([...(e.absentIds || []), person.id])];
       if (!e.participants.some(s => s.id === person.id)) e.participants.push(person);
@@ -578,7 +1004,7 @@ export const examRepository = {
       const e = examById(db, examId); teacherOwns(e, actor); const person = eligibleParticipant(e, student);
       if (!examMatchesStudent(e, person) || !e.participants.some(item => item.id === person.id)) fail('শিক্ষার্থী এই পরীক্ষার assigned class/batch roster-এ নেই।');
       if (e.resultsPublished) fail('Manager ফলাফল প্রকাশ করেছেন; নম্বর আর পরিবর্তন করা যাবে না।');
-      if (e.status !== 'published' || e.type === 'mcq' || Date.now() < new Date(`${classExamDate(e.startAt)}T00:00:00+06:00`).getTime()) fail('ক্লাসে পরীক্ষার দিন থেকে নম্বর দেওয়া যাবে।');
+      if (!isLiveExam(e) || e.type === 'mcq' || Date.now() < new Date(`${classExamDate(e.startAt)}T00:00:00+06:00`).getTime()) fail('ক্লাসে পরীক্ষার দিন থেকে নম্বর দেওয়া যাবে।');
       if (e.questions.some(q => !Object.hasOwn(questionScores, q.id) || !['string', 'number'].includes(typeof questionScores[q.id]) || !String(questionScores[q.id]).trim() || !Number.isFinite(Number(questionScores[q.id])) || round(Number(questionScores[q.id])) !== Number(questionScores[q.id]) || Number(questionScores[q.id]) < 0 || Number(questionScores[q.id]) > q.marks)) fail('প্রতিটি প্রশ্নের নম্বর শূন্য থেকে পূর্ণমানের মধ্যে দিন।');
       const score = round(e.questions.reduce((sum, q) => sum + Number(questionScores[q.id]), 0));
       let a = db.attempts.find(a => a.examId === e.id && a.studentId === person.id);

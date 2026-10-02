@@ -5,7 +5,7 @@ import { installPanelGuard, lockPanel, rememberPanelPage, watchOwnPanelSession }
 import { openStaffPasswordDialog } from './staff-password-dialog.js';
 import { loadRoster, saveRoster, syncAccountStatus, loadNotices, saveNotices, loadRoutine, saveRoutine, WEEK_DAYS } from './office-data.js';
 import { financeRepository, monthLabel, dateLabel, studentFeeSummary, newestTransactions, isFinalizedTransaction } from './finance-data.js';
-import { examRepository, examResults, MANAGER_ACTOR } from './exam-data.js';
+import { examRepository, examResults, isLiveExam, MANAGER_ACTOR } from './exam-data.js';
 import { examMeta, resultMarkup, downloadResults } from './exam-ui.js';
 import { teachingRepository, todayISO, TEACHING_KEY } from './teaching-data.js';
 import { enabledClasses } from './config.js';
@@ -109,9 +109,9 @@ function renderDashboard() {
   safeSetText('#mgrTodayCollection', money(totalToday)); safeSetText('#mgrPendingPayments', bn(pendingTx.length)); safeSetText('#mgrTodayClasses', todaysClasses == null ? '—' : bn(todaysClasses));
   safeSetText('#mgrCounterStatus', pendingTx.length ? `${bn(pendingTx.length)}টি এন্ট্রি পর্যালোচনার অপেক্ষায়` : 'অপেক্ষমাণ এন্ট্রি নেই');
   safeSetText('#mgrAttendanceSummary', attendanceSummary());
-  const upcoming = exams.exams.filter(exam => exam.status === 'published' && Number(exam.startAt) >= Date.now()).sort((a, b) => a.startAt - b.startAt).slice(0, 3);
+  const upcoming = exams.exams.filter(exam => isLiveExam(exam) && Number(exam.startAt) >= Date.now()).sort((a, b) => a.startAt - b.startAt).slice(0, 3);
   $('#mgrUpcomingExams').innerHTML = upcoming.length ? upcoming.map(exam => compactRow(exam.title, `${exam.className || '—'} • ${new Date(exam.startAt).toLocaleDateString('bn-BD')}`)).join('') : '<p class="finance-hint">কোনো প্রকাশিত আসন্ন পরীক্ষা নেই।</p>';
-  const pendingResults = exams.exams.filter(exam => exam.status === 'published' && exam.type !== 'mcq' && exam.endAt < Date.now()).map(exam => ({ exam, remaining: (exam.participants || []).filter(person => !exams.attempts.some(a => a.examId === exam.id && a.studentId === person.id && (a.questionScores || a.status === 'absent'))).length })).filter(item => item.remaining > 0);
+  const pendingResults = exams.exams.filter(exam => isLiveExam(exam) && exam.type !== 'mcq' && exam.endAt < Date.now()).map(exam => ({ exam, remaining: (exam.participants || []).filter(person => !exams.attempts.some(a => a.examId === exam.id && a.studentId === person.id && (a.questionScores || a.status === 'absent'))).length })).filter(item => item.remaining > 0);
   $('#mgrPendingResults').innerHTML = pendingResults.length ? pendingResults.slice(0, 3).map(({ exam, remaining }) => compactRow(exam.title, `${bn(remaining)} শিক্ষার্থীর written marks/absence বাকি`)).join('') : '<p class="finance-hint">কোনো অপেক্ষমাণ ফলাফল record নেই।</p>';
   $('#mgrRecentNotices').innerHTML = notices.length ? notices.slice(0, 2).map(item => compactRow(item.title, item.date || '')).join('') : '<p class="finance-hint">এখনো কোনো নোটিশ নেই।</p>';
   const activity = [
@@ -213,7 +213,7 @@ function renderRoutine() {
   $('#managerRoutineForm [name=className]').value ||= '';
 }
 function renderResults() {
-  const completed = exams.exams.filter(exam => exam.status === 'published').sort((a, b) => Number(b.endAt || 0) - Number(a.endAt || 0));
+  const completed = exams.exams.filter(exam => isLiveExam(exam)).sort((a, b) => Number(b.endAt || 0) - Number(a.endAt || 0));
   $('#managerResultList').innerHTML = completed.length ? completed.map(exam => `<article class="manager-result-exam">${examMeta(exam)}<p class="finance-hint">${exam.resultsPublished ? 'ফলাফল প্রকাশিত' : 'ফলাফল এখনো শিক্ষার্থীদের জন্য প্রকাশিত নয়'}</p><div class="manager-actions"><button type="button" class="mini-btn" data-manager-action="download-result" data-id="${escapeHtml(exam.id)}">Marks / Result CSV</button>${exam.resultsPublished ? '' : `<button type="button" class="mini-btn approve" data-manager-action="publish-results" data-id="${escapeHtml(exam.id)}">ফলাফল চূড়ান্তভাবে প্রকাশ</button>`}</div>${resultMarkup(exams, exam, true)}</article>`).join('') : '<p class="admin-empty">এখনো কোনো প্রকাশিত পরীক্ষা নেই।</p>';
 }
 function renderProfile() {
@@ -373,7 +373,7 @@ $('#managerPaymentSearch').addEventListener('input', renderFinance);
 $('#managerPaymentStatus').addEventListener('change', renderFinance);
 $('#managerResultList').addEventListener('click', async event => {
   const button = event.target.closest('[data-manager-action]'); if (!button) return;
-  const exam = exams.exams.find(item => item.id === button.dataset.id && item.status === 'published');
+  const exam = exams.exams.find(item => item.id === button.dataset.id && isLiveExam(item));
   if (!exam) return;
   if (button.dataset.managerAction === 'download-result') { downloadResults(exams, exam); return; }
   if (button.dataset.managerAction === 'publish-results') {

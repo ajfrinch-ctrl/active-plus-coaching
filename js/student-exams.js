@@ -1,4 +1,4 @@
-import { examRepository as repo, examMatchesStudent, retryEligibility, firstAttemptMean, examResults, totalMarks, watchExams } from './exam-data.js';
+import { examRepository as repo, examMatchesStudent, retryEligibility, firstAttemptMean, examResults, totalMarks, watchExams, isStudentVisibleExam } from './exam-data.js';
 import { examMeta, resultMarkup, esc, num } from './exam-ui.js';
 import { downloadExamPDF } from './exam-pdf.js';
 
@@ -18,7 +18,9 @@ export function initStudentExams({ getStudent, getAccount }) {
   function list() {
     view = 'list'; examId = null; attemptId = null;
     if (!activeAccount()) { content.innerHTML = '<p class="exam-card">অনুমোদিত অ্যাকাউন্ট দিয়ে লগইন করতে হবে।</p>'; return; }
-    const exams = db.exams.filter(e => e.status === 'published' && examMatchesStudent(e, getStudent())).sort((a, b) => b.startAt - a.startAt), now = Date.now();
+    /* Draft / review / approved / archived papers are staff-only: a student
+    never sees a question before its exam is published. */
+    const exams = db.exams.filter(e => isStudentVisibleExam(e) && examMatchesStudent(e, getStudent())).sort((a, b) => b.startAt - a.startAt), now = Date.now();
     content.innerHTML = `<div class="exam-actions">${button('refresh', 'তালিকা / জমার অবস্থা হালনাগাদ')}</div><div class="exam-list">${exams.map(e => {
       const attempts = own(e), active = attempts.find(a => a.status === 'active'), queued = attempts.some(a => a.status === 'queued');
       const canFirst = !attempts.length && now >= e.startAt && now < e.endAt && now <= e.startAt + e.lateMinutes * 60000;
@@ -57,7 +59,7 @@ export function initStudentExams({ getStudent, getAccount }) {
   }
   function repaint() {
     if (!activeAccount()) { list(); return; }
-    const e = db.exams.find(e => e.id === examId && e.status === 'published');
+    const e = db.exams.find(e => e.id === examId && isStudentVisibleExam(e));
     if (view === 'active' && e) {
       const a = own(e).find(a => a.id === attemptId);
       if (a?.status === 'active') root.querySelectorAll('[data-answer-question]').forEach(input => { input.checked = a.answers[input.dataset.answerQuestion] === input.value; });
@@ -101,7 +103,7 @@ export function initStudentExams({ getStudent, getAccount }) {
   }
   async function automaticPDF() {
     if (busy || pdfBusy || !ready || !activeAccount() || document.querySelector('#appShell').hidden || document.visibilityState !== 'visible') return;
-    for (const e of db.exams.filter(e => e.type === 'mcq' && e.status === 'published' && examMatchesStudent(e, getStudent()) && Date.now() >= e.endAt && own(e).some(a => !a.demoFixture))) {
+    for (const e of db.exams.filter(e => e.type === 'mcq' && isStudentVisibleExam(e) && examMatchesStudent(e, getStudent()) && Date.now() >= e.endAt && own(e).some(a => !a.demoFixture))) {
       const key = `activePlus.examPDF.${e.id}.${getStudent().id}`;
       let done = false; try { done = window.localStorage.getItem(key) === 'started'; } catch { /* Manual download remains available. */ }
       if (done || autoTried.has(key)) continue;

@@ -626,10 +626,11 @@ Firebase Authentication + role-based security rules, সার্ভার-অ�
 ### কোথায় পাবেন
 
 - **শিক্ষক → আরও → পরীক্ষা নিন:** MCQ / লিখিত / সংক্ষিপ্ত উত্তর আলাদা তৈরি, **কোন শ্রেণির জন্য সেই শ্রেণি নির্বাচন (আবশ্যক)**, প্রশ্ন পেস্ট, preview, খসড়া, অনুমোদনের আবেদন, ক্লাস পরীক্ষার নম্বর ও উপস্থিতি। পরীক্ষার কার্ডে শ্রেণির নাম দেখা যায়। আগের শিক্ষক footer-এর “পরীক্ষা” অংশ শুধু পুরোনো class assessment records; নতুন অনুমোদিত online workflow আলাদা। তালিকার উপরে ধরনের ট্যাবের নিচে **শ্রেণির ছাঁকনি**ও আছে — একটি শ্রেণি বাছাই করলে শুধু সেই শ্রেণির পরীক্ষা দেখায়।
-- **Admin → আরও → পরীক্ষা নিন:** অপেক্ষমাণ পরীক্ষা দেখুন, প্রশ্ন/সঠিক উত্তর/নম্বর যাচাই করুন, প্রয়োজনে negative marking বদলে অনুমোদন দিন অথবা কারণ লিখে ফেরত দিন। প্রকাশিত প্রশ্ন পরিবর্তন/মুছে ফেলা বন্ধ।
+- **Manager → পরীক্ষা:** তারিখ অনুযায়ী ইতিহাস, আসন্ন পরীক্ষা ও প্রশ্নের আর্কাইভ। ছাঁকনি: নাম/ID/প্রশ্ন, নির্দিষ্ট তারিখ, তারিখ-পরিসর, শ্রেণি, বিষয়, অবস্থা, ধরন। Manager নতুন পরীক্ষা তৈরি, প্রশ্ন যোগ/সম্পাদনা/মুছে ফেলা, অপশন ও সঠিক উত্তর বদল, তারিখ/শ্রেণি/নম্বর/সময়কাল নির্ধারণ, খসড়া সংরক্ষণ, পর্যালোচনা, অনুমোদন, প্রকাশ, Unpublish, সম্পন্ন/আর্কাইভ, ফিরিয়ে আনা, ডুপ্লিকেট এবং পুরোনো প্রশ্ন দিয়ে নতুন পরীক্ষা — সব করতে পারেন। প্রকাশিত পরীক্ষা সরাসরি মুছে যায় না (আগে Unpublish/আর্কাইভ), আর উত্তর/ফলাফল থাকা পরীক্ষা কখনোই মুছে যায় না।
+- **প্রশ্ন কখনো খোলা থাকে না:** ড্যাশবোর্ড/ইতিহাসে শুধু পরীক্ষার তালিকা — প্রতিটি সারিতে “প্রশ্ন দেখুন” চাপলে কেবল সেই এক পরীক্ষার প্রশ্ন খোলে।
 - **শিক্ষার্থী → হোম/কোর্স → পরীক্ষা দাও:** **নিজের শ্রেণির জন্য** প্রকাশিত পরীক্ষা (অন্য শ্রেণির পরীক্ষা তালিকায় আসে না এবং শুরুও করা যায় না), MCQ-তে অংশগ্রহণ, লিখিত/সংক্ষিপ্ত প্রশ্নপত্র ডাউনলোড, নিজের ও সবার ফলাফল। ফলাফল পাতাতেও প্রবেশের বাটন আছে। Footer আগের পাঁচটিই। শ্রেণি নির্বাচন চালুর আগে সংরক্ষিত পরীক্ষাগুলোর শ্রেণি নেই, তাই সেগুলো আগের মতোই সব শ্রেণিকে দেখানো হয়।
 
-প্রতি পরীক্ষায় একটি বিষয়; একই দিনে একাধিক পরীক্ষা তৈরি করা যায়। Draft/pending/rejected পরীক্ষা শিক্ষার্থীর UI-তে আসে না। সব অনুমোদিত শ্রেণি/বর্ষ একসঙ্গে অংশ নিতে পারে।
+প্রতি পরীক্ষায় একটি বিষয়; একই দিনে একাধিক পরীক্ষা আলাদা Examination ID নিয়ে আলাদা রেকর্ড হিসেবে থাকে; একই দিনের পরীক্ষাগুলো একই তারিখের গ্রুপে দেখায় — পুরোনো ও নতুন প্রশ্ন কখনো মেশে না। Status: খসড়া → অনুমোদনের অপেক্ষায় → অনুমোদিত → প্রকাশিত → সম্পন্ন → আর্কাইভ (ফেরত = সংশোধনের শাখা)। Draft/pending/approved/rejected/archived কিছুই শিক্ষার্থীর UI-তে আসে না; শুধু নিজের শ্রেণির প্রকাশিত/সম্পন্ন পরীক্ষা নির্ধারিত সময়ে দেখা যায়। প্রতিটি প্রশ্নের নিজস্ব unique ID থাকে এবং তারিখ বদলালে রেকর্ড নতুন তারিখে সাজে। সব অনুমোদিত শ্রেণি/বর্ষ একসঙ্গে অংশ নিতে পারে।
 
 ### প্রশ্নের টেমপ্লেট
 
@@ -677,7 +678,7 @@ D: ৯
 
 বর্তমান demo teacher/admin role client-side, প্রশ্নের answer key client storage-এই থাকে এবং device clock/client data বদলানো যায়; exam timing প্রতিটি ডিভাইসের ঘড়িতেই চলে, তাই পরীক্ষার আগে সব ফোনের সময় ঠিক আছে কি না মিলিয়ে নিন। UI-তে answer key withheld থাকলেও এটি পরীক্ষার গোপনীয়তা বা cheating prevention নয়। বাস্তব high-stakes চালুর জন্য authenticated teacher/student/admin accounts, server-side permissions, server-authoritative clock/eligibility/grading, answer-key isolation until global end, durable server-side exam/attempt database, idempotent sync endpoint, conflict policy এবং offline answer timing গ্রহণের স্পষ্ট server policy আবশ্যক। ছাত্রের ফোনের timestamp একা বিশ্বাস করা যাবে না। Teacher registration/provisioning আগের মতো এখনও পৃথক pending কাজ।
 
-Tests: template parser/validation, approval transitions/ownership, timing/grace, all-class eligibility, shuffle/resume, negative/weighted grading, running-average retry, best-score rank, offline locking/idempotent sync, written marks/absence, failed/corrupt writes, multi-page PDF structure, end-time auto PDF, direct CSV, and mobile 320/390/landscape/wide layout—সঙ্গে আগের সব regression tests।
+Tests: date-wise archive grouping/filters, question-level edit/add/delete with unique ids, workflow transitions and permissions, student visibility, template parser/validation, approval transitions/ownership, timing/grace, all-class eligibility, shuffle/resume, negative/weighted grading, running-average retry, best-score rank, offline locking/idempotent sync, written marks/absence, failed/corrupt writes, multi-page PDF structure, end-time auto PDF, direct CSV, and mobile 320/390/landscape/wide layout—সঙ্গে আগের সব regression tests।
 
 ## খালি শুরু
 

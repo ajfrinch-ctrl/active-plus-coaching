@@ -1,8 +1,11 @@
-// v147: phone lookup with three-digit masks, running public transaction IDs
-// and readable privacy-safe payment reports. Keep today default/offline receipts.
-const CACHE_VERSION = 147;
+// v148: date-wise examination workspace — question archive, review workflow
+// (draft → review → approved → published → completed → archived) and question-
+// level editing for the Manager. v147: phone lookup with three-digit masks,
+// running public transaction IDs and readable privacy-safe payment reports.
+const CACHE_VERSION = 148;
 const CACHE_NAME = `active-plus-student-v${CACHE_VERSION}-minimal-education`;
 const APP_SHELL = [
+  './css/exam-archive.css',
   './css/app-polish.css',
   './css/student-record.css',
   './css/ui-wallet.css',
@@ -98,6 +101,7 @@ const APP_SHELL = [
   './js/exam-data.js',
   './js/exam-ui.js',
   './js/exam-manager.js',
+  './js/exam-archive.js',
   './js/exam-pdf.js',
   './js/material-pdf.js',
   './js/student-exams.js',
