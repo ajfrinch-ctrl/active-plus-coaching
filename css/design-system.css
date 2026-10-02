@@ -1,4 +1,6 @@
-/* Minimal Education • single application entry; no legacy visual imports. */
+/* Minimal Education • single application entry; no legacy visual imports.
+   Load order matters: palette → structure → forms → features → status → auth →
+   polish → record → the Pay skin (wallet-style look, always last). */
 @import url('./foundation.css');
 @import url('./ui-layout.css');
 @import url('./ui-components.css');
@@ -11,7 +13,5 @@
 
 @import url('./app-polish.css');
 @import url('./student-record.css');
-@import url('./ui-interior.css');
 
-@import url('./ui-modern.css');
-@import url('./student-notebook.css');
+@import url('./ui-wallet.css');

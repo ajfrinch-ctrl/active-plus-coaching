@@ -2,6 +2,7 @@
 const focusable = 'button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex="0"]';
 const visible = el => !el.closest('[hidden]') && el.getClientRects().length > 0;
 const previousFocus = new WeakMap();
+const dialogSelector = '.admin-modal,.modal,.staff-pw-card,.apc-lock-card';
 let activeDialog = null;
 function enhance() {
   // Retain column names when the mobile layout presents rows as compact cards.
@@ -13,7 +14,7 @@ function enhance() {
       });
     });
   });
-  const dialogs = [...document.querySelectorAll('.admin-modal,.modal,.staff-pw-card,.apc-lock-card')].filter(visible);
+  const dialogs = [...document.querySelectorAll(dialogSelector)].filter(visible);
   const next = dialogs.at(-1) || null;
   if (next === activeDialog) return;
   if (activeDialog) {
@@ -22,7 +23,10 @@ function enhance() {
   }
   activeDialog = next;
   if (!next) return;
-  previousFocus.set(next, document.activeElement);
+  // Some feature forms synchronously focus their first field before the
+  // observer sees the open dialog. Keep the external opener captured below,
+  // rather than recording that field as its own return target.
+  if (!next.contains(document.activeElement)) previousFocus.set(next, document.activeElement);
   next.setAttribute('role', 'dialog');
   next.setAttribute('aria-modal', 'true');
   if (!next.hasAttribute('aria-label') && !next.hasAttribute('aria-labelledby')) {
@@ -36,6 +40,11 @@ function enhance() {
   }
 }
 function start() {
+  document.addEventListener('focusin', event => {
+    const dialog = event.target.closest?.(dialogSelector);
+    const opener = event.relatedTarget;
+    if (dialog && dialog !== activeDialog && opener && !dialog.contains(opener)) previousFocus.set(dialog, opener);
+  });
   enhance();
   new MutationObserver(enhance).observe(document.body, {subtree:true, childList:true, attributes:true, attributeFilter:['hidden','class']});
   document.addEventListener('keydown', event => {

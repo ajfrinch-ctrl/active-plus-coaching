@@ -812,7 +812,7 @@ const CASH_COLUMNS = () => ([
 
 const cashRow = tx => ([
   dateLabel(tx.date),
-  dash(tx.id),
+  dash(tx.transactionNo || tx.id),
   dash(tx.receiptNo || tx.id),
   dash(tx.studentName),
   money(tx.amount),

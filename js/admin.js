@@ -837,7 +837,7 @@ async function collectFee(event) {
   renderFeeProfile();
   try {
     // Only update the UI and issue a receipt after durable storage succeeds.
-    state.transactions = await financeRepository.saveTransaction(tx);
+    state.transactions = await financeRepository.saveTransaction(tx, { serialTransaction: true, receiptDate: now });
   } catch {
     $('#feeSaveError').textContent = 'পেমেন্ট সংরক্ষণ হয়নি। ব্রাউজারের স্টোরেজ/খালি জায়গা পরীক্ষা করে আবার চেষ্টা করুন।';
     $('#feeSaveError').hidden = false;

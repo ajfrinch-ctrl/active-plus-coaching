@@ -31,7 +31,8 @@ test('an existing counter session opens the desk directly and it is usable', asy
   // store has settled and the token is a valid, device-bound session again.
   await waitFor(() => $('#payFeeMonth').options.length > 0);
   assert.equal(await hasPaymentSession(), true);
-  assert.equal($$('#payFeeMethodGroup [data-pay-method]').length > 0, true);
+  assert.equal($('#payFeeMethod').options.length > 0, true);
+  await waitFor(() => $('#paymentMain').dataset.counterReady === 'true');
 
   // Straight to work: search → profile, without touching the login form.
   type($('#payStudentSearch'), 'রাইসা');

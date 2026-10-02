@@ -154,6 +154,12 @@ test('the theme switch shows exactly the theme the app is in', () => {
     'the checkbox must cover the whole track so the row is tappable');
   for (const page of PAGES) {
     const html = read(`${page}.html`);
+    if (page === 'payment') {
+      assert.match(html, /js\/appearance-boot\.js/);
+      assert.match(html, /js\/theme-entry\.js/);
+      assert.doesNotMatch(html, /id="darkModeToggle"/); // Latest scope removes extra counter settings, not saved AMOLED support.
+      continue;
+    }
     const row = html.match(/<label class="settings-toggle theme-switch">[\s\S]{0,1400}?<\/label>/);
     assert.ok(row, `${page}.html has no theme switch row`);
     assert.match(row[0], /<span class="toggle-switch"><input type="checkbox" id="darkModeToggle"><i><\/i><\/span>/,
@@ -164,29 +170,18 @@ test('the theme switch shows exactly the theme the app is in', () => {
   }
 });
 
-test('the glass skin is a layer on top, never the only rendering path', () => {
-  const skin = read('css/ui-interior.css');
-  // Screen only: print keeps the flat, ink-friendly document, and the ambient
-  // wash can never end up on paper.
+test('the wallet skin is a screen-only layer with accessible blur fallbacks', () => {
+  const skin = read('css/ui-wallet.css');
   assert.match(skin.trimStart(), /^\/\*[\s\S]*?\*\/\s*@media screen \{/,
-    'the skin must be wrapped in @media screen');
-  // Every drop of translucency sits behind the capability check…
+    'print must retain the flat ink-friendly document');
   const supports = skin.indexOf('@supports ((-webkit-backdrop-filter');
-  assert.ok(supports > -1, 'the glass rules are no longer behind @supports');
-  // The wash itself is a plain background layer, declared before (not inside)
-  // the capability check, and it never blurs anything.
-  assert.ok(skin.indexOf('body::before') < supports,
-    'the ambient wash must not depend on blur support');
-  assert.doesNotMatch(skin.slice(skin.indexOf('body::before'), supports), /backdrop-filter/,
-    'the ambient wash is being blurred; it is the thing being blurred through');
-  // …and people who ask for less transparency get the flat app back.
-  assert.match(skin, /@media \(prefers-reduced-transparency: reduce\)/,
-    'no reduced-transparency fallback');
-  assert.match(skin, /@media \(prefers-reduced-transparency: reduce\)[\s\S]*display: none/,
-    'the ambient layer is not dropped when transparency is reduced');
-  // The skin is the last word on the material.
+  assert.ok(supports > -1, 'dialog blur must stay behind a capability check');
+  assert.doesNotMatch(skin.slice(0, supports), /(?:-webkit-)?backdrop-filter\s*:(?!\s*none\b)/,
+    'an ordinary card or topbar must not depend on blur');
+  assert.match(skin, /@media \(prefers-reduced-transparency: reduce\)[\s\S]*backdrop-filter: none/);
+  assert.match(skin, /@media \(prefers-reduced-motion: reduce\)[\s\S]*scroll-behavior: auto/);
   const imports = [...read('css/design-system.css').matchAll(/@import\s+url\(\s*['"]\.\/([^'"]+)['"]\s*\)/g)].map(m => m[1]);
-  assert.equal(imports[imports.length - 1], 'ui-interior.css', 'the skin no longer loads last');
+  assert.equal(imports.at(-1), 'ui-wallet.css', 'the active skin must load last');
 });
 
 test('AMOLED glass keeps the canvas black and the text readable', () => {
