@@ -295,6 +295,27 @@ html[data-theme="dark"] .dashboard-exam-card .dashboard-primary-action { backgro
 .daily-challenge-section .challenge-card { margin-top: 0; }
 .challenge-star { display: none; }
 
+/* আজকের অনুপ্রেরণা — one compact row between today's classes and the quick
+   menu. Same card material as the other home rows (surface, hairline, 20px
+   radius); the mark is a small tinted disc. Nothing here depends on the
+   network, so the row can never be a spinner or an empty box. */
+.daily-quote-section { margin: 14px 0 0; }
+.daily-quote-card {
+  display: grid; grid-template-columns: 36px minmax(0, 1fr); align-items: center; gap: 10px;
+  margin: 0; padding: 12px 14px;
+  background: var(--color-surface); border: 1px solid var(--color-border);
+  border-radius: 20px; box-shadow: var(--pay-shadow); color: var(--color-text);
+}
+.daily-quote-card[hidden] { display: none; }
+.daily-quote-mark {
+  display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%;
+  background: var(--tone-violet-soft); color: var(--tone-violet);
+}
+.daily-quote-mark svg { width: 20px; height: 20px; }
+.daily-quote-text { margin: 0; min-width: 0; font-size: 13.5px; line-height: 1.5; overflow-wrap: anywhere; }
+.daily-quote-author { font-size: 12px; color: var(--color-text-secondary); }
+.daily-quote-author[hidden] { display: none; }
+
 /* 7 ── Page header: the app bar's colour continues into a rounded band with
    a back button and the page title. Top-level views only; a heading nested in
    a card keeps plain text styling. */
@@ -994,6 +1015,7 @@ html[data-theme="dark"] .pay-toast { background: var(--color-surface-muted); col
   .student-home-view .pay-hero { grid-column: 1 / -1; }
   .student-home-view .pay-grid { grid-column: 1 / -1; grid-template-columns: repeat(8, minmax(0, 1fr)); }
   .student-home-view:not(.is-empty-routine) .dashboard-today-section { grid-row: span 3; }
+  .daily-quote-section { grid-column: 1 / -1; }
   .daily-challenge-section { grid-column: 1 / -1; }
   .study-progress-card { display: grid; grid-template-columns: minmax(200px, 1fr) minmax(0, 1.3fr); gap: 0 24px; padding: 20px 24px; }
   .study-progress-stats { border: 0; border-left: 1px dashed var(--color-border); padding: 0 0 0 24px; margin: 0; }
@@ -1088,6 +1110,11 @@ svg.apc-color-icon, svg.apc-glyph-icon { flex-shrink: 0; pointer-events: none; }
 #homeView.is-empty-routine .pay-tile-icon svg { width: 32px; height: 32px; }
 #homeView.is-empty-routine .pay-tile-label { font-size: 12px; }
 #homeView.is-empty-routine .dashboard-today-section { display: flex; flex-direction: column; flex: 1; margin-top: 10px; }
+#homeView.is-empty-routine .daily-quote-section { margin-top: 8px; }
+#homeView.is-empty-routine .daily-quote-card { grid-template-columns: 30px minmax(0, 1fr); gap: 8px; padding: 9px 12px; border-radius: 16px; }
+#homeView.is-empty-routine .daily-quote-mark { width: 30px; height: 30px; }
+#homeView.is-empty-routine .daily-quote-mark svg { width: 17px; height: 17px; }
+#homeView.is-empty-routine .daily-quote-text { font-size: 12.5px; line-height: 1.45; }
 #homeView.is-empty-routine .dashboard-today-section .dashboard-section-heading { flex: none; margin-bottom: 6px; }
 #homeView.is-empty-routine #dashboardRoutineList { display: flex; flex: 1; align-items: flex-start; }
 /* Today’s empty state shares Today study's card, icon, copy and action.
@@ -1108,6 +1135,8 @@ svg.apc-color-icon, svg.apc-glyph-icon { flex-shrink: 0; pointer-events: none; }
   #homeView.is-empty-routine .study-progress-stats { margin-top: 4px; padding-top: 6px; }
   #homeView.is-empty-routine .study-progress-note { margin-top: 6px; }
   #homeView.is-empty-routine #studentServices { margin-top: 8px; padding-block: 6px; gap: 2px 0; }
+  #homeView.is-empty-routine .daily-quote-section { margin-top: 6px; }
+  #homeView.is-empty-routine .daily-quote-card { padding: 8px 10px; }
   #homeView.is-empty-routine .pay-tile { gap: 4px; padding-block: 2px; }
   #homeView.is-empty-routine .dashboard-today-section { margin-top: 8px; }
   #homeView.is-empty-routine .dashboard-today-section .dashboard-section-heading { margin-bottom: 4px; }

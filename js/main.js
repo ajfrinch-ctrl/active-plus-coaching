@@ -4,6 +4,7 @@ import { runMigrations } from './storage/migration.js';
 import { KEYS, listDocuments } from './database.js';
 import { syncAccountStatus } from './office-data.js';
 import { APP_TAGLINE, defaultStudent } from './config.js';
+import { BRAND_NAME } from './brand.js';
 import { loadStudent, loadAccount, hasSession, saveStudent, clearSession, loadAppConfig } from './storage.js';
 import { escapeHtml } from './sanitize.js';
 import { $, setAuthMessage, showFeedback } from './ui.js';
@@ -30,6 +31,7 @@ import { initStudentDashboard } from './student-dashboard.js';
 import { mountReports, refreshReports } from './reports.js';
 import { initNotificationSettings } from './notification-settings.js';
 import { initCourseHub } from './course-hub.js';
+import { initDailyQuote } from './daily-quote.js';
 
 /* Always reveal the login shell before optional startup work. A failure in any
    secondary feature must never leave the entry page completely blank. */
@@ -47,8 +49,17 @@ function applyAppConfig(cfg) {
   // 1. Tagline
   const taglineText = cfg.tagline || APP_TAGLINE;
   document.querySelectorAll('[data-fixed-tagline]').forEach(tagline => {
-    tagline.setAttribute('aria-label', taglineText);
-    tagline.textContent = taglineText;
+    /* The same slogan line carries the institute name and the logo sits beside
+       it, on every page: name + logo + slogan, one brand. */
+    tagline.setAttribute('aria-label', `${BRAND_NAME} • ${taglineText}`);
+    const institute = tagline.querySelector('.app-brand-institute');
+    const separator = tagline.querySelector('.app-brand-sep');
+    if (institute && separator) {
+      tagline.textContent = '';
+      tagline.append(institute, separator, document.createTextNode(taglineText));
+    } else {
+      tagline.textContent = taglineText;
+    }
   });
 
   // 3. Maintenance Mode
@@ -151,6 +162,9 @@ const refreshDashboard = initStudentDashboard({ getStudent: () => state.student,
 /* The Learning Hub (Class → Subject → Chapter → Content) reads the same exams
    and results the Examination module owns — it never keeps a second copy. */
 const refreshCourses = initCourseHub({ getStudent: () => state.student });
+/* আজকের অনুপ্রেরণা — the day's quote is on screen before this line returns and
+   never waits for a network or a decision from the reader. */
+const dailyQuote = initDailyQuote({ mount: '#dailyQuoteCard' });
 
 function handleAction(action) {
   switch (action) {
@@ -218,6 +232,7 @@ function enterApp() {
   openStudentApp(state);
   refreshDashboard();
   refreshTeaching(); refreshCourses.paint();
+  dailyQuote.paint();
   refreshExams();
   refreshNotices();
   window.dispatchEvent(new Event('apc-session-ready'));

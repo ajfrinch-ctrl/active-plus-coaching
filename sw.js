@@ -1,9 +1,11 @@
-// v149: examination identity + question bank — permanent Exam Codes
+// v150: student home — আজকের অনুপ্রেরণা (a deterministic daily quote card
+// between today's classes and the quick menu) with its offline feed cached in
+// the shell. v149: examination identity + question bank — permanent Exam Codes
 // (M2608BN01), seeded paper order, প্রণ্ন সংরক্ষণ করুন shelf, per-student and
 // answer-key PDFs, the student Learning Hub (class → subject → chapter) and the
 // shared brand module. v148: date-wise examination workspace — question
 // archive, review workflow and question-level editing for the Manager.
-const CACHE_VERSION = 149;
+const CACHE_VERSION = 150;
 const CACHE_NAME = `active-plus-student-v${CACHE_VERSION}-minimal-education`;
 const APP_SHELL = [
   './css/notifications.css',
@@ -114,6 +116,8 @@ const APP_SHELL = [
   './js/course-content.js',
   './js/course-hub.js',
   './js/course-editor.js',
+  './js/daily-quote.js',
+  './assets/daily-quotes.json',
   './js/exam-manager.js',
   './js/exam-archive.js',
   './js/exam-pdf.js',

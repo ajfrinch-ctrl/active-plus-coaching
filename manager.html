@@ -5,11 +5,11 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/; frame-src 'self' https://www.google.com/recaptcha/; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https: wss:; manifest-src 'self'; worker-src 'self'; base-uri 'self'; object-src 'none'">
   <meta name="referrer" content="no-referrer">
   <script src="js/sanitize-url.js"></script>
-  <script src="js/app-entry.js?v=149" data-entry="manager"></script>
+  <script src="js/app-entry.js?v=150" data-entry="manager"></script>
   <script src="js/topbar-connectivity.js?v=20260929-topbar"></script>
   <script type="module" src="js/realtime-sync-entry.js"></script>
   <script src="js/appearance-boot.js"></script>
-  <script src="js/theme-logos.js?v=149"></script>
+  <script src="js/theme-logos.js?v=150"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f3f6fb">
   <meta name="description" content="Active Plus Coaching Manager operations panel">
@@ -17,13 +17,13 @@
   <title>Active Plus | Manager Operations</title>
   <link rel="icon" href="favicon.ico" sizes="any">
 
-  <link rel="stylesheet" href="css/design-system.css?v=149">
+  <link rel="stylesheet" href="css/design-system.css?v=150">
   <script type="module" src="js/ui-accessibility.js"></script>
   <script src="js/launch-screen.js" defer></script>
 </head>
 <body>
   <div class="admin-shell manager-shell" id="managerShell" hidden>
-    <header class="app-topbar"><div class="app-topbar-inner"><div class="app-brand"><img class="app-brand-logo" src="assets/icons/logo-128.png" alt="Active Plus Coaching" width="38" height="38"><span class="app-brand-text"><strong class="app-brand-name">ম্যানেজার প্যানেল</strong><small class="app-brand-slogan" data-fixed-tagline>শিখতে থাকো, এগিয়ে যাও</small></span></div><div class="app-topbar-actions"><button class="app-topbar-icon notification-button" id="notificationButton" type="button" aria-label="নোটিশ দেখুন" aria-haspopup="dialog"><svg class="apc-glyph-icon" data-icon="bell" data-icon-set="active-plus-color" data-icon-version="1" data-icon-style="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5.5 16V9a6.5 6.5 0 0 1 13 0v7l2 2h-17Zm4 5a3 3 0 0 0 5 0"/></svg><span class="notification-dot" hidden aria-hidden="true"></span></button><button class="app-topbar-icon app-topbar-exit" id="managerLogout" type="button" aria-label="লগআউট"><svg class="apc-glyph-icon" data-icon="logout" data-icon-set="active-plus-color" data-icon-version="1" data-icon-style="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h5M8 12h13m-5-5 5 5-5 5"/></svg></button></div></div></header>
+    <header class="app-topbar"><div class="app-topbar-inner"><div class="app-brand"><img class="app-brand-logo" src="assets/icons/logo-128.png" alt="Active Plus Coaching" width="38" height="38"><span class="app-brand-text"><strong class="app-brand-name">ম্যানেজার প্যানেল</strong><small class="app-brand-slogan" data-fixed-tagline><span class="app-brand-institute">Active Plus Coaching</span><span class="app-brand-sep" aria-hidden="true"> • </span>শিখতে থাকো, এগিয়ে যাও</small></span></div><div class="app-topbar-actions"><button class="app-topbar-icon notification-button" id="notificationButton" type="button" aria-label="নোটিশ দেখুন" aria-haspopup="dialog"><svg class="apc-glyph-icon" data-icon="bell" data-icon-set="active-plus-color" data-icon-version="1" data-icon-style="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5.5 16V9a6.5 6.5 0 0 1 13 0v7l2 2h-17Zm4 5a3 3 0 0 0 5 0"/></svg><span class="notification-dot" hidden aria-hidden="true"></span></button><button class="app-topbar-icon app-topbar-exit" id="managerLogout" type="button" aria-label="লগআউট"><svg class="apc-glyph-icon" data-icon="logout" data-icon-set="active-plus-color" data-icon-version="1" data-icon-style="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M10 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h5M8 12h13m-5-5 5 5-5 5"/></svg></button></div></div></header>
     <main class="admin-main manager-main" id="managerMain">
       <p class="finance-error manager-data-error" id="managerDataError" role="alert" hidden>কিছু operational data পড়া যায়নি। নিরাপদে কাজ বন্ধ রাখা হয়েছে—storage ঠিক করে আবার load করুন।</p>
 
