@@ -73,11 +73,13 @@ test('an admin-authored maintenance message cannot inject markup', async () => {
   assert.equal(ctx.window.__xss, undefined);
   // A plain message is still shown in full, escaped output and all.
   assert.equal(escapeHtml('সিস্টেম আপডেট চলছে'), 'সিস্টেম আপডেট চলছে');
-  // Both banner sinks escape the message — no raw interpolation anywhere.
+  // Both banner hosts share one sink, and that sink escapes the message —
+  // no raw interpolation of the admin text anywhere in the module.
   const source = readFileSync(new URL('../js/main.js', import.meta.url), 'utf8');
-  const sinks = source.match(/\$\{escapeHtml\(cfg\.maintenanceMessage\)/g) || [];
-  assert.equal(sinks.length, 2, 'both maintenance banners escape the admin message');
+  const sinks = source.match(/\$\{escapeHtml\(message\)\}/g) || [];
+  assert.equal(sinks.length, 1, 'the shared maintenance banner escapes the admin message once');
   assert.equal(/\$\{cfg\.maintenanceMessage\}/.test(source), false);
+  assert.equal(/\$\{[^}]*maintenanceMessage[^}]*\}/.test(source), false, 'the admin message is never interpolated raw');
   ctx.dom.window.close();
 });
 

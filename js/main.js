@@ -3,7 +3,7 @@ import { iconMarkup } from './icons.js';
 import { runMigrations } from './storage/migration.js';
 import { KEYS, listDocuments } from './database.js';
 import { syncAccountStatus } from './office-data.js';
-import { APP_TAGLINE, defaultStudent } from './config.js';
+import { APP_TAGLINE, STORAGE_KEYS, defaultStudent, maintenanceState } from './config.js';
 import { loadStudent, loadAccount, hasSession, saveStudent, clearSession, loadAppConfig } from './storage.js';
 import { escapeHtml } from './sanitize.js';
 import { $, setAuthMessage, showFeedback } from './ui.js';
@@ -39,6 +39,54 @@ runMigrations();
 
 const appConfig = loadAppConfig();
 
+/* Maintenance notice: one sink, two hosts (the login card and the signed-in
+   screen). The admin's message is untrusted text, so it is escaped here — the
+   only place it is ever interpolated. */
+const MAINTENANCE_HOSTS = Object.freeze([
+  { id: 'authMaintenanceBanner', host: '.auth-card' },
+  { id: 'appMainMaintenanceBanner', host: '#appMain' }
+]);
+
+function maintenanceBannerMarkup(cfg) {
+  const { message } = maintenanceState(cfg);
+  return `
+      <div class="maint-icon">
+        ${iconMarkup('shield')}
+      </div>
+      <div class="maint-body">
+        <strong>⚠️ সিস্টেম রক্ষণাবেক্ষণ চলছে</strong>
+        <p>${escapeHtml(message)}</p>
+      </div>
+    `;
+}
+
+/* Paints or clears the notice from the live config. Safe to call at any time:
+   the admin can switch maintenance off from another tab or another device, and
+   this device must drop the banner without waiting for a reload. */
+function applyMaintenanceMode(cfg = loadAppConfig()) {
+  const { on } = maintenanceState(cfg);
+  if (!on) {
+    MAINTENANCE_HOSTS.forEach(({ id }) => $(`#${id}`)?.remove());
+    $('#appMaintenanceBanner')?.remove();   // legacy id from an older build
+    return;
+  }
+  const markup = maintenanceBannerMarkup(cfg);
+  for (const { id, host } of MAINTENANCE_HOSTS) {
+    let banner = $(`#${id}`);
+    if (!banner) {
+      // Inserted inside the card / main column, never over the fixed topbar.
+      const parent = $(host);
+      if (!parent) continue;
+      banner = document.createElement('div');
+      banner.id = id;
+      banner.className = 'maintenance-alert-card';
+      parent.prepend(banner);
+    }
+    banner.innerHTML = markup;
+    banner.hidden = false;
+  }
+}
+
 function applyAppConfig(cfg) {
   if (!cfg) return;
 
@@ -50,55 +98,7 @@ function applyAppConfig(cfg) {
   });
 
   // 3. Maintenance Mode
-  if (cfg.maintenanceMode) {
-    // 1. On Auth Screen: insert inside .auth-card safely below topbar
-    let authMaintBanner = $('#authMaintenanceBanner');
-    if (!authMaintBanner) {
-      authMaintBanner = document.createElement('div');
-      authMaintBanner.id = 'authMaintenanceBanner';
-      authMaintBanner.className = 'maintenance-alert-card';
-      const authCard = $('.auth-card');
-      if (authCard) {
-        authCard.prepend(authMaintBanner);
-      }
-    }
-    authMaintBanner.innerHTML = `
-      <div class="maint-icon">
-        ${iconMarkup("shield")}
-      </div>
-      <div class="maint-body">
-        <strong>⚠️ সিস্টেম রক্ষণাবেক্ষণ চলছে</strong>
-        <p>${escapeHtml(cfg.maintenanceMessage) || 'বর্তমানে অ্যাপটিতে সিস্টেম আপডেট ও রক্ষণাবেক্ষণের কাজ চলছে।'}</p>
-      </div>
-    `;
-    authMaintBanner.hidden = false;
-
-    // 2. On App Main Screen: insert inside #appMain safely below topbar
-    let appMaintBanner = $('#appMainMaintenanceBanner');
-    if (!appMaintBanner) {
-      appMaintBanner = document.createElement('div');
-      appMaintBanner.id = 'appMainMaintenanceBanner';
-      appMaintBanner.className = 'maintenance-alert-card';
-      const appMain = $('#appMain');
-      if (appMain) {
-        appMain.prepend(appMaintBanner);
-      }
-    }
-    appMaintBanner.innerHTML = `
-      <div class="maint-icon">
-        ${iconMarkup("shield")}
-      </div>
-      <div class="maint-body">
-        <strong>⚠️ সিস্টেম রক্ষণাবেক্ষণ চলছে</strong>
-        <p>${escapeHtml(cfg.maintenanceMessage) || 'বর্তমানে অ্যাপটিতে সিস্টেম আপডেট ও রক্ষণাবেক্ষণের কাজ চলছে।'}</p>
-      </div>
-    `;
-    appMaintBanner.hidden = false;
-  } else {
-    $('#authMaintenanceBanner')?.remove();
-    $('#appMainMaintenanceBanner')?.remove();
-    $('#appMaintenanceBanner')?.remove();
-  }
+  applyMaintenanceMode(cfg);
 
   // 4. Registration Permission
   if (cfg.allowRegistration === false) {
@@ -138,6 +138,15 @@ function applyAppConfig(cfg) {
 }
 
 applyAppConfig(appConfig);
+
+/* The flag is a setting, not a build-time constant: another tab on this device
+   and the cloud sync both write it after this module has booted. Repaint on
+   every settings write so an "off" from the admin clears the notice at once
+   instead of surviving until the next reload. */
+window.addEventListener('storage', event => {
+  if (!event || event.key === null || event.key === STORAGE_KEYS.appConfig) applyMaintenanceMode();
+});
+window.addEventListener('apc-app-config', () => applyMaintenanceMode());
 
 const state = {
   student: loadStudent(),
