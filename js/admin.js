@@ -559,8 +559,8 @@ function renderClasses() {
           </div>
           <small>${bn(count)} শিক্ষার্থী</small>
         </div>
-        <label class="switch" aria-label="${className} চালু বা বন্ধ করুন">
-          <input type="checkbox" data-class-name="${className}" ${enabled ? 'checked' : ''}>
+        <label class="switch">
+          <input type="checkbox" data-class-name="${className}" aria-label="${className} চালু বা বন্ধ করুন" ${enabled ? 'checked' : ''}>
           <span class="switch-track"></span>
         </label>
       </div>`;

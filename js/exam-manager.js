@@ -3,6 +3,7 @@ import { examMeta, questionPreview, resultMarkup, downloadResults, esc, num } fr
 import { downloadExamPDF } from './exam-pdf.js';
 import { enabledClasses } from './config.js';
 import { listTeacherAssignments } from './teacher-assignments.js';
+import { confirmAction } from './in-app-dialog.js';
 
 export function initExamManager(container, role) {
   const root = document.querySelector(container); if (!root) return;
@@ -129,7 +130,16 @@ export function initExamManager(container, role) {
     else if (action === 'edit') editor(e.type, e);
     else if (action === 'detail') detail(e);
     else if (action === 'request') run(() => repo.requestApproval(e.id, actor), 'Manager-এর অনুমতির জন্য পাঠানো হয়েছে।');
-    else if (action === 'delete' && window.confirm('এই খসড়া পরীক্ষাটি মুছে ফেলবেন?')) run(() => repo.deleteDraft(e.id, actor), 'খসড়া মুছে ফেলা হয়েছে।');
+    else if (action === 'delete') {
+      /* The app's own dialog, not a native confirm: a blocked native dialog
+         would leave the draft in place with no explanation. */
+      const ok = await confirmAction({
+        kicker: 'পরীক্ষা', title: 'খসড়া পরীক্ষাটি মুছে ফেলবেন?',
+        message: `${e.title} — খসড়াটি মুছে গেলে প্রশ্নগুলো আর ফেরানো যাবে না।`,
+        confirmLabel: 'হ্যাঁ, মুছে ফেলুন', tone: 'danger'
+      });
+      if (ok) run(() => repo.deleteDraft(e.id, actor), 'খসড়া মুছে ফেলা হয়েছে।');
+    }
     else if (action === 'report') report(e);
     else if (action === 'grade') { try { await grade(e); } catch (e) { error(e.message); } }
     else if (action === 'csv') downloadResults(db, e);
