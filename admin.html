@@ -87,6 +87,7 @@
             </div>
             <time class="admin-date-pill" id="adminTodayDate"></time>
           </div>
+          <p class="admin-maintenance-flag" id="adminMaintenanceFlag" hidden role="status"></p>
           <div class="admin-hero-stats">
             <div class="admin-stat-tile tone-mint">
               <span class="tile-icon" aria-hidden="true"><svg class="apc-glyph-icon" data-icon="users" data-icon-set="active-plus-color" data-icon-version="1" data-icon-style="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="9" cy="7.3" r="3.4"/><path d="M2.5 21v-3a6.5 6.5 0 0 1 13 0v3M16 4.5a3.3 3.3 0 0 1 0 6.4M18 14a5.4 5.4 0 0 1 3.5 5v2"/></svg></span>
@@ -332,6 +333,16 @@
               <div class="app-field"><label for="cfgBroadcastMessage">ঘোষণার লেখা</label><textarea id="cfgBroadcastMessage" rows="3" maxlength="500" placeholder="যেমন: আজ বিকেল ৩টায় ক্লাস বন্ধ থাকবে।"></textarea></div>
               <button class="admin-btn primary" type="button" id="btnSaveBroadcast">সব ডিভাইসে পাঠান</button>
               <p class="finance-hint" id="broadcastState" role="status"></p>
+            </div>
+          </article>
+          <article class="admin-card">
+            <header class="admin-card-head"><div><p class="eyebrow">Maintenance</p><h2>রক্ষণাবেক্ষণ মোড</h2></div></header>
+            <div class="app-setting-group">
+              <p class="finance-hint">চালু করলে শিক্ষার্থী অ্যাপে লগইন স্ক্রিন ও হোমের উপরে একটি সতর্কতা ব্যানার দেখা যাবে। কাজ শেষ হলে টিক চিহ্ন সরিয়ে <strong>সংরক্ষণ</strong> চাপুন — ব্যানার সাথে সাথে সব ডিভাইস থেকে সরে যাবে।</p>
+              <label class="admin-check"><input type="checkbox" id="cfgMaintenanceMode"> রক্ষণাবেক্ষণ মোড চালু রাখুন</label>
+              <div class="app-field"><label for="cfgMaintenanceMessage">বার্তা (ঐচ্ছিক)</label><textarea id="cfgMaintenanceMessage" rows="3" maxlength="500" placeholder="সম্মানিত শিক্ষার্থী, অ্যাপটিতে বর্তমানে সিস্টেম আপডেট চলছে। সাময়িক অসুবিধার জন্য আন্তরিকভাবে দুঃখিত।"></textarea></div>
+              <button class="admin-btn primary" type="button" id="btnSaveMaintenance">সংরক্ষণ করুন</button>
+              <p class="finance-hint" id="maintenanceState" role="status"></p>
             </div>
           </article>
           <article class="admin-card">

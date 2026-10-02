@@ -11,7 +11,7 @@ import { iconMarkup } from './icons.js';
    Admin sees system-level monitoring, owns every staff identity (Staff ID) and
    keeps the device's data safe. Username and password are required; the roster,
    notices and routine start empty and stay on this device. */
-import { enabledClasses, DEFAULT_APP_SETTINGS, ADMIN_ID, DEFAULT_PIN } from './config.js';
+import { enabledClasses, DEFAULT_APP_SETTINGS, ADMIN_ID, DEFAULT_PIN, maintenanceState } from './config.js';
 import { toBanglaNumber } from './ui.js';
 import { classCodes, feeCategories, paymentMethods } from './admin-data.js';
 import { loadAppConfig, saveAppConfig, loadAccount, saveAccount } from './storage.js';
@@ -241,6 +241,17 @@ function renderDashboard() {
   if ($('#dashStaffCount')) $('#dashStaffCount').textContent = bn(state.staffCounts.active || 0);
   if ($('#dashProtectedCount')) {
     $('#dashProtectedCount').textContent = bn(state.staff.filter(staff => staff.protected).length || 0);
+  }
+  /* A switched-on maintenance notice is easy to forget, and a forgotten notice
+     is exactly how students end up staring at one for days. The dashboard keeps
+     saying so until the switch in System Settings is turned off again. */
+  const flag = $('#adminMaintenanceFlag');
+  if (flag) {
+    const { on } = maintenanceState(loadAppConfig());
+    flag.hidden = !on;
+    flag.textContent = on
+      ? '⚠️ রক্ষণাবেক্ষণ মোড চালু আছে — শিক্ষার্থী অ্যাপে সতর্কতা ব্যানার দেখা যাচ্ছে। সিস্টেম সেটিংস থেকে বন্ধ করুন।'
+      : '';
   }
   const today = new Date();
   $('#adminTodayDate').textContent = dateLabel(today);
@@ -914,6 +925,37 @@ function renderAppManagement() {
   if ($('#cfgWhatsapp')) $('#cfgWhatsapp').value = cfg.whatsappNumber || ADMIN_ID || '01819486966';
   if ($('#cfgEmail')) $('#cfgEmail').value = cfg.officialEmail || 'activeplus.coaching@gmail.com';
   if ($('#cfgAddress')) $('#cfgAddress').value = cfg.campusAddress || 'দিনাজপুর সদর, দিনাজপুর';
+  renderMaintenanceSettings(cfg);
+}
+
+/* Maintenance mode. The switch is the only control that exists for this flag,
+   so it also doubles as the way out of a notice that is stuck on: an admin who
+   unchecks it and saves writes an explicit `false`, which every synced device
+   then honours (js/main.js repaints on the settings write). */
+function renderMaintenanceSettings(cfg = state.appConfig || loadAppConfig()) {
+  const { on } = maintenanceState(cfg);
+  if ($('#cfgMaintenanceMode')) $('#cfgMaintenanceMode').checked = on;
+  // The stored text, never the fallback: an empty box means "use the default",
+  // and saving an untouched box must not freeze the default into the document.
+  if ($('#cfgMaintenanceMessage')) $('#cfgMaintenanceMessage').value = String(cfg.maintenanceMessage || '');
+  if ($('#maintenanceState')) {
+    $('#maintenanceState').textContent = on
+      ? 'এখন চালু আছে — শিক্ষার্থী অ্যাপে সতর্কতা ব্যানার দেখা যাচ্ছে।'
+      : 'এখন বন্ধ আছে — শিক্ষার্থী অ্যাপ স্বাভাবিকভাবে চলছে।';
+  }
+}
+
+function saveMaintenanceFromForm() {
+  const current = state.appConfig || loadAppConfig();
+  const on = Boolean($('#cfgMaintenanceMode')?.checked);
+  const message = $('#cfgMaintenanceMessage')?.value.trim().slice(0, 500) || '';
+  /* Exactly what is in the box: an empty message is not an error, the student
+     app falls back to its default notice (js/config.js maintenanceState). */
+  state.appConfig = { ...current, maintenanceMode: on, maintenanceMessage: message };
+  saveAppConfig(state.appConfig);
+  renderMaintenanceSettings(state.appConfig);
+  renderDashboard();   // the dashboard reminder follows the switch immediately
+  toast(on ? 'রক্ষণাবেক্ষণ মোড চালু করা হয়েছে' : 'রক্ষণাবেক্ষণ মোড বন্ধ করা হয়েছে — ব্যানার সরে গেছে');
 }
 
 function saveAppSettingsFromForm() {
@@ -1397,6 +1439,7 @@ function onStaffChanged() {
 
 $('#btnSaveAppSettings')?.addEventListener('click', saveAppSettingsFromForm);
 $('#btnSaveBroadcast')?.addEventListener('click', saveBroadcastFromForm);
+$('#btnSaveMaintenance')?.addEventListener('click', saveMaintenanceFromForm);
 
 $('#bootstrapCredentialsDone')?.addEventListener('click', () => { $('#bootstrapCredentialsBackdrop').hidden = true; });
 $('#bootstrapCopyCredentials')?.addEventListener('click', async () => {
