@@ -1,6 +1,7 @@
-// v147: phone lookup with three-digit masks, running public transaction IDs
-// and readable privacy-safe payment reports. Keep today default/offline receipts.
-const CACHE_VERSION = 147;
+// v148: one in-app dialog for Manager decisions (reject reason, notice/routine
+// edits, deletes) and an accessibility pass; keep 147's privacy-safe reports and
+// today default/offline receipts.
+const CACHE_VERSION = 148;
 const CACHE_NAME = `active-plus-student-v${CACHE_VERSION}-minimal-education`;
 const APP_SHELL = [
   './css/app-polish.css',
@@ -15,6 +16,7 @@ const APP_SHELL = [
   './js/status-surface.js',
   './js/ui-accessibility.js',
   './js/print-tokens.js',
+  './js/in-app-dialog.js',
   './css/ui-status.css',
   './js/icons.js',
   './js/icon-set.js',

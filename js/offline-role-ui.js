@@ -1,4 +1,5 @@
 import { iconElement } from './icons.js';
+import { confirmAction } from './in-app-dialog.js';
 import { registerServiceWorker } from './service-worker.js';
 registerServiceWorker();
 import { createRoleStore, ROLE_NAMES } from './offline-role-store.js';
@@ -74,7 +75,12 @@ function render(section) {
     const note = document.createElement('p'); note.textContent = 'ব্যাকআপে password hashes-সহ সংবেদনশীল তথ্য থাকে। নিরাপদে রাখুন। Restore সম্পূর্ণ v2 workspace প্রতিস্থাপন করবে; পুরোনো v1 তথ্য নয়।'; $('#actions').append(note);
     button('ব্যাকআপ ডাউনলোড', () => download('active-plus-offline-backup.json', db.backup()), $('#actions'));
     form([['content', 'Backup JSON', 'textarea']], async f => {
-      if (!confirm('সম্পূর্ণ v2 workspace প্রতিস্থাপন করবেন? আগে ব্যাকআপ নিন।')) return;
+      const ok = await confirmAction({
+        kicker: 'ব্যাকআপ / রিস্টোর', title: 'সম্পূর্ণ v2 workspace প্রতিস্থাপন করবেন?',
+        message: 'বর্তমান v2 ডেটা মুছে ব্যাকআপ ফাইলের ডেটা বসবে (পুরোনো v1 তথ্য অপরিবর্তিত থাকবে)। আগে ব্যাকআপ নিয়ে রাখুন।',
+        confirmLabel: 'হ্যাঁ, রিস্টোর করুন', tone: 'danger'
+      });
+      if (!ok) return;
       await db.restore(f.content); location.reload();
     }, 'রিস্টোর'); return;
   }

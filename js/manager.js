@@ -19,6 +19,10 @@ import { initExamManager } from './exam-manager.js';
 import { listTeacherAssignments, saveTeacherAssignment, deleteTeacherAssignment, TEACHER_ASSIGNMENTS_KEY } from './teacher-assignments.js';
 import { mountReports, refreshReports } from './reports.js';
 import { iconElement } from './icons.js';
+/* Every confirmation and short edit in this panel is the app's own dialog, not
+   a native prompt: iOS standalone ignores window.prompt, and a Manager
+   decision must never be dropped silently. */
+import { askFields, askText, confirmAction } from './in-app-dialog.js';
 
 registerServiceWorker();
 initFixedShell();
@@ -244,8 +248,20 @@ async function approveStudent(studentId, decision) {
   if (!(await managerGuard())) return toast('Manager session যাচাই হয়নি। আবার প্রবেশ করুন।', true);
   const student = students.find(row => row.id === studentId);
   if (!student || student.status !== 'pending') return toast('এই নিবন্ধনে আর সিদ্ধান্ত নেওয়া যাবে না।', true);
-  const note = decision === 'rejected' ? window.prompt('Reject করার কারণ লিখুন (আবশ্যক):', '')?.trim() : '';
-  if (decision === 'rejected' && !note) return;
+  let note = '';
+  if (decision === 'rejected') {
+    note = await askText({
+      kicker: 'নিবন্ধন পর্যালোচনা',
+      title: 'নিবন্ধন বাতিলের কারণ',
+      message: `${student.name || 'শিক্ষার্থী'} (${student.id || 'Student ID নেই'}) এর নিবন্ধন বাতিল হবে — শিক্ষার্থী কারণটি দেখতে পাবে।`,
+      label: 'কারণ',
+      placeholder: 'যেমন: তথ্য অসম্পূর্ণ / যোগাযোগ করা যায়নি',
+      required: true, maxLength: 500, multiline: true, rows: 4,
+      confirmLabel: 'কারণসহ বাতিল করুন', tone: 'danger'
+    });
+    if (!note) return;
+    if (!(await managerGuard())) return toast('Manager session যাচাই হয়নি।', true);
+  }
   managerBusy = true;
   try {
     // Shared with the Admin panel and the notification review dialog.
@@ -259,8 +275,21 @@ async function approveStudent(studentId, decision) {
 window.addEventListener(DECIDED_EVENT, () => { if (!managerBusy) void loadOperationalData(); });
 async function reviewPayment(id, decision) {
   if (!(await managerGuard())) return toast('Manager session যাচাই হয়নি।', true);
-  const note = decision === 'rejected' ? window.prompt('Payment reject করার কারণ লিখুন (আবশ্যক):', '')?.trim() : '';
-  if (decision === 'rejected' && !note) return;
+  let note = '';
+  if (decision === 'rejected') {
+    const tx = transactions.find(item => item.id === id);
+    note = await askText({
+      kicker: 'পেমেন্ট পর্যালোচনা',
+      title: 'পেমেন্ট বাতিলের কারণ',
+      message: `${tx?.studentName || 'এই পেমেন্ট'} • ${money(tx?.amount)} — বাতিল হলে এটি অনুমোদিত আদায় হিসেবে গণ্য হবে না।`,
+      label: 'কারণ',
+      placeholder: 'যেমন: ভুল এন্ট্রি / টাকা মেলেনি',
+      required: true, maxLength: 500, multiline: true, rows: 4,
+      confirmLabel: 'কারণসহ বাতিল করুন', tone: 'danger'
+    });
+    if (!note) return;
+    if (!(await managerGuard())) return toast('Manager session যাচাই হয়নি।', true);
+  }
   managerBusy = true;
   try { transactions = await financeRepository.reviewTransaction(id, decision, note); await loadOperationalData(); toast(decision === 'approved' ? 'Payment অনুমোদিত ও final হয়েছে।' : 'Payment কারণসহ বাতিল হয়েছে।'); }
   catch (error) { toast(error.message || 'Payment review সংরক্ষণ হয়নি।', true); }
@@ -289,9 +318,21 @@ function showStudentEditor(card, student) {
 }
 async function editNotice(notice) {
   if (!(await managerGuard())) return toast('Manager session যাচাই হয়নি।', true);
-  const title = window.prompt('নোটিশের শিরোনাম', notice.title); if (title == null || !title.trim()) return;
-  const body = window.prompt('নোটিশের বিবরণ', notice.body); if (body == null || !body.trim()) return;
-  if (!managerGuard()) return;
+  /* One dialog for both fields: the old pair of native prompts could apply a
+     title edit and then lose the body when the second prompt was cancelled. */
+  const edited = await askFields({
+    kicker: 'নোটিশ',
+    title: 'নোটিশ সম্পাদনা',
+    message: 'প্রকাশিত নোটিশের লেখা সব প্যানেলে একসঙ্গে বদলে যাবে।',
+    fields: [
+      { name: 'title', label: 'নোটিশের শিরোনাম', value: notice.title, required: true, maxLength: 120 },
+      { name: 'body', label: 'নোটিশের বিবরণ', value: notice.body, required: true, maxLength: 1000, type: 'textarea', rows: 5 }
+    ],
+    confirmLabel: 'পরিবর্তন সংরক্ষণ করুন'
+  });
+  if (!edited) return;
+  if (!(await managerGuard())) return toast('Manager session যাচাই হয়নি।', true);
+  const title = edited.title, body = edited.body;
   notices = notices.map(item => item.id === notice.id ? { ...item, title: title.trim().slice(0, 120), body: body.trim().slice(0, 1000), updatedAt: new Date().toISOString() } : item);
   if (!saveNotices(notices)) return toast('নোটিশ সংরক্ষণ হয়নি।', true);
   void loadOperationalData(); toast('নোটিশ আপডেট হয়েছে।');
@@ -299,9 +340,19 @@ async function editNotice(notice) {
 async function changeRoutine(index) {
   if (!(await managerGuard())) return toast('Manager session যাচাই হয়নি।', true);
   const item = routine[routineDay]?.classes?.[index]; if (!item) return;
-  const subject = window.prompt('বিষয়', item.subject); if (subject == null || !subject.trim()) return;
-  const teacher = window.prompt('Teacher assignment', item.teacher); if (teacher == null || !teacher.trim()) return;
-  item.subject = subject.trim().slice(0, 80); item.teacher = teacher.trim().slice(0, 100);
+  const edited = await askFields({
+    kicker: 'রুটিন',
+    title: `${dayLabel[routineDay] || routineDay} — ক্লাস সম্পাদনা`,
+    message: 'বিষয় ও শিক্ষক একসঙ্গে সংরক্ষণ হবে।',
+    fields: [
+      { name: 'subject', label: 'বিষয়', value: item.subject, required: true, maxLength: 80 },
+      { name: 'teacher', label: 'Teacher assignment', value: item.teacher, required: true, maxLength: 100 }
+    ],
+    confirmLabel: 'রুটিন সংরক্ষণ করুন'
+  });
+  if (!edited) return;
+  if (!(await managerGuard())) return toast('Manager session যাচাই হয়নি।', true);
+  item.subject = edited.subject.trim().slice(0, 80); item.teacher = edited.teacher.trim().slice(0, 100);
   if (!saveRoutine(routine)) return toast('Routine সংরক্ষণ হয়নি।', true);
   void loadOperationalData(); toast('Routine assignment আপডেট হয়েছে।');
 }
@@ -397,7 +448,12 @@ $('#managerNoticeList').addEventListener('click', async event => {
   const notice = notices.find(item => item.id === button.dataset.id); if (!notice) return;
   if (button.dataset.managerAction === 'edit-notice') await editNotice(notice);
   if (button.dataset.managerAction === 'delete-notice') {
-    if (!window.confirm('এই নোটিশ মুছবেন?')) return;
+    const ok = await confirmAction({
+      kicker: 'নোটিশ', title: 'নোটিশটি মুছে ফেলবেন?',
+      message: `“${notice.title}” শিক্ষার্থী, শিক্ষক ও Manager — সবার তালিকা থেকে সরে যাবে।`,
+      confirmLabel: 'হ্যাঁ, মুছে ফেলুন', tone: 'danger'
+    });
+    if (!ok) return;
     if (!(await managerGuard())) return toast('Manager session যাচাই হয়নি।', true);
     notices = notices.filter(item => item.id !== notice.id);
     if (saveNotices(notices)) { renderNotices(); toast('নোটিশ মুছে ফেলা হয়েছে।'); }
@@ -408,7 +464,14 @@ $('#managerRoutineList').addEventListener('click', async event => {
   const button = event.target.closest('[data-manager-action]'); if (!button) return;
   const index = Number(button.dataset.index); const rows = routine[routineDay]?.classes || [];
   if (button.dataset.managerAction === 'edit-routine') await changeRoutine(index);
-  if (button.dataset.managerAction === 'delete-routine' && window.confirm('এই routine entry মুছবেন?')) {
+  if (button.dataset.managerAction === 'delete-routine') {
+    const item = rows[index];
+    const ok = await confirmAction({
+      kicker: 'রুটিন', title: 'রুটিন এন্ট্রিটি মুছে ফেলবেন?',
+      message: `${item?.subject || 'এই ক্লাসটি'} • ${dayLabel[routineDay] || routineDay} ${item?.time || ''} — শিক্ষার্থী ও শিক্ষকের রুটিন থেকেও সরে যাবে।`,
+      confirmLabel: 'হ্যাঁ, মুছে ফেলুন', tone: 'danger'
+    });
+    if (!ok) return;
     if (!(await managerGuard())) return toast('Manager session যাচাই হয়নি।', true);
     rows.splice(index, 1); if (!saveRoutine(routine)) return toast('Routine সংরক্ষণ হয়নি।', true); renderRoutine(); toast('Routine entry মুছে ফেলা হয়েছে।');
   }
@@ -425,7 +488,13 @@ $('#managerTeacherAssignmentForm').addEventListener('submit', async event => {
 });
 $('#managerTeacherList').addEventListener('click', async event => {
   const button = event.target.closest('[data-manager-action="delete-teacher-assignment"]');
-  if (!button || !window.confirm('এই Teacher assignment সরাবেন?')) return;
+  if (!button) return;
+  const ok = await confirmAction({
+    kicker: 'শিক্ষক', title: 'Teacher assignment সরাবেন?',
+    message: 'সরানোর পর এই ক্লাস/ব্যাচে শিক্ষকের academic access বন্ধ হয়ে যাবে।',
+    confirmLabel: 'হ্যাঁ, সরান', tone: 'danger'
+  });
+  if (!ok) return;
   if (!(await managerGuard())) return toast('Manager session যাচাই হয়নি।', true);
   try { await deleteTeacherAssignment(button.dataset.id); await renderTeachers(); toast('Teacher assignment সরানো হয়েছে।'); }
   catch (error) { toast(error.message || 'Assignment সরানো হয়নি।', true); }

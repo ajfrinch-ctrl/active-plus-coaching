@@ -16,13 +16,36 @@ export function normalizeAnswer(value) {
   return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
-export function showFeedback(message) {
-  $('.feedback-toast')?.remove();
+/**
+ * Transient feedback line, announced to assistive tech.
+ *
+ * The live region is created once and only hidden between messages: a region
+ * that is inserted *with* its text (or removed and rebuilt every time) is not
+ * reliably announced. Keeping one `role="status"` node on the page and
+ * changing its text is the pattern screen readers follow.
+ */
+function feedbackToast() {
+  const existing = $('.feedback-toast');
+  if (existing?.isConnected) return existing;
   const toast = document.createElement('div');
   toast.className = 'feedback-toast';
-  toast.textContent = message;
+  toast.setAttribute('role', 'status');
+  toast.setAttribute('aria-live', 'polite');
+  toast.setAttribute('aria-atomic', 'true');
+  toast.hidden = true;
   document.body.append(toast);
-  window.setTimeout(() => toast.remove(), 2600);
+  return toast;
+}
+
+export function showFeedback(message) {
+  const toast = feedbackToast();
+  const text = String(message ?? '');
+  // Clearing first means a repeated message is still a fresh announcement.
+  toast.textContent = '';
+  toast.textContent = text;
+  toast.hidden = false;
+  window.clearTimeout(showFeedback.timer);
+  showFeedback.timer = window.setTimeout(() => { toast.hidden = true; }, 2600);
 }
 
 /**

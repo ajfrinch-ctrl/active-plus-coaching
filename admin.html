@@ -5,11 +5,11 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/; frame-src 'self' https://www.google.com/recaptcha/; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https: wss:; manifest-src 'self'; worker-src 'self'; base-uri 'self'; object-src 'none'">
   <meta name="referrer" content="no-referrer">
   <script src="js/sanitize-url.js"></script>
-  <script src="js/app-entry.js?v=147" data-entry="admin"></script>
+  <script src="js/app-entry.js?v=148" data-entry="admin"></script>
   <script src="js/topbar-connectivity.js?v=20260929-topbar"></script>
   <script type="module" src="js/realtime-sync-entry.js"></script>
   <script src="js/appearance-boot.js"></script>
-  <script src="js/theme-logos.js?v=147"></script>
+  <script src="js/theme-logos.js?v=148"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
   <meta name="theme-color" content="#f3f6fb">
   <meta name="description" content="Active Plus Coaching এডমিন প্যানেল — ইউজারনেম ও পাসওয়ার্ড দিয়ে প্রবেশ।">
@@ -26,7 +26,7 @@
   <!-- Icon geometry + staff management: loaded last so one fixed container
        per icon is the final word (no overlap, no double painting). -->
 
-  <link rel="stylesheet" href="css/design-system.css?v=147">
+  <link rel="stylesheet" href="css/design-system.css?v=148">
   <script type="module" src="js/ui-accessibility.js"></script>
   <script src="js/launch-screen.js" defer></script>
 </head>
@@ -170,7 +170,7 @@
           <div class="student-search-box">
             <label class="student-search" for="studentSearch">
               <svg class="apc-glyph-icon" data-icon="search" data-icon-set="active-plus-color" data-icon-version="1" data-icon-style="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="10.5" cy="10.5" r="7"/><path d="m16 16 5 5"/></svg>
-              <input id="studentSearch" type="search" placeholder="স্টুডেন্ট আইডি, নাম বা মোবাইল নং দিয়ে খুঁজুন..." autocomplete="off">
+              <input id="studentSearch" type="search" aria-label="শিক্ষার্থী খুঁজুন" placeholder="স্টুডেন্ট আইডি, নাম বা মোবাইল নং দিয়ে খুঁজুন..." autocomplete="off">
               <button class="student-search-clear" id="studentSearchClear" type="button" aria-label="অনুসন্ধান মুছুন" hidden>
                 <svg class="apc-glyph-icon" data-icon="close" data-icon-set="active-plus-color" data-icon-version="1" data-icon-style="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m6 6 12 12M18 6 6 18"/></svg>
               </button>
