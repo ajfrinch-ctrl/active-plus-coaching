@@ -1,3 +1,4 @@
+// v155: instant MCQ practice — নিজে নিজে যেকোনো মুহূর্তে MCQ অনুশীলন (সময়সীমা/সময়সূচি ছাড়া, তাৎক্ষণিক ফলাফল); প্রতিটি নেওয়া MCQ পরীক্ষা এখন নিজে থেকে প্রশ্নব্যাংকে সংরক্ষিত হয় যাতে ভবিষ্যতে পরীক্ষার্থীগুলো অনুশীলন করতে পারে।
 // v154: topbar প্যানেল-নাম সব ৫ পোর্টালেই বাদ (লোগো + স্লোগান মাত্র); app-brand-name CSS নিষ্ক্রিয় হওয়ায় মুছেছে।
 // v153: student/admin/teacher topbar — panel name removed (logo + slogan only; manager ও payment-এ name থাকছে)।
 // v152: row/line spacing fixes — hero band now covers the full hero (white text safe in light mode) and the summary card straddles its edge; exam workspace rows keep one even grid gap (no dead space); chip rows stop double-spacing.
@@ -10,7 +11,7 @@
 // answer-key PDFs, the student Learning Hub (class → subject → chapter) and the
 // shared brand module. v148: date-wise examination workspace — question
 // archive, review workflow and question-level editing for the Manager.
-const CACHE_VERSION = 154;
+const CACHE_VERSION = 155;
 const CACHE_NAME = `active-plus-student-v${CACHE_VERSION}-minimal-education`;
 const APP_SHELL = [
   './css/notifications.css',
@@ -128,6 +129,7 @@ const APP_SHELL = [
   './js/exam-pdf.js',
   './js/material-pdf.js',
   './js/student-exams.js',
+  './js/student-practice.js',
   './js/student-dashboard.js',
   './js/account-policy.js',
   './js/storage.js',

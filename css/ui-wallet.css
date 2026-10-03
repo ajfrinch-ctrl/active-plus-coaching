@@ -901,6 +901,18 @@ html[data-theme="dark"] .auth-brand img { background: transparent; padding: 0; b
 .exam-option { padding: 12px 14px; border-radius: 14px; margin: 8px 0; min-height: 50px; font-weight: 500; }
 .exam-option:has(input:checked) { background: var(--pay-disc); border-color: var(--color-primary); }
 .exam-option input { flex: none; }
+/* Instant MCQ practice — the self-study lane; official exam screens stay as they are. */
+.practice-card h2 { font-size: 16px; font-weight: 700; margin: 0 0 6px; }
+.practice-timer { display: flex; flex-wrap: wrap; gap: 2px 12px; align-items: baseline; border-color: var(--color-border); background: var(--color-surface-muted); color: var(--color-text); font-weight: 600; }
+.practice-timer strong { font-weight: 800; }
+.practice-timer small { flex-basis: 100%; font-weight: 600; }
+.practice-history { display: grid; gap: 8px; margin: 10px 0 4px; }
+.practice-history-row { display: flex; flex-wrap: wrap; gap: 2px 12px; align-items: baseline; font-size: 13px; margin: 0; }
+.practice-history-row span:last-of-type { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.practice-best { font-weight: 600; }
+.practice-review .practice-correct { border-color: var(--color-success); background: var(--pay-success-soft); }
+.practice-review .practice-wrong { border-color: var(--color-danger); background: var(--tone-amber-soft); }
+.practice-review .practice-skip { opacity: .78; }
 .exam-form { border: 1px solid var(--color-border); border-radius: 20px; padding: 16px; background: var(--color-surface); }
 .exam-form > .exam-actions { margin-top: 16px; }
 .rp-section { margin-top: 20px; }
