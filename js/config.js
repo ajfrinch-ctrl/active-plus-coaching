@@ -18,6 +18,24 @@ export const STORAGE_KEYS = Object.freeze({
 
 export const DEFAULT_PIN = '123123';
 
+/* Maintenance mode is one strict boolean flag plus one admin-authored message.
+   The flag is read by the student app (js/main.js) and written by the admin
+   panel (js/admin.js); both go through this helper so the two ends can never
+   drift.
+
+   Why the flag is not a plain truthiness test: the config document travels
+   through cloud sync, backup merge and hand edits, so `maintenanceMode` can
+   arrive as the string "false" or "0". A loose `if (cfg.maintenanceMode)`
+   then shows the maintenance banner to every student — and nothing in the app
+   could switch it off again. Only a literal `true` (or the string "true" a
+   JSON form can produce) puts the app under maintenance. */
+export function maintenanceState(cfg) {
+  const raw = cfg?.maintenanceMode;
+  const on = raw === true || (typeof raw === 'string' && raw.trim().toLowerCase() === 'true');
+  const message = String(cfg?.maintenanceMessage ?? '').trim().slice(0, 500);
+  return Object.freeze({ on, message: message || DEFAULT_APP_SETTINGS.maintenanceMessage });
+}
+
 export const ADMIN_ID = '01819486966';
 
 export const DEFAULT_APP_SETTINGS = Object.freeze({
