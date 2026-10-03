@@ -36,8 +36,8 @@ function shellBar(document, exitId) {
 
 /** Same markup everywhere, ignoring the two values that must differ per panel. */
 function normalised(bar) {
-  // The panel name is only still shown on the manager and payment bars, so it
-  // is stripped before comparing; ids, titles and data-actions differ per panel
+  // No bar shows a panel name any more (logo + slogan only); the strip below
+  // stays as a guard. ids, titles and data-actions differ per panel
   // by necessity (that is how the shell wires them) — everything else, order,
   // classes, icons, labels, must be byte-for-byte the same.
   return bar.outerHTML
