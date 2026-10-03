@@ -1,3 +1,7 @@
+// v160: one status vocabulary on the teacher's list — the badge is derived from
+// data the record already carries (draft|published plus each pupil's progress),
+// so a list can say "দেওয়া হয়েছে / জমা পড়ছে ১/২ / সব জমা হয়েছে" without
+// migrating a single record.
 // v159: the teacher sees what the student will see — js/learning-card.js is now
 // the one renderer for published work, called by both the student app and the
 // homework editor's preview, so the two cannot drift apart.
@@ -30,7 +34,7 @@
 // answer-key PDFs, the student Learning Hub (class → subject → chapter) and the
 // shared brand module. v148: date-wise examination workspace — question
 // archive, review workflow and question-level editing for the Manager.
-const CACHE_VERSION = 159;
+const CACHE_VERSION = 160;
 const CACHE_NAME = `active-plus-student-v${CACHE_VERSION}-minimal-education`;
 const APP_SHELL = [
   './css/notifications.css',

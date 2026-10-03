@@ -72,11 +72,27 @@ function activityMeta(a) {
   const date = `${displayDate(a.date)}${a.time ? ' • ' + bn(a.time) : ''}`;
   return `${a.type === 'homework' ? 'শেষ সময়: ' : ''}${date}${a.duration ? ' • ' + bn(a.duration) + ' মিনিট' : ''}${a.totalMarks ? ' • পূর্ণমান ' + bn(a.totalMarks) : ''}`;
 }
+/* One status vocabulary for the teacher's own list.
+
+   These labels are *derived* — the stored model still says draft|published and
+   each pupil's progress is still pending|done|reviewed, so no record has to be
+   migrated and nothing that already works changes shape. "Viewed" from the
+   design brief has no counterpart in the data and is deliberately not invented
+   here; adding a state nothing records would be a badge that lies. */
+function statusBadge(a) {
+  if (a.status !== 'published') return { tone: 'draft', text: 'খসড়া' };
+  const stats = a.type === 'suggestion' ? null : progressStats(a);
+  if (!stats || !stats.total) return { tone: 'published', text: 'প্রকাশিত' };
+  if (!stats.recorded) return { tone: 'assigned', text: 'দেওয়া হয়েছে' };
+  if (stats.recorded < stats.total) return { tone: 'partial', text: `জমা পড়ছে ${bn(stats.recorded)}/${bn(stats.total)}` };
+  return { tone: 'complete', text: 'সব জমা হয়েছে' };
+}
 function recordCard(a) {
+  const badge = statusBadge(a);
   const stats = a.status === 'published' && a.type !== 'suggestion' ? progressStats(a) : null;
   const note = pendingNote(a);
   return `<article class="teaching-card" data-activity-id="${esc(a.id)}">
-    <div class="teaching-card-head"><span class="teaching-kind">${ACTIVITY_TYPES[a.type].label}</span><span class="teaching-status ${a.status}">${a.status === 'published' ? 'প্রকাশিত' : 'খসড়া'}</span></div>
+    <div class="teaching-card-head"><span class="teaching-kind">${ACTIVITY_TYPES[a.type].label}</span><span class="teaching-status ${badge.tone}">${badge.text}</span></div>
     <h3>${esc(a.title)}</h3><small>${esc(a.subject)} • ${esc(a.className)} • ${esc(a.group || 'সব বিভাগ')}</small>
     <p>${esc(activityMeta(a))}</p>${a.room ? `<small>স্থান: ${esc(a.room)}</small>` : ''}
     ${stats && stats.total ? `<p class="teaching-progress-line ${note ? 'pending' : stats.recorded === stats.total ? 'clear' : 'idle'}">অগ্রগতি ${bn(stats.recorded)}/${bn(stats.total)} জন${note ? ' • ' + esc(note) : stats.recorded === stats.total ? ' • সব নথিভুক্ত' : ''}</p>` : note ? `<p class="teaching-progress-line pending">${esc(note)}</p>` : ''}
