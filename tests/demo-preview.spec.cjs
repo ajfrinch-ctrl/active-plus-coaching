@@ -81,8 +81,8 @@ for (const viewport of [{ width: 320, height: 740 }, { width: 844, height: 390 }
     await expect(page.locator('#teacherActivityForm')).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await expect(page.locator('#activity-title')).toHaveCSS('font-size', '16px');
-    await page.locator('#teacherActivityForm [type=submit]').scrollIntoViewIfNeeded();
-    const box = await page.locator('#teacherActivityForm [type=submit]').boundingBox();
+    await page.locator('#teacherActivityForm [data-save-as="published"]').scrollIntoViewIfNeeded();
+    const box = await page.locator('#teacherActivityForm [data-save-as="published"]').boundingBox();
     expect(box.y + box.height).toBeLessThanOrEqual(viewport.height);
   });
 }

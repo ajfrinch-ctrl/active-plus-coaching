@@ -63,7 +63,7 @@ test('student, manager and teacher have eight real, named service shortcuts', ()
 test('secondary screens have accessible home/back controls and staff More has round icons', () => {
   for (const [name, attribute, target, count] of [
     ['index', 'data-view', 'home', 6], ['admin', 'data-admin-view', 'dashboard', 11],
-    ['manager', 'data-manager-view', 'dashboard', 15], ['teacher', 'data-teacher-view', 'home', 10]
+    ['manager', 'data-manager-view', 'dashboard', 15], ['teacher', 'data-teacher-view', 'home', 11]
   ]) {
     const document = doc(name);
     const backs = [...document.querySelectorAll('.pay-back')];

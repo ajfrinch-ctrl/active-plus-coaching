@@ -73,7 +73,7 @@ test('the teacher preview and the student card are the same markup', async () =>
   teacher.type($('#activity-group'), GROUP);
   $('#activity-date').value = DATE;
   $('#activity-time').value = TIME;
-  $('#activity-status').value = 'published';
+  teacher.click($('#teacherActivityForm [data-save-as="published"]'));
 
   assert.equal($('#activityPreviewBox').hidden, true, 'the preview starts closed');
   teacher.click($('#activityPreviewToggle'));

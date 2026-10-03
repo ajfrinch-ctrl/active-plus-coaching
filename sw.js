@@ -1,3 +1,6 @@
+// v162: creating or editing a piece of work is a full-screen page, not a small
+// modal — two labelled steps (মূল তথ্য / কাজের বিবরণ) and two explicit actions,
+// "খসড়া হিসেবে সংরক্ষণ" and "শিক্ষার্থীদের দিন", in place of a status dropdown.
 // v161: the teacher can download a piece of work as a PDF — the same generator
 // the student app calls (js/material-pdf.js), so the sheet the teacher prints is
 // the sheet that was actually sent, institution header and page numbers included.
@@ -37,7 +40,7 @@
 // answer-key PDFs, the student Learning Hub (class → subject → chapter) and the
 // shared brand module. v148: date-wise examination workspace — question
 // archive, review workflow and question-level editing for the Manager.
-const CACHE_VERSION = 161;
+const CACHE_VERSION = 162;
 const CACHE_NAME = `active-plus-student-v${CACHE_VERSION}-minimal-education`;
 const APP_SHELL = [
   './css/notifications.css',

@@ -17,14 +17,15 @@ async function create(page, type, title, overrides = {}) {
   await page.locator('#activity-title').fill(title);
   await page.locator('#activity-subject').fill('গণিত');
   await page.locator('#activity-details').fill('প্রথম অধ্যায় পড়বে।\nঅনুশীলনী ১ সমাধান করবে।');
-  await page.locator('#activity-status').selectOption(overrides.status || 'published');
+  /* status is no longer a field — the action you press decides it */
   if (type !== 'suggestion') { await page.locator('#activity-date').fill('2026-10-01'); await page.locator('#activity-time').fill('17:00'); }
-  for (const [key, value] of Object.entries(overrides)) {
-    if (['status', 'className'].includes(key)) await page.locator(`#activity-${key}`).selectOption(value);
+    if (key === 'status') continue;
+    if (key === 'className') await page.locator('#activity-className').selectOption(value);
     else await page.locator(`#activity-${key}`).fill(value);
   }
-  await page.locator('#teacherActivityForm [type=submit]').click();
-  await expect(page.locator('#teacherModalBackdrop')).toBeHidden();
+  }
+  await page.locator(`#teacherActivityForm [data-save-as="${overrides.status || 'published'}"]`).click();
+  await expect(page.locator('#teacherCompose')).toBeHidden();
   return page.locator('#teacherRecordList .teaching-card').filter({ has: page.getByRole('heading', { name: title, exact: true }) });
 }
 async function studentPage(context) {
@@ -86,8 +87,8 @@ test('routine creation, attendance, schedule conflicts and student routine', asy
   await expect(student.locator('#teacherRoutineList')).toContainText('অতিরিক্ত গণিত ক্লাস'); await expect(student.locator('#teacherRoutineList')).toContainText('উপস্থিত');
   await expect(student.locator('#teacherRoutineList')).toContainText('কক্ষ ২');
   await page.locator('#teacherNewActivity').click(); await page.locator('#activity-title').fill('সংঘর্ষ'); await page.locator('#activity-subject').fill('বাংলা');
-  await page.locator('#activity-date').fill('2026-10-01'); await page.locator('#activity-time').fill('17:30'); await page.locator('#activity-status').selectOption('published');
-  await page.locator('#teacherActivityForm [type=submit]').click(); await expect(page.locator('#teacherSaveError')).toContainText('আরেকটি ক্লাস/পরীক্ষা');
+  await page.locator('#activity-date').fill('2026-10-01'); await page.locator('#activity-time').fill('17:30');
+  await page.locator('#teacherActivityForm [data-save-as="published"]').click(); await expect(page.locator('#teacherSaveError')).toContainText('আরেকটি ক্লাস/পরীক্ষা');
 });
 
 test('suggestions, subject links, class/group scope, draft filter and escaped content', async ({ page, context }) => {
@@ -108,8 +109,8 @@ test('write failure keeps entered work and does not falsely save; corrupt storag
   await enter(page); await page.locator('.admin-bottom [data-teacher-view=more]').click(); await page.locator('#teacherMore [data-teacher-view=homework]').click(); await page.locator('#teacherNewActivity').click();
   await page.locator('#activity-title').fill('হারাবে না'); await page.locator('#activity-subject').fill('গণিত');
   await page.evaluate(key => { const real = Storage.prototype.setItem; Storage.prototype.setItem = function(k, v) { if (k === key) throw new DOMException('quota', 'QuotaExceededError'); return real.call(this, k, v); }; }, KEY);
-  await page.locator('#teacherActivityForm [type=submit]').click(); await expect(page.locator('#teacherSaveError')).toContainText('সংরক্ষণ হয়নি');
-  await expect(page.locator('#activity-title')).toHaveValue('হারাবে না'); await expect(page.locator('#teacherActivityForm [type=submit]')).toBeEnabled();
+  await page.locator('#teacherActivityForm [data-save-as="published"]').click(); await expect(page.locator('#teacherSaveError')).toContainText('সংরক্ষণ হয়নি');
+  await expect(page.locator('#activity-title')).toHaveValue('হারাবে না'); await expect(page.locator('#teacherActivityForm [data-save-as="published"]')).toBeEnabled();
   expect(await page.evaluate(key => localStorage.getItem(key), KEY)).toBeNull(); await expect(page.locator('.admin-toast')).toHaveCount(0);
   await page.reload(); await page.evaluate(key => localStorage.setItem(key, '{broken'), KEY); await page.locator('#teacherEnter').click();
   await expect(page.locator('#teacherEntryError')).toBeVisible(); await expect(page.locator('#teacherShell')).toBeHidden();
@@ -137,12 +138,12 @@ for (const viewport of [{ width: 320, height: 740 }, { width: 390, height: 844 }
       return Math.abs(top.top) < 1 && Math.abs(foot.bottom - innerHeight) < 1 && Math.abs(main.top - top.bottom) <= 1 && Math.abs(main.bottom - foot.top) <= 1 && document.documentElement.scrollWidth <= innerWidth && document.querySelector('#teacherShell').offsetWidth <= 480 && window.scrollY === 0;
     })).toBe(true);
     await page.locator('.admin-bottom [data-teacher-view=more]').click(); await page.locator('#teacherMore [data-teacher-view=homework]').click(); await expect.poll(() => page.locator('#teacherMain').evaluate(el => el.scrollTop)).toBe(0);
-    await page.locator('#teacherNewActivity').click(); await expect(page.locator('#teacherMain')).toHaveCSS('overflow-y', 'hidden');
+    await page.locator('#teacherNewActivity').click(); await expect(page.locator('#teacherCompose')).toBeVisible();
     await page.locator('#activity-title').fill('মোবাইল পরীক্ষা'); await page.locator('#activity-subject').fill('গণিত');
-    const submit = page.locator('#teacherActivityForm [type=submit]'); await submit.scrollIntoViewIfNeeded();
+    const submit = page.locator('#teacherActivityForm [data-save-as="published"]'); await submit.scrollIntoViewIfNeeded();
     const rect = await submit.boundingBox(); expect(rect.y + rect.height).toBeLessThanOrEqual(viewport.height);
     await expect(page.locator('#activity-title')).toHaveCSS('font-size', '16px');
-    await submit.click(); await expect(page.locator('#teacherModalBackdrop')).toBeHidden();
+    await submit.click(); await expect(page.locator('#teacherCompose')).toBeHidden();
     await expect(page.locator('#teacherRecordList')).toContainText('মোবাইল পরীক্ষা');
   });
 }

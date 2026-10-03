@@ -5,11 +5,11 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/; frame-src 'self' https://www.google.com/recaptcha/; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https: wss:; manifest-src 'self'; worker-src 'self'; base-uri 'self'; object-src 'none'">
   <meta name="referrer" content="no-referrer">
   <script src="js/sanitize-url.js"></script>
-  <script src="js/app-entry.js?v=161" data-entry="teacher"></script>
+  <script src="js/app-entry.js?v=162" data-entry="teacher"></script>
   <script src="js/topbar-connectivity.js?v=20260929-topbar"></script>
   <script type="module" src="js/realtime-sync-entry.js"></script>
   <script src="js/appearance-boot.js"></script>
-  <script src="js/theme-logos.js?v=161"></script>
+  <script src="js/theme-logos.js?v=162"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
   <meta name="theme-color" content="#f3f6fb">
   <meta name="robots" content="noindex">
@@ -21,7 +21,7 @@
   <!-- Global glass design system. Presentation layer only; loaded last. -->
   <link rel="preload" href="assets/fonts/NotoSansBengali-Variable.ttf" as="font" type="font/ttf" crossorigin>
 
-  <link rel="stylesheet" href="css/design-system.css?v=161">
+  <link rel="stylesheet" href="css/design-system.css?v=162">
   <script type="module" src="js/ui-accessibility.js"></script>
   <script src="js/launch-screen.js" defer></script>
 </head>
@@ -89,6 +89,12 @@
         <p id="teacherRecordCount" class="finance-hint" role="status"></p>
         <div id="teacherRecordList" class="teacher-record-list"></div>
         <button id="teacherRecordMore" class="teacher-list-more" type="button" hidden></button>
+      </section>
+      <section id="teacherCompose" class="teacher-view" aria-labelledby="teacherComposeTitle" hidden>
+        <div class="page-intro"><button class="pay-back" type="button" id="teacherComposeBack" data-teacher-view="home" aria-label="ফিরে যান"><svg class="apc-glyph-icon" data-icon="back" data-icon-set="active-plus-color" data-icon-version="1" data-icon-style="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20 12H4m6-6-6 6 6 6"/></svg></button>
+          <div><p class="eyebrow">শিক্ষক প্যানেল</p><h1 id="teacherComposeTitle"></h1></div>
+        </div>
+        <div id="teacherComposeBody"></div>
       </section>
       <section id="teacherMore" class="teacher-view" aria-labelledby="teacherMoreTitle" hidden>
         <div class="page-intro"><button class="pay-back" type="button" data-teacher-view="home" aria-label="হোমে ফিরুন"><svg class="apc-glyph-icon" data-icon="back" data-icon-set="active-plus-color" data-icon-version="1" data-icon-style="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20 12H4m6-6-6 6 6 6"/></svg></button><div><p class="eyebrow">সহায়ক কাজ</p><h1 id="teacherMoreTitle">আরও</h1></div></div>

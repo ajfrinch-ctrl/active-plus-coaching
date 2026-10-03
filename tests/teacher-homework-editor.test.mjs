@@ -56,14 +56,19 @@ test('the home screen offers a way to add homework', () => {
 
 test('opening the editor presents the fields a homework needs', () => {
   ctx.click($('#teacherQuickActions [data-new-activity="homework"]'));
-  assert.equal($('#teacherModalBackdrop').hidden, false, 'the editor opens');
-  for (const id of ['#activity-title', '#activity-subject', '#activity-className', '#activity-group', '#activity-date', '#activity-time', '#activity-details', '#activity-status']) {
+  assert.equal($('#teacherCompose').hidden, false, 'the editor opens as a full-screen page');
+  assert.equal($('#teacherModalBackdrop').hidden, true, 'and it is not the old modal');
+  for (const id of ['#activity-title', '#activity-subject', '#activity-className', '#activity-group', '#activity-date', '#activity-time', '#activity-details']) {
     assert.ok($(id), `${id} exists`);
   }
   assert.equal($('#activity-title').required, true, 'a title cannot be skipped');
   assert.equal($('#activity-subject').required, true, 'nor a subject');
   assert.equal($('#activity-className').required, true, 'nor the class');
-  assert.deepEqual([...$('#activity-status').options].map(o => o.value), ['draft', 'published']);
+  /* §11: the choice is two actions, not a dropdown buried in the form. */
+  assert.equal($('#activity-status'), null, 'the ambiguous status dropdown is gone');
+  assert.deepEqual($$('#teacherActivityForm [data-save-as]').map(b => b.dataset.saveAs), ['draft', 'published']);
+  /* §8: the form is grouped into two labelled steps. */
+  assert.equal($$('#teacherActivityForm .compose-step').length, 2, 'two steps');
 });
 
 test('saving as a draft keeps the work away from students', async () => {
@@ -72,7 +77,7 @@ test('saving as a draft keeps the work away from students', async () => {
   ctx.type($('#activity-details'), 'অনুশীলনী ১ সমাধান করবে।');
   $('#activity-date').value = '2026-10-01';
   $('#activity-time').value = '17:00';
-  $('#activity-status').value = 'draft';
+  ctx.click($('#teacherActivityForm [data-save-as="draft"]'));
   ctx.submit($('#teacherActivityForm'));
   await ctx.waitFor(() => saved().length === 1);
 
@@ -80,7 +85,7 @@ test('saving as a draft keeps the work away from students', async () => {
   assert.equal(activity.status, 'draft');
   assert.equal(activity.title, 'খসড়া অঙ্ক');
   assert.equal(activity.type, 'homework');
-  assert.equal($('#teacherModalBackdrop').hidden, true, 'the editor closes after a good save');
+  assert.equal($('#teacherCompose').hidden, true, 'the page closes after a good save');
 });
 
 test('a draft is not published work', async () => {
@@ -96,7 +101,7 @@ test('publishing is what makes the same work visible', async () => {
   ctx.type($('#activity-details'), 'অনুশীলনী ২ সমাধান করবে।');
   $('#activity-date').value = '2026-10-02';
   $('#activity-time').value = '17:00';
-  $('#activity-status').value = 'published';
+  ctx.click($('#teacherActivityForm [data-save-as="published"]'));
   ctx.submit($('#teacherActivityForm'));
   await ctx.waitFor(() => saved().length === 2);
 
@@ -105,13 +110,32 @@ test('publishing is what makes the same work visible', async () => {
   assert.equal(published[0].title, 'প্রকাশিত অঙ্ক');
 });
 
+test('leaving the page tears it down and returns to the list it came from', () => {
+  /* Opened from the homework list, so back must go there — not to home, and not
+     leave a half-filled form or a locked scroll behind for the next open. */
+  ctx.click($('[data-type-tab="homework"]'));
+  ctx.click($('#teacherNewActivity'));
+  assert.equal($('#teacherCompose').hidden, false, 'the page is open');
+  assert.equal($('#teacherComposeBack').dataset.teacherView, 'homework',
+    'back points at the list the teacher came from');
+  ctx.type($('#activity-title'), 'অসম্পূর্ণ খসড়া');
+  assert.equal(document.body.classList.contains('admin-modal-open'), true, 'scroll is locked while composing');
+
+  ctx.click($('#teacherComposeBack'));
+
+  assert.equal($('#teacherCompose').hidden, true, 'the page closed');
+  assert.equal($('#teacherRecords').hidden, false, 'and the homework list is back');
+  assert.equal($('#teacherComposeBody').innerHTML, '', 'the half-filled form was dropped');
+  assert.equal(document.body.classList.contains('admin-modal-open'), false, 'scroll is unlocked');
+});
+
 test('a class the teacher does not take is refused, and the typing survives', async () => {
   ctx.click($('#teacherQuickActions [data-new-activity="homework"]'));
   ctx.type($('#activity-title'), 'ভুল শ্রেণির কাজ');
   ctx.type($('#activity-subject'), 'গণিত');
   $('#activity-date').value = '2026-10-03';
   $('#activity-time').value = '17:00';
-  $('#activity-status').value = 'published';
+  ctx.click($('#teacherActivityForm [data-save-as="published"]'));
   /* A class that is real in the app but absent from this teacher's
      assignments — the guard under test. */
   const foreign = enabledClasses.find(name => name !== ASSIGNED_CLASS);
@@ -126,6 +150,6 @@ test('a class the teacher does not take is refused, and the typing survives', as
 
   assert.equal(saved().length, before, 'nothing was written');
   assert.match($('#teacherSaveError').textContent, /assignment/, 'and the reason is stated');
-  assert.equal($('#teacherModalBackdrop').hidden, false, 'the editor stays open');
+  assert.equal($('#teacherCompose').hidden, false, 'the page stays open');
   assert.equal($('#activity-title').value, 'ভুল শ্রেণির কাজ', 'the work typed so far is not lost');
 });

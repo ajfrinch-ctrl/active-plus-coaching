@@ -272,6 +272,12 @@ function setView(view) {
     state.recordLimit = 15;
   }
   state.view = view;
+  /* Leaving the compose page tears it down, whichever way it was left. */
+  if (composeOpen) {
+    composeOpen = false;
+    document.body.classList.remove('admin-modal-open');
+    const body = $('#teacherComposeBody'); if (body) body.innerHTML = '';
+  }
   const panel = ACTIVITY_TYPES[view] ? 'teacherRecords' : { home: 'teacherHome', more: 'teacherMore', students: 'teacherStudents', 'online-exams': 'teacherOnlineExams', courses: 'teacherCourses', classes: 'teacherClasses', 'routine-view': 'teacherRoutine', reports: 'teacherAcademicReports', profile: 'teacherProfile', 'notification-settings': 'teacherNotificationSettings' }[view];
   $$('.teacher-view').forEach(el => { el.hidden = el.id !== panel; });
   $$('.teacher-type-tabs [data-type-tab]').forEach(el => {
@@ -321,37 +327,83 @@ function closeModal() {
   const target = modalTrigger?.isConnected && modalTrigger.getClientRects().length && !modalTrigger.disabled ? modalTrigger : $('.admin-bottom-item.active');
   target?.focus({ preventScroll: true });
 }
+/* Creating or editing a piece of work is a full-screen page, not a dialog.
+   There is too much to decide here — who the work is for, when it is due, what
+   it actually says — for a small modal, and §7 of the design brief is explicit
+   that it must never be one.
+
+   The two steps are labelled sections rather than a hiding wizard: the whole
+   form stays reachable, so nothing has to be discovered, and the existing
+   field ids keep meaning what they meant. */
+let composeReturn = 'home', composeOpen = false;
+function openCompose() {
+  composeReturn = TEACHER_VIEWS.includes(state.view) ? state.view : 'home';
+  /* The back control declares a route like every other .pay-back; this only
+     sharpens it to the list the teacher actually came from. */
+  $('#teacherComposeBack').dataset.teacherView = composeReturn;
+  composeOpen = true;
+  $$('.teacher-view').forEach(el => { el.hidden = el.id !== 'teacherCompose'; });
+  document.body.classList.add('admin-modal-open');
+  $('#teacherMain').scrollTo({ top: 0, behavior: 'instant' });
+  $('#teacherComposeBack').focus();
+}
+function closeCompose() {
+  if (state.busy) return;
+  setView(composeReturn);
+}
 function showEditor(type, old = null) {
   if (type === 'exam') return setView('online-exams');
   if (!state.ready || state.busy) return toast('আগে ডেটা লোড হতে দিন বা আবার চেষ্টা করুন।');
   const a = old || { type, date: todayISO(), time: '17:00', duration: 60, totalMarks: 100, status: 'draft', className: assignedClasses()[0] || '' };
   const timed = ['exam', 'routine'].includes(type);
   const field = (name, label, inputType = 'text', extra = '') => `<div><label for="activity-${name}">${label}</label><input id="activity-${name}" name="${name}" type="${inputType}" value="${esc(a[name] ?? '')}" ${extra}></div>`;
-  openModal(`${old ? 'সম্পাদনা: ' : 'নতুন '}${ACTIVITY_TYPES[type].label}`, `<form id="teacherActivityForm" class="teacher-form">
-    ${field('title', 'শিরোনাম *', 'text', 'required maxlength="150"')}
-    ${field('subject', 'বিষয় *', 'text', 'required maxlength="80"')}
-    <div><label for="activity-className">শ্রেণি *</label><select id="activity-className" name="className" required>${classOptions(a.className)}</select></div>
-    ${field('group', 'বিভাগ (খালি রাখলে সব বিভাগ)', 'text', 'maxlength="80" list="teacherGroups" placeholder="যেমন: বিজ্ঞান বিভাগ"')}
-    <datalist id="teacherGroups">${[...new Set(['বিজ্ঞান বিভাগ', 'মানবিক', 'ব্যবসায় শিক্ষা', 'সাধারণ', ...state.students.map(s => s.group).filter(Boolean)])].map(g => `<option value="${esc(g)}"></option>`).join('')}</datalist>
-    ${type !== 'suggestion' ? field('date', type === 'homework' ? 'জমার শেষ তারিখ *' : 'তারিখ *', 'date', 'required') + field('time', type === 'homework' ? 'জমার শেষ সময় *' : 'শুরুর সময় *', 'time', 'required') : ''}
-    ${timed ? field('duration', 'সময়কাল (মিনিট) *', 'number', 'min="5" max="300" step="1" required') + field('room', 'রুম / স্থান', 'text', 'maxlength="120"') : ''}
-    ${type === 'exam' ? field('totalMarks', 'পূর্ণমান *', 'number', 'min="1" max="1000" step="1" required') : ''}
-    <div><label for="activity-details">${type === 'exam' ? 'সিলেবাস / প্রশ্ন ও নির্দেশনা' : type === 'homework' ? 'কাজের বিবরণ ও নির্দেশনা' : type === 'suggestion' ? 'সাজেশন / নোট' : 'ক্লাসের বিবরণ'}</label><textarea id="activity-details" name="details" rows="5" maxlength="3000">${esc(a.details || '')}</textarea></div>
-    ${field('resourceURL', 'সহায়ক লিংক (ঐচ্ছিক)', 'url', 'maxlength="1000" placeholder="https://…"')}
-    <div><label for="activity-status">অবস্থা *</label><select id="activity-status" name="status"><option value="draft" ${a.status === 'draft' ? 'selected' : ''}>খসড়া — শুধু শিক্ষক দেখবেন</option><option value="published" ${a.status === 'published' ? 'selected' : ''}>প্রকাশিত — শিক্ষার্থী দেখবে</option></select></div>
+  $('#teacherComposeTitle').textContent = `${old ? 'সম্পাদনা: ' : 'নতুন '}${ACTIVITY_TYPES[type].label}`;
+  $('#teacherComposeBody').innerHTML = `<form id="teacherActivityForm" class="teacher-form">
+    <fieldset class="compose-step">
+      <legend><span class="compose-step-num" aria-hidden="true">১</span>মূল তথ্য</legend>
+      ${field('title', 'শিরোনাম *', 'text', 'required maxlength="150"')}
+      ${field('subject', 'বিষয় *', 'text', 'required maxlength="80"')}
+      <div><label for="activity-className">শ্রেণি *</label><select id="activity-className" name="className" required>${classOptions(a.className)}</select></div>
+      ${field('group', 'বিভাগ (খালি রাখলে সব বিভাগ)', 'text', 'maxlength="80" list="teacherGroups" placeholder="যেমন: বিজ্ঞান বিভাগ"')}
+      <datalist id="teacherGroups">${[...new Set(['বিজ্ঞান বিভাগ', 'মানবিক', 'ব্যবসায় শিক্ষা', 'সাধারণ', ...state.students.map(s => s.group).filter(Boolean)])].map(g => `<option value="${esc(g)}"></option>`).join('')}</datalist>
+      ${type !== 'suggestion' ? field('date', type === 'homework' ? 'জমার শেষ তারিখ *' : 'তারিখ *', 'date', 'required') + field('time', type === 'homework' ? 'জমার শেষ সময় *' : 'শুরুর সময় *', 'time', 'required') : ''}
+      ${timed ? field('duration', 'সময়কাল (মিনিট) *', 'number', 'min="5" max="300" step="1" required') + field('room', 'রুম / স্থান', 'text', 'maxlength="120"') : ''}
+      ${type === 'exam' ? field('totalMarks', 'পূর্ণমান *', 'number', 'min="1" max="1000" step="1" required') : ''}
+    </fieldset>
+    <fieldset class="compose-step">
+      <legend><span class="compose-step-num" aria-hidden="true">২</span>কাজের বিবরণ</legend>
+      <div><label for="activity-details">${type === 'exam' ? 'সিলেবাস / প্রশ্ন ও নির্দেশনা' : type === 'homework' ? 'কাজের বিবরণ ও নির্দেশনা' : type === 'suggestion' ? 'সাজেশন / নোট' : 'ক্লাসের বিবরণ'}</label><textarea id="activity-details" name="details" rows="5" maxlength="3000">${esc(a.details || '')}</textarea></div>
+      ${field('resourceURL', 'সহায়ক লিংক (ঐচ্ছিক)', 'url', 'maxlength="1000" placeholder="https://…"')}
+    </fieldset>
     <div class="teacher-preview">
       <button class="admin-btn ghost" type="button" id="activityPreviewToggle" aria-expanded="false" aria-controls="activityPreviewBox">শিক্ষার্থী যেভাবে দেখবে</button>
       <div class="teacher-preview-box" id="activityPreviewBox" hidden></div>
     </div>
-    <p class="finance-hint">প্রকাশিত কাজ নির্দিষ্ট শ্রেণি/বিভাগের শিক্ষার্থী অ্যাপে দেখা যাবে (একই ব্রাউজারে)।</p>
     <p class="finance-error" id="teacherSaveError" role="alert" hidden></p>
-    <div class="modal-actions"><button class="admin-btn primary" type="submit">সংরক্ষণ করুন</button><button class="admin-btn ghost" type="button" data-close-teacher>বাতিল</button></div>
-  </form>`);
-  $('#teacherActivityForm').addEventListener('submit', event => {
-    event.preventDefault(); const form = event.currentTarget;
+    <div class="compose-actions">
+      <button class="admin-btn ghost" type="submit" data-save-as="draft">খসড়া হিসেবে সংরক্ষণ</button>
+      <button class="admin-btn primary" type="submit" data-save-as="published">শিক্ষার্থীদের দিন</button>
+    </div>
+    <p class="finance-hint">খসড়া শুধু আপনি দেখবেন; “শিক্ষার্থীদের দিন” চাপলে কাজটি সেই শ্রেণি/বিভাগের শিক্ষার্থী অ্যাপে চলে যাবে।</p>
+  </form>`;
+  openCompose();
+
+  const form = $('#teacherActivityForm');
+  /* Which of the two actions was pressed decides the status. Tracked on click
+     rather than read from event.submitter, which a synthetic submit does not
+     carry — the form behaves the same whether a person or a test drives it. */
+  let chosen = a.status === 'published' ? 'published' : 'draft';
+  form.querySelectorAll('[data-save-as]').forEach(button => {
+    button.addEventListener('click', () => { chosen = button.dataset.saveAs; });
+  });
+  form.addEventListener('submit', event => {
+    event.preventDefault();
     if (!form.reportValidity()) return;
     const values = Object.fromEntries(new FormData(form));
-    save(form, () => teachingRepository.saveActivity({ ...values, type, id: old?.id, date: type === 'suggestion' ? a.date : values.date }), 'কাজটি সংরক্ষণ করা হয়েছে');
+    save(form, () => teachingRepository.saveActivity({
+      ...values, status: chosen, type, id: old?.id,
+      date: type === 'suggestion' ? a.date : values.date
+    }), chosen === 'draft' ? 'খসড়া সংরক্ষিত হয়েছে' : 'কাজটি শিক্ষার্থীদের দেওয়া হয়েছে');
   });
 
   /* The preview has to BE the student screen, not a picture of it: it calls the
@@ -368,7 +420,7 @@ function showEditor(type, old = null) {
       date: type === 'suggestion' ? a.date : values.date, time: values.time || '', room: values.room || '',
       totalMarks: Number(values.totalMarks) || 0,
       details: values.details || '', resourceURL: values.resourceURL || '',
-      teacherName: state.teacher?.fullName || 'শিক্ষক', progress: {}, status: values.status || 'draft'
+      teacherName: state.teacher?.fullName || 'শিক্ষক', progress: {}, status: chosen
     };
     const pupil = { id: 'preview-pupil', className: draft.className, group: draft.group };
     box.innerHTML = learningCard(draft, pupil);
@@ -384,21 +436,28 @@ function showEditor(type, old = null) {
     $('#activityPreviewToggle').setAttribute('aria-expanded', String(open));
     paintPreview();
   });
-  $('#teacherActivityForm').addEventListener('input', paintPreview);
+  form.addEventListener('input', paintPreview);
 }
+
 async function save(form, operation, message) {
   if (state.busy || !state.ready) return;
   state.busy = true; form.setAttribute('aria-busy', 'true'); $('#teacherSaveError').hidden = true;
   const controls = [...form.querySelectorAll('input, select, textarea, button')];
   controls.forEach(el => { el.disabled = true; });
-  const submit = form.querySelector('[type=submit]'), label = submit.textContent; submit.textContent = 'সংরক্ষণ হচ্ছে…';
+  /* Draft and assign are two submit buttons on one form, so the busy label has
+     to cover both rather than whichever happens to come first. */
+  const submits = [...form.querySelectorAll('[type=submit]')];
+  const labels = submits.map(button => button.textContent);
+  submits.forEach(button => { button.textContent = 'সংরক্ষণ হচ্ছে…'; });
   let success = false;
   try { state.db = await operation(); render(); success = true; }
   catch (error) {
     $('#teacherSaveError').textContent = error instanceof DOMException ? 'সংরক্ষণ হয়নি। ব্রাউজারের স্টোরেজ/খালি জায়গা পরীক্ষা করে আবার চেষ্টা করুন।' : error.message || 'সংরক্ষণ হয়নি। আবার চেষ্টা করুন।';
     $('#teacherSaveError').hidden = false;
-  } finally { state.busy = false; form.removeAttribute('aria-busy'); controls.forEach(el => { el.disabled = false; }); submit.textContent = label; }
-  if (success) { closeModal(); toast(message); }
+  } finally { state.busy = false; form.removeAttribute('aria-busy'); controls.forEach(el => { el.disabled = false; }); submits.forEach((button, i) => { button.textContent = labels[i]; }); }
+  /* The compose page is a full-screen view, not a dialog, so it closes by
+     route; the detail/progress/delete surfaces are still modals. */
+  if (success) { if ($('#teacherCompose').hidden) closeModal(); else closeCompose(); toast(message); }
 }
 function showDetail(a) {
   const link = safeResourceURL(a.resourceURL);
