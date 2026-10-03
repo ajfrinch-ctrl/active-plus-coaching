@@ -217,9 +217,11 @@ export function initCourseHub({ getStudent }) {
       const looseItems = inSection(loose);
       const empty = !blocks.length && !looseItems.length;
       if (empty) {
-        return '<div class="notice-empty course-empty"><span class="notice-empty-art" aria-hidden="true">' + iconMarkup('icon-book') + '</span>' +
-            '<strong>' + (search ? 'কিছু পাওয়া যায়নি' : 'এই বিষয়ে এখনো কিছু যোগ করা হয়নি') + '</strong>' +
-            '<p>' + (search ? 'অন্য শব্দ দিয়ে খুঁজে দেখুন।' : 'শিক্ষক কনটেন্ট যোগ করলে এখানে দেখা যাবে।') + '</p></div>';
+        return emptyState({
+          icon: 'book',
+          title: search ? 'কিছু পাওয়া যায়নি' : 'এই বিষয়ে এখনো কিছু যোগ করা হয়নি',
+          message: search ? 'অন্য শব্দ দিয়ে খুঁজে দেখুন।' : 'শিক্ষক কনটেন্ট যোগ করলে এখানে দেখা যাবে।'
+        });
       }
       return blocks.join('') + (looseItems.length ? '<div class="course-loose">' + looseItems.map(contentCard).join('') + '</div>' : '');
     };

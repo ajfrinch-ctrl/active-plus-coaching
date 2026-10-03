@@ -1,3 +1,6 @@
+// v164: the last two private empty states are gone — notice-center.js kept its
+// own emptyState() and course-hub.js hand-built a .notice-empty card. Both now
+// call the shared emptyState(), and a test fails if anyone grows a new one.
 // v163: the group picker offers only the groups that actually hold an approved
 // pupil in the chosen class, and the editor names how many students the work
 // will reach — publishing to an empty class+group used to look like success.
@@ -43,7 +46,7 @@
 // answer-key PDFs, the student Learning Hub (class → subject → chapter) and the
 // shared brand module. v148: date-wise examination workspace — question
 // archive, review workflow and question-level editing for the Manager.
-const CACHE_VERSION = 163;
+const CACHE_VERSION = 164;
 const CACHE_NAME = `active-plus-student-v${CACHE_VERSION}-minimal-education`;
 const APP_SHELL = [
   './css/notifications.css',

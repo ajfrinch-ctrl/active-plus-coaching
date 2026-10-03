@@ -33,12 +33,6 @@
 .notice-detail .mini-btn{margin-top:var(--space-2);width:fit-content}
 .notice-unread-dot{position:absolute;inset-inline-end:var(--space-3);inset-block-start:var(--space-3);width:8px;height:8px;border-radius:50%;background:var(--color-primary)}
 
-/* ---------- The pretty empty state (never a row of buttons) ---------- */
-.notice-empty{display:grid;justify-items:center;gap:var(--space-2);padding:var(--space-6) var(--space-4);border:1px dashed var(--color-border);border-radius:var(--radius-md);background:var(--color-surface);text-align:center}
-.notice-empty-art{width:64px;height:64px;display:grid;place-items:center;border-radius:50%;background:var(--color-surface-muted);color:var(--color-success)}
-.notice-empty-art svg{width:30px;height:30px}
-.notice-empty strong{font-size:var(--font-md)}
-.notice-empty p{margin:0;color:var(--color-text-secondary);font-size:var(--font-sm)}
 
 /* ---------- The in-app card: no acknowledgement button ---------- */
 .apc-alert-actions{display:flex;flex-wrap:wrap;gap:var(--space-2);justify-content:flex-end;margin-top:var(--space-4)}
@@ -65,5 +59,4 @@
 @media(max-width:420px){
   .notice-filters .notice-read-all{margin-left:0;width:100%}
   .notice-detail{padding:var(--space-3)}
-  .notice-empty{padding:var(--space-4) var(--space-3)}
 }

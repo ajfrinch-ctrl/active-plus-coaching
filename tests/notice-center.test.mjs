@@ -160,7 +160,7 @@ test('the bell shows the unread count; the inbox filters unread/all and marks re
   assert.equal(modal.querySelectorAll('.notice-detail.unread').length, 2);
   assert.equal(modal.querySelector('[data-apc-notice-status]').textContent, '২টি অপঠিত নোটিফিকেশন');
   assert.equal(modal.querySelectorAll('img').length, 0, 'an item body injected markup');
-  assert.ok(modal.querySelector('[data-apc-notice-empty]') === null, 'the empty card is not shown while items exist');
+  assert.ok(modal.querySelector('.apc-empty') === null, 'the empty card is not shown while items exist');
 
   // "সব" shows the same two; the unread tab comes back to them.
   ctx.click(modal.querySelector('[data-apc-notice-filter="all"]'));
@@ -176,7 +176,7 @@ test('the bell shows the unread count; the inbox filters unread/all and marks re
   assert.ok(modal.querySelector('[data-apc-notice-read-all]').hidden, 'the read-all action hides when nothing is unread');
 
   // Nothing unread left: a checked card, and no acknowledgement buttons.
-  const empty = modal.querySelector('[data-apc-notice-empty]');
+  const empty = modal.querySelector('.apc-empty');
   assert.ok(empty, 'the empty state is shown');
   assert.match(empty.textContent, /সব নোটিফিকেশন দেখা হয়েছে/);
   assert.match(empty.textContent, /নতুন কোনো নোটিফিকেশন নেই/);

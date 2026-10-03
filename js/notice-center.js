@@ -1,4 +1,5 @@
 import { iconMarkup as minimalIcon } from './icons.js';
+import { emptyState } from './ui-states.js';
 import { SECTION_LABEL } from './notification-store.js';
 /* The notification centre behind the bell button — one design on every panel.
  *
@@ -118,14 +119,6 @@ function buildModal() {
   return backdrop;
 }
 
-/* The pretty empty state: a checked card instead of a row of buttons. */
-function emptyState(title, note) {
-  return '<div class="notice-empty" data-apc-notice-empty>' +
-      '<span class="notice-empty-art" aria-hidden="true">' + iconMarkup('icon-award') + '</span>' +
-      '<strong>' + escapeHtml(title) + '</strong>' +
-      '<p>' + escapeHtml(note) + '</p>' +
-    '</div>';
-}
 
 /* ---- mount ------------------------------------------------------------------ */
 
@@ -269,13 +262,13 @@ export function mountNoticeCenter(api) {
     if (!listBox) return { unread, total: feed.length };
 
     if (!feed.length) {
-      listBox.innerHTML = emptyState('সব নোটিফিকেশন দেখা হয়েছে', 'নতুন কোনো নোটিফিকেশন নেই।');
+      listBox.innerHTML = emptyState({ icon: 'award', title: 'সব নোটিফিকেশন দেখা হয়েছে', message: 'নতুন কোনো নোটিফিকেশন নেই।' });
       return { unread, total: 0 };
     }
     const visible = filter === 'unread' ? unreadItems : feed;
     listBox.innerHTML = visible.length
       ? visible.map(item => paintCard(item, isUnread(item, state))).join('')
-      : emptyState('সব নোটিফিকেশন দেখা হয়েছে', 'এখন নতুন কোনো নোটিফিকেশন নেই।');
+      : emptyState({ icon: 'award', title: 'সব নোটিফিকেশন দেখা হয়েছে', message: 'এখন নতুন কোনো নোটিফিকেশন নেই।' });
     return { unread, total: feed.length };
   }
 

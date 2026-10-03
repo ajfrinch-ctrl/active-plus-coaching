@@ -4,6 +4,7 @@
    no way forward. These tests pin the shared card: the helper's shape, and that
    the real Teacher and Manager panels actually paint it. */
 import test from 'node:test';
+import { readFileSync, readdirSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import { emptyState } from '../js/ui-states.js';
 import { loadPage } from './jsdom-harness.mjs';
@@ -73,4 +74,16 @@ test('the real Manager panel paints the shared card in its lists', async () => {
   const payments = ctx.$('#managerPaymentList');
   assert.ok(payments.querySelector('.apc-empty'));
   assert.match(payments.textContent, /payment record নেই/);
+});
+
+test('no module hand-rolls its own empty card', () => {
+  /* notice-center.js kept a private emptyState() and course-hub.js a hand-built
+     .notice-empty block — two more skins for a job the shared card already does
+     (§44: never two UIs for the same thing). Both now call emptyState(). */
+  for (const file of readdirSync(new URL('../js/', import.meta.url)).filter(f => f.endsWith('.js'))) {
+    if (file === 'ui-states.js') continue; // the one place allowed to build the card
+    const source = readFileSync(new URL(`../js/${file}`, import.meta.url), 'utf8');
+    assert.equal(/class="apc-empty"/.test(source), false, `${file} must call emptyState(), not build the card itself`);
+    assert.equal(/class="[^"]*\bnotice-empty\b/.test(source), false, `${file} still paints the retired .notice-empty card`);
+  }
 });
