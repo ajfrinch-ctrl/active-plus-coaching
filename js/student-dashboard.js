@@ -2,10 +2,11 @@ import { iconMarkup } from './icons.js';
 /* Data-driven student home dashboard. The UI only shows records already stored
    for this student; absent classes, results or fees are never filled with demo values. */
 import { loadRoutine, WEEK_DAYS, ROUTINE_KEY } from './office-data.js';
-import { teachingRepository, publishedForStudent } from './teaching-data.js';
+import { teachingRepository, publishedForStudent, displayDate } from './teaching-data.js';
 import { examRepository, examMatchesStudent, watchExams, isStudentVisibleExam } from './exam-data.js';
 import { financeRepository, studentFeeSummary } from './finance-data.js';
 import { toBanglaNumber as bn } from './ui.js';
+import { applyScope, latestScope, byRecency, LATEST_DAYS_DASHBOARD, DASHBOARD_LIMIT } from './latest-scope.js';
 
 const $ = selector => document.querySelector(selector);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
@@ -73,6 +74,34 @@ function renderProgress(activities, exams, studentId) {
   return { homework, done, pending, percent };
 }
 
+/* Section: সাম্প্রতিক বাড়ির কাজ — the last few days only, three rows at most.
+   A dashboard is not a database dump: the full history is one tap away in the
+   homework panel, and every row here says who gave it, when it is due and
+   where the student stands. */
+function renderLatestHomework(homework, studentId) {
+  const section = $('#latestHomeworkSection');
+  const list = $('#latestHomeworkList');
+  if (!section || !list) return;
+  const recent = applyScope(homework, latestScope(LATEST_DAYS_DASHBOARD)).sort(byRecency).slice(0, DASHBOARD_LIMIT);
+  section.hidden = recent.length === 0;
+  if (!recent.length) { list.innerHTML = ''; return; }
+  list.innerHTML = recent.map(a => {
+    const value = a.progress?.[studentId]?.value;
+    const done = ['done', 'reviewed'].includes(value);
+    const given = a.createdAt ? displayDate(String(a.createdAt).slice(0, 10)) : '';
+    const due = a.date ? `${displayDate(a.date)}${a.time ? ` • ${a.time}` : ''}` : '';
+    const meta = [given ? `দেওয়া হয়েছে ${given}` : '', due ? `জমার শেষ ${due}` : ''].filter(Boolean).join(' • ');
+    return `<button type="button" class="latest-work-row" data-action="homework">` +
+      `<span class="latest-work-subject">${esc(a.subject || 'বিষয় উল্লেখ নেই')}</span>` +
+      `<strong>${esc(a.title)}</strong>` +
+      `<span class="latest-work-meta">${esc([a.teacherName ? `শিক্ষক • ${a.teacherName}` : '', meta].filter(Boolean).join(' • '))}</span>` +
+      `<span class="latest-work-state${done ? ' is-done' : ''}">${done ? 'সম্পন্ন' : 'কাজ বাকি'}</span>` +
+    `</button>`;
+  }).join('');
+  const note = $('#latestHomeworkNote');
+  if (note) note.textContent = `সর্বশেষ ${bn(LATEST_DAYS_DASHBOARD)} দিনের ${bn(recent.length)}টি কাজ • বাকি ইতিহাস প্যানেলে`;
+}
+
 function renderChallenge(homework, progress, studentId) {
   const pending = homework.find(item => !['done', 'reviewed'].includes(item.progress?.[studentId]?.value));
   const title = $('#dashboardChallengeTitle');
@@ -137,6 +166,7 @@ export function initStudentDashboard({ getStudent, getAccount }) {
       renderRoutine(student, activities);
       const progress = renderProgress(activities, exams, student.id);
       renderChallenge(progress.homework, progress, student.id);
+      renderLatestHomework(progress.homework, student.id);
       renderExam(exams);
       renderFees(student, account, transactions);
     } catch {

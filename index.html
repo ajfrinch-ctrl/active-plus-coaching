@@ -5,11 +5,11 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/; frame-src 'self' https://www.google.com/recaptcha/; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https: wss:; manifest-src 'self'; worker-src 'self'; base-uri 'self'; object-src 'none'; form-action 'none'">
   <meta name="referrer" content="no-referrer">
   <script src="js/sanitize-url.js"></script>
-  <script src="js/app-entry.js?v=151" data-entry="student"></script>
+  <script src="js/app-entry.js?v=152" data-entry="student"></script>
   <script src="js/topbar-connectivity.js?v=20260929-topbar"></script>
   <script type="module" src="js/realtime-sync-entry.js"></script>
   <script src="js/appearance-boot.js"></script>
-  <script src="js/theme-logos.js?v=151"></script>
+  <script src="js/theme-logos.js?v=152"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
   <meta name="theme-color" content="#f3f6fb">
   <meta name="description" content="Active Plus Coaching শিক্ষার্থী অ্যাপ — অফলাইনে রুটিন, ক্লাস, ফলাফল ও নোটিশ দেখুন।">
@@ -24,7 +24,7 @@
   <link rel="icon" type="image/png" sizes="16x16" href="assets/icons/favicon-16.png">
   <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
   <link rel="preload" href="assets/fonts/NotoSansBengali-Variable.ttf" as="font" type="font/ttf" crossorigin>
-  <link rel="stylesheet" href="css/design-system.css?v=151">
+  <link rel="stylesheet" href="css/design-system.css?v=152">
   <script type="module" src="js/ui-accessibility.js"></script>
   <script src="js/launch-screen.js" defer></script>
 </head>
@@ -283,6 +283,14 @@
             <button type="button" class="challenge-open" data-view="courses" aria-label="পড়াশোনার কাজ খুলুন">›</button>
           </article>
         </section>
+
+        <!-- Latest homework only: the last few days, three rows at most. The
+             full history lives in the homework panel this section opens. -->
+        <section class="dashboard-section" id="latestHomeworkSection" aria-labelledby="latestHomeworkTitle" hidden>
+          <div class="dashboard-section-heading"><h2 id="latestHomeworkTitle">সাম্প্রতিক বাড়ির কাজ</h2><button type="button" class="dashboard-text-link" data-action="homework">সব দেখুন <span aria-hidden="true">›</span></button></div>
+          <div class="latest-work-list" id="latestHomeworkList"></div>
+          <div class="latest-work-foot"><p class="finance-hint" id="latestHomeworkNote" role="status"></p><button type="button" class="mini-btn" data-action="homework">সব বাড়ির কাজ দেখুন</button></div>
+        </section>
       </section>
 
       <!-- ROUTINE -->
@@ -321,6 +329,11 @@
             <button type="button" data-learning-filter="suggestion" aria-pressed="false">সাজেশন</button>
             <button type="button" data-learning-filter="routine" aria-pressed="false">রুটিন</button>
           </div>
+          <div class="learning-toolbar">
+            <label class="learning-search" for="learningSearch">খুঁজুন<input id="learningSearch" type="search" placeholder="বিষয়, শিক্ষক বা কাজের নাম…" autocomplete="off"></label>
+            <div id="learningScope"></div>
+          </div>
+          <p class="finance-hint" id="learningScopeNote" role="status"></p>
           <p class="learning-error" id="learningError" role="alert" hidden></p>
           <div class="learning-list" id="learningList"></div>
         </section>

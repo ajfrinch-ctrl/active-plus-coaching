@@ -4,9 +4,36 @@ import { toBanglaNumber as bn, showFeedback, openModal, closeModal } from './ui.
 import { downloadBlob } from './exam-pdf.js';
 import { activitySheetPDF, materialFileName } from './material-pdf.js';
 import { teachingRepository, publishedForStudent, ACTIVITY_TYPES, PROGRESS_LABELS, escapeText as esc, displayDate, safeResourceURL, watchTeachingData } from './teaching-data.js';
+import { initScopeBar, applyScope, scopeNote, latestScope, LATEST_DAYS_PANEL } from './latest-scope.js';
+import { iconMarkup } from './icons.js';
+
+/* Subject, teacher or the work's own title — the three things a student
+   actually remembers a homework by. */
+function matchesQuery(activity, query) {
+  if (!query) return true;
+  const haystack = `${activity.title || ''} ${activity.subject || ''} ${activity.teacherName || ''}`.toLocaleLowerCase();
+  return haystack.includes(query);
+}
+
+/* One empty state for every list: icon + one line + the action that actually
+   helps. "Nothing in this window" is not the same as "nothing exists", so the
+   first case offers the way back to the full history. */
+function emptyState(total, query) {
+  const art = iconMarkup(query ? 'search' : 'assignment', 'apc-empty-icon-svg');
+  if (total) {
+    return `<div class="apc-empty"><span class="apc-empty-icon" aria-hidden="true">${art}</span>` +
+      '<strong>এই সময়ে কোনো কাজ নেই</strong>' +
+      `<p>${query ? 'এই লেখা মিলে এমন কোনো কাজ এই সময়ে নেই।' : 'নির্বাচিত সময়ে তোমার জন্য প্রকাশিত কোনো কাজ নেই।'} পুরোনো কাজ দেখতে “সব” অথবা “তারিখ ধরে” ব্যবহার করো।</p>` +
+      '<button type="button" class="mini-btn primary" data-scope-show-all>সব কাজ দেখুন</button></div>';
+  }
+  return `<div class="apc-empty"><span class="apc-empty-icon" aria-hidden="true">${art}</span>` +
+    '<strong>এখনও কোনো কাজ দেওয়া হয়নি।</strong>' +
+    '<p>শিক্ষক কাজ প্রকাশ করলে এখানে দেখা যাবে।</p></div>';
+}
 
 export function initStudentTeaching({ getStudent }) {
   let db = { activities: [] }, filter = 'all', request = 0;
+  let scope = latestScope(LATEST_DAYS_PANEL), query = '', scopeBar = null;
   const pending = new Set();
   const $ = selector => document.querySelector(selector);
   const num = value => esc(bn(value));
@@ -47,8 +74,13 @@ export function initStudentTeaching({ getStudent }) {
   function render() {
     const student = getStudent();
     const activities = publishedForStudent(db.activities, student).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-    const visible = activities.filter(a => filter === 'all' || a.type === filter);
-    $('#learningList').innerHTML = visible.map(a => card(a, student)).join('') || '<p class="teacher-empty">এই বিভাগে তোমার জন্য এখনও কোনো কাজ প্রকাশ হয়নি।</p>';
+    /* The list opens on the latest work. The routine board, the results board
+       and the totals below still count everything this student has, so scoping
+       the list can never hide a class that is still coming. */
+    const inWindow = applyScope(activities, scope);
+    const visible = inWindow.filter(a => (filter === 'all' || a.type === filter) && matchesQuery(a, query));
+    $('#learningList').innerHTML = visible.map(a => card(a, student)).join('') || emptyState(activities.length, query);
+    if ($('#learningScopeNote')) $('#learningScopeNote').textContent = scopeNote(scope, { shown: visible.length, total: activities.length });
     $('#learningCount').textContent = `${bn(activities.length)}টি প্রকাশিত কাজ • ${student.className}`;
     const homework = activities.filter(a => a.type === 'homework');
     const done = homework.filter(a => ['done', 'reviewed'].includes(a.progress[student.id]?.value)).length;
@@ -162,6 +194,25 @@ export function initStudentTeaching({ getStudent }) {
       } else status.textContent = 'PDF তৈরি হয়নি। আবার চেষ্টা করো।';
     } finally { button.disabled = false; }
   });
+
+  /* The one filter bar every list uses: latest by default, "তারিখ ধরে" opens
+     From → To. Nothing is deleted by it — "সব" brings the history straight back. */
+  scopeBar = initScopeBar({
+    mount: '#learningScope',
+    idPrefix: 'learning',
+    scope,
+    latestDays: LATEST_DAYS_PANEL,
+    labels: { latest: 'সাম্প্রতিক', all: 'সব', range: 'তারিখ ধরে' },
+    onChange(next) { scope = next; render(); }
+  });
+  $('#learningList').addEventListener('click', event => {
+    if (!event.target.closest('[data-scope-show-all]') || !scopeBar) return;
+    scopeBar.set({ mode: 'all' });
+    scope = scopeBar.scope();
+    render();
+  });
+  const search = $('#learningSearch');
+  if (search) search.addEventListener('input', () => { query = search.value.trim().toLocaleLowerCase(); render(); });
 
   watchTeachingData(refresh);
   refresh();

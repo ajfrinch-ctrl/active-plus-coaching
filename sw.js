@@ -1,3 +1,6 @@
+// v152: lists open on the latest work — js/latest-scope.js gives every list one
+// rule (recent by default, From → To for history) and one filter bar; the
+// student home shows three days of homework and the panel a week.
 // v151: Settings owns the notification screen — on the Manager and Teacher
 // panels it sat directly inside <main>, so it painted under every page. It is
 // a routed page now, opened from the panel's profile page or from "আরও".
@@ -8,7 +11,7 @@
 // answer-key PDFs, the student Learning Hub (class → subject → chapter) and the
 // shared brand module. v148: date-wise examination workspace — question
 // archive, review workflow and question-level editing for the Manager.
-const CACHE_VERSION = 151;
+const CACHE_VERSION = 152;
 const CACHE_NAME = `active-plus-student-v${CACHE_VERSION}-minimal-education`;
 const APP_SHELL = [
   './css/notifications.css',
@@ -127,6 +130,7 @@ const APP_SHELL = [
   './js/material-pdf.js',
   './js/student-exams.js',
   './js/student-dashboard.js',
+  './js/latest-scope.js',
   './js/account-policy.js',
   './js/storage.js',
   './js/ui.js',
