@@ -69,6 +69,9 @@ function attentionItems(source = own()) {
 }
 const assignedClasses = () => [...new Set(state.assignments.map(item => item.className))];
 const classOptions = value => assignedClasses().map(c => `<option value="${esc(c)}" ${c === value ? 'selected' : ''}>${esc(c)}</option>`).join('');
+/* A group belongs to a class, not to the whole school — offering every group from
+   every class lets a teacher publish work that reaches nobody. */
+const groupsFor = (className) => [...new Set(state.students.filter(s => s.className === className && s.group).map(s => s.group))].sort();
 function activityMeta(a) {
   const date = `${displayDate(a.date)}${a.time ? ' • ' + bn(a.time) : ''}`;
   return `${a.type === 'homework' ? 'শেষ সময়: ' : ''}${date}${a.duration ? ' • ' + bn(a.duration) + ' মিনিট' : ''}${a.totalMarks ? ' • পূর্ণমান ' + bn(a.totalMarks) : ''}`;
@@ -365,7 +368,8 @@ function showEditor(type, old = null) {
       ${field('subject', 'বিষয় *', 'text', 'required maxlength="80"')}
       <div><label for="activity-className">শ্রেণি *</label><select id="activity-className" name="className" required>${classOptions(a.className)}</select></div>
       ${field('group', 'বিভাগ (খালি রাখলে সব বিভাগ)', 'text', 'maxlength="80" list="teacherGroups" placeholder="যেমন: বিজ্ঞান বিভাগ"')}
-      <datalist id="teacherGroups">${[...new Set(['বিজ্ঞান বিভাগ', 'মানবিক', 'ব্যবসায় শিক্ষা', 'সাধারণ', ...state.students.map(s => s.group).filter(Boolean)])].map(g => `<option value="${esc(g)}"></option>`).join('')}</datalist>
+      <datalist id="teacherGroups">${groupsFor(a.className).map(g => `<option value="${esc(g)}"></option>`).join('')}</datalist>
+      <p class="finance-hint" id="activityReach" role="status" aria-live="polite"></p>
       ${type !== 'suggestion' ? field('date', type === 'homework' ? 'জমার শেষ তারিখ *' : 'তারিখ *', 'date', 'required') + field('time', type === 'homework' ? 'জমার শেষ সময় *' : 'শুরুর সময় *', 'time', 'required') : ''}
       ${timed ? field('duration', 'সময়কাল (মিনিট) *', 'number', 'min="5" max="300" step="1" required') + field('room', 'রুম / স্থান', 'text', 'maxlength="120"') : ''}
       ${type === 'exam' ? field('totalMarks', 'পূর্ণমান *', 'number', 'min="1" max="1000" step="1" required') : ''}
@@ -436,7 +440,29 @@ function showEditor(type, old = null) {
     $('#activityPreviewToggle').setAttribute('aria-expanded', String(open));
     paintPreview();
   });
-  form.addEventListener('input', paintPreview);
+  form.addEventListener('input', () => { paintPreview(); paintReach(); });
+
+  /* Say out loud who will actually receive this. Publishing to a class + group
+     combination that holds no student silently reaches nobody. */
+  const paintReach = () => {
+    const className = $('#activity-className').value;
+    const group = String($('#activity-group').value || '').trim();
+    const reach = $('#activityReach');
+    if (!reach) return;
+    const count = state.students.filter(s => matchesStudent({ className, group }, s)).length;
+    const where = group ? `${className} · ${group}` : `${className} — সব বিভাগ`;
+    reach.textContent = count ? `${where}: ${count} জন শিক্ষার্থী পাবে।`
+      : `${where}: এই শ্রেণি/বিভাগে কোনো শিক্ষার্থী নেই — প্রকাশ করলে কেউ দেখতে পাবে না।`;
+    reach.classList.toggle('reach-none', count === 0);
+  };
+  /* Changing the class has to refresh the group list too: the groups that exist
+     belong to the class, not to the whole school. */
+  const paintGroups = () => {
+    const list = $('#teacherGroups');
+    if (list) list.innerHTML = groupsFor($('#activity-className').value).map(g => `<option value="${esc(g)}"></option>`).join('');
+  };
+  $('#activity-className').addEventListener('change', () => { paintGroups(); paintReach(); paintPreview(); });
+  paintGroups(); paintReach();
 }
 
 async function save(form, operation, message) {

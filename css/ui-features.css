@@ -130,6 +130,10 @@
 .compose-step-num{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:999px;background:var(--tone-blue-soft);color:var(--tone-blue);font-size:13px;font-weight:700}
 .compose-actions{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3);margin-top:var(--space-4)}
 @media(max-width:420px){.compose-actions{grid-template-columns:1fr}}
+/* Naming the real audience is the point of the hint: publishing to a class+group
+   that holds no student otherwise looks identical to a successful assign. */
+#activityReach{min-height:1.2em;margin:4px 0 0}
+#activityReach.reach-none{color:var(--danger);font-weight:600}
 .teacher-preview{display:grid;gap:var(--space-3);margin-top:var(--space-4)}
 .teacher-preview-box{padding:var(--space-3);border:1.5px dashed var(--line);border-radius:var(--radius-lg);background:var(--surface)}
 .teacher-preview-box>.learning-card{margin:0}

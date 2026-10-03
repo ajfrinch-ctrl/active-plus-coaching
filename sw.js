@@ -1,3 +1,6 @@
+// v163: the group picker offers only the groups that actually hold an approved
+// pupil in the chosen class, and the editor names how many students the work
+// will reach — publishing to an empty class+group used to look like success.
 // v162: creating or editing a piece of work is a full-screen page, not a small
 // modal — two labelled steps (মূল তথ্য / কাজের বিবরণ) and two explicit actions,
 // "খসড়া হিসেবে সংরক্ষণ" and "শিক্ষার্থীদের দিন", in place of a status dropdown.
@@ -40,7 +43,7 @@
 // answer-key PDFs, the student Learning Hub (class → subject → chapter) and the
 // shared brand module. v148: date-wise examination workspace — question
 // archive, review workflow and question-level editing for the Manager.
-const CACHE_VERSION = 162;
+const CACHE_VERSION = 163;
 const CACHE_NAME = `active-plus-student-v${CACHE_VERSION}-minimal-education`;
 const APP_SHELL = [
   './css/notifications.css',

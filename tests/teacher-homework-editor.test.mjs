@@ -110,6 +110,31 @@ test('publishing is what makes the same work visible', async () => {
   assert.equal(published[0].title, 'প্রকাশিত অঙ্ক');
 });
 
+test('the group picker offers only this class\'s groups, and names who will get the work', () => {
+  ctx.click($('#teacherQuickActions [data-new-activity="homework"]'));
+
+  /* The seeded দশম শ্রেণি roster holds three pupils: two approved বিজ্ঞান বিভাগ and
+     one *rejected* মানবিক. So মানবিক must not be offered — suggesting a group
+     whose only member is rejected would publish work nobody can receive. */
+  assert.deepEqual($$('#teacherGroups option').map(o => o.value), ['বিজ্ঞান বিভাগ'],
+    'only groups with a real, approved pupil in this class are offered');
+
+  const reach = $('#activityReach');
+  assert.match(reach.textContent, /2 জন শিক্ষার্থী পাবে/, 'the real audience is stated');
+  assert.equal(reach.classList.contains('reach-none'), false);
+
+  /* ব্যবসায় শিক্ষা is a genuine group — in দ্বাদশ শ্রেণি. Offering it here let a
+     teacher publish দশম + ব্যবসায় শিক্ষা, which reaches nobody and looked
+     exactly like a successful assign. */
+  ctx.type($('#activity-group'), 'ব্যবসায় শিক্ষা');
+  assert.match(reach.textContent, /কোনো শিক্ষার্থী নেই/, 'an audience of nobody is called out');
+  assert.equal(reach.classList.contains('reach-none'), true, 'and reads as a warning');
+
+  ctx.type($('#activity-group'), 'বিজ্ঞান বিভাগ');
+  assert.match(reach.textContent, /2 জন শিক্ষার্থী পাবে/, 'picking a real group clears it');
+  assert.equal(reach.classList.contains('reach-none'), false);
+});
+
 test('leaving the page tears it down and returns to the list it came from', () => {
   /* Opened from the homework list, so back must go there — not to home, and not
      leave a half-filled form or a locked scroll behind for the next open. */
