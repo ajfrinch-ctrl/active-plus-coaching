@@ -1,3 +1,6 @@
+// v161: the teacher can download a piece of work as a PDF — the same generator
+// the student app calls (js/material-pdf.js), so the sheet the teacher prints is
+// the sheet that was actually sent, institution header and page numbers included.
 // v160: one status vocabulary on the teacher's list — the badge is derived from
 // data the record already carries (draft|published plus each pupil's progress),
 // so a list can say "দেওয়া হয়েছে / জমা পড়ছে ১/২ / সব জমা হয়েছে" without
@@ -34,7 +37,7 @@
 // answer-key PDFs, the student Learning Hub (class → subject → chapter) and the
 // shared brand module. v148: date-wise examination workspace — question
 // archive, review workflow and question-level editing for the Manager.
-const CACHE_VERSION = 160;
+const CACHE_VERSION = 161;
 const CACHE_NAME = `active-plus-student-v${CACHE_VERSION}-minimal-education`;
 const APP_SHELL = [
   './css/notifications.css',
