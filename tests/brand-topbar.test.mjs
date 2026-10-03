@@ -28,7 +28,17 @@ test('every page carries the logo, the institute name and the slogan', () => {
     assert.match(brand, /class="app-brand-institute"[^>]*>Active Plus Coaching</, `${page}: the institute name`);
     assert.match(brand, /data-fixed-tagline/, `${page}: the slogan slot`);
     assert.match(brand, /শিখতে থাকো, এগিয়ে যাও/, `${page}: the slogan`);
-    assert.match(brand, /class="app-brand-name"/, `${page}: the panel name stays too`);
+  }
+});
+
+test('the panel name stays only on the manager and payment bars', () => {
+  for (const page of ['manager.html', 'payment.html']) {
+    const brand = read(page).match(/<div class="app-brand">[\s\S]*?<\/div>/)?.[0] || '';
+    assert.match(brand, /class="app-brand-name"/, `${page}: the panel name is still there`);
+  }
+  for (const page of ['index.html', 'admin.html', 'teacher.html']) {
+    const brand = read(page).match(/<div class="app-brand">[\s\S]*?<\/div>/)?.[0] || '';
+    assert.doesNotMatch(brand, /class="app-brand-name"/, `${page}: the panel name should be gone — logo + slogan only`);
   }
 });
 
