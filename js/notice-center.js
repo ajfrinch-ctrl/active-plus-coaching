@@ -1,5 +1,6 @@
 import { iconMarkup as minimalIcon } from './icons.js';
-/* The notification inbox behind the bell button — one design on every panel.
+import { SECTION_LABEL } from './notification-store.js';
+/* The notification centre behind the bell button — one design on every panel.
  *
  * The bell in the topbar is the same control for a student, the Admin, the
  * Manager, the Teacher and the Payment counter. It shows the unread count and
@@ -8,10 +9,13 @@ import { iconMarkup as minimalIcon } from './icons.js';
  * broadcast, and — for the student who is taking part — a new exam or a
  * published result.
  *
- * Read state is shared with the system notifications: the inbox marks items
- * with the same receipt the engine keeps (activePlus.notifications.seen.v1),
- * so a notification that was read in the list is never announced again and a
- * notification raised by the engine never appears as unread in the list.
+ * The list has two answers: অপঠিত (default) and সব. The count on the bell comes
+ * from the record store (js/notification-store.js), where only `read === false`
+ * counts, so it survives a refresh and never mixes two people on one device.
+ *
+ * Opening the list does NOT mark everything read: an item becomes read when it
+ * is opened, or when the person asks for it with "সব পড়া করুন". That is why the
+ * list can honestly show an unread indicator on the cards it has not opened.
  *
  * The page markup is reused when it exists (#noticeModal on the student page);
  * on the staff panels the same modal is built here, with the same classes, so
@@ -49,6 +53,12 @@ const REFRESH_COLLECTIONS = Object.freeze(['notices', 'settings', 'exams', 'stud
 
 const BN_DIGITS = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
 const bn = value => String(value).replace(/\d/g, digit => BN_DIGITS[Number(digit)]);
+/** 0 hides the badge, 1–9 shows the exact number, 10+ shows "১০+". */
+export function unreadBadgeText(count) {
+  const value = Number(count) || 0;
+  if (value <= 0) return '';
+  return value > 9 ? `${bn(10)}+` : bn(value);
+}
 
 let center = null;
 
@@ -81,6 +91,8 @@ function iconMarkup(kind) {
   return minimalIcon(document.getElementById('icon-bell') ? 'icon-bell' : wanted);
 }
 
+const sectionOf = item => SECTION_LABEL[item?.kind] || 'নোটিশ';
+
 /* ---- modal ------------------------------------------------------------------ */
 
 function buildModal() {
@@ -94,12 +106,25 @@ function buildModal() {
       '<h2 id="apcNoticeTitle">নোটিফিকেশন</h2></div>' +
       '<button type="button" class="modal-close" data-apc-notice-close aria-label="বন্ধ করুন">×</button></div>' +
       '<p class="notice-read-status" data-apc-notice-status role="status"></p>' +
+      '<div class="notice-filters" role="tablist" aria-label="নোটিফিকেশন দেখার ধরন">' +
+        '<button type="button" class="chip active" role="tab" aria-selected="true" data-apc-notice-filter="unread">অপঠিত<span data-apc-notice-unread-chip></span></button>' +
+        '<button type="button" class="chip" role="tab" aria-selected="false" data-apc-notice-filter="all">সব</button>' +
+        '<button type="button" class="mini-btn notice-read-all" data-apc-notice-read-all>সব পড়া করুন</button>' +
+      '</div>' +
       '<div data-apc-notice-list></div>' +
       '<p class="form-note" data-apc-notice-push role="status"></p>' +
-      '<button class="modal-action" type="button" data-apc-notice-close>বুঝেছি</button>' +
     '</section>';
   document.body.append(backdrop);
   return backdrop;
+}
+
+/* The pretty empty state: a checked card instead of a row of buttons. */
+function emptyState(title, note) {
+  return '<div class="notice-empty" data-apc-notice-empty>' +
+      '<span class="notice-empty-art" aria-hidden="true">' + iconMarkup('icon-award') + '</span>' +
+      '<strong>' + escapeHtml(title) + '</strong>' +
+      '<p>' + escapeHtml(note) + '</p>' +
+    '</div>';
 }
 
 /* ---- mount ------------------------------------------------------------------ */
@@ -119,15 +144,30 @@ export function mountNoticeCenter(api) {
   const pushNote = modal.querySelector('[data-apc-notice-push]');
   let pushRow = null;
   let shownFeed = [];
+  let filter = 'unread';
 
-  /* "সব খালি করুন": one button on every panel (page modal or built modal). */
+  /* The filter tabs and the "read all" action, for a page modal that has the
+     list but not this shell (index.html). */
+  let filterRow = modal.querySelector('.notice-filters');
+  if (!filterRow && listBox) {
+    filterRow = document.createElement('div');
+    filterRow.className = 'notice-filters';
+    filterRow.innerHTML =
+      '<button type="button" class="chip active" role="tab" aria-selected="true" data-apc-notice-filter="unread">অপঠিত<span data-apc-notice-unread-chip></span></button>' +
+      '<button type="button" class="chip" role="tab" aria-selected="false" data-apc-notice-filter="all">সব</button>' +
+      '<button type="button" class="mini-btn notice-read-all" data-apc-notice-read-all>সব পড়া করুন</button>';
+    listBox.before(filterRow);
+  }
+
+  /* "তালিকা খালি করুন": one button on every panel (page modal or built modal).
+     Clearing hides the reminder; it never deletes the record or the task. */
   let clearButton = modal.querySelector('[data-apc-notice-clear]');
   if (!clearButton && typeof api.clear === 'function') {
     clearButton = document.createElement('button');
     clearButton.type = 'button';
     clearButton.className = 'mini-btn';
     clearButton.dataset.apcNoticeClear = '';
-    clearButton.textContent = 'সব খালি করুন';
+    clearButton.textContent = 'তালিকা খালি করুন';
     clearButton.hidden = true;
     if (statusLine) statusLine.after(clearButton);
     else if (listBox) listBox.before(clearButton);
@@ -141,46 +181,101 @@ export function mountNoticeCenter(api) {
     }
   }
 
+  /* Unread state: the record store is the source of truth; a page that hands us
+     an older engine (no `unread`) falls back to the read receipts. */
+  function unreadKeys() {
+    if (typeof api.unread === 'function') {
+      try {
+        const count = Number(api.unread());
+        if (Number.isFinite(count)) {
+          const keys = new Set();
+          // Which items are unread still comes from the records; with only a
+          // count available every unread card is painted by position.
+          return { count: Math.max(0, count), keys: typeof api.unreadKeys === 'function' ? new Set(api.unreadKeys()) : null };
+        }
+      } catch { /* fall through to the receipts */ }
+    }
+    const seen = new Set(api.seen ? api.seen() : []);
+    return { count: null, keys: null, seen };
+  }
+
+  function isUnread(item, state) {
+    if (state.keys) return state.keys.has(item.key);
+    if (state.seen) return !state.seen.has(item.key) || item.actionable;
+    return !item.read;
+  }
+
+  function paintBadge(unread) {
+    const bell = document.getElementById('notificationButton');
+    if (!bell) return;
+    let dot = bell.querySelector('.notification-dot');
+    if (!dot) {
+      dot = document.createElement('span');
+      dot.className = 'notification-dot';
+      dot.setAttribute('aria-hidden', 'true');
+      bell.append(dot);
+    }
+    const text = unreadBadgeText(unread);
+    dot.textContent = text;
+    dot.classList.toggle('is-count', text.length > 0);
+    dot.hidden = unread === 0;
+    bell.setAttribute('aria-label', unread
+      ? `নোটিফিকেশন — ${bn(unread)}টি অপঠিত`
+      : 'নোটিফিকেশন — সব পড়া হয়েছে');
+  }
+
+  function paintCard(item, unread) {
+    const opens = item.actionable || Boolean(item.target) || typeof api.openItem === 'function';
+    const label = ACTION_LABEL[item.kind] || (item.actionable ? 'দেখুন' : '');
+    const action = label
+      ? '<button type="button" class="mini-btn approve" data-apc-notice-open="' + escapeHtml(item.key) + '">' + escapeHtml(label) + '</button>'
+      : '';
+    return '<article class="notice-detail' + (unread ? ' unread' : '') + (opens ? ' actionable' : '') + '"' +
+      (opens ? ' data-apc-notice-open="' + escapeHtml(item.key) + '" role="button" tabindex="0"' : '') + '>' +
+      '<span class="notice-detail-icon' + (item.kind === 'broadcast' ? ' light' : '') + '">' + iconMarkup(item.kind) + '</span>' +
+      '<div class="notice-detail-copy"><span class="notice-time">' + escapeHtml(whenText(item)) + '</span>' +
+      '<span class="notice-section-chip">' + escapeHtml(sectionOf(item)) + '</span>' +
+      '<h3>' + escapeHtml(item.title) + '</h3>' +
+      (item.body ? '<p>' + escapeHtml(item.body) + '</p>' : '') + action + '</div>' +
+      (unread ? '<span class="notice-unread-dot" aria-label="অপঠিত"></span>' : '') + '</article>';
+  }
+
   function paint() {
     let feed = [];
     try { feed = api.feed() || []; } catch { feed = []; }
-    const seen = new Set(api.seen ? api.seen() : []);
-    // A registration waiting for a decision stays "unread" until it is opened,
-    // decided or cleared: it is a task, not just news.
-    const unread = feed.filter(item => !seen.has(item.key) || item.actionable).length;
+    const state = unreadKeys();
+    const unreadItems = feed.filter(item => isUnread(item, state));
+    const unread = state.count === null ? unreadItems.length : state.count;
     shownFeed = feed;
+
     if (clearButton) clearButton.hidden = feed.length === 0;
 
-    const bell = document.getElementById('notificationButton');
-    if (bell) {
-      const dot = bell.querySelector('.notification-dot');
-      if (dot) dot.hidden = unread === 0;
-      bell.setAttribute('aria-label', unread
-        ? `নোটিফিকেশন — ${bn(unread)}টি অপঠিত`
-        : 'নোটিফিকেশন — সব পড়া হয়েছে');
-    }
+    const chip = modal.querySelector('[data-apc-notice-unread-chip]');
+    if (chip) chip.textContent = unread ? ` ${bn(unread)}` : '';
+    paintBadge(unread);
+
     if (statusLine) {
-      statusLine.textContent = !feed.length
-        ? 'এখনও কোনো নোটিফিকেশন নেই।'
-        : unread ? `${bn(unread)}টি অপঠিত নোটিফিকেশন` : 'সব নোটিফিকেশন পড়া হয়েছে।';
+      statusLine.textContent = feed.length
+        ? (unread ? `${bn(unread)}টি অপঠিত নোটিফিকেশন` : 'নতুন কোনো অপঠিত নোটিফিকেশন নেই।')
+        : '';
     }
+    const readAll = modal.querySelector('[data-apc-notice-read-all]');
+    if (readAll) readAll.hidden = unread === 0;
+    modal.querySelectorAll('[data-apc-notice-filter]').forEach(tab => {
+      const active = tab.dataset.apcNoticeFilter === filter;
+      tab.classList.toggle('active', active);
+      tab.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
     if (!listBox) return { unread, total: feed.length };
-    listBox.innerHTML = feed.length
-      ? feed.map(item => {
-        const isUnread = !seen.has(item.key) || item.actionable;
-        const opens = item.actionable || Boolean(item.target);
-        const label = ACTION_LABEL[item.kind] || (item.actionable ? 'দেখুন' : '');
-        const action = label
-          ? '<button type="button" class="mini-btn approve" data-apc-notice-open="' + escapeHtml(item.key) + '">' + escapeHtml(label) + '</button>'
-          : '';
-        return '<article class="notice-detail' + (isUnread ? ' unread' : '') + (opens ? ' actionable' : '') + '"' +
-          (opens ? ' data-apc-notice-open="' + escapeHtml(item.key) + '" role="button" tabindex="0"' : '') + '>' +
-          '<span class="notice-detail-icon' + (item.kind === 'broadcast' ? ' light' : '') + '">' + iconMarkup(item.kind) + '</span>' +
-          '<div><span class="notice-time">' + escapeHtml(whenText(item)) + '</span>' +
-          '<h3>' + escapeHtml(item.title) + '</h3>' +
-          (item.body ? '<p>' + escapeHtml(item.body) + '</p>' : '') + action + '</div></article>';
-      }).join('')
-      : '<p class="admin-empty">এখনও কোনো নোটিফিকেশন নেই।</p>';
+
+    if (!feed.length) {
+      listBox.innerHTML = emptyState('সব নোটিফিকেশন দেখা হয়েছে', 'নতুন কোনো নোটিফিকেশন নেই।');
+      return { unread, total: 0 };
+    }
+    const visible = filter === 'unread' ? unreadItems : feed;
+    listBox.innerHTML = visible.length
+      ? visible.map(item => paintCard(item, isUnread(item, state))).join('')
+      : emptyState('সব নোটিফিকেশন দেখা হয়েছে', 'এখন নতুন কোনো নোটিফিকেশন নেই।');
     return { unread, total: feed.length };
   }
 
@@ -236,12 +331,8 @@ export function mountNoticeCenter(api) {
 
   function open() {
     hideAlerts();                              // the list shows them all
-    let result = null;
-    try { result = api.markAllSeen?.(); } catch { /* the list still opens */ }
+    filter = 'unread';
     paint();
-    if (statusLine && result && result.saved === false) {
-      statusLine.textContent = 'পড়ার অবস্থা এইবারের জন্য রাখা হয়েছে; ডিভাইসে সংরক্ষণ হয়নি।';
-    }
     show(true);
   }
 
@@ -251,13 +342,20 @@ export function mountNoticeCenter(api) {
     const bell = event.target?.closest?.('#notificationButton');
     if (bell) { event.preventDefault(); open(); return; }
     if (!modal.contains(event.target)) return;
+    const tab = event.target?.closest?.('[data-apc-notice-filter]');
+    if (tab) { filter = tab.dataset.apcNoticeFilter === 'all' ? 'all' : 'unread'; paint(); return; }
+    if (event.target?.closest?.('[data-apc-notice-read-all]')) {
+      event.preventDefault();
+      readAll();
+      return;
+    }
     const target = event.target?.closest?.('[data-apc-notice-open]');
     if (target) { event.preventDefault(); openItem(target.dataset.apcNoticeOpen); return; }
     if (event.target?.closest?.('[data-apc-notice-clear]')) {
       event.preventDefault();
       try { api.clear?.(); } catch { /* the list repaints anyway */ }
       paint();
-      if (statusLine) statusLine.textContent = 'নোটিফিকেশন খালি করা হয়েছে।';
+      if (statusLine) statusLine.textContent = 'তালিকা খালি করা হয়েছে।';
       return;
     }
     if (!ownsModal) return;
@@ -271,12 +369,38 @@ export function mountNoticeCenter(api) {
     }
   });
 
-  /* An actionable item closes the list and opens its own dialog. */
+  /** Everything in the list is read — the explicit action, never a side effect. */
+  function readAll() {
+    const keys = shownFeed.map(item => item.key);
+    let saved = true;
+    try {
+      if (typeof api.markRead === 'function') saved = api.markRead(keys) !== false;
+      else if (typeof api.markAllSeen === 'function') saved = api.markAllSeen().saved !== false;
+    } catch { saved = false; }
+    paint();
+    if (statusLine) {
+      statusLine.textContent = saved
+        ? 'সব নোটিফিকেশন পড়া হিসেবে চিহ্নিত করা হয়েছে।'
+        : 'পড়ার অবস্থা এইবারের জন্য রাখা হয়েছে; ডিভাইসে সংরক্ষণ হয়নি।';
+    }
+    return saved;
+  }
+
+  /* An actionable item closes the list and opens its own dialog. Either way the
+     item has now been looked at, so it is marked read before it opens. */
   function openItem(key) {
     const item = shownFeed.find(entry => entry.key === key);
-    if (!item || typeof api.openItem !== 'function') return;
-    closeModal();
-    void Promise.resolve(api.openItem(item)).finally(() => paint());
+    if (!item) return;
+    try {
+      if (typeof api.markRead === 'function') api.markRead([key]);
+      else if (typeof api.markAllSeen === 'function') api.markAllSeen();
+    } catch { /* opening still works */ }
+    if (typeof api.openItem === 'function') {
+      closeModal();
+      void Promise.resolve(api.openItem(item)).finally(() => paint());
+      return;
+    }
+    paint();
   }
 
   /* The page modal (#noticeModal) is closed by its own page code; hide it the
@@ -290,13 +414,13 @@ export function mountNoticeCenter(api) {
 
   /* ---- Popup: new notifications, and the "notifications are off" story ----
      One sheet serves both. It sits on a blurred backdrop (css/ui-features.css +
-     the glass skin), carries ক্যান্সেল and বুঝেছি wherever it opens, and never
-     needs the phone's notification permission: it is the in-app half. */
+     the glass skin) and never needs the phone's notification permission: it is
+     the in-app half. There is no acknowledgement button — tapping an item opens
+     it, × (or Escape) puts the sheet away. */
   let alertCard = null;
   let alertBackdrop = null;
   let alertItems = [];
   let alertMode = 'items';
-  let infoKind = 'denied';
 
   const INFO_COPY = {
     denied: 'ব্রাউজার সেটিংসে এই সাইটের নোটিফিকেশন ব্লক করা আছে — Chrome/Safari সেটিংস থেকে অনুমতি দিলে নতুন নোটিশ, পরীক্ষা ও ফলাফলের খবর ফোনেই আসবে।',
@@ -327,7 +451,7 @@ export function mountNoticeCenter(api) {
     document.body.append(alertBackdrop);
     alertBackdrop.addEventListener('click', event => {
       if (event.target === alertBackdrop) { hideAlerts(); return; }
-      if (event.target.closest('[data-apc-alert-close], [data-apc-alert-cancel], [data-apc-alert-ok]')) { hideAlerts(); return; }
+      if (event.target.closest('[data-apc-alert-close]')) { hideAlerts(); return; }
       if (event.target.closest('[data-apc-alert-all]')) { hideAlerts(); open(); return; }
       const row = event.target.closest('[data-apc-alert-open]');
       if (!row) return;
@@ -356,10 +480,7 @@ export function mountNoticeCenter(api) {
   function alertFooter(showAll) {
     return '<footer class="apc-alert-actions">' +
         (showAll || '') +
-        '<div class="apc-alert-choice">' +
-          '<button type="button" class="mini-btn" data-apc-alert-cancel>ক্যান্সেল</button>' +
-          '<button type="button" class="mini-btn primary" data-apc-alert-ok>বুঝেছি</button>' +
-        '</div>' +
+        '<button type="button" class="mini-btn" data-apc-alert-close>বন্ধ করুন</button>' +
       '</footer>';
   }
 
@@ -376,7 +497,7 @@ export function mountNoticeCenter(api) {
       alertHeader('Active Plus আপডেট', 'নতুন নোটিফিকেশন' + (alertItems.length > 1 ? ' · ' + bn(alertItems.length) + 'টি' : '')) +
       '<ul>' + rows + '</ul>' +
       (more ? '<p class="apc-alert-note">' + more + ' নোটিফিকেশন অপেক্ষা করছে।</p>' : '') +
-      alertFooter('<button type="button" class="mini-btn" data-apc-alert-all>সব দেখুন' + (more ? ' (' + more + ')' : '') + '</button>');
+      alertFooter('<button type="button" class="mini-btn primary" data-apc-alert-all>সব দেখুন' + (more ? ' (' + more + ')' : '') + '</button>');
     alertMode = 'items';
     alertBackdrop.hidden = false;
     alertCard.hidden = false;
@@ -386,15 +507,28 @@ export function mountNoticeCenter(api) {
      bell and by the notification pill (js/notifications.js). */
   function showInfo(kind = 'denied') {
     if (!document.body) return false;
-    infoKind = INFO_COPY[kind] ? kind : 'denied';
+    const chosen = INFO_COPY[kind] ? kind : 'denied';
     ensureAlertShell();
     alertCard.innerHTML =
       alertHeader('Active Plus', 'নোটিফিকেশন বন্ধ') +
-      '<p class="apc-alert-copy">' + INFO_COPY[infoKind] + '</p>' +
+      '<p class="apc-alert-copy">' + INFO_COPY[chosen] + '</p>' +
       alertFooter('');
     alertMode = 'info';
     alertBackdrop.hidden = false;
     alertCard.hidden = false;
+    return true;
+  }
+
+  /** The settings screen asks for one sample card, on the same sheet. */
+  function showPreview(item = {}) {
+    if (!document.body) return false;
+    alertItems = [{
+      key: `preview:${Date.now()}`,
+      kind: item.kind || 'notice',
+      title: item.title || 'এটি একটি প্রিভিউ',
+      body: item.body || 'নতুন নোটিশ, পরীক্ষা ও ফলাফলের খবর ঠিক এভাবেই দেখতে পাবেন।'
+    }];
+    paintAlerts();
     return true;
   }
 
@@ -420,6 +554,7 @@ export function mountNoticeCenter(api) {
   const repaint = () => paint();
   window.addEventListener('apc-notifications-updated', repaint);
   window.addEventListener('apc-notification', repaint);
+  window.addEventListener('apc-notification-settings', repaint);
   window.addEventListener('apc-sync-updated', event => {
     const collection = event?.detail?.collection;
     if (!collection || REFRESH_COLLECTIONS.includes(collection)) repaint();
@@ -433,11 +568,16 @@ export function mountNoticeCenter(api) {
     paint,
     open,
     showInfo,
+    showPreview,
+    readAll,
+    setFilter: value => { filter = value === 'all' ? 'all' : 'unread'; paint(); },
+    filter: () => filter,
     close: () => show(false),
     refresh: () => { try { api.refresh?.(); } catch { /* ignore */ } paint(); },
     isOpen: () => !modal.hidden
   };
   paint();
+  void paintPush();
   window.apcNoticeCenter = center;
   return center;
 }

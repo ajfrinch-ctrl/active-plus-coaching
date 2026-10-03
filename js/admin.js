@@ -1,4 +1,6 @@
 import { studentRecordMarkup } from './student-record.js';
+import { initAdminAcademics } from './admin-academics.js';
+import { initNotificationSettings } from './notification-settings.js';
 import { iconMarkup } from './icons.js';
 /* Admin panel — System Control + Staff Management + Permissions + Security +
    Data + Reports + Settings.
@@ -137,6 +139,8 @@ async function enterPanel() {
   await refreshStaffSnapshot();
   renderAll();
   // The Reports Module re-reads who is signed in and what they may see.
+  // Settings → Notification Settings, inside the Admin Profile page.
+  initNotificationSettings({ mount: '#notificationSettings' });
   mountReports($('#adminReports'), { panel: 'admin' });
   // A deep link (admin.html#staff) opens only when this role may see it;
   // anything else falls back to the first permitted tab.
@@ -161,7 +165,7 @@ function exitPanel() {
 
 /* ---------- View switching ---------- */
 
-const moreViews = new Set(['roles', 'data', 'backup', 'security', 'settings', 'profile']);
+const moreViews = new Set(['roles', 'data', 'backup', 'security', 'settings', 'profile', 'academics']);
 
 /**
  * Open one Admin Panel view.
@@ -1410,6 +1414,17 @@ async function refreshStaffSnapshot() {
   }));
 }
 
+/* ---------- Academic Setup (classes ↔ subjects) ---------- */
+let academicsMounted = false;
+function renderAcademics() {
+  if (academicsMounted) return;
+  academicsMounted = true;
+  initAdminAcademics({
+    mount: '#adminAcademics',
+    onToast: (text, isError) => toast(text, isError)
+  });
+}
+
 function renderAll() {
   if (viewExists('dashboard')) renderDashboard();
   if (viewExists('students')) renderStudents();
@@ -1420,6 +1435,7 @@ function renderAll() {
   if (viewExists('data')) renderDataManagement();
   if (viewExists('backup')) renderBackup();
   if (viewExists('security')) renderSecurity();
+  if (viewExists('academics')) renderAcademics();
   if (viewExists('profile')) renderAdminProfile();
   if (viewExists('staff')) void renderStaff();
 }

@@ -125,12 +125,13 @@ export const VIEW_CAPABILITIES = Object.freeze({
   data: CAPABILITIES.DATA_MANAGE,
   backup: CAPABILITIES.BACKUP_MANAGE,
   security: CAPABILITIES.SECURITY_MANAGE,
+  academics: CAPABILITIES.SETTINGS_MANAGE,
   settings: CAPABILITIES.SETTINGS_MANAGE,
   profile: CAPABILITIES.PROFILE_VIEW
 });
 
 /** Views reachable from the "More" menu. */
-export const MORE_VIEWS = Object.freeze(['roles', 'data', 'backup', 'security', 'settings', 'profile']);
+export const MORE_VIEWS = Object.freeze(['roles', 'data', 'backup', 'security', 'academics', 'settings', 'profile']);
 
 /** Bottom-bar entries. `order` keeps the tab order stable no matter which
  *  entries survive the capability filter. */
@@ -148,7 +149,8 @@ export const ADMIN_MORE_NAV = Object.freeze([
   { view: 'data', label: 'Data Management', hint: 'ডেটা সংগ্রহ, পরিসংখ্যান ও পরিষ্কার', icon: 'data', capability: CAPABILITIES.DATA_MANAGE, order: 2 },
   { view: 'backup', label: 'Backup & Restore', hint: 'সম্পূর্ণ ব্যাকআপ নিন ও ফিরিয়ে আনুন', icon: 'backup', capability: CAPABILITIES.BACKUP_MANAGE, order: 3 },
   { view: 'security', label: 'সিকিউরিটি', hint: 'সেশন, পাসওয়ার্ড নীতি ও সুরক্ষিত অ্যাকাউন্ট', icon: 'security', capability: CAPABILITIES.SECURITY_MANAGE, order: 4 },
-  { view: 'settings', label: 'সিস্টেম সেটিংস', hint: 'অ্যাপ কন্ট্রোল, ক্লাস ও ব্র্যান্ডিং', icon: 'settings', capability: CAPABILITIES.SETTINGS_MANAGE, order: 5 },
+  { view: 'academics', label: 'ক্লাসের বিষয় ঠিক করুন', hint: 'ক্লাস, বিষয় ও ম্যাপিংয়ের একক কেন্দ্র', icon: 'settings', capability: CAPABILITIES.SETTINGS_MANAGE, order: 5 },
+  { view: 'settings', label: 'সিস্টেম সেটিংস', hint: 'অ্যাপ কন্ট্রোল ও ব্র্যান্ডিং', icon: 'settings', capability: CAPABILITIES.SETTINGS_MANAGE, order: 6 },
   { view: 'profile', label: 'Admin Profile', hint: 'নিজের পরিচয় ও পাসওয়ার্ড', icon: 'profile', capability: CAPABILITIES.PROFILE_VIEW, order: 6 }
 ]);
 

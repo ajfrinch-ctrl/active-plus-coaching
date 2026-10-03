@@ -13,7 +13,7 @@ const $ = sel => ctx.$(sel);
 const storedExam = () => JSON.parse(ctx.window.localStorage.getItem(EXAM_KEY)).exams[0];
 
 before(async () => {
-  ctx = await loadPage('teacher.html', { seed: { 'activePlus.demo.autofill.v1': 'off', [TEACHER_ASSIGNMENTS_KEY]: JSON.stringify(enabledClasses.map((className, index) => ({ id: `TAS-${index}`, teacherUsername: 'teacher.apc', teacherName: 'Test Teacher', className, group: '', subject: 'Test' }))) } });
+  ctx = await loadPage('teacher.html', { seed: { 'activePlus.demo.autofill.v1': 'off', [TEACHER_ASSIGNMENTS_KEY]: JSON.stringify(enabledClasses.map((className, index) => ({ id: `TAS-${index}`, teacherUsername: 'teacher.apc', teacherName: 'Test Teacher', className, group: '', subject: 'Test', subjects: ['গণিত', 'ইংরেজি', 'বিজ্ঞান', 'বাংলা', 'Test'] }))) } });
   await openStaffPanel(ctx, 'teacher', {
     importPanel: () => import('../js/teacher.js'),
     shellId: 'teacherShell',
@@ -45,7 +45,7 @@ test('writing any other mark is refused with a Bengali explanation', () => {
 test('a saved MCQ draft stores one mark per question', async () => {
   ctx.type($('textarea[name=template]'), examTemplate('mcq'));
   $('input[name=title]').value = 'গণিত MCQ';
-  $('input[name=subject]').value = 'গণিত';
+  $('[name=subject]').value = 'গণিত';
   $('input[name=startAt]').value = '2026-10-01T10:00';
   $('input[name=endAt]').value = '2026-10-01T11:00';
   $('input[name=passPercent]').value = '33';

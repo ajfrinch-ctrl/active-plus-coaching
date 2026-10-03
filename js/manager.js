@@ -5,7 +5,7 @@ import { installPanelGuard, lockPanel, rememberPanelPage, watchOwnPanelSession }
 import { openStaffPasswordDialog } from './staff-password-dialog.js';
 import { loadRoster, saveRoster, syncAccountStatus, loadNotices, saveNotices, loadRoutine, saveRoutine, WEEK_DAYS } from './office-data.js';
 import { financeRepository, monthLabel, dateLabel, studentFeeSummary, newestTransactions, isFinalizedTransaction } from './finance-data.js';
-import { examRepository, examResults, MANAGER_ACTOR } from './exam-data.js';
+import { examRepository, examResults, isLiveExam, MANAGER_ACTOR } from './exam-data.js';
 import { examMeta, resultMarkup, downloadResults } from './exam-ui.js';
 import { teachingRepository, todayISO, TEACHING_KEY } from './teaching-data.js';
 import { enabledClasses } from './config.js';
@@ -16,7 +16,9 @@ import { matchesStudentQuery } from './student-search.js';
 import { registerServiceWorker } from './service-worker.js';
 import { initFixedShell } from './fixed-shell.js';
 import { initExamManager } from './exam-manager.js';
-import { listTeacherAssignments, saveTeacherAssignment, deleteTeacherAssignment, TEACHER_ASSIGNMENTS_KEY } from './teacher-assignments.js';
+import { listTeacherAssignments, saveTeacherAssignment, deleteTeacherAssignment, deleteAssignmentSubject, selectableSubjects, TEACHER_ASSIGNMENTS_KEY } from './teacher-assignments.js';
+import { listClasses } from './academics.js';
+import { initNotificationSettings } from './notification-settings.js';
 import { mountReports, refreshReports } from './reports.js';
 import { iconElement } from './icons.js';
 
@@ -26,20 +28,21 @@ const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
 const bn = value => String(value ?? 0).replace(/\d/g, digit => '০১২৩৪৫৬৭৮৯'[digit]);
 const money = value => `৳${bn(Number(value || 0).toLocaleString('en-US'))}`;
-const MANAGER_VIEWS = Object.freeze(['dashboard', 'students', 'approvals', 'classes', 'teachers', 'finance', 'cash-counter', 'notices', 'routine', 'exams', 'results', 'reports', 'profile', 'more']);
+const MANAGER_VIEWS = Object.freeze(['dashboard', 'students', 'approvals', 'classes', 'teachers', 'finance', 'cash-counter', 'notices', 'routine', 'exams', 'courses', 'results', 'reports', 'profile', 'more']);
 /* The "আরও" page. One row per Manager module, in the same icon + title + hint
    language as the Admin panel's More menu, so a module looks the same wherever
    it is reached from. Labels stay Bangla like the bottom bar; the hint names
    what actually happens inside. */
 const MORE_MODULES = Object.freeze([
-  { view: 'classes', icon: 'book', label: 'ক্লাস ও ব্যাচ', hint: 'শ্রেণি, ব্যাচ ও বিষয় তালিকা' },
-  { view: 'teachers', icon: 'users', label: 'শিক্ষক', hint: 'Teacher assignment ও ক্লাস বণ্টন' },
+  { view: 'classes', icon: 'book', label: 'ক্লাস পরিচালনা করুন', hint: 'শ্রেণি, ব্যাচ ও বিষয় তালিকা' },
+  { view: 'teachers', icon: 'users', label: 'শিক্ষককে ক্লাস ও বিষয় দিন', hint: 'কোন শিক্ষক কোন ক্লাসে কোন বিষয় পড়াবেন' },
   { view: 'finance', icon: 'wallet', label: 'ফি ও পেমেন্ট', hint: 'পেমেন্ট যাচাই, বকেয়া ও কালেকশন' },
   { view: 'cash-counter', icon: 'receipt', label: 'ক্যাশ কাউন্টার', hint: 'কাউন্টার এন্ট্রি ও আদায়ের অবস্থা' },
-  { view: 'notices', icon: 'notice', label: 'নোটিশ', hint: 'নোটিশ তৈরি, সম্পাদনা ও মুছে ফেলা' },
-  { view: 'routine', icon: 'calendar', label: 'রুটিন', hint: 'দিনভিত্তিক ক্লাস ও শিক্ষক সাজানো' },
-  { view: 'exams', icon: 'exam', label: 'পরীক্ষা', hint: 'পরীক্ষা তৈরি, প্রশ্ন ও প্রকাশ' },
-  { view: 'results', icon: 'result', label: 'ফলাফল', hint: 'নম্বর যাচাই ও ফলাফল প্রকাশ' },
+  { view: 'notices', icon: 'notice', label: 'নোটিশ দিন', hint: 'নোটিশ তৈরি, সম্পাদনা ও মুছে ফেলা' },
+  { view: 'routine', icon: 'calendar', label: 'ক্লাস রুটিন তৈরি করুন', hint: 'দিনভিত্তিক ক্লাস ও শিক্ষক সাজানো' },
+  { view: 'exams', icon: 'exam', label: 'পরীক্ষা পরিচালনা করুন', hint: 'পরীক্ষা তৈরি, প্রশ্ন, অনুমোদন ও প্রকাশ' },
+  { view: 'courses', icon: 'book', label: 'পড়াশোনা পরিচালনা করুন', hint: 'কোর্স উপকরণ, নোট ও সাজেশন' },
+  { view: 'results', icon: 'result', label: 'ফলাফল দেখুন', hint: 'নম্বর যাচাই ও ফলাফল প্রকাশ' },
   { view: 'reports', icon: 'reports', label: 'রিপোর্ট', hint: 'রিপোর্ট তৈরি, প্রিভিউ ও ডাউনলোড' },
   { view: 'profile', icon: 'user', label: 'ম্যানেজার প্রোফাইল', hint: 'নিজের পরিচয় ও পাসওয়ার্ড' }
 ]);
@@ -75,6 +78,7 @@ function renderView(view) {
   if (view === 'finance') renderFinance();
   if (view === 'cash-counter') renderCashCounter();
   if (view === 'notices') renderNotices();
+  if (view === 'courses') mountCourseEditor();
   if (view === 'routine') renderRoutine();
   if (view === 'results') renderResults();
   if (view === 'reports') void refreshReports($('#managerReports'));
@@ -109,9 +113,9 @@ function renderDashboard() {
   safeSetText('#mgrTodayCollection', money(totalToday)); safeSetText('#mgrPendingPayments', bn(pendingTx.length)); safeSetText('#mgrTodayClasses', todaysClasses == null ? '—' : bn(todaysClasses));
   safeSetText('#mgrCounterStatus', pendingTx.length ? `${bn(pendingTx.length)}টি এন্ট্রি পর্যালোচনার অপেক্ষায়` : 'অপেক্ষমাণ এন্ট্রি নেই');
   safeSetText('#mgrAttendanceSummary', attendanceSummary());
-  const upcoming = exams.exams.filter(exam => exam.status === 'published' && Number(exam.startAt) >= Date.now()).sort((a, b) => a.startAt - b.startAt).slice(0, 3);
+  const upcoming = exams.exams.filter(exam => isLiveExam(exam) && Number(exam.startAt) >= Date.now()).sort((a, b) => a.startAt - b.startAt).slice(0, 3);
   $('#mgrUpcomingExams').innerHTML = upcoming.length ? upcoming.map(exam => compactRow(exam.title, `${exam.className || '—'} • ${new Date(exam.startAt).toLocaleDateString('bn-BD')}`)).join('') : '<p class="finance-hint">কোনো প্রকাশিত আসন্ন পরীক্ষা নেই।</p>';
-  const pendingResults = exams.exams.filter(exam => exam.status === 'published' && exam.type !== 'mcq' && exam.endAt < Date.now()).map(exam => ({ exam, remaining: (exam.participants || []).filter(person => !exams.attempts.some(a => a.examId === exam.id && a.studentId === person.id && (a.questionScores || a.status === 'absent'))).length })).filter(item => item.remaining > 0);
+  const pendingResults = exams.exams.filter(exam => isLiveExam(exam) && exam.type !== 'mcq' && exam.endAt < Date.now()).map(exam => ({ exam, remaining: (exam.participants || []).filter(person => !exams.attempts.some(a => a.examId === exam.id && a.studentId === person.id && (a.questionScores || a.status === 'absent'))).length })).filter(item => item.remaining > 0);
   $('#mgrPendingResults').innerHTML = pendingResults.length ? pendingResults.slice(0, 3).map(({ exam, remaining }) => compactRow(exam.title, `${bn(remaining)} শিক্ষার্থীর written marks/absence বাকি`)).join('') : '<p class="finance-hint">কোনো অপেক্ষমাণ ফলাফল record নেই।</p>';
   $('#mgrRecentNotices').innerHTML = notices.length ? notices.slice(0, 2).map(item => compactRow(item.title, item.date || '')).join('') : '<p class="finance-hint">এখনো কোনো নোটিশ নেই।</p>';
   const activity = [
@@ -154,13 +158,36 @@ function renderClasses() {
     return `<article class="manager-record"><div class="manager-record-head"><div><h2>${escapeHtml(className)}</h2><p class="manager-meta">${escapeHtml(classCodes[className] || '')}</p></div><span class="badge badge-approved">${bn(classStudents.length)} শিক্ষার্থী</span></div><p>Batch/Group: ${escapeHtml(groups.join(', ') || 'তথ্য নেই')}</p><p>Assigned teacher: ${escapeHtml(teacherNames.join(', ') || 'রুটিনে নেই')}</p></article>`;
   }).join('');
 }
+/** Step 3 of the assignment form: only the subjects Admin enabled for the
+    chosen class (plus any legacy value already on the record, so nothing is
+    stranded). One class → several ticked subjects → several assignments. */
+function renderTeacherSubjectPicker(className, selected = []) {
+  const box = $('#managerTeacherSubjectList');
+  const note = $('[data-teacher-subject-note]');
+  if (!box) return;
+  const chosen = [...new Set([...selected, ...[...box.querySelectorAll('input[name=subject]:checked')].map(input => input.value)])];
+  if (!className) {
+    box.innerHTML = '<p class="admin-empty">আগে ক্লাস নির্বাচন করুন — তারপর সেই ক্লাসের বিষয়গুলো দেখবেন।</p>';
+    if (note) note.textContent = 'Admin-এর ক্লাস ও বিষয় সেটআপ থেকেই এই তালিকা আসে।';
+    return;
+  }
+  const options = selectableSubjects(className, { includeLegacy: chosen });
+  box.innerHTML = options.length
+    ? options.map(name => `<label class="manager-subject-option"><input type="checkbox" name="subject" value="${escapeHtml(name)}" ${chosen.includes(name) ? 'checked' : ''}> ${escapeHtml(name)}</label>`).join('')
+    : '<p class="admin-empty">এই ক্লাসের জন্য Admin কোনো বিষয় চালু করেননি — Admin → ক্লাস ও বিষয় সেটআপ থেকে চালু করুন।</p>';
+  if (note) note.textContent = options.length ? `${bn(options.length)}টি বিষয় চালু আছে — একাধিক টিক দিতে পারবেন।` : '';
+}
 async function renderTeachers() {
   const teacher = await readStaffAccount('teacher');
   const form = $('#managerTeacherAssignmentForm');
   if (form) {
     form.elements.teacherName.value = teacher?.fullName || 'Teacher profile unavailable';
     form.elements.teacherUsername.value = teacher?.username || '';
-    form.elements.className.innerHTML = `<option value="">শ্রেণি নির্বাচন</option>${enabledClasses.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('')}`;
+    const classes = listClasses().map(item => item.name);
+    const choices = classes.length ? classes : [...enabledClasses];
+    form.elements.className.innerHTML = `<option value="">শ্রেণি নির্বাচন</option>${choices.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('')}`;
+    form.elements.className.value = choices[0] || '';
+    renderTeacherSubjectPicker(form.elements.className.value);
   }
   const assignments = teacher ? listTeacherAssignments(teacher.username) : [];
   const schedule = new Map();
@@ -171,7 +198,11 @@ async function renderTeachers() {
     schedule.get(key).push(`${item.className || 'ক্লাস নেই'} • ${item.subject || 'বিষয় নেই'} • ${dayLabel[day] || day} ${item.time || ''}`);
   }));
   const activityCount = (teaching.activities || []).filter(item => item.teacherId === 'TCH-001').length;
-  const cards = assignments.map(item => `<article class="manager-record"><div class="manager-record-head"><div><h2>${escapeHtml(item.className)}${item.group ? ` • ${escapeHtml(item.group)}` : ''}</h2><p class="manager-meta">${escapeHtml(item.subject)} • ${escapeHtml(item.teacherName)}</p></div><button class="mini-btn reject" type="button" data-manager-action="delete-teacher-assignment" data-id="${escapeHtml(item.id)}">Assignment সরান</button></div></article>`);
+  const cards = assignments.map(item => {
+    const subjects = (item.subjects && item.subjects.length ? item.subjects : [item.subject]).filter(Boolean);
+    const chips = subjects.map(name => `<span class="manager-subject-chip">${escapeHtml(name)}<button class="mini-btn reject" type="button" data-manager-action="delete-teacher-subject" data-id="${escapeHtml(item.id)}" data-subject="${escapeHtml(name)}" aria-label="${escapeHtml(name)} সরান">×</button></span>`).join('');
+    return `<article class="manager-record"><div class="manager-record-head"><div><h2>${escapeHtml(item.className)}${item.group ? ` • ${escapeHtml(item.group)}` : ''}</h2><p class="manager-meta">${escapeHtml(item.teacherName)} • ${bn(subjects.length)}টি বিষয়</p><div class="manager-subject-chips">${chips}</div></div><button class="mini-btn reject" type="button" data-manager-action="delete-teacher-assignment" data-id="${escapeHtml(item.id)}">Assignment সরান</button></div></article>`;
+  });
   const routineRows = [...schedule.entries()].flatMap(([name, items]) => items.map(item => `<li>${escapeHtml(name)} — ${escapeHtml(item)}</li>`));
   $('#managerTeacherList').innerHTML = `${cards.join('') || '<p class="admin-empty">এখনো কোনো Teacher class/batch assignment নেই। Teacher panel-এ assignment না থাকলে academic data access বন্ধ থাকবে।</p>'}<article class="manager-record"><h2>Routine schedule</h2><p>নিচের routine entries আলাদা schedule data; এগুলো নিজেরা Teacher access grant করে না।</p><ul>${routineRows.join('') || '<li>কোনো routine assignment নেই।</li>'}</ul><p class="manager-meta">সংরক্ষিত teaching activities: ${bn(activityCount)}</p></article>`;
 }
@@ -213,7 +244,7 @@ function renderRoutine() {
   $('#managerRoutineForm [name=className]').value ||= '';
 }
 function renderResults() {
-  const completed = exams.exams.filter(exam => exam.status === 'published').sort((a, b) => Number(b.endAt || 0) - Number(a.endAt || 0));
+  const completed = exams.exams.filter(exam => isLiveExam(exam)).sort((a, b) => Number(b.endAt || 0) - Number(a.endAt || 0));
   $('#managerResultList').innerHTML = completed.length ? completed.map(exam => `<article class="manager-result-exam">${examMeta(exam)}<p class="finance-hint">${exam.resultsPublished ? 'ফলাফল প্রকাশিত' : 'ফলাফল এখনো শিক্ষার্থীদের জন্য প্রকাশিত নয়'}</p><div class="manager-actions"><button type="button" class="mini-btn" data-manager-action="download-result" data-id="${escapeHtml(exam.id)}">Marks / Result CSV</button>${exam.resultsPublished ? '' : `<button type="button" class="mini-btn approve" data-manager-action="publish-results" data-id="${escapeHtml(exam.id)}">ফলাফল চূড়ান্তভাবে প্রকাশ</button>`}</div>${resultMarkup(exams, exam, true)}</article>`).join('') : '<p class="admin-empty">এখনো কোনো প্রকাশিত পরীক্ষা নেই।</p>';
 }
 function renderProfile() {
@@ -373,7 +404,7 @@ $('#managerPaymentSearch').addEventListener('input', renderFinance);
 $('#managerPaymentStatus').addEventListener('change', renderFinance);
 $('#managerResultList').addEventListener('click', async event => {
   const button = event.target.closest('[data-manager-action]'); if (!button) return;
-  const exam = exams.exams.find(item => item.id === button.dataset.id && item.status === 'published');
+  const exam = exams.exams.find(item => item.id === button.dataset.id && isLiveExam(item));
   if (!exam) return;
   if (button.dataset.managerAction === 'download-result') { downloadResults(exams, exam); return; }
   if (button.dataset.managerAction === 'publish-results') {
@@ -413,17 +444,32 @@ $('#managerRoutineList').addEventListener('click', async event => {
     rows.splice(index, 1); if (!saveRoutine(routine)) return toast('Routine সংরক্ষণ হয়নি।', true); renderRoutine(); toast('Routine entry মুছে ফেলা হয়েছে।');
   }
 });
+$('#managerTeacherAssignmentForm').addEventListener('change', event => {
+  if (event.target.name !== 'className') return;
+  renderTeacherSubjectPicker(event.target.value);
+});
 $('#managerTeacherAssignmentForm').addEventListener('submit', async event => {
   event.preventDefault();
   const form = event.currentTarget;
   if (!(await managerGuard())) return toast('Manager session যাচাই হয়নি।', true);
   const data = new FormData(form);
   try {
-    await saveTeacherAssignment({ className: data.get('className'), group: data.get('group'), subject: data.get('subject') });
+    const subjects = data.getAll('subject').map(String).filter(Boolean);
+    await saveTeacherAssignment({ className: data.get('className'), group: data.get('group'), subjects });
     form.reset(); await renderTeachers(); await loadOperationalData(); toast('Teacher assignment সংরক্ষণ হয়েছে।');
   } catch (error) { toast(error.message || 'Assignment সংরক্ষণ হয়নি।', true); }
 });
 $('#managerTeacherList').addEventListener('click', async event => {
+  const subjectButton = event.target.closest('[data-manager-action="delete-teacher-subject"]');
+  if (subjectButton) {
+    if (!(await managerGuard())) return toast('Manager session যাচাই হয়নি।', true);
+    try {
+      await deleteAssignmentSubject(subjectButton.dataset.id, subjectButton.dataset.subject);
+      await renderTeachers();
+      toast('বিষয়টি assignment থেকে সরানো হয়েছে — বাকি বিষয় অক্ষত আছে।');
+    } catch (error) { toast(error.message || 'বিষয় সরানো হয়নি।', true); }
+    return;
+  }
   const button = event.target.closest('[data-manager-action="delete-teacher-assignment"]');
   if (!button || !window.confirm('এই Teacher assignment সরাবেন?')) return;
   if (!(await managerGuard())) return toast('Manager session যাচাই হয়নি।', true);
@@ -468,8 +514,21 @@ async function enterManager() {
   renderView(MANAGER_VIEWS.includes(wanted) ? wanted : 'dashboard');
   onRouteChange(name => { if (MANAGER_VIEWS.includes(name) && name !== activeView) renderView(name); });
   await loadOperationalData();
+  // Settings → Notification Settings, inside the Manager's own profile page.
+  initNotificationSettings({ mount: '#notificationSettings' });
+  // পড়াশোনা পরিচালনা করুন: the same content library the Teacher writes into.
+  mountCourseEditor();
   mountReports($('#managerReports'), { panel: 'manager' });
   watchOwnPanelSession('manager');
+}
+/** The content editor is mounted once and only painted when its page opens. */
+let courseEditor = null;
+async function mountCourseEditor() {
+  try {
+    const { initCourseEditor } = await import('./course-editor.js');
+    courseEditor = initCourseEditor({ mount: '#managerCourseEditor', role: 'manager', actor: 'MANAGER', toast: message => toast(message) });
+    courseEditor.paint?.();
+  } catch (error) { console.warn('[Active Plus] course editor unavailable:', error?.name || 'unknown'); }
 }
 $('#managerLogout').addEventListener('click', () => { clearStaffSession('manager'); goToLoginPage(); });
 window.addEventListener('storage', event => {

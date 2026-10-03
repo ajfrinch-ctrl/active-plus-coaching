@@ -62,7 +62,12 @@ export const KEYS = Object.freeze({
   account: 'active-plus-account-v1',
   accounts: 'activePlus.db.accounts.v1',
   usernames: 'active-plus-usernames-v1',
-  studentProfile: 'active-plus-student-v1'
+  studentProfile: 'active-plus-student-v1',
+  notifications: 'activePlus.notifications.records.v1',
+  academics: 'activePlus.academics.v1',
+  courseContent: 'activePlus.courseContent.v1',
+  questionBank: 'activePlus.questionBank.v1',
+  notificationSettings: 'activePlus.notificationSettings.v1'
 });
 
 function storage() {

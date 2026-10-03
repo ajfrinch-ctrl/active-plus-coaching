@@ -5,12 +5,13 @@
    letters the student sees in the app), and the footer carries the page number.
    The answer key keeps its own pages after the question pages. */
 import { toBanglaNumber as bn } from './ui.js';
-import { EXAM_TYPES, totalMarks, classExamDate } from './exam-data.js';
+import { EXAM_TYPES, totalMarks, classExamDate, examCodeOf, examDurationMinutes, examDateOf, examStageLabel } from './exam-data.js';
+import { BRAND_NAME, BRAND_TAGLINE, brandLogoLargeSrc } from './brand.js';
 let assets;
 export async function loadAssets() {
   if (!assets) assets = Promise.all([
     new FontFace('ExamBangla', `url("${new URL('../assets/fonts/NotoSansBengali-Variable.ttf', import.meta.url).href}")`, { weight: '100 900' }).load().then(font => document.fonts.add(font)),
-    (async () => { const logo = new Image(); logo.src = new URL('../assets/icons/app-logo.png', import.meta.url).href; await logo.decode(); return logo; })()
+    (async () => { const logo = new Image(); logo.src = brandLogoLargeSrc(import.meta.url); await logo.decode(); return logo; })()
   ]).catch(error => { assets = null; throw error; });
   return assets;
 }
@@ -61,6 +62,17 @@ export function optionLetter(index) {
   return 'ABCDEFGH'[index] || String(index + 1);
 }
 
+/* `২৫-০৮-২০২৬` for the printed header (Asia/Dhaka, the exam's own day). */
+export function examDateShortLabel(exam) {
+  const key = examDateOf(exam);
+  const [year, month, day] = String(key).split('-');
+  return year ? bn(`${day}-${month}-${year}`) : '—';
+}
+export function timeOf(value) {
+  if (!Number.isFinite(Number(value))) return '—';
+  return bn(new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Dhaka', hour: '2-digit', minute: '2-digit', hour12: false }).format(Number(value)));
+}
+
 /* Where the next question goes in a two-column paper. `top`/`bottom` are the
    column bounds, `y` the current cursor and `blockHeight` the question plus its
    options. A block that fits in a column but not in what is left of this one
@@ -77,6 +89,25 @@ export async function downloadExamPDF(exam, { solutions = false, attempt = null,
   if (solutions && Date.now() < exam.endAt) throw new Error('সঠিক উত্তরসহ PDF সবার পরীক্ষা শেষ হলে পাওয়া যাবে।');
   if (!authorPreview && (exam.status !== 'published' || Date.now() < exam.startAt)) throw new Error('প্রশ্ন এখনও প্রকাশের সময় হয়নি।');
   const [font, logo] = await loadAssets(), canvas = document.createElement('canvas'); canvas.width = 1240; canvas.height = 1754;
+  /* The printed code is the paper's permanent identity: it appears on every
+     page footer, so a printed sheet can always be traced back to one record. */
+  const code = examCodeOf(exam);
+  const identity = [
+    ['পরীক্ষার কোড', code],
+    ['শ্রেণি', exam.className || 'সব শ্রেণি'],
+    ['বিষয়', `${exam.subject}${exam.subjectCode ? ` (${exam.subjectCode})` : ''}`],
+    ['পরীক্ষার ধরন', EXAM_TYPES[exam.type] || exam.type],
+    ['অধ্যায়', exam.chapterName || '—'],
+    ['Batch', exam.batchName || exam.group || '—'],
+    ['পরীক্ষার তারিখ', examDateShortLabel(exam)],
+    ['সময়', `${timeOf(exam.startAt)} – ${timeOf(exam.endAt)}`],
+    ['সময়কাল', `${bn(examDurationMinutes(exam))} মিনিট`],
+    ['মোট প্রশ্ন', bn((exam.questions || []).length)],
+    ['পূর্ণমান', bn(totalMarks(exam))],
+    ['পাস নম্বর', bn(Number(exam.passingMarks) || Math.round(totalMarks(exam) * (Number(exam.passPercent) || 33) / 100))],
+    ['প্রতি ভুলে কাটা', exam.type === 'mcq' ? bn(Number(exam.negativeMarks ?? exam.negative) || 0) : 'প্রযোজ্য নয়'],
+    ['অবস্থা', examStageLabel(exam)]
+  ];
   const ctx = canvas.getContext('2d'), pages = [];
   const W = canvas.width, LEFT = 62, RIGHT = W - 62, CONTENT_W = RIGHT - LEFT;
   const FOOT_Y = 1690, BOTTOM = 1652;
@@ -90,8 +121,8 @@ export async function downloadExamPDF(exam, { solutions = false, attempt = null,
     pageNo++;
     ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, canvas.height);
     ctx.drawImage(logo, 62, 42, 72, 72);
-    ctx.fillStyle = '#04795a'; ctx.font = '700 30px ExamBangla'; ctx.fillText('Active Plus Coaching', 150, 80);
-    ctx.font = '22px ExamBangla'; ctx.fillText('শিখতে থাকো, এগিয়ে যাও', 150, 113);
+    ctx.fillStyle = '#04795a'; ctx.font = '700 30px ExamBangla'; ctx.fillText(BRAND_NAME, 150, 80);
+    ctx.font = '22px ExamBangla'; ctx.fillText(BRAND_TAGLINE, 150, 113);
     if (part) {
       ctx.font = '700 22px ExamBangla'; ctx.textAlign = 'right';
       ctx.fillText(part, RIGHT, 82);
@@ -104,7 +135,7 @@ export async function downloadExamPDF(exam, { solutions = false, attempt = null,
 
   const renderFooter = () => {
     ctx.font = '18px ExamBangla'; ctx.fillStyle = '#596960';
-    const label = `${partSolutions ? 'সঠিক উত্তরপত্র' : 'প্রশ্নপত্র'} • Active Plus Coaching`;
+    const label = `${partSolutions ? 'সঠিক উত্তরপত্র' : 'প্রশ্নপত্র'} • ${code} • ${BRAND_NAME}`;
     ctx.fillText(label, LEFT, FOOT_Y);
     if (pageNo) {
       ctx.textAlign = 'right';
@@ -229,13 +260,32 @@ export async function downloadExamPDF(exam, { solutions = false, attempt = null,
     y += 10;
   };
 
-  const drawHead = async () => {
+  /* The paper's own identity card: every field a printed sheet must carry so
+     the exam can be traced without the app (code, class, subject + subject
+     code, type, chapter, date, duration, question count and marks). */
+  const drawIdentity = async () => {
+    const rowH = 34, labelW = 250, colW = (CONTENT_W - labelW) / 2;
     await drawParagraph(`পরীক্ষার নাম: ${exam.title}`, { bold: true, color: '#143b30' });
-    await drawParagraph(`${EXAM_TYPES[exam.type]} • বিষয়: ${exam.subject} • সব শ্রেণি • পূর্ণমান: ${bn(totalMarks(exam))}`);
-    await drawParagraph(`শুরু: ${new Date(exam.startAt).toLocaleString('bn-BD')} • শেষ: ${new Date(exam.endAt).toLocaleString('bn-BD')}`);
-    await drawParagraph(exam.type !== 'mcq'
-      ? `পরের দিন ক্লাসে পরীক্ষা: ${classExamDate(exam.startAt)}। খাতায় উত্তর লিখবে; অনলাইনে লিখিত উত্তর জমা নয়।`
-      : `প্রতি ভুল উত্তরে কাটা নম্বর: ${bn(exam.negative)}। সর্বনিম্ন মোট নম্বর ০।`);
+    for (let index = 0; index < identity.length; index += 2) {
+      if (y + rowH > BOTTOM) { await finishPage(); y = beginPage({ part: partSolutions ? 'উত্তরপত্র' : 'প্রশ্নপত্র' }); }
+      for (let column = 0; column < 2; column++) {
+        const row = identity[index + column];
+        if (!row) continue;
+        const x = LEFT + column * (colW + 10);
+        ctx.fillStyle = '#f2f7f3'; ctx.fillRect(x, y - 24, colW, rowH - 4);
+        ctx.fillStyle = '#596960'; ctx.font = '20px ExamBangla';
+        ctx.fillText(String(row[0]), x + 10, y);
+        ctx.fillStyle = '#143b30'; ctx.font = '700 20px ExamBangla';
+        ctx.fillText(String(row[1]).slice(0, 40), x + labelW - 30, y);
+      }
+      y += rowH;
+    }
+    y += 8;
+  };
+  const drawHead = async () => {
+    await drawIdentity();
+    if (exam.type !== 'mcq') await drawParagraph(`পরের দিন ক্লাসে পরীক্ষা: ${classExamDate(exam.startAt)}। খাতায় উত্তর লিখবে; অনলাইনে লিখিত উত্তর জমা নয়।`);
+    else await drawParagraph(`সর্বনিম্ন মোট নম্বর ০। প্রথম প্রবেশের সীমা ${bn(exam.lateMinutes)} মিনিট।`);
     if (attempt) await drawParagraph(`শিক্ষার্থী: ${attempt.name} • চেষ্টা: ${bn(attempt.number)} • প্রাপ্ত নম্বর: ${attempt.score === undefined ? 'জমা অপেক্ষমাণ' : bn(attempt.score)}`);
     if (exam.instructions) await drawParagraph(exam.instructions);
   };
@@ -303,17 +353,26 @@ export async function downloadExamPDF(exam, { solutions = false, attempt = null,
     y += Math.ceil(questions.length / 6) * 56 + 20;
     for (const [i, q] of questions.entries()) {
       if (y + 120 > BOTTOM) { await finishPage(); y = beginPage({ part: 'উত্তরপত্র' }); }
-      await drawParagraph(`${bn(i + 1)}. ${q.text} [${bn(q.marks)} নম্বর]`, { bold: true, color: '#143b30' });
+      /* Every answer-key row names the question twice: by position (no.) and by
+         its permanent record id, so a paper can be marked against the record. */
+      await drawParagraph(`${bn(i + 1)}. ${q.text} [${bn(q.marks)} নম্বর] — আইডি ${q.uid || q.id || '—'}`, { bold: true, color: '#143b30' });
       if (q.options) {
         const opts = optionsFor(q);
         await drawOptionGrid(q, opts);
         const chosen = opts.findIndex(o => o.id === attempt?.answers?.[q.id]);
         const right = opts.findIndex(o => o.id === q.answer);
         const correct = chosen >= 0 && chosen === right;
+        const rightOption = opts[right];
+        await drawParagraph(
+          rightOption ? `সঠিক উত্তর: ${rightOption.id}. ${rightOption.text}` : 'সঠিক উত্তর: —',
+          { size: 19, color: '#3d8660' }
+        );
         await drawParagraph(
           chosen < 0 ? 'তোমার উত্তর: অনুত্তরিত' : `তুমি ${'ABCD'[chosen]} উত্তরটি দিয়েছ${correct ? ' — সঠিক' : ' — ভুল'}`,
           { size: 19, color: correct ? '#3d8660' : '#a33e30' }
         );
+      } else if (q.answerText) {
+        await drawParagraph(`মডেল উত্তর: ${q.answerText}`, { size: 19, color: '#3d8660' });
       }
     }
     await finishPage();

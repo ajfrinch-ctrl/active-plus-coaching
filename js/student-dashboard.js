@@ -3,7 +3,7 @@ import { iconMarkup } from './icons.js';
    for this student; absent classes, results or fees are never filled with demo values. */
 import { loadRoutine, WEEK_DAYS, ROUTINE_KEY } from './office-data.js';
 import { teachingRepository, publishedForStudent } from './teaching-data.js';
-import { examRepository, examMatchesStudent, watchExams } from './exam-data.js';
+import { examRepository, examMatchesStudent, watchExams, isStudentVisibleExam } from './exam-data.js';
 import { financeRepository, studentFeeSummary } from './finance-data.js';
 import { toBanglaNumber as bn } from './ui.js';
 
@@ -133,7 +133,7 @@ export function initStudentDashboard({ getStudent, getAccount }) {
       ]);
       if (current !== request) return;
       const activities = publishedForStudent(teachingDb.activities || [], student);
-      const exams = (examDb.exams || []).filter(exam => exam.status === 'published' && examMatchesStudent(exam, student));
+      const exams = (examDb.exams || []).filter(exam => isStudentVisibleExam(exam) && examMatchesStudent(exam, student));
       renderRoutine(student, activities);
       const progress = renderProgress(activities, exams, student.id);
       renderChallenge(progress.homework, progress, student.id);
@@ -142,10 +142,21 @@ export function initStudentDashboard({ getStudent, getAccount }) {
     } catch {
       if (current !== request) return;
       $('#homeView')?.classList.remove('is-empty-routine');
-      $('#dashboardRoutineList').dataset.state = 'error';
-      $('#dashboardRoutineList').innerHTML = '<p class="dashboard-empty">আজকের তথ্য লোড করা যায়নি। আবার চেষ্টা করুন।</p>';
+      const list = $('#dashboardRoutineList');
+      list.dataset.state = 'error';
+      /* Full-width row, readable when it wraps, and the retry lives inside the
+         same component — a half-width chip would break the dashboard grid. */
+      list.innerHTML = '<div class="dashboard-routine-error" role="alert" data-routine-error>'
+        + '<span class="dashboard-routine-error-icon" aria-hidden="true">!</span>'
+        + '<div class="dashboard-routine-error-copy"><strong>আজকের ক্লাস আনা যায়নি</strong>'
+        + '<p>সংরক্ষিত রুটিন পড়া যায়নি বা সংযোগ বিচ্ছিন্ন। তথ্য মুছে যায়নি — আবার চেষ্টা করুন।</p></div>'
+        + '<button type="button" class="mini-btn primary" data-routine-retry>আবার চেষ্টা করুন</button></div>';
     }
   }
+  /* The retry button sits inside the error row itself. */
+  $('#dashboardRoutineList')?.addEventListener('click', event => {
+    if (event.target.closest('[data-routine-retry]')) void refresh();
+  });
   watchExams(() => { void refresh(); });
   window.addEventListener('teaching-data-updated', refresh);
   window.addEventListener('storage', event => {

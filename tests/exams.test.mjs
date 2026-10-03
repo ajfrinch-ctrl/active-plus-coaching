@@ -12,7 +12,7 @@ let clock;
 const start = new Date('2026-10-01T10:00:00Z').getTime(), end = start + 3600000;
 const [one, two, three] = adminStudents.filter(s => s.status === 'approved');
 function setup() {
-  const assignments = enabledClasses.map((className, index) => ({ id: `TAS-${index}`, teacherUsername: 'teacher.apc', teacherName: 'Test Teacher', className, group: '', subject: 'Test' }));
+  const assignments = enabledClasses.map((className, index) => ({ id: `TAS-${index}`, teacherUsername: 'teacher.apc', teacherName: 'Test Teacher', className, group: '', subject: 'Test', subjects: ['গণিত', 'ইংরেজি', 'বিজ্ঞান', 'বাংলা', 'Test'] }));
   const store = new Map([[ROSTER_KEY, JSON.stringify(adminStudents)], [TEACHER_ASSIGNMENTS_KEY, JSON.stringify(assignments)], [STAFF_ACCOUNTS.teacher.accountKey, JSON.stringify({ role: 'teacher', username: 'teacher.apc', fullName: 'Test Teacher', status: 'active' })], [STAFF_ACCOUNTS.manager.accountKey, JSON.stringify({ role: 'manager', username: 'manager.apc', fullName: 'Test Manager', status: 'active' })]]); let fail = false, events = 0;
   clock = start - 3600000; Date.now = () => clock;
   Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { onLine: true } });

@@ -117,7 +117,7 @@ test('"সব দেখুন" opens the list', async () => {
   assert.equal(inbox().hidden, false);
 });
 
-test('the popup always offers ক্যান্সেল and বুঝেছি, on a blurred backdrop', async () => {
+test('the popup is closed by its own controls — no acknowledgement wording anywhere', async () => {
   ctx.window.localStorage.setItem(KEYS.notices, JSON.stringify([notice('N-9', 'নবম নোটিশ')]));
   controller.refresh();
   await ctx.waitFor(() => cardVisible(), 3000);
@@ -126,29 +126,30 @@ test('the popup always offers ক্যান্সেল and বুঝেছি
   assert.equal(backdrop.contains(card()), true, 'the sheet lives inside the backdrop');
   assert.equal(card().getAttribute('role'), 'dialog');
   assert.equal(card().getAttribute('aria-modal'), 'true');
+  // The forbidden acknowledgements are gone for good; × and "বন্ধ করুন" close it.
+  assert.doesNotMatch(card().textContent, /বুঝেছি|ঠিক আছে|আমি বুঝেছি/);
+  const closeButton = card().querySelector('[data-apc-alert-close]');
+  assert.ok(closeButton, 'the popup has no close control');
   const cancel = ctx.$('#apcInAppAlert [data-apc-alert-cancel]');
-  const ok = ctx.$('#apcInAppAlert [data-apc-alert-ok]');
-  assert.ok(cancel && ok, 'both answers are in the popup');
-  assert.match(cancel.textContent, /ক্যান্সেল/);
-  assert.match(ok.textContent, /বুঝেছি/);
+  assert.equal(cancel, null, 'the ক্যান্সেল/বুঝেছি pair must not come back');
   // The backdrop is what blurs the page behind the sheet.
   const css = readFileSync(new URL('../css/ui-features.css', import.meta.url), 'utf8');
   assert.match(css, /\.apc-alert-backdrop\{[^}]*background:var\(--modal-backdrop\)/, 'the backdrop has no dim layer');
   const skin = readFileSync(new URL('../css/ui-interior.css', import.meta.url), 'utf8');
   assert.match(skin, /\.apc-alert-backdrop/, 'the glass skin does not blur the popup backdrop');
-  // ক্যান্সেল closes it and leaves the item in the bell list, like × does.
-  ctx.click(cancel);
-  assert.equal(cardVisible(), false, 'ক্যান্সেল did not close the popup');
+  // "বন্ধ করুন" closes it and leaves the item in the bell list.
+  ctx.click([...card().querySelectorAll('[data-apc-alert-close]')].at(-1));
+  assert.equal(cardVisible(), false, 'the close button did not close the popup');
   assert.equal(backdrop.hidden, true, 'the blurred backdrop stayed over the page');
   assert.ok(controller.feed().some(item => item.key.startsWith('notice:N-9')));
 });
 
-test('বুঝেছি closes the popup too, and Escape always works', async () => {
+test('× on the popup closes it and Escape always works', async () => {
   ctx.window.localStorage.setItem(KEYS.notices, JSON.stringify([notice('N-10', 'দশম নোটিশ')]));
   controller.refresh();
   await ctx.waitFor(() => cardVisible(), 3000);
-  ctx.click(ctx.$('#apcInAppAlert [data-apc-alert-ok]'));
-  assert.equal(cardVisible(), false, 'বুঝেছি did not close the popup');
+  ctx.click(ctx.$('#apcInAppAlert [data-apc-alert-close]'));
+  assert.equal(cardVisible(), false, '× did not close the popup');
   ctx.window.localStorage.setItem(KEYS.notices, JSON.stringify([notice('N-11', 'এগারোতম নোটিশ')]));
   controller.refresh();
   await ctx.waitFor(() => cardVisible(), 3000);
@@ -163,16 +164,15 @@ test('the off switch is explained in the same popup, on the same blurred backdro
   assert.equal(cardVisible(), true);
   assert.match(card().textContent, /নোটিফিকেশন বন্ধ/);
   assert.match(card().textContent, /ব্রাউজার সেটিংস/);
-  assert.match(card().textContent, /ক্যান্সেল/);
-  assert.match(card().textContent, /বুঝেছি/);
+  assert.doesNotMatch(card().textContent, /বুঝেছি|ঠিক আছে|আমি বুঝেছি/);
   assert.equal(ctx.$('#apcAlertBackdrop').hidden, false, 'the off-state popup has no backdrop');
-  ctx.click(ctx.$('#apcInAppAlert [data-apc-alert-ok]'));
+  ctx.click(ctx.$('#apcInAppAlert [data-apc-alert-close]'));
   assert.equal(cardVisible(), false);
   // Turning notifications off tells the same story (the pill path).
   ctx.window.document.dispatchEvent(new ctx.window.CustomEvent('apc-notifications-updated'));
   assert.equal(center.showInfo('disabled'), true);
   assert.match(card().textContent, /বন্ধ করা হয়েছে/);
-  ctx.click(ctx.$('#apcInAppAlert [data-apc-alert-cancel]'));
+  ctx.click(ctx.$('#apcInAppAlert [data-apc-alert-close]'));
   assert.equal(cardVisible(), false);
 });
 

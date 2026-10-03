@@ -22,7 +22,7 @@ const honours = adminStudents.find(s => s.id === '260716011');        // অন�
 
 before(async () => {
   ctx = await loadPage('teacher.html', {
-    seed: { 'activePlus.demo.autofill.v1': 'off', [ROSTER_KEY]: JSON.stringify(adminStudents), [TEACHER_ASSIGNMENTS_KEY]: JSON.stringify(enabledClasses.map((className, index) => ({ id: `TAS-${index}`, teacherUsername: 'teacher.apc', teacherName: 'Test Teacher', className, group: '', subject: 'Test' }))) }
+    seed: { 'activePlus.demo.autofill.v1': 'off', [ROSTER_KEY]: JSON.stringify(adminStudents), [TEACHER_ASSIGNMENTS_KEY]: JSON.stringify(enabledClasses.map((className, index) => ({ id: `TAS-${index}`, teacherUsername: 'teacher.apc', teacherName: 'Test Teacher', className, group: '', subject: 'Test', subjects: ['গণিত', 'ইংরেজি', 'বিজ্ঞান', 'বাংলা', 'Test'] }))) }
   });
   repo = (await import('../js/exam-data.js')).examRepository;
   await provisionStaff('manager');
@@ -47,7 +47,7 @@ test('the exam editor asks which class the exam is for', () => {
 
 test('saving an exam records the chosen class and the card shows it', async () => {
   ctx.type($('input[name=title]'), 'শ্রেণি পরীক্ষা — ত্রিকোণমিতি');
-  ctx.type($('input[name=subject]'), 'গণিত');
+  ctx.type($('[name=subject]'), 'গণিত');
   ctx.$('select[name=className]').value = tenth.className;
   ctx.type($('textarea[name=template]'), examTemplate('mcq'));
   ctx.submit($('[data-exam-form]'));
