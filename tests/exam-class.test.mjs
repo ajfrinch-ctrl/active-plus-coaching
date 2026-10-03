@@ -51,6 +51,10 @@ test('saving an exam records the chosen class and the card shows it', async () =
   ctx.$('select[name=className]').value = tenth.className;
   ctx.type($('textarea[name=template]'), examTemplate('mcq'));
   ctx.submit($('[data-exam-form]'));
+  /* The save runs through the panel's async run() wrapper; wait for the record
+     to land instead of guessing how long that takes. A fixed 60ms wait made
+     this file fail three tests whenever the suite ran under CPU load. */
+  await ctx.waitFor(() => exams().length > 0);
   await settle();
 
   const saved = exams()[0];
