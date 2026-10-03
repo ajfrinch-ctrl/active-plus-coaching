@@ -3,7 +3,7 @@ import { rememberRoute, onRouteChange, routeName } from './panel-route.js';
 import { decideRegistration, DECISION_MESSAGES, DECIDED_EVENT } from './registration-review.js';
 import { installPanelGuard, lockPanel, rememberPanelPage, watchOwnPanelSession } from './panel-lockdown.js';
 import { openStaffPasswordDialog } from './staff-password-dialog.js';
-import { loadRoster, saveRoster, syncAccountStatus, loadNotices, saveNotices, loadRoutine, saveRoutine, WEEK_DAYS } from './office-data.js';
+import { loadRoster, saveRoster, syncAccountStatus, loadNotices, loadAllNotices, saveNotices, loadRoutine, saveRoutine, WEEK_DAYS } from './office-data.js';
 import { financeRepository, monthLabel, dateLabel, studentFeeSummary, newestTransactions, isFinalizedTransaction } from './finance-data.js';
 import { examRepository, examResults, isLiveExam, MANAGER_ACTOR } from './exam-data.js';
 import { examMeta, resultMarkup, downloadResults } from './exam-ui.js';
@@ -54,7 +54,7 @@ const MORE_MODULES = Object.freeze([
 ]);
 const dayLabel = Object.freeze({ sat: 'শনিবার', sun: 'রবিবার', mon: 'সোমবার', tue: 'মঙ্গলবার', wed: 'বুধবার', thu: 'বৃহস্পতিবার' });
 const statusLabel = Object.freeze({ approved: 'সক্রিয়', pending: 'অপেক্ষমাণ', rejected: 'বাতিল' });
-let students = loadRoster(), notices = loadNotices(), routine = loadRoutine(), transactions = [], exams = { exams: [], attempts: [] }, teaching = { activities: [] }, managerAccount = null;
+let students = loadRoster(), notices = loadAllNotices(), routine = loadRoutine(), transactions = [], exams = { exams: [], attempts: [] }, teaching = { activities: [] }, managerAccount = null;
 let activeView = 'dashboard', studentScope = 'all', cashScope = 'pending', routineDay = 'sat', examStarted = false, managerBusy = false, noticeSettings = null;
 
 function toast(message, error = false) {
@@ -241,7 +241,12 @@ function renderCashCounter() {
   $$('[data-cash-scope]').forEach(button => button.classList.toggle('active', button.dataset.cashScope === cashScope));
 }
 function renderNotices() {
-  $('#managerNoticeList').innerHTML = notices.length ? notices.map(item => `<article class="manager-record"><div class="manager-record-head"><div><h2>${escapeHtml(item.title)}</h2><p class="manager-meta">${escapeHtml(item.id)} • ${escapeHtml(item.audience || 'সকল শিক্ষার্থী')} • ${escapeHtml(item.date || '')}</p></div><div class="manager-actions"><button class="mini-btn" data-manager-action="edit-notice" data-id="${escapeHtml(item.id)}" type="button">Edit</button><button class="mini-btn reject" data-manager-action="delete-notice" data-id="${escapeHtml(item.id)}" type="button">Delete</button></div></div><p>${escapeHtml(item.body)}</p></article>`).join('') : emptyState({ icon: 'notice', title: 'কোনো operational notice নেই।' });
+  $('#managerNoticeList').innerHTML = notices.length ? notices.map(item => {
+    /* A draft is the Manager's own work in progress: labelled as such, and the
+       card says plainly that nobody has received it yet. */
+    const draft = item.status === 'draft';
+    return `<article class="manager-record"><div class="manager-record-head"><div><h2>${draft ? '<span class="badge badge-pending">খসড়া</span> ' : ''}${escapeHtml(item.title)}</h2><p class="manager-meta">${escapeHtml(item.id)} • ${escapeHtml(item.audience || 'সকল শিক্ষার্থী')} • ${escapeHtml(item.date || '')}${draft ? ' • শিক্ষার্থীরা এখনো দেখবে না' : ''}</p></div><div class="manager-actions">${draft ? `<button class="mini-btn approve" data-manager-action="publish-notice" data-id="${escapeHtml(item.id)}" type="button">প্রকাশ করুন</button>` : ''}<button class="mini-btn" data-manager-action="edit-notice" data-id="${escapeHtml(item.id)}" type="button">Edit</button><button class="mini-btn reject" data-manager-action="delete-notice" data-id="${escapeHtml(item.id)}" type="button">Delete</button></div></div><p>${escapeHtml(item.body)}</p></article>`;
+  }).join('') : emptyState({ icon: 'notice', title: 'কোনো operational notice নেই।' });
 }
 function renderRoutine() {
   // This route is reachable directly from Home/More: required class choices
@@ -262,7 +267,7 @@ function renderProfile() {
   $('#managerProfileCard').innerHTML = `<div class="manager-profile-list"><div><small>নাম</small><strong>${escapeHtml(account.fullName || 'Manager')}</strong></div><div><small>Username</small><strong>${escapeHtml(account.username || '—')}</strong></div><div><small>Contact</small><strong>${escapeHtml(account.mobile || '—')}</strong></div><div><small>Email</small><strong>${escapeHtml(account.email || '—')}</strong></div><div><small>Role</small><strong>Manager — Operational Controller</strong></div><div><small>Account status</small><strong>${escapeHtml(account.status || account.accountStatus || 'active')}</strong></div></div>`;
 }
 async function loadOperationalData() {
-  students = loadRoster(); notices = loadNotices(); routine = loadRoutine();
+  students = loadRoster(); notices = loadAllNotices(); routine = loadRoutine();
   const [tx, examData, teachingData] = await Promise.allSettled([financeRepository.listTransactions(), examRepository.list(), teachingRepository.listForManager()]);
   const failures = [tx, examData, teachingData].filter(result => result.status === 'rejected').length;
   $('#managerDataError').hidden = failures === 0;
@@ -423,19 +428,34 @@ $('#managerResultList').addEventListener('click', async event => {
     catch (error) { toast(error.message || 'ফলাফল প্রকাশ হয়নি।', true); }
   }
 });
+/* Saving a draft must never be the same act as publishing, so the two buttons
+   carry their intent and it is read on click — a programmatic submit carries no
+   submitter, and guessing wrong here would publish something unfinished. */
+let noticeIntent = 'published';
+$('#managerNoticeForm').addEventListener('click', event => {
+  const chosen = event.target.closest('[data-save-notice]');
+  if (chosen) noticeIntent = chosen.dataset.saveNotice;
+});
 $('#managerNoticeForm').addEventListener('submit', async event => {
   event.preventDefault();
   const form = event.currentTarget;   // null again after the await below
-  if (!(await managerGuard())) return toast('Manager session যাচাই হয়নি।', true);
+  if (!(await managerGuard())) return toast('Manager session যাচাই হয়নি।', true);
   const data = new FormData(form); const title = String(data.get('title') || '').trim(), body = String(data.get('body') || '').trim();
   if (!title || !body) return;
-  notices.unshift({ id: newId('NOT'), title: title.slice(0, 120), body: body.slice(0, 1000), audience: String(data.get('audience')), date: dateLabel(new Date()), createdAt: new Date().toISOString(), status: 'published', author: managerAccount?.username || 'manager' });
-  if (!saveNotices(notices)) return toast('নোটিশ সংরক্ষণ হয়নি।', true);
-  form.reset(); await loadOperationalData(); renderNotices(); toast('নোটিশ প্রকাশিত হয়েছে।');
+  const status = noticeIntent === 'draft' ? 'draft' : 'published';
+  notices.unshift({ id: newId('NOT'), title: title.slice(0, 120), body: body.slice(0, 1000), audience: String(data.get('audience')), date: dateLabel(new Date()), createdAt: new Date().toISOString(), status: status, author: managerAccount?.username || 'manager' });
+  if (!saveNotices(notices)) return toast('নোটিশ সংরক্ষণ হয়নি।', true);
+  form.reset(); await loadOperationalData(); renderNotices();
+  toast(status === 'draft' ? 'খসড়া সংরক্ষিত হয়েছে — শিক্ষার্থীরা এটি দেখবে না।' : 'নোটিশ প্রকাশিত হয়েছে।');
 });
 $('#managerNoticeList').addEventListener('click', async event => {
   const button = event.target.closest('[data-manager-action]'); if (!button) return;
   const notice = notices.find(item => item.id === button.dataset.id); if (!notice) return;
+    if (button.dataset.managerAction === 'publish-notice') {
+      if (!(await managerGuard())) return toast('Manager session যাচাই হয়নি।', true);
+      notices = notices.map(item => item.id === notice.id ? { ...item, status: 'published' } : item);
+      if (saveNotices(notices)) { renderNotices(); toast('নোটিশ প্রকাশিত হয়েছে।'); }
+    }
   if (button.dataset.managerAction === 'edit-notice') await editNotice(notice);
   if (button.dataset.managerAction === 'delete-notice') {
     if (!await confirmAction({ title: 'নোটিশ মুছে ফেলবেন?', message: 'এই নোটিশ মুছে ফেললে শিক্ষার্থী ও শিক্ষক প্যানেল থেকেও সরে যাবে।', confirmLabel: 'মুছে ফেলুন', tone: 'danger', eyebrow: 'ম্যানেজার প্যানেল' })) return;

@@ -1,3 +1,6 @@
+// v166: a notice can now be held as a draft. loadNotices() drops drafts at the
+// one read point every module shares, so a half-written notice cannot reach a
+// student; only the Manager panel (loadAllNotices) sees its own drafts.
 // v165: the student's exam list is filed by when they can act on it —
 // "এখন দেওয়া যাবে", "আসন্ন", "সম্পন্ন" — instead of one flat run of cards.
 // v164: the last two private empty states are gone — notice-center.js kept its
@@ -48,7 +51,7 @@
 // answer-key PDFs, the student Learning Hub (class → subject → chapter) and the
 // shared brand module. v148: date-wise examination workspace — question
 // archive, review workflow and question-level editing for the Manager.
-const CACHE_VERSION = 165;
+const CACHE_VERSION = 166;
 const CACHE_NAME = `active-plus-student-v${CACHE_VERSION}-minimal-education`;
 const APP_SHELL = [
   './css/notifications.css',

@@ -119,6 +119,14 @@ export async function syncAccountStatus(studentId, status) {
 }
 
 export function loadNotices() {
+  /* Drafts belong to whoever is writing them. Every reader in the app comes
+     through here, so dropping them at this one point means a half-written
+     notice cannot reach a student via some forgotten call site. */
+  return listDocuments('notices').filter(notice => notice.status !== 'draft');
+}
+
+/* The Manager panel is the only caller allowed to see its own drafts. */
+export function loadAllNotices() {
   return listDocuments('notices');
 }
 
