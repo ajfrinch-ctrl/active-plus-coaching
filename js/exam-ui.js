@@ -9,6 +9,30 @@ export const when = value => new Date(value).toLocaleString('bn-BD', { dateStyle
 export function examMeta(e) {
   return `<span class="exam-tag">${EXAM_TYPES[e.type]}</span><span class="exam-tag">${EXAM_STATUSES[e.status]}</span><h3>${esc(e.title)}</h3><p>${esc(e.subject)} • ${esc(e.className || 'সব শ্রেণি')}${e.group ? ` • ${esc(e.group)}` : ''} • পূর্ণমান ${num(totalMarks(e))}</p><small>পরীক্ষার কোড: <strong>${esc(examCodeOf(e))}</strong>${e.chapterName ? ` • অধ্যায়: ${esc(e.chapterName)}` : ''}<br>শুরু: ${esc(when(e.startAt))}<br>শেষ: ${esc(when(e.endAt))}</small>${e.type !== 'mcq' ? `<p class="exam-note">প্রশ্ন ডাউনলোড করে পরের দিন ক্লাসে পরীক্ষা: ${esc(classExamDate(e.startAt))}</p>` : ''}`;
 }
+/* One renderer for a question, whether a pupil is answering it or staff are
+   looking at it before publishing. §39: the preview has to BE the pupil's
+   paper, not a second drawing of it — otherwise a layout fault only shows up
+   after the exam is live. The answering path is byte-identical to the inline
+   markup this replaced; `answering: false` keeps the same shell and shows the
+   options as disabled radios so nothing can be recorded by accident. */
+export function examQuestionMarkup(q, index, { optionIds = null, selected = null, answering = false } = {}) {
+  const options = q.options || [];
+  const ids = optionIds || options.map(o => o.id);
+  const body = ids.map((id, j) => {
+    const option = options.find(o => o.id === id);
+    if (!option) return '';
+    const control = answering
+      ? `<input type="radio" name="answer-${q.id}" value="${id}" data-answer-question="${q.id}" ${selected === id ? 'checked' : ''}>`
+      : `<input type="radio" disabled aria-hidden="true" tabindex="-1">`;
+    return `<label class="exam-option">${control}<span>${'ABCD'[j]}. ${esc(option.text)}</span></label>`;
+  }).join('');
+  return `<fieldset class="exam-question"><legend>প্রশ্ন ${num(index + 1)} • ${num(q.marks)} নম্বর</legend><p>${esc(q.text)}</p>${body}</fieldset>`;
+}
+
+export function examPaperMarkup(exam, { optionOrder = null } = {}) {
+  return `<div class="exam-question-list">${(exam.questions || []).map((q, i) => examQuestionMarkup(q, i, { optionIds: optionOrder?.[q.id] || null })).join('')}</div>`;
+}
+
 export function questionPreview(e, answers = false) {
   return `<div class="exam-question-list">${e.questions.map((q, i) => `<article class="exam-question"><small>প্রশ্ন ${num(i + 1)} • ${num(q.marks)} নম্বর</small><p>${esc(q.text)}</p>${q.options ? q.options.map(o => `<p>${o.id}. ${esc(o.text)}</p>`).join('') : ''}${answers && q.answer ? `<strong>সঠিক উত্তর: ${q.answer}</strong>` : ''}</article>`).join('')}</div>`;
 }

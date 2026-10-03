@@ -1,5 +1,5 @@
 import { examRepository as repo, examMatchesStudent, retryEligibility, firstAttemptMean, examResults, totalMarks, watchExams, isStudentVisibleExam } from './exam-data.js';
-import { examMeta, resultMarkup, attemptStage, stageTag, codeTag, esc, num } from './exam-ui.js';
+import { examQuestionMarkup, examMeta, resultMarkup, attemptStage, stageTag, codeTag, esc, num } from './exam-ui.js';
 import { emptyState } from './ui-states.js';
 import { downloadExamPDF } from './exam-pdf.js';
 
@@ -48,10 +48,7 @@ export function initStudentExams({ getStudent, getAccount }) {
     content.innerHTML = `<div class="exam-actions">${button('list', '← তালিকা (উত্তর সংরক্ষিত থাকবে)')}</div><div class="exam-timer"><span>সবার জন্য একই শেষ সময় • চেষ্টা ${num(a.number)}</span><strong data-exam-clock aria-live="off"></strong><em class="exam-timer-hint" data-low-hint hidden></em><small data-answer-status>উত্তর এই ফোনে সংরক্ষিত হচ্ছে।</small></div><h2>${esc(e.title)}</h2><p class="exam-note">সব প্রশ্ন একসঙ্গে দেখানো হয়েছে — খুঁজতে স্ক্রল করো। সময় শেষ হলে উত্তরপত্র <strong>স্বয়ংক্রিয়ভাবে জমা</strong> হবে; ততক্ষণ যেকোনো উত্তরের অপশন বদলাতে পারবে। নেট না থাকলেও উত্তর এই ফোনে সংরক্ষিত থাকবে, সংযোগ ফিরলে জমা হবে।</p>
       <div class="exam-question-list">${a.order.map((item, i) => {
         const q = e.questions.find(q => q.id === item.id);
-        return `<fieldset class="exam-question"><legend>প্রশ্ন ${num(i + 1)} • ${num(q.marks)} নম্বর</legend><p>${esc(q.text)}</p>${item.options.map((id, j) => {
-          const option = q.options.find(o => o.id === id);
-          return `<label class="exam-option"><input type="radio" name="answer-${q.id}" value="${id}" data-answer-question="${q.id}" ${a.answers[q.id] === id ? 'checked' : ''}><span>${'ABCD'[j]}. ${esc(option.text)}</span></label>`;
-        }).join('')}</fieldset>`;
+        return examQuestionMarkup(q, i, { optionIds: item.options, selected: a.answers[q.id], answering: true });
       }).join('')}</div><div class="exam-actions">${button('confirm', 'উত্তরপত্র জমা দাও', e.id, 'primary')}</div>
       <div class="exam-card" data-submit-confirm hidden><h3>এখনই জমা দেবে?</h3><p>জমা দেওয়ার পর এই প্রচেষ্টার উত্তর বদলানো যাবে না। চাইলে “উত্তরে ফিরে যাও” চেপে সময় শেষ হওয়া পর্যন্ত অপেক্ষা করো — সময় শেষ হলে উত্তরপত্র স্বয়ংক্রিয়ভাবে জমা হবে।</p><div class="exam-actions">${button('finish', 'হ্যাঁ, জমা দাও', e.id, 'primary')}${button('cancel-confirm', 'উত্তরে ফিরে যাও')}</div></div>`;
     clock(); scrollTop();

@@ -16,9 +16,15 @@ const TOP = 300, BOTTOM = 1600;   // a column of 1300 units
 test('options use the same letters as the app', () => {
   assert.deepEqual([0, 1, 2, 3].map(optionLetter), ['A', 'B', 'C', 'D']);
   assert.equal(optionLetter(4), 'E', 'a fifth option still gets its own letter');
-  const studentApp = read('js/student-exams.js');
-  assert.match(studentApp, /'ABCD'\[j\]/, 'the on-screen exam labels options A–D');
+  /* v167 moved the on-screen question markup into the shared renderer, so the
+     letters have exactly one home — the same one the pupil's paper and the
+     staff preview both read. One site is what stops them drifting apart. */
+  const shared = read('js/exam-ui.js');
+  assert.match(shared, /'ABCD'\[j\]/, 'the on-screen exam labels options A–D');
   assert.match(read('js/exam-pdf.js'), /optionLetter\(/, 'the printed paper uses the same letters');
+  const sites = ['js/student-exams.js', 'js/exam-manager.js']
+    .filter(file => /'ABCD'\[j\]/.test(read(file)));
+  assert.deepEqual(sites, [], 'no panel re-implements option lettering');
 });
 
 test('a question that fits goes in the current column', () => {

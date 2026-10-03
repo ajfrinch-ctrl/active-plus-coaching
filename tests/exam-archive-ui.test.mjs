@@ -214,3 +214,27 @@ test('the question archive is date-wise, searchable and offers duplicate instead
   ctx.click($('#teacherExamWorkspace [data-exam-action="list"]'));
   await ctx.waitFor(() => rows().length === 3);
 });
+
+/* §20/§39: staff must be able to look at the pupil's actual paper before
+   publishing it — and looking must not be answering. */
+test('the student preview is the pupil’s own paper, with nothing answerable', async () => {
+  const target = examByTitle('মডেল টেস্ট');
+  ctx.click($(`#teacherExamWorkspace [data-exam-action="questions"][data-id="${target.id}"]`));
+  await ctx.waitFor(() => $$('#teacherExamWorkspace .exam-question').length === 2);
+  assert.ok($('#teacherExamWorkspace [data-exam-action="student-preview"]'), 'the questions view offers the preview');
+
+  ctx.click($('#teacherExamWorkspace [data-exam-action="student-preview"]'));
+  await ctx.waitFor(() => /শিক্ষার্থীর চোখে প্রশ্নপত্র/.test($('#teacherExamWorkspace').textContent));
+
+  const workspace = $('#teacherExamWorkspace');
+  assert.equal(workspace.querySelectorAll('fieldset.exam-question').length, 2, 'both questions are drawn in the pupil’s own shell');
+  assert.ok(workspace.querySelectorAll('.exam-option').length >= 4, 'with the pupil’s option rows');
+  assert.equal(workspace.querySelectorAll('[data-answer-question]').length, 0, 'a preview cannot record an answer');
+  const radios = workspace.querySelectorAll('.exam-option input');
+  assert.ok(radios.length >= 4, 'the options still show their radios');
+  assert.equal(workspace.querySelectorAll('.exam-option input[disabled]').length, radios.length, 'and every one of them is inert');
+  assert.equal(workspace.querySelectorAll('.exam-option-correct').length, 0, 'no option is marked as the right one');
+  /* The note on this screen explains that answers are withheld, so match the
+     reveal markup itself rather than the word — prose is not a leak. */
+  assert.doesNotMatch(workspace.innerHTML, /সঠিক উত্তর:/, 'the answer key never reaches this screen');
+});

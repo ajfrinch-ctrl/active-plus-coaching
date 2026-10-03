@@ -5,7 +5,7 @@
    Permissions are decided by js/exam-archive.js and enforced again in
    js/exam-data.js; this module only paints the buttons that are allowed. */
 import { examRepository as repo, EXAM_TYPES, EXAM_STATUSES, TEACHER_ACTOR, ADMIN_ACTOR, MANAGER_ACTOR, examTemplate, EXAM_SAMPLE_TEMPLATES, MCQ_30_SAMPLE, parseQuestions, totalMarks, watchExams, isLiveExam, examDateOf, examDurationMinutes, examDateFor, examCodeOf, examStageLabel, ensureChapter } from './exam-data.js';
-import { examRecord, questionPreview, resultMarkup, downloadResults, statusTag, typeTag, stageTag, codeTag, esc, num, when, shortExamId } from './exam-ui.js';
+import { examRecord, questionPreview, examPaperMarkup, resultMarkup, downloadResults, statusTag, typeTag, stageTag, codeTag, esc, num, when, shortExamId } from './exam-ui.js';
 import { confirmAction } from './confirm-dialog.js';
 import { downloadExamPDF } from './exam-pdf.js';
 import { enabledClasses } from './config.js';
@@ -282,7 +282,7 @@ export function initExamManager(container, role) {
     view = 'questions'; selected = exam.id;
     const perm = permissionFor(exam);
     content.innerHTML = `${back()}<article class="exam-card exam-questions-head"><div class="exam-tags">${typeTag(exam)}${statusTag(exam)}</div>${examRecord(exam)}
-      <div class="exam-actions">${button('paper', 'প্রশ্নপত্র PDF ডাউনলোড', exam.id)}${button('detail', 'বিস্তারিত ও অনুমোদন', exam.id)}${perm.edit ? button('questions', 'প্রশ্ন সম্পাদনা সহ দেখুন', exam.id) : ''}</div>
+      <div class="exam-actions">${button('paper', 'প্রশ্নপত্র PDF ডাউনলোড', exam.id)}${button('student-preview', 'শিক্ষার্থীর চোখে দেখুন', exam.id)}${button('detail', 'বিস্তারিত ও অনুমোদন', exam.id)}${perm.edit ? button('questions', 'প্রশ্ন সম্পাদনা সহ দেখুন', exam.id) : ''}</div>
       <p class="exam-note">প্রশ্নের জন্য unique ID: <strong>${esc(exam.id)}-q1 … ${esc(exam.id)}-q${(exam.questions || []).length}</strong> — একই প্রশ্ন অন্য পরীক্ষায় গেলেও তার নিজের ID থাকবে।</p></article>
       ${problemHint(exam)}
       <div class="exam-actions exam-bank-tools">
@@ -294,6 +294,22 @@ export function initExamManager(container, role) {
       <div class="exam-question-list">${exam.questions.map((question, index) => questionMarkup(exam, question, index, perm)).join('')}</div>
       ${perm.edit ? addQuestionMarkup(exam) : '<p class="exam-note">প্রকাশিত/সম্পন্ন পরীক্ষার প্রশ্ন আর বদলানো যায় না।</p>'}`;
   }
+  /* §20/§39: staff see the pupil's actual paper, not a second drawing of it.
+     The shared renderer emits disabled radios here, so previewing can never
+     record an answer — and the correct answers stay off this screen on purpose. */
+  function studentPreview(exam) {
+    view = 'student-preview'; selected = exam.id;
+    const paper = (exam.questions || []).length
+      ? examPaperMarkup(exam)
+      : '<p class="exam-note">এখনো কোনো প্রশ্ন যোগ করা হয়নি।</p>';
+    content.innerHTML = `<div class="exam-actions">${button('questions', '← প্রশ্ন তালিকা', exam.id)}</div>
+      <article class="exam-card"><div class="exam-tags">${typeTag(exam)}${statusTag(exam)}</div>
+      <h2 class="exam-title">${esc(exam.title)}</h2>
+      <p class="exam-note">শিক্ষার্থী ঠিক এটাই দেখবে। এখানে উত্তর দেওয়া যাবে না, তাই কিছু সংরক্ষিত হবে না — সঠিক উত্তরও দেখানো হয় না।</p></article>
+      <h3 class="exam-section-title">শিক্ষার্থীর চোখে প্রশ্নপত্র</h3>${paper}`;
+    scrollTop();
+  }
+
   function problemHint(exam) {
     const perm = permissionFor(exam);
     if (perm.edit) return '';
@@ -513,6 +529,7 @@ export function initExamManager(container, role) {
   }
   function repaintSelected(exam) {
     if (view === 'questions') questions(exam);
+    else if (view === 'student-preview') studentPreview(exam);
     else if (view === 'detail') detail(exam);
     else if (view === 'report') report(exam, false);
     else if (view === 'grade') grade(exam);
@@ -661,6 +678,7 @@ export function initExamManager(container, role) {
     else if (action.startsWith('new-')) editor(action.slice(4));
     else if (action === 'edit') editor(e.type, e);
     else if (action === 'questions') questions(e);
+    else if (action === 'student-preview') studentPreview(e);
     else if (action === 'detail') detail(e);
     else if (action === 'q-edit') { openQuestion = target.dataset.id; questions(db.exams.find(item => item.id === selected)); scrollTop(); }
     else if (action === 'q-cancel') { openQuestion = null; questions(db.exams.find(item => item.id === selected)); }
