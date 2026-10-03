@@ -40,7 +40,7 @@
   label { line-height:1.6; }
   .form-section-title { font-size:16px;font-weight:600;margin-top:16px; }
   .form-grid-2>div,.field-grid>div,.staff-form-grid>div { min-width:0; }
-  .chip-row button,.day-tabs button,.finance-nav-pills button,.teacher-type-tabs button,.pay-methods button { border-radius:10px; }
+  .chip-row button,.day-tabs button,.finance-nav-pills button,.teacher-type-tabs button,.pay-methods button { border-radius:var(--btn-radius); }
   .badge,.status-badge { border-radius:24px;padding:4px 10px;line-height:1.5; }
   .student-row,.staff-card,.manager-record,.routine-item,.ledger-row {
     border:1px solid var(--color-border);border-radius:14px;background:var(--color-surface);padding:16px;
@@ -115,7 +115,7 @@
      list itself shows nothing personal. */
   .student-toolbar { display:flex;flex-wrap:wrap;gap:12px;align-items:center; }
   .student-search-box { flex:1 1 100%; }
-  .student-filter-toggle { display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border:1px solid var(--color-border);border-radius:12px;background:var(--color-surface);color:var(--color-text);font-weight:500; }
+  .student-filter-toggle { display:inline-flex;align-items:center;gap:8px;min-height:var(--btn-md);padding:0 var(--space-4);border:var(--btn-border) solid var(--color-border);border-radius:var(--btn-radius);background:var(--color-surface);color:var(--color-text);font-weight:500; }
   .student-filter-toggle.active { border-color:var(--color-primary);color:var(--color-primary); }
   .student-filter-toggle svg { width:18px;height:18px; }
   .student-filter-panel { flex:1 1 100%;display:grid;gap:12px;padding:16px;border:1px solid var(--color-border);border-radius:14px;background:var(--color-surface); }

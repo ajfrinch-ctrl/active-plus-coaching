@@ -1,3 +1,6 @@
+// v156: one button scale — css/foundation.css declares four heights, one
+// radius and one border weight, and every button rule points at it instead of
+// carrying its own 36/40/44/50px and 9px/10px/13px/999px corner.
 // v155: the same empty state reaches the Admin, Course, Staff and Payment
 // panels — no admin-empty card is left outside a boot-time loading line.
 // v154: one empty state — an empty list says so the same way everywhere,
@@ -18,7 +21,7 @@
 // answer-key PDFs, the student Learning Hub (class → subject → chapter) and the
 // shared brand module. v148: date-wise examination workspace — question
 // archive, review workflow and question-level editing for the Manager.
-const CACHE_VERSION = 155;
+const CACHE_VERSION = 156;
 const CACHE_NAME = `active-plus-student-v${CACHE_VERSION}-minimal-education`;
 const APP_SHELL = [
   './css/notifications.css',

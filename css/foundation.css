@@ -12,6 +12,13 @@
  --color-primary:#2864bd;--color-primary-hover:#194f9d;--color-success:#187346;--color-warning:#875b0c;--color-danger:#b83239;
  --space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:24px;--space-6:32px;--space-7:48px;
  --radius-sm:9px;--radius-md:14px;--radius-lg:18px;
+ /* One button scale. Four heights, one radius, one border weight — a button
+    picks a size from here instead of inventing numbers, so the same action is
+    the same size in every panel. Heights are the ones the app already used. */
+ --btn-xs:32px;--btn-sm:38px;--btn-md:44px;--btn-lg:50px;
+ --btn-radius:var(--radius-md);--btn-border:1.5px;--btn-pad-x:var(--space-4);
+ --btn-font:var(--font-sm);--btn-font-lg:var(--font-md);
+ --btn-weight:600;--btn-weight-lg:700;
  --font-xs:12px;--font-sm:14px;--font-md:16px;--font-lg:20px;--font-xl:28px;--font-2xl:36px;
  --shadow-sm:0 3px 14px #20365306;--shadow-dialog:0 12px 36px #202b3c18;
  --modal-backdrop:#17243866;

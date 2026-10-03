@@ -31,7 +31,7 @@
 .course-item h4{margin:0;font-size:var(--font-md);overflow-wrap:anywhere}
 .course-item-desc,.course-item-body{margin:0;color:var(--color-text-secondary);font-size:var(--font-sm);overflow-wrap:anywhere}
 .course-item-body{color:var(--color-text)}
-.course-item-link{display:inline-flex;align-items:center;gap:6px;min-height:44px;color:var(--color-primary);font-weight:600;text-decoration:none}
+.course-item-link{display:inline-flex;align-items:center;gap:6px;min-height:var(--btn-md);color:var(--color-primary);font-weight:600;text-decoration:none}
 .course-item-when{color:var(--color-text-secondary);font-size:var(--font-xs)}
 .course-empty{margin:0}
 /* Pull the notice strip the hub adds inside its own list into the same rhythm. */
