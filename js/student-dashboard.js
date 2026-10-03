@@ -158,7 +158,7 @@ export function initStudentDashboard({ getStudent, getAccount }) {
     $('#homeView')?.setAttribute('data-student-id', student.id || '');
     try {
       const [teachingDb, examDb, transactions] = await Promise.all([
-        teachingRepository.list(), examRepository.list(), financeRepository.listTransactions()
+        teachingRepository.listForStudent(student), examRepository.list(), financeRepository.listTransactions()
       ]);
       if (current !== request) return;
       const activities = publishedForStudent(teachingDb.activities || [], student);

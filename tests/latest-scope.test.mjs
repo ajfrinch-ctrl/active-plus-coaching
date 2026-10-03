@@ -68,11 +68,11 @@ test('newest first, and a count line that says what is held back', () => {
    leaves them (js/demo-data.js does the same), so no staff session is needed to
    place work a teacher has already published.
 
-   Note the assignment record: the student app reads teaching data through
-   teachingRepository.list(), which returns the *teacher-scoped* snapshot
-   (js/teaching-data.js → teacherSnapshot), so a device also has to hold
-   teacher.apc's assignment for the class before a student sees anything. That
-   coupling is recorded in the UX audit; this seed mirrors it. */
+   The assignment record is kept here because the Teacher panel and the roster
+   still read it. It is no longer needed for the *student* to see work: that read
+   now goes through teachingRepository.listForStudent(), so a pupil's phone shows
+   published work without holding teacher.apc's assignment records. That older
+   coupling is what tests/student-datapath.test.mjs now pins shut. */
 async function bootStudent() {
   const ctx = await loadPage('index.html', { seed: { 'activePlus.demo.autofill.v1': 'off' } });
   const { window } = ctx;

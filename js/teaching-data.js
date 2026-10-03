@@ -129,6 +129,13 @@ function ownedActivity(db, id) {
 }
 export const teachingRepository = {
   async list() { return teacherSnapshot(readData()); },
+  /* What a student may read: published work addressed to their own class and
+     group. This must NOT go through teacherSnapshot() — that one also requires
+     this device to hold teacher.apc's Manager assignment for the class, so a
+     student's own phone showed an empty list until the teacher's assignment
+     records happened to sync to it. Whether a teacher may *manage* a class has
+     nothing to do with whether a pupil may *read* work sent to them. */
+  async listForStudent(student) { return studentSnapshot(readData(), student || {}); },
   async listForManager() { await requireRoleSession('manager'); return readData(); },
   async listStudents() { await requireRoleSession('teacher'); return roster(); },
   async listApprovedStudents() { await requireRoleSession('manager'); return approvedRoster(); },

@@ -106,7 +106,7 @@ export function initStudentTeaching({ getStudent }) {
   async function refresh() {
     const current = ++request;
     try {
-      const next = await teachingRepository.list();
+      const next = await teachingRepository.listForStudent(getStudent());
       if (current !== request) return;
       db = next; $('#learningError').hidden = true; render();
     } catch {
