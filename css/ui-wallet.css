@@ -172,7 +172,7 @@ body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; 
 }
 .bottom-link::before, .admin-bottom-item::before { display: none; }
 .bottom-link:hover, .admin-bottom-item:hover { background: transparent; }
-.bottom-link > span:not(.nav-chip), .admin-bottom-item > .nav-label { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bottom-link > .nav-label, .admin-bottom-item > .nav-label { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nav-chip {
   display: grid; place-items: center; width: 54px; height: 30px; border-radius: 16px;
   background: transparent; transition: background-color .18s ease;

@@ -1,3 +1,6 @@
+// v157: one bottom navigation — every portal's tab labels its text with
+// .nav-label, so a single CSS rule serves all four and the Manager's active
+// tab finally carries aria-current.
 // v156: one button scale — css/foundation.css declares four heights, one
 // radius and one border weight, and every button rule points at it instead of
 // carrying its own 36/40/44/50px and 9px/10px/13px/999px corner.
@@ -21,7 +24,7 @@
 // answer-key PDFs, the student Learning Hub (class → subject → chapter) and the
 // shared brand module. v148: date-wise examination workspace — question
 // archive, review workflow and question-level editing for the Manager.
-const CACHE_VERSION = 156;
+const CACHE_VERSION = 157;
 const CACHE_NAME = `active-plus-student-v${CACHE_VERSION}-minimal-education`;
 const APP_SHELL = [
   './css/notifications.css',
