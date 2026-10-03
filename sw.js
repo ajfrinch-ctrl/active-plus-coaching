@@ -1,3 +1,5 @@
+// v165: the student's exam list is filed by when they can act on it —
+// "এখন দেওয়া যাবে", "আসন্ন", "সম্পন্ন" — instead of one flat run of cards.
 // v164: the last two private empty states are gone — notice-center.js kept its
 // own emptyState() and course-hub.js hand-built a .notice-empty card. Both now
 // call the shared emptyState(), and a test fails if anyone grows a new one.
@@ -46,7 +48,7 @@
 // answer-key PDFs, the student Learning Hub (class → subject → chapter) and the
 // shared brand module. v148: date-wise examination workspace — question
 // archive, review workflow and question-level editing for the Manager.
-const CACHE_VERSION = 164;
+const CACHE_VERSION = 165;
 const CACHE_NAME = `active-plus-student-v${CACHE_VERSION}-minimal-education`;
 const APP_SHELL = [
   './css/notifications.css',

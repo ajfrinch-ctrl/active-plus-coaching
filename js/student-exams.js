@@ -1,5 +1,6 @@
 import { examRepository as repo, examMatchesStudent, retryEligibility, firstAttemptMean, examResults, totalMarks, watchExams, isStudentVisibleExam } from './exam-data.js';
 import { examMeta, resultMarkup, attemptStage, stageTag, codeTag, esc, num } from './exam-ui.js';
+import { emptyState } from './ui-states.js';
 import { downloadExamPDF } from './exam-pdf.js';
 
 export function initStudentExams({ getStudent, getAccount }) {
@@ -15,20 +16,32 @@ export function initStudentExams({ getStudent, getAccount }) {
   function error(text) { $('[data-exam-error]').textContent = text; $('[data-exam-error]').hidden = !text; }
   function message(text) { $('[data-exam-message]').textContent = text; $('[data-exam-message]').hidden = !text; }
   function scrollTop() { if (document.querySelector('#examsView').classList.contains('active')) root.closest('main')?.scrollTo({ top: 0, behavior: 'instant' }); }
-  function list() {
-    view = 'list'; examId = null; attemptId = null;
-    if (!activeAccount()) { content.innerHTML = '<p class="exam-card">অনুমোদিত অ্যাকাউন্ট দিয়ে লগইন করতে হবে।</p>'; return; }
-    /* Draft / review / approved / archived papers are staff-only: a student
-    never sees a question before its exam is published. */
-    const exams = db.exams.filter(e => isStudentVisibleExam(e) && examMatchesStudent(e, getStudent())).sort((a, b) => b.startAt - a.startAt), now = Date.now();
-    content.innerHTML = `<div class="exam-actions">${button('refresh', 'তালিকা / জমার অবস্থা হালনাগাদ')}</div><div class="exam-list">${exams.map(e => {
+  /* The card markup, unchanged — only where it is filed has moved. */
+  const examCard = (e, now) => {
       const attempts = own(e), active = attempts.find(a => a.status === 'active'), queued = attempts.some(a => a.status === 'queued');
       const canFirst = !attempts.length && now >= e.startAt && now < e.endAt && now <= e.startAt + e.lateMinutes * 60000;
       const retry = retryEligibility(db, e, getStudent().id);
       return `<article class="exam-card" data-student-exam="${esc(e.id)}">${examMeta(e)}<p class="exam-note">${stageTag(e)}${codeTag(e)}</p><p class="exam-note">${esc(e.instructions)}</p>${e.type === 'mcq' ? `<p class="exam-note">সব প্রশ্ন একসঙ্গে থাকবে। প্রতি ভুলে ${num(e.negative)} নম্বর কাটা হবে; সর্বনিম্ন মোট ০। প্রথম প্রবেশের সীমা ${num(e.lateMinutes)} মিনিট।</p>${queued ? `<p class="exam-message">${esc(attemptStage(attempts.find(a => a.status === 'queued'), e))}</p>` : ''}` : ''}
-        <div class="exam-actions">${e.type === 'mcq' ? active && now < e.endAt ? button('resume', 'পরীক্ষায় ফিরে যাও', e.id, 'primary') : canFirst ? button('start', 'পরীক্ষা শুরু করো', e.id, 'primary') : retry ? button('start', 'দ্বিতীয়বার পরীক্ষা দাও', e.id, 'primary') : `<small>${now < e.startAt ? 'নির্ধারিত সময়ে পরীক্ষা শুরু হবে।' : now >= e.endAt ? 'পরীক্ষার সময় শেষ।' : attempts.length ? 'চলমান গড়ের নিচে হলে দ্বিতীয় সুযোগ এখানে আসবে।' : 'প্রথম প্রবেশের সময়সীমা শেষ।'}</small>` : now >= e.startAt ? button('paper', 'প্রশ্নপত্র PDF ডাউনলোড', e.id, 'primary') : '<small>শুরুর সময় হলে PDF পাওয়া যাবে।</small>'}
-        ${e.resultsPublished ? button('results', 'প্রকাশিত ফলাফল', e.id) : '<small>ফলাফল Manager-এর প্রকাশের অপেক্ষায়।</small>'}${e.type === 'mcq' && now >= e.endAt ? button('solutions', 'সঠিক উত্তরসহ PDF', e.id) : ''}</div></article>`;
-    }).join('') || '<p class="exam-card">Admin এখনও কোনো পরীক্ষা প্রকাশ করেননি।</p>'}</div>`;
+        <div class="exam-actions">${e.type === 'mcq' ? active && now < e.endAt ? button('resume', 'পরীক্ষায় ফিরে যাও', e.id, 'primary') : canFirst ? button('start', 'পরীক্ষা শুরু করো', e.id, 'primary') : retry ? button('start', 'দ্বিতীয়বার পরীক্ষা দাও', e.id, 'primary') : `<small>${now < e.startAt ? 'নির্ধারিত সময়ে পরীক্ষা শুরু হবে।' : now >= e.endAt ? 'পরীক্ষার সময় শেষ।' : attempts.length ? 'চলমান গড়ের নিচে হলে দ্বিতীয় সুযোগ এখানে আসবে।' : 'প্রথম প্রবেশের সময়সীমা শেষ।'}</small>` : now >= e.startAt ? button('paper', 'প্রশ্নপত্র PDF ডাউনলোড', e.id, 'primary') : '<small>শুরুর সময় হলে PDF পাওয়া যাবে।</small>'}
+        ${e.resultsPublished ? button('results', 'প্রকাশিত ফলাফল', e.id) : '<small>ফলাফল Manager-এর প্রকাশের অপেক্ষায়।</small>'}${e.type === 'mcq' && now >= e.endAt ? button('solutions', 'সঠিক উত্তরসহ PDF', e.id) : ''}</div></article>`;
+  };
+  function list() {
+    view = 'list'; examId = null; attemptId = null;
+    if (!activeAccount()) { content.innerHTML = '<p class="exam-card">অনুমোদিত অ্যাকাউন্ট দিয়ে লগইন করতে হবে।</p>'; return; }
+    /* Draft / review / approved / archived papers are staff-only: a student
+    never sees a question before its exam is published. */
+    const exams = db.exams.filter(e => isStudentVisibleExam(e) && examMatchesStudent(e, getStudent())).sort((a, b) => b.startAt - a.startAt), now = Date.now();
+    /* §24 — one flat list made "what can I do right now?" hard to answer: an exam
+       that can be started this minute sat beside one due next week. Same cards,
+       filed by when the student can act on them; empty groups are omitted. */
+    const sections = [
+      ['এখন দেওয়া যাবে', exams.filter(e => now >= e.startAt && now < e.endAt)],
+      ['আসন্ন', exams.filter(e => now < e.startAt)],
+      ['সম্পন্ন', exams.filter(e => now >= e.endAt)]
+    ].filter(entry => entry[1].length).map(entry =>
+      `<section class="exam-group"><h2 class="exam-group-title">${esc(entry[0])}<span class="exam-group-count">${num(entry[1].length)}</span></h2>${entry[1].map(e => examCard(e, now)).join('')}</section>`
+    ).join('');
+    content.innerHTML = `<div class="exam-actions">${button('refresh', 'তালিকা / জমার অবস্থা হালনাগাদ')}</div><div class="exam-list">${sections || emptyState({ icon: 'exam', title: 'Admin এখনও কোনো পরীক্ষা প্রকাশ করেননি', message: 'প্রকাশিত হলে এখানে দেখা যাবে।' })}</div>`;
   }
   function activeExam(e, a) {
     view = 'active'; examId = e.id; attemptId = a.id;
