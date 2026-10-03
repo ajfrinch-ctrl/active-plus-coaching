@@ -162,7 +162,7 @@ test('the panel search finds work by subject, teacher or title', async () => {
   await ctx.flush(4);
   assert.equal(ctx.$$('#learningList .learning-card').length, 0);
   assert.ok(ctx.$('#learningList .apc-empty'), 'an empty result says so instead of showing a blank screen');
-  ctx.click(ctx.$('#learningList [data-scope-show-all]'));
+  ctx.click(ctx.$('#learningList [data-empty-action="show-all"]'));
   await ctx.flush(4);
   assert.equal(readScopeBar(ctx.$('#learningScope')).mode, 'all', 'the empty state offers the way back to everything');
 });

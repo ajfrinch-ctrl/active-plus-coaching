@@ -59,6 +59,12 @@ Master prompt-এর ৪৫টি ধারার ভিত্তিতে প�
 `rc-preview-empty`, `empty-routine`, `dashboard-empty`, `admin-empty-search`। বেশিরভাগই শুধু
 এক লাইন টেক্সট — আইকন বা action নেই (ধারা ৩১ চায় আইকন + বার্তা + action)।
 
+**v154-এ যা এক হয়েছে:** Manager প্যানেলের ১০টি ও Teacher প্যানেলের ১৩টি খালি তালিকা এবং
+শিক্ষার্থীর হোমওয়ার্ক তালিকা এখন `js/ui-states.js`-এর একটি কার্ডে (`admin-empty`/`teacher-empty`
+দুটি পরিবারই এই দুই প্যানেল থেকে গেছে)। বাকি পরিবার — `notice-empty`, `notice-empty-art`,
+`rc-preview-empty`, `empty-routine`, `dashboard-empty`, `admin-empty-search` এবং admin/course/staff
+প্যানেলের `admin-empty` — এখনো বাকি।
+
 ### ১.৫ তারিখ ও ফিল্টার
 
 * **From → To আছে শুধু এক জায়গায়:** `js/exam-manager.js:87-88` (পরীক্ষা আর্কাইভ)।
@@ -219,8 +225,16 @@ HISTORY    → প্যানেলের ভেতরে, কখনো dashboa
 দুটি প্রশ্ন জমে না। টেস্ট `tests/confirm-dialog.test.mjs` (৪টি) — শেষ টেস্টটি আসল
 `manager.html` বুট করে নোটিশ মুছতে গিয়ে দেখে যে ব্রাউজার ডায়ালগ নয়, এই কার্ডই উঠছে।
 
-**Phase 4-এ বাকি:** এক বটম-নেভ/রাউটার, এক বাটন স্কেল, এক empty state/tab/কার্ড —
-এগুলো এখনো বাকি, কারণ এগুলো সব প্যানেল ছোঁয়; প্রতিটি আলাদা ধাপে করা হবে।
+## ৭. v154 — Empty state এক করা (Phase 4-এর দ্বিতীয় অংশ)
+
+`js/ui-states.js` → `emptyState({ icon, title, message, button })`। Manager প্যানেলের ১০টি,
+Teacher প্যানেলের ১৩টি ও শিক্ষার্থীর হোমওয়ার্ক তালিকার খালি অবস্থা এখন এই একটি কার্ড
+(`.apc-empty`): আইকন + এক লাইন + ব্যাখ্যা + প্রয়োজনে অ্যাকশন। ফিল্টারের কারণে ফাঁকা হলে
+কার্ডে `[data-empty-action="show-all"]` বাটন থাকে, তাই “কিছু নেই” আর “লুকানো আছে” এক
+রকম দেখায় না। লেখাগুলো অপরিবর্তিত — শুধু গড়ন এক হয়েছে।
+
+**Phase 4-এ বাকি:** এক বটম-নেভ/রাউটার, এক বাটন স্কেল, বাকি empty-state পরিবার
+(`notice-empty`, `dashboard-empty`, `empty-routine`, `admin-empty-search`, `rc-preview-empty`)।
 
 **টেস্ট:** `tests/latest-scope.test.mjs` (৮টি) — বিশুদ্ধ নিয়ম + আসল `index.html` বুট করে
 dashboard ও প্যানেল দুটোই চালানো। পুরো suite: **৮০২টি টেস্ট, ৮০২ পাস**।

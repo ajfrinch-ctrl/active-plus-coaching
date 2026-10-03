@@ -9,6 +9,7 @@ import { loadAppConfig } from './storage.js';
 import { toBanglaNumber as bn } from './ui.js';
 import { initExamManager } from './exam-manager.js';
 import { initNotificationSettings } from './notification-settings.js';
+import { emptyState } from './ui-states.js';
 import { initFixedShell } from './fixed-shell.js';
 import { registerServiceWorker } from './service-worker.js';
 import { mountReports, refreshReports } from './reports.js';
@@ -145,11 +146,11 @@ function renderHome() {
   $('#teacherAttentionHint').textContent = items.length ? `${bn(items.length)}টি কাজ বাকি${scope === 'all' ? '' : ' • ' + esc(scope)}` : (scope === 'all' ? 'সব কাজ শেষ' : `${esc(scope)} — সব কাজ শেষ`);
   $('#teacherAttention').innerHTML = items.length
     ? items.map(({ a, note }) => queueCard(a, note, a.status === 'published' && ACTIVITY_TYPES[a.type].progress ? ACTIVITY_TYPES[a.type].progress : 'সম্পাদনা করুন')).join('')
-    : hasAssignments ? '<p class="teacher-empty teacher-all-clear">সব কাজ শেষ — নম্বর, খাতা দেখা ও উপস্থিতি সব নথিভুক্ত আছে।</p>' : '<p class="teacher-empty">কোনো assigned class/batch নেই।</p>';
+    : hasAssignments ? emptyState({ icon: 'approval', title: 'সব কাজ শেষ', message: 'নম্বর, খাতা দেখা ও উপস্থিতি সব নথিভুক্ত আছে।' }) : emptyState({ icon: 'users', title: 'কোনো assigned class/batch নেই।' });
   $('#teacherTodayClasses').innerHTML = todays.length
     ? todays.map(item => `<article class="teaching-card"><span class="teaching-kind">Manager routine</span><h3>${esc(item.subject || 'বিষয় উল্লেখ নেই')}</h3><small>${esc(item.className || '')}${item.room ? ` • ${esc(item.room)}` : ''}</small><p>${esc(item.time || 'সময় নির্ধারিত নয়')}</p></article>`).join('')
-    : `<p class="teacher-empty">${hasAssignments ? 'Manager routine-এ আজকের কোনো assigned class schedule নেই।' : 'No Manager assignment.'}</p>`;
-  $('#teacherRecent').innerHTML = records.slice().sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 5).map(recordCard).join('') || `<p class="teacher-empty">${hasAssignments ? 'এখনও কোনো academic কাজ যোগ করা হয়নি।' : 'Assignment না থাকায় academic কাজ দেখানো হচ্ছে না।'}</p>`;
+    : `${hasAssignments ? emptyState({ icon: 'calendar', title: 'Manager routine-এ আজকের কোনো assigned class schedule নেই।' }) : emptyState({ icon: 'calendar', title: 'No Manager assignment.' })}`;
+  $('#teacherRecent').innerHTML = records.slice().sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 5).map(recordCard).join('') || `${hasAssignments ? emptyState({ icon: 'assignment', title: 'এখনও কোনো academic কাজ যোগ করা হয়নি।' }) : emptyState({ icon: 'assignment', title: 'Assignment না থাকায় academic কাজ দেখানো হচ্ছে না।' })}`;
 }
 function renderRecords() {
   if (!ACTIVITY_TYPES[state.view]) return;
@@ -176,7 +177,7 @@ function renderRecords() {
   }
   $('#teacherRecordList').innerHTML = visible.length
     ? groups.map(group => `<p class="teacher-group-label">${esc(group.key)}<span>${bn(group.items.length)}টি</span></p>${group.items.map(recordCard).join('')}`).join('')
-    : '<p class="teacher-empty">কোনো কাজ পাওয়া যায়নি। নতুন কাজ যোগ করুন অথবা ফিল্টার বদলান।</p>';
+    : emptyState({ icon: 'assignment', title: 'কোনো কাজ পাওয়া যায়নি।', message: 'নতুন কাজ যোগ করুন অথবা ফিল্টার বদলান।' });
   const more = $('#teacherRecordMore');
   if (more) {
     const remaining = list.length - visible.length;
@@ -189,17 +190,17 @@ function renderStudents() {
   const className = $('#teacherStudentClass').value;
   if (!state.assignments.length) {
     $('#teacherStudentCount').textContent = '—';
-    $('#teacherStudentList').innerHTML = '<p class="teacher-empty">Manager assignment না দেওয়া পর্যন্ত student search বন্ধ থাকবে।</p>';
+    $('#teacherStudentList').innerHTML = emptyState({ icon: 'search', title: 'Manager assignment না দেওয়া পর্যন্ত student search বন্ধ থাকবে।' });
     return;
   }
   if (!$('#teacherStudentSearch').value.trim()) {
     $('#teacherStudentCount').textContent = '';
-    $('#teacherStudentList').innerHTML = '<p class="teacher-empty">শিক্ষার্থী খুঁজতে নাম, Student ID বা মোবাইল লিখুন।</p>';
+    $('#teacherStudentList').innerHTML = emptyState({ icon: 'search', title: 'শিক্ষার্থী খুঁজতে নাম, Student ID বা মোবাইল লিখুন।' });
     return;
   }
   const students = searchTeachingStudents(state.students, $('#teacherStudentSearch').value).filter(s => className === 'all' || s.className === className);
   $('#teacherStudentCount').textContent = `${bn(students.length)} জন অনুমোদিত শিক্ষার্থী`;
-  $('#teacherStudentList').innerHTML = students.map(s => `<article class="teaching-card"><span class="student-avatar" aria-hidden="true">${esc(s.name.charAt(0))}</span><h3>${esc(s.name)}</h3><small>Student ID: ${esc(s.id)}</small><p>${esc(s.className)} • ${esc(s.group || '—')}</p><small>মোবাইল: ${esc(s.mobile || s.studentMobile || '—')}</small><div class="teaching-actions"><button type="button" data-student-detail="${esc(s.id)}">শেখার অগ্রগতি</button></div></article>`).join('') || '<p class="teacher-empty">কোনো শিক্ষার্থী পাওয়া যায়নি</p>';
+  $('#teacherStudentList').innerHTML = students.map(s => `<article class="teaching-card"><span class="student-avatar" aria-hidden="true">${esc(s.name.charAt(0))}</span><h3>${esc(s.name)}</h3><small>Student ID: ${esc(s.id)}</small><p>${esc(s.className)} • ${esc(s.group || '—')}</p><small>মোবাইল: ${esc(s.mobile || s.studentMobile || '—')}</small><div class="teaching-actions"><button type="button" data-student-detail="${esc(s.id)}">শেখার অগ্রগতি</button></div></article>`).join('') || emptyState({ icon: 'students', title: 'কোনো শিক্ষার্থী পাওয়া যায়নি' });
 }
 const weekdayNames = { sat: 'শনিবার', sun: 'রবিবার', mon: 'সোমবার', tue: 'মঙ্গলবার', wed: 'বুধবার', thu: 'বৃহস্পতিবার' };
 function renderTeacherClasses() {
@@ -207,13 +208,13 @@ function renderTeacherClasses() {
   host.innerHTML = state.assignments.map(item => {
     const students = state.students.filter(student => student.className === item.className && (!item.group || student.group === item.group));
     return `<article class="teaching-card"><h3>${esc(item.className)}${item.group ? ` • ${esc(item.group)}` : ''}</h3><p>${esc(item.subject)}</p><small>${bn(students.length)} জন অনুমোদিত শিক্ষার্থী</small></article>`;
-  }).join('') || '<p class="teacher-empty">Manager এখনো কোনো class/batch assignment দেননি। অ্যাসাইনমেন্ট না থাকায় শিক্ষার্থী ও একাডেমিক রেকর্ড দেখানো হচ্ছে না।</p>';
+  }).join('') || emptyState({ icon: 'users', title: 'Manager এখনো কোনো class/batch assignment দেননি।', message: 'অ্যাসাইনমেন্ট না থাকায় শিক্ষার্থী ও একাডেমিক রেকর্ড দেখানো হচ্ছে না।' });
 }
 function renderTeacherRoutine() {
   const host = $('#teacherRoutineList'); if (!host) return;
   const routine = loadRoutine();
   const rows = WEEK_DAYS.flatMap(day => (routine[day]?.classes || []).filter(item => state.assignments.some(assignment => assignment.className === item.className)).map(item => ({ day, item })));
-  host.innerHTML = rows.length ? rows.map(({ day, item }) => `<article class="teaching-card"><span class="teaching-kind">${esc(weekdayNames[day] || day)}</span><h3>${esc(item.subject || 'বিষয় উল্লেখ নেই')}</h3><p>${esc(item.className || '')}${item.room ? ` • ${esc(item.room)}` : ''}</p><small>${esc(item.time || 'সময় নির্ধারিত নয়')}</small></article>`).join('') : '<p class="teacher-empty">আপনার assigned class-এর জন্য Manager routine-এ কোনো schedule নেই।</p>';
+  host.innerHTML = rows.length ? rows.map(({ day, item }) => `<article class="teaching-card"><span class="teaching-kind">${esc(weekdayNames[day] || day)}</span><h3>${esc(item.subject || 'বিষয় উল্লেখ নেই')}</h3><p>${esc(item.className || '')}${item.room ? ` • ${esc(item.room)}` : ''}</p><small>${esc(item.time || 'সময় নির্ধারিত নয়')}</small></article>`).join('') : emptyState({ icon: 'calendar', title: 'আপনার assigned class-এর জন্য Manager routine-এ কোনো schedule নেই।' });
 }
 function renderAcademicReports() {
   const host = $('#teacherAcademicReportList'); if (!host) return;
@@ -225,7 +226,7 @@ function renderAcademicReports() {
     const assignments = classRecords.filter(item => item.type === 'homework').length;
     return `<article class="teaching-card"><h3>${esc(className)}</h3><p>সংরক্ষিত attendance entry: ${bn(attendance)}</p><p>নথিভুক্ত marks entry: ${bn(marks)}</p><p>Assignment activity: ${bn(assignments)}</p></article>`;
   });
-  host.innerHTML = rows.join('') || '<p class="teacher-empty">রিপোর্ট দেখানোর মতো assigned class নেই। এখানে শুধু এই ব্রাউজারে সংরক্ষিত academic activity গণনা করা হয়; এটি পূর্ণাঙ্গ/সার্ভার রিপোর্ট নয়।</p>';
+  host.innerHTML = rows.join('') || emptyState({ icon: 'reports', title: 'রিপোর্ট দেখানোর মতো assigned class নেই।', message: 'এখানে শুধু এই ব্রাউজারে সংরক্ষিত academic activity গণনা করা হয়; এটি পূর্ণাঙ্গ/সার্ভার রিপোর্ট নয়।' });
 }
 function renderTeacherProfile() {
   const host = $('#teacherProfileCard'); if (!host) return;
@@ -368,7 +369,7 @@ function showProgress(a) {
       }).join('')}</div>
       <p class="finance-error" id="teacherSaveError" role="alert" hidden></p>
       <div class="modal-actions"><button class="admin-btn primary" type="submit">সংরক্ষণ করুন</button><button class="admin-btn ghost" type="button" data-close-teacher>বাতিল</button></div>
-    </form>` : '<p class="teacher-empty">এই শ্রেণি/বিভাগে কোনো অনুমোদিত শিক্ষার্থী নেই।</p>'}`);
+    </form>` : emptyState({ icon: 'students', title: 'এই শ্রেণি/বিভাগে কোনো অনুমোদিত শিক্ষার্থী নেই।' })}`);
 
   const form = $('#teacherProgressForm');
   if (!form) return;
@@ -423,7 +424,7 @@ function showDelete(a) {
 function showStudent(id) {
   const s = state.students.find(student => student.id === id); if (!s) return;
   const records = own().filter(a => a.status === 'published' && matchesStudent(a, s) && a.progress[s.id]);
-  openModal(s.name, `<p class="modal-copy">Student ID: ${esc(s.id)} • ${esc(s.className)} • ${esc(s.group || '—')}</p><div class="teacher-record-list">${records.map(a => `<article class="teaching-card"><small>${ACTIVITY_TYPES[a.type].label}</small><h3>${esc(a.title)}</h3><p>${a.type === 'exam' ? `${bn(a.progress[s.id].value)} / ${bn(a.totalMarks)}` : PROGRESS_LABELS[a.progress[s.id].value] || '—'}</p></article>`).join('') || '<p class="teacher-empty">এখনও কোনো নম্বর বা অগ্রগতি নথিভুক্ত হয়নি।</p>'}</div>`);
+  openModal(s.name, `<p class="modal-copy">Student ID: ${esc(s.id)} • ${esc(s.className)} • ${esc(s.group || '—')}</p><div class="teacher-record-list">${records.map(a => `<article class="teaching-card"><small>${ACTIVITY_TYPES[a.type].label}</small><h3>${esc(a.title)}</h3><p>${a.type === 'exam' ? `${bn(a.progress[s.id].value)} / ${bn(a.totalMarks)}` : PROGRESS_LABELS[a.progress[s.id].value] || '—'}</p></article>`).join('') || emptyState({ icon: 'result', title: 'এখনও কোনো নম্বর বা অগ্রগতি নথিভুক্ত হয়নি।' })}</div>`);
 }
 
 ['teacherHomeClass', 'teacherClassFilter', 'teacherStudentClass'].forEach(id => { $('#' + id).insertAdjacentHTML('beforeend', classOptions()); });

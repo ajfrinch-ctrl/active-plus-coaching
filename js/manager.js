@@ -19,6 +19,7 @@ import { initExamManager } from './exam-manager.js';
 import { listTeacherAssignments, saveTeacherAssignment, deleteTeacherAssignment, deleteAssignmentSubject, selectableSubjects, TEACHER_ASSIGNMENTS_KEY } from './teacher-assignments.js';
 import { listClasses } from './academics.js';
 import { confirmAction } from './confirm-dialog.js';
+import { emptyState } from './ui-states.js';
 import { initNotificationSettings } from './notification-settings.js';
 import { mountReports, refreshReports } from './reports.js';
 import { iconElement } from './icons.js';
@@ -145,13 +146,13 @@ function renderStudents() {
   $('#managerStudentList').innerHTML = list.length ? list.map(student => {
     const fee = studentFeeSummary(student, transactions);
     return `<article class="manager-record" data-manager-student="${escapeHtml(student.id)}"><div class="manager-record-head"><div><h2>${escapeHtml(student.name || 'নাম নেই')}</h2><p class="manager-meta">${escapeHtml(student.id)} • ${escapeHtml(student.className || 'ক্লাস নেই')} ${student.group ? `• ${escapeHtml(student.group)}` : ''}</p></div><span class="badge ${student.status === 'approved' ? 'badge-approved' : student.status === 'pending' ? 'badge-pending' : 'badge-rejected'}">${escapeHtml(statusLabel[student.status] || student.status || 'অজানা')}</span></div><p>মোবাইল ${escapeHtml(student.mobile || '—')} • বকেয়া ${money(fee.due)} • উপস্থিতি ${student.attendance == null ? '—' : `${escapeHtml(student.attendance)}%`} • গড় ফল ${student.average == null ? '—' : escapeHtml(student.average)}</p><div class="manager-actions"><button class="mini-btn" type="button" data-manager-action="view-student" data-id="${escapeHtml(student.id)}">প্রোফাইল</button><button class="mini-btn" type="button" data-manager-action="edit-student" data-id="${escapeHtml(student.id)}">তথ্য সম্পাদনা</button></div><div class="manager-student-extra" hidden></div></article>`;
-  }).join('') : '<p class="admin-empty">কোনো শিক্ষার্থী মেলেনি।</p>';
+  }).join('') : emptyState({ icon: 'search', title: 'কোনো শিক্ষার্থী মেলেনি।' });
 }
 function renderApprovals() {
   const pending = students.filter(student => student.status === 'pending');
   safeSetText('#managerPendingBadge', `${bn(pending.length)} অপেক্ষমাণ`);
   $('#managerPendingCount') && ( $('#managerPendingCount').textContent = bn(pending.length) );
-  $('#managerStudentQueue').innerHTML = pending.length ? pending.map(student => `<article class="manager-record"><div class="manager-record-head"><div><p class="eyebrow">${escapeHtml(student.id || 'Application')}</p><h2>${escapeHtml(student.name || 'নাম নেই')}</h2></div><span class="badge badge-pending">অপেক্ষমাণ</span></div><p>শ্রেণি ${escapeHtml(student.className || '—')} • ${escapeHtml(student.group || 'Batch নেই')}</p><p>মোবাইল ${escapeHtml(student.mobile || '—')} • অভিভাবক ${escapeHtml(student.guardianMobile || '—')}</p><p class="manager-meta">আবেদন: ${escapeHtml(student.enrolledAt || 'তারিখ নেই')}</p><div class="manager-actions"><button class="mini-btn approve" type="button" data-manager-action="approve-student" data-id="${escapeHtml(student.id)}">Approve</button><button class="mini-btn reject" type="button" data-manager-action="reject-student" data-id="${escapeHtml(student.id)}">Reject</button></div></article>`).join('') : '<p class="admin-empty">এখন কোনো নিবন্ধন অনুমোদনের অপেক্ষায় নেই।</p>';
+  $('#managerStudentQueue').innerHTML = pending.length ? pending.map(student => `<article class="manager-record"><div class="manager-record-head"><div><p class="eyebrow">${escapeHtml(student.id || 'Application')}</p><h2>${escapeHtml(student.name || 'নাম নেই')}</h2></div><span class="badge badge-pending">অপেক্ষমাণ</span></div><p>শ্রেণি ${escapeHtml(student.className || '—')} • ${escapeHtml(student.group || 'Batch নেই')}</p><p>মোবাইল ${escapeHtml(student.mobile || '—')} • অভিভাবক ${escapeHtml(student.guardianMobile || '—')}</p><p class="manager-meta">আবেদন: ${escapeHtml(student.enrolledAt || 'তারিখ নেই')}</p><div class="manager-actions"><button class="mini-btn approve" type="button" data-manager-action="approve-student" data-id="${escapeHtml(student.id)}">Approve</button><button class="mini-btn reject" type="button" data-manager-action="reject-student" data-id="${escapeHtml(student.id)}">Reject</button></div></article>`).join('') : emptyState({ icon: 'approval', title: 'এখন কোনো নিবন্ধন অনুমোদনের অপেক্ষায় নেই।' });
 }
 function renderRoutineClassOptions() {
   const select = $('#managerRoutineClass'), selected = select.value;
@@ -176,14 +177,14 @@ function renderTeacherSubjectPicker(className, selected = []) {
   if (!box) return;
   const chosen = [...new Set([...selected, ...[...box.querySelectorAll('input[name=subject]:checked')].map(input => input.value)])];
   if (!className) {
-    box.innerHTML = '<p class="admin-empty">আগে ক্লাস নির্বাচন করুন — তারপর সেই ক্লাসের বিষয়গুলো দেখবেন।</p>';
+    box.innerHTML = emptyState({ icon: 'classes', title: 'আগে ক্লাস নির্বাচন করুন', message: 'তারপর সেই ক্লাসের বিষয়গুলো দেখবেন।' });
     if (note) note.textContent = 'Admin-এর ক্লাস ও বিষয় সেটআপ থেকেই এই তালিকা আসে।';
     return;
   }
   const options = selectableSubjects(className, { includeLegacy: chosen });
   box.innerHTML = options.length
     ? options.map(name => `<label class="manager-subject-option"><input type="checkbox" name="subject" value="${escapeHtml(name)}" ${chosen.includes(name) ? 'checked' : ''}> ${escapeHtml(name)}</label>`).join('')
-    : '<p class="admin-empty">এই ক্লাসের জন্য Admin কোনো বিষয় চালু করেননি — Admin → ক্লাস ও বিষয় সেটআপ থেকে চালু করুন।</p>';
+    : emptyState({ icon: 'book', title: 'এই ক্লাসের জন্য Admin কোনো বিষয় চালু করেননি', message: 'Admin → ক্লাস ও বিষয় সেটআপ থেকে চালু করুন।' });
   if (note) note.textContent = options.length ? `${bn(options.length)}টি বিষয় চালু আছে — একাধিক টিক দিতে পারবেন।` : '';
 }
 async function renderTeachers() {
@@ -213,7 +214,7 @@ async function renderTeachers() {
     return `<article class="manager-record"><div class="manager-record-head"><div><h2>${escapeHtml(item.className)}${item.group ? ` • ${escapeHtml(item.group)}` : ''}</h2><p class="manager-meta">${escapeHtml(item.teacherName)} • ${bn(subjects.length)}টি বিষয়</p><div class="manager-subject-chips">${chips}</div></div><button class="mini-btn reject" type="button" data-manager-action="delete-teacher-assignment" data-id="${escapeHtml(item.id)}">Assignment সরান</button></div></article>`;
   });
   const routineRows = [...schedule.entries()].flatMap(([name, items]) => items.map(item => `<li>${escapeHtml(name)} — ${escapeHtml(item)}</li>`));
-  $('#managerTeacherList').innerHTML = `${cards.join('') || '<p class="admin-empty">এখনো কোনো Teacher class/batch assignment নেই। Teacher panel-এ assignment না থাকলে academic data access বন্ধ থাকবে।</p>'}<article class="manager-record"><h2>Routine schedule</h2><p>নিচের routine entries আলাদা schedule data; এগুলো নিজেরা Teacher access grant করে না।</p><ul>${routineRows.join('') || '<li>কোনো routine assignment নেই।</li>'}</ul><p class="manager-meta">সংরক্ষিত teaching activities: ${bn(activityCount)}</p></article>`;
+  $('#managerTeacherList').innerHTML = `${cards.join('') || emptyState({ icon: 'users', title: 'এখনো কোনো Teacher class/batch assignment নেই।', message: 'Teacher panel-এ assignment না থাকলে academic data access বন্ধ থাকবে।' })}<article class="manager-record"><h2>Routine schedule</h2><p>নিচের routine entries আলাদা schedule data; এগুলো নিজেরা Teacher access grant করে না।</p><ul>${routineRows.join('') || '<li>কোনো routine assignment নেই।</li>'}</ul><p class="manager-meta">সংরক্ষিত teaching activities: ${bn(activityCount)}</p></article>`;
 }
 function renderFinance() {
   const approved = transactions.filter(isFinalizedTransaction);
@@ -226,7 +227,7 @@ function renderFinance() {
   const search = ($('#managerPaymentSearch')?.value || '').trim().toLocaleLowerCase();
   const status = $('#managerPaymentStatus')?.value || 'all';
   const list = newestTransactions(transactions).filter(tx => (status === 'all' || (tx.status || 'approved') === status) && (!search || `${tx.studentName} ${tx.studentId} ${tx.id} ${tx.receiptNo}`.toLocaleLowerCase().includes(search)));
-  $('#managerPaymentList').innerHTML = list.length ? list.map(tx => transactionCard(tx, false)).join('') : '<p class="admin-empty">কোনো payment record নেই।</p>';
+  $('#managerPaymentList').innerHTML = list.length ? list.map(tx => transactionCard(tx, false)).join('') : emptyState({ icon: 'wallet', title: 'কোনো payment record নেই।' });
 }
 function transactionCard(tx, allowReview) {
   const status = tx.status || 'approved';
@@ -236,11 +237,11 @@ function transactionCard(tx, allowReview) {
 function renderCashCounter() {
   const selected = transactions.filter(tx => cashScope === 'all' || (cashScope === 'approved' ? (tx.status || 'approved') === 'approved' : tx.status === cashScope));
   const list = newestTransactions(selected);
-  $('#managerCashList').innerHTML = list.length ? list.map(tx => transactionCard(tx, true)).join('') : '<p class="admin-empty">এই filter-এ কোনো Cash Counter entry নেই।</p>';
+  $('#managerCashList').innerHTML = list.length ? list.map(tx => transactionCard(tx, true)).join('') : emptyState({ icon: 'receipt', title: 'এই filter-এ কোনো Cash Counter entry নেই।' });
   $$('[data-cash-scope]').forEach(button => button.classList.toggle('active', button.dataset.cashScope === cashScope));
 }
 function renderNotices() {
-  $('#managerNoticeList').innerHTML = notices.length ? notices.map(item => `<article class="manager-record"><div class="manager-record-head"><div><h2>${escapeHtml(item.title)}</h2><p class="manager-meta">${escapeHtml(item.id)} • ${escapeHtml(item.audience || 'সকল শিক্ষার্থী')} • ${escapeHtml(item.date || '')}</p></div><div class="manager-actions"><button class="mini-btn" data-manager-action="edit-notice" data-id="${escapeHtml(item.id)}" type="button">Edit</button><button class="mini-btn reject" data-manager-action="delete-notice" data-id="${escapeHtml(item.id)}" type="button">Delete</button></div></div><p>${escapeHtml(item.body)}</p></article>`).join('') : '<p class="admin-empty">কোনো operational notice নেই।</p>';
+  $('#managerNoticeList').innerHTML = notices.length ? notices.map(item => `<article class="manager-record"><div class="manager-record-head"><div><h2>${escapeHtml(item.title)}</h2><p class="manager-meta">${escapeHtml(item.id)} • ${escapeHtml(item.audience || 'সকল শিক্ষার্থী')} • ${escapeHtml(item.date || '')}</p></div><div class="manager-actions"><button class="mini-btn" data-manager-action="edit-notice" data-id="${escapeHtml(item.id)}" type="button">Edit</button><button class="mini-btn reject" data-manager-action="delete-notice" data-id="${escapeHtml(item.id)}" type="button">Delete</button></div></div><p>${escapeHtml(item.body)}</p></article>`).join('') : emptyState({ icon: 'notice', title: 'কোনো operational notice নেই।' });
 }
 function renderRoutine() {
   // This route is reachable directly from Home/More: required class choices
@@ -249,12 +250,12 @@ function renderRoutine() {
   $('#managerRoutineDays').innerHTML = WEEK_DAYS.map(day => `<button type="button" class="chip ${day === routineDay ? 'active' : ''}" data-routine-day="${day}">${dayLabel[day] || day}</button>`).join('');
   $('#managerRoutineDayTitle').textContent = `${dayLabel[routineDay] || routineDay} — রুটিনে ক্লাস যোগ করুন`;
   const rows = routine[routineDay]?.classes || [];
-  $('#managerRoutineList').innerHTML = rows.length ? rows.map((item, index) => `<article class="manager-record"><div class="manager-record-head"><h2>${escapeHtml(item.subject || 'বিষয় নেই')}</h2><span class="badge badge-approved">${escapeHtml(item.time || 'সময় নেই')}</span></div><p>${escapeHtml(item.className || '')} • ${escapeHtml(item.teacher || '')} • ${escapeHtml(item.room || '')}</p><div class="manager-actions"><button type="button" class="mini-btn" data-manager-action="edit-routine" data-index="${index}">Edit</button><button type="button" class="mini-btn reject" data-manager-action="delete-routine" data-index="${index}">Delete</button></div></article>`).join('') : '<p class="admin-empty">এই দিনের routine record নেই।</p>';
+  $('#managerRoutineList').innerHTML = rows.length ? rows.map((item, index) => `<article class="manager-record"><div class="manager-record-head"><h2>${escapeHtml(item.subject || 'বিষয় নেই')}</h2><span class="badge badge-approved">${escapeHtml(item.time || 'সময় নেই')}</span></div><p>${escapeHtml(item.className || '')} • ${escapeHtml(item.teacher || '')} • ${escapeHtml(item.room || '')}</p><div class="manager-actions"><button type="button" class="mini-btn" data-manager-action="edit-routine" data-index="${index}">Edit</button><button type="button" class="mini-btn reject" data-manager-action="delete-routine" data-index="${index}">Delete</button></div></article>`).join('') : emptyState({ icon: 'calendar', title: 'এই দিনের routine record নেই।' });
   $('#managerRoutineForm [name=className]').value ||= '';
 }
 function renderResults() {
   const completed = exams.exams.filter(exam => isLiveExam(exam)).sort((a, b) => Number(b.endAt || 0) - Number(a.endAt || 0));
-  $('#managerResultList').innerHTML = completed.length ? completed.map(exam => `<article class="manager-result-exam">${examMeta(exam)}<p class="finance-hint">${exam.resultsPublished ? 'ফলাফল প্রকাশিত' : 'ফলাফল এখনো শিক্ষার্থীদের জন্য প্রকাশিত নয়'}</p><div class="manager-actions"><button type="button" class="mini-btn" data-manager-action="download-result" data-id="${escapeHtml(exam.id)}">Marks / Result CSV</button>${exam.resultsPublished ? '' : `<button type="button" class="mini-btn approve" data-manager-action="publish-results" data-id="${escapeHtml(exam.id)}">ফলাফল চূড়ান্তভাবে প্রকাশ</button>`}</div>${resultMarkup(exams, exam, true)}</article>`).join('') : '<p class="admin-empty">এখনো কোনো প্রকাশিত পরীক্ষা নেই।</p>';
+  $('#managerResultList').innerHTML = completed.length ? completed.map(exam => `<article class="manager-result-exam">${examMeta(exam)}<p class="finance-hint">${exam.resultsPublished ? 'ফলাফল প্রকাশিত' : 'ফলাফল এখনো শিক্ষার্থীদের জন্য প্রকাশিত নয়'}</p><div class="manager-actions"><button type="button" class="mini-btn" data-manager-action="download-result" data-id="${escapeHtml(exam.id)}">Marks / Result CSV</button>${exam.resultsPublished ? '' : `<button type="button" class="mini-btn approve" data-manager-action="publish-results" data-id="${escapeHtml(exam.id)}">ফলাফল চূড়ান্তভাবে প্রকাশ</button>`}</div>${resultMarkup(exams, exam, true)}</article>`).join('') : emptyState({ icon: 'exam', title: 'এখনো কোনো প্রকাশিত পরীক্ষা নেই।' });
 }
 function renderProfile() {
   const account = managerAccount || {};

@@ -1,3 +1,5 @@
+// v154: one empty state — an empty list says so the same way everywhere,
+// through js/ui-states.js (icon + one line + the action that helps).
 // v153: one confirmation for the whole app — js/confirm-dialog.js replaces the
 // browser's window.confirm on the exam desk and the Manager panel, so delete,
 // publish and archive all ask in the same card with the same two buttons.
@@ -14,7 +16,7 @@
 // answer-key PDFs, the student Learning Hub (class → subject → chapter) and the
 // shared brand module. v148: date-wise examination workspace — question
 // archive, review workflow and question-level editing for the Manager.
-const CACHE_VERSION = 153;
+const CACHE_VERSION = 154;
 const CACHE_NAME = `active-plus-student-v${CACHE_VERSION}-minimal-education`;
 const APP_SHELL = [
   './css/notifications.css',
@@ -135,6 +137,7 @@ const APP_SHELL = [
   './js/student-dashboard.js',
   './js/latest-scope.js',
   './js/confirm-dialog.js',
+  './js/ui-states.js',
   './js/account-policy.js',
   './js/storage.js',
   './js/ui.js',

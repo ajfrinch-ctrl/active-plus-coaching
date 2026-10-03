@@ -5,7 +5,7 @@ import { downloadBlob } from './exam-pdf.js';
 import { activitySheetPDF, materialFileName } from './material-pdf.js';
 import { teachingRepository, publishedForStudent, ACTIVITY_TYPES, PROGRESS_LABELS, escapeText as esc, displayDate, safeResourceURL, watchTeachingData } from './teaching-data.js';
 import { initScopeBar, applyScope, scopeNote, latestScope, LATEST_DAYS_PANEL } from './latest-scope.js';
-import { iconMarkup } from './icons.js';
+import { emptyState as sharedEmptyState } from './ui-states.js';
 
 /* Subject, teacher or the work's own title — the three things a student
    actually remembers a homework by. */
@@ -15,20 +15,24 @@ function matchesQuery(activity, query) {
   return haystack.includes(query);
 }
 
-/* One empty state for every list: icon + one line + the action that actually
-   helps. "Nothing in this window" is not the same as "nothing exists", so the
-   first case offers the way back to the full history. */
+/* One empty state for every list — the shared card from js/ui-states.js.
+   "Nothing in this window" is not the same as "nothing exists", so the first
+   case offers the way back to the full history. */
 function emptyState(total, query) {
-  const art = iconMarkup(query ? 'search' : 'assignment', 'apc-empty-icon-svg');
+  const button = { label: 'সব কাজ দেখুন', action: 'show-all', tone: 'primary' };
   if (total) {
-    return `<div class="apc-empty"><span class="apc-empty-icon" aria-hidden="true">${art}</span>` +
-      '<strong>এই সময়ে কোনো কাজ নেই</strong>' +
-      `<p>${query ? 'এই লেখা মিলে এমন কোনো কাজ এই সময়ে নেই।' : 'নির্বাচিত সময়ে তোমার জন্য প্রকাশিত কোনো কাজ নেই।'} পুরোনো কাজ দেখতে “সব” অথবা “তারিখ ধরে” ব্যবহার করো।</p>` +
-      '<button type="button" class="mini-btn primary" data-scope-show-all>সব কাজ দেখুন</button></div>';
+    return sharedEmptyState({
+      icon: query ? 'search' : 'assignment',
+      title: 'এই সময়ে কোনো কাজ নেই',
+      message: `${query ? 'এই লেখা মিলে এমন কোনো কাজ এই সময়ে নেই।' : 'নির্বাচিত সময়ে তোমার জন্য প্রকাশিত কোনো কাজ নেই।'} পুরোনো কাজ দেখতে “সব” অথবা “তারিখ ধরে” ব্যবহার করো।`,
+      button
+    });
   }
-  return `<div class="apc-empty"><span class="apc-empty-icon" aria-hidden="true">${art}</span>` +
-    '<strong>এখনও কোনো কাজ দেওয়া হয়নি।</strong>' +
-    '<p>শিক্ষক কাজ প্রকাশ করলে এখানে দেখা যাবে।</p></div>';
+  return sharedEmptyState({
+    icon: 'assignment',
+    title: 'এখনও কোনো কাজ দেওয়া হয়নি।',
+    message: 'শিক্ষক কাজ প্রকাশ করলে এখানে দেখা যাবে।'
+  });
 }
 
 export function initStudentTeaching({ getStudent }) {
@@ -206,7 +210,7 @@ export function initStudentTeaching({ getStudent }) {
     onChange(next) { scope = next; render(); }
   });
   $('#learningList').addEventListener('click', event => {
-    if (!event.target.closest('[data-scope-show-all]') || !scopeBar) return;
+    if (!event.target.closest('[data-empty-action="show-all"]') || !scopeBar) return;
     scopeBar.set({ mode: 'all' });
     scope = scopeBar.scope();
     render();
