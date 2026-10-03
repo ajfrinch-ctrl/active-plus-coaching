@@ -63,14 +63,17 @@ test('student, manager and teacher have eight real, named service shortcuts', ()
 test('secondary screens have accessible home/back controls and staff More has round icons', () => {
   for (const [name, attribute, target, count] of [
     ['index', 'data-view', 'home', 6], ['admin', 'data-admin-view', 'dashboard', 11],
-    ['manager', 'data-manager-view', 'dashboard', 14], ['teacher', 'data-teacher-view', 'home', 9]
+    ['manager', 'data-manager-view', 'dashboard', 15], ['teacher', 'data-teacher-view', 'home', 10]
   ]) {
     const document = doc(name);
     const backs = [...document.querySelectorAll('.pay-back')];
     assert.equal(backs.length, count, name);
     for (const button of backs) {
-      // The More sub-pages (Reports, Notification Settings) go back to More.
-      const parent = name === 'index' && button.closest('#reportsView, #notificationSettingsView') ? 'profile' : target;
+      // A sub-page of Settings (Reports on the student app, Notification
+      // Settings on every panel) goes back to the page that owns it, not to
+      // the panel's first tab.
+      const ownedBySettings = button.closest('#reportsView, #notificationSettingsView, #managerNotificationSettingsView, #teacherNotificationSettings');
+      const parent = ownedBySettings ? 'profile' : target;
       assert.equal(button.getAttribute(attribute), parent);
       assert.ok(button.getAttribute('aria-label'));
       assert.ok(button.querySelector('svg'));

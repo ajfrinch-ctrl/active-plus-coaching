@@ -28,7 +28,10 @@ const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
 const bn = value => String(value ?? 0).replace(/\d/g, digit => '০১২৩৪৫৬৭৮৯'[digit]);
 const money = value => `৳${bn(Number(value || 0).toLocaleString('en-US'))}`;
-const MANAGER_VIEWS = Object.freeze(['dashboard', 'students', 'approvals', 'classes', 'teachers', 'finance', 'cash-counter', 'notices', 'routine', 'exams', 'courses', 'results', 'reports', 'profile', 'more']);
+const MANAGER_VIEWS = Object.freeze(['dashboard', 'students', 'approvals', 'classes', 'teachers', 'finance', 'cash-counter', 'notices', 'routine', 'exams', 'courses', 'results', 'reports', 'profile', 'notification-settings', 'more']);
+/* A settings sub-page is not a tab of its own: the bottom bar keeps "আরও" lit
+   while it is open, since that page (and the profile page) is what opens it. */
+const BOTTOM_TAB_FOR = Object.freeze({ 'notification-settings': 'more' });
 /* The "আরও" page. One row per Manager module, in the same icon + title + hint
    language as the Admin panel's More menu, so a module looks the same wherever
    it is reached from. Labels stay Bangla like the bottom bar; the hint names
@@ -44,12 +47,13 @@ const MORE_MODULES = Object.freeze([
   { view: 'courses', icon: 'book', label: 'পড়াশোনা পরিচালনা করুন', hint: 'কোর্স উপকরণ, নোট ও সাজেশন' },
   { view: 'results', icon: 'result', label: 'ফলাফল দেখুন', hint: 'নম্বর যাচাই ও ফলাফল প্রকাশ' },
   { view: 'reports', icon: 'reports', label: 'রিপোর্ট', hint: 'রিপোর্ট তৈরি, প্রিভিউ ও ডাউনলোড' },
+  { view: 'notification-settings', icon: 'bell', label: 'নোটিফিকেশন সেটিংস', hint: 'চালু/বন্ধ, অনুমতি, শব্দ ও প্রিভিউ' },
   { view: 'profile', icon: 'user', label: 'ম্যানেজার প্রোফাইল', hint: 'নিজের পরিচয় ও পাসওয়ার্ড' }
 ]);
 const dayLabel = Object.freeze({ sat: 'শনিবার', sun: 'রবিবার', mon: 'সোমবার', tue: 'মঙ্গলবার', wed: 'বুধবার', thu: 'বৃহস্পতিবার' });
 const statusLabel = Object.freeze({ approved: 'সক্রিয়', pending: 'অপেক্ষমাণ', rejected: 'বাতিল' });
 let students = loadRoster(), notices = loadNotices(), routine = loadRoutine(), transactions = [], exams = { exams: [], attempts: [] }, teaching = { activities: [] }, managerAccount = null;
-let activeView = 'dashboard', studentScope = 'all', cashScope = 'pending', routineDay = 'sat', examStarted = false, managerBusy = false;
+let activeView = 'dashboard', studentScope = 'all', cashScope = 'pending', routineDay = 'sat', examStarted = false, managerBusy = false, noticeSettings = null;
 
 function toast(message, error = false) {
   const node = $('#managerToast'); if (!node) return;
@@ -62,7 +66,8 @@ function renderView(view) {
   activeView = view;
   $$('.manager-view').forEach(panel => { const active = panel.dataset.viewPanel === view; panel.classList.toggle('active', active); panel.hidden = !active; });
   $$('.manager-bottom [data-manager-view]').forEach(button => {
-    const active = button.dataset.managerView === view || (view === 'more' && button.dataset.managerView === 'more');
+    const tab = BOTTOM_TAB_FOR[view] || view;
+    const active = button.dataset.managerView === tab;
     button.classList.toggle('active', active);
     if (active) button.setAttribute('aria-current', 'page'); else button.removeAttribute('aria-current');
   });
@@ -83,6 +88,9 @@ function renderView(view) {
   if (view === 'results') renderResults();
   if (view === 'reports') void refreshReports($('#managerReports'));
   if (view === 'profile') renderProfile();
+  // Repaint the screen when its page opens, so the unread count and the
+  // permission line say what is true now rather than at boot.
+  if (view === 'notification-settings') noticeSettings?.paint();
   $('#managerMain')?.scrollTo({ top: 0, behavior: 'smooth' });
   return true;
 }
@@ -514,8 +522,9 @@ async function enterManager() {
   renderView(MANAGER_VIEWS.includes(wanted) ? wanted : 'dashboard');
   onRouteChange(name => { if (MANAGER_VIEWS.includes(name) && name !== activeView) renderView(name); });
   await loadOperationalData();
-  // Settings → Notification Settings, inside the Manager's own profile page.
-  initNotificationSettings({ mount: '#notificationSettings' });
+  // Settings → Notification Settings: a page of its own, reached from the
+  // Manager's profile page or from "আরও". It paints nowhere else.
+  noticeSettings = initNotificationSettings({ mount: '#notificationSettings' });
   // পড়াশোনা পরিচালনা করুন: the same content library the Teacher writes into.
   mountCourseEditor();
   mountReports($('#managerReports'), { panel: 'manager' });

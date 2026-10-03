@@ -24,7 +24,7 @@ before(async () => {
 test('Manager boots on the operational dashboard with only its allow-listed sections', () => {
   assert.deepEqual(ctx.jsdomErrors, []);
   const views = ctx.$$('.manager-view').map(view => view.dataset.viewPanel);
-  assert.deepEqual(views, ['dashboard', 'students', 'approvals', 'classes', 'teachers', 'finance', 'cash-counter', 'notices', 'routine', 'exams', 'courses', 'results', 'reports', 'profile', 'more']);
+  assert.deepEqual(views, ['dashboard', 'students', 'approvals', 'classes', 'teachers', 'finance', 'cash-counter', 'notices', 'routine', 'exams', 'courses', 'results', 'reports', 'profile', 'notification-settings', 'more']);
   const routes = ctx.$$('[data-manager-view]').map(button => button.dataset.managerView);
   for (const forbidden of ['staff', 'roles', 'permissions', 'security', 'backup', 'restore', 'settings', 'admin']) assert.equal(routes.includes(forbidden), false);
   assert.equal(ctx.$('#managerMain a[href*="admin"]'), null);
@@ -125,7 +125,7 @@ test('the আরও page lists every module as a real page, not a floating drawe
   assert.equal(ctx.window.location.hash, '#more', 'the open page lives in the URL');
 
   const rows = ctx.$$('#managerMoreMenu .admin-more-item');
-  const expected = ['classes', 'teachers', 'finance', 'cash-counter', 'notices', 'routine', 'exams', 'courses', 'results', 'reports', 'profile'];
+  const expected = ['classes', 'teachers', 'finance', 'cash-counter', 'notices', 'routine', 'exams', 'courses', 'results', 'reports', 'notification-settings', 'profile'];
   assert.deepEqual(rows.slice(0, expected.length).map(row => row.dataset.managerView), expected);
   assert.equal(rows.length, expected.length + 1, 'the log-out row is the last one');
   assert.ok(rows[rows.length - 1].classList.contains('is-logout'));

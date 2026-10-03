@@ -17,7 +17,7 @@ import { teachingRepository, DEMO_TEACHER, ACTIVITY_TYPES, PROGRESS_LABELS, esca
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
 const state = { db: { activities: [] }, students: [], assignments: [], teacher: null, view: 'home', homeClass: 'all', status: 'all', ready: false, busy: false, recordLimit: 15 };
-let modalTrigger, toastTimer;
+let modalTrigger, toastTimer, noticeSettings = null;
 initFixedShell();
 initExamManager('#teacherExamWorkspace', 'teacher');
 registerServiceWorker();
@@ -233,7 +233,7 @@ function renderTeacherProfile() {
   host.innerHTML = `<div class="manager-profile-list"><div><small>নাম</small><strong>${esc(account.fullName || '—')}</strong></div><div><small>Username</small><strong>${esc(account.username || '—')}</strong></div><div><small>যোগাযোগ</small><strong>${esc(account.mobile || '—')}</strong></div><div><small>Role</small><strong>Teacher — Academic</strong></div><div><small>Assigned class/batch</small><strong>${bn(state.assignments.length)}</strong></div></div>`;
 }
 function render() { renderHome(); renderRecords(); renderStudents(); renderTeacherClasses(); renderTeacherRoutine(); renderAcademicReports(); renderTeacherProfile(); }
-const TEACHER_VIEWS = Object.freeze(['home', 'more', 'students', 'online-exams', 'courses', 'classes', 'routine-view', 'reports', 'profile', ...Object.keys(ACTIVITY_TYPES)]);
+const TEACHER_VIEWS = Object.freeze(['home', 'more', 'students', 'online-exams', 'courses', 'classes', 'routine-view', 'reports', 'profile', 'notification-settings', ...Object.keys(ACTIVITY_TYPES)]);
 function setView(view) {
   if (!TEACHER_VIEWS.includes(view)) return;
   const previous = state.view;
@@ -244,7 +244,7 @@ function setView(view) {
     state.recordLimit = 15;
   }
   state.view = view;
-  const panel = ACTIVITY_TYPES[view] ? 'teacherRecords' : { home: 'teacherHome', more: 'teacherMore', students: 'teacherStudents', 'online-exams': 'teacherOnlineExams', courses: 'teacherCourses', classes: 'teacherClasses', 'routine-view': 'teacherRoutine', reports: 'teacherAcademicReports', profile: 'teacherProfile' }[view];
+  const panel = ACTIVITY_TYPES[view] ? 'teacherRecords' : { home: 'teacherHome', more: 'teacherMore', students: 'teacherStudents', 'online-exams': 'teacherOnlineExams', courses: 'teacherCourses', classes: 'teacherClasses', 'routine-view': 'teacherRoutine', reports: 'teacherAcademicReports', profile: 'teacherProfile', 'notification-settings': 'teacherNotificationSettings' }[view];
   $$('.teacher-view').forEach(el => { el.hidden = el.id !== panel; });
   $$('.teacher-type-tabs [data-type-tab]').forEach(el => {
     const active = el.dataset.typeTab === view;
@@ -257,6 +257,9 @@ function setView(view) {
     el.classList.toggle('active', active);
     if (active) el.setAttribute('aria-current', 'page'); else el.removeAttribute('aria-current');
   });
+  // Repaint the settings screen when its page opens, so the unread count and
+  // the permission line say what is true now rather than at boot.
+  if (view === 'notification-settings') noticeSettings?.paint();
   $('#teacherMain').scrollTo({ top: 0, behavior: 'instant' }); render();
   // The open page lives in the URL, so a refresh lands back on it.
   rememberRoute(view);
@@ -438,8 +441,9 @@ async function showTeacherShell() {
   setView(TEACHER_VIEWS.includes(wanted) ? wanted : 'home');
   onRouteChange(name => { if (TEACHER_VIEWS.includes(name) && name !== state.view) setView(name); });
   const loaded = await reload();
-  // Settings → Notification Settings, inside the Teacher's profile page.
-  initNotificationSettings({ mount: '#notificationSettings' });
+  // Settings → Notification Settings: a page of its own, reached from the
+  // Teacher's profile page or from "আরও". It paints nowhere else.
+  noticeSettings = initNotificationSettings({ mount: '#notificationSettings' });
   // পড়াশোনা পরিচালনা করুন — content for the Teacher's own class+subject only.
   mountCourseEditor();
   mountReports($('#teacherReports'), { panel: 'teacher' });

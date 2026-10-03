@@ -1,3 +1,6 @@
+// v151: Settings owns the notification screen — on the Manager and Teacher
+// panels it sat directly inside <main>, so it painted under every page. It is
+// a routed page now, opened from the panel's profile page or from "আরও".
 // v150: student home — আজকের অনুপ্রেরণা (a deterministic daily quote card
 // between today's classes and the quick menu) with its offline feed cached in
 // the shell. v149: examination identity + question bank — permanent Exam Codes
@@ -5,7 +8,7 @@
 // answer-key PDFs, the student Learning Hub (class → subject → chapter) and the
 // shared brand module. v148: date-wise examination workspace — question
 // archive, review workflow and question-level editing for the Manager.
-const CACHE_VERSION = 150;
+const CACHE_VERSION = 151;
 const CACHE_NAME = `active-plus-student-v${CACHE_VERSION}-minimal-education`;
 const APP_SHELL = [
   './css/notifications.css',
