@@ -1,3 +1,6 @@
+// v153: one confirmation for the whole app — js/confirm-dialog.js replaces the
+// browser's window.confirm on the exam desk and the Manager panel, so delete,
+// publish and archive all ask in the same card with the same two buttons.
 // v152: lists open on the latest work — js/latest-scope.js gives every list one
 // rule (recent by default, From → To for history) and one filter bar; the
 // student home shows three days of homework and the panel a week.
@@ -11,7 +14,7 @@
 // answer-key PDFs, the student Learning Hub (class → subject → chapter) and the
 // shared brand module. v148: date-wise examination workspace — question
 // archive, review workflow and question-level editing for the Manager.
-const CACHE_VERSION = 152;
+const CACHE_VERSION = 153;
 const CACHE_NAME = `active-plus-student-v${CACHE_VERSION}-minimal-education`;
 const APP_SHELL = [
   './css/notifications.css',
@@ -131,6 +134,7 @@ const APP_SHELL = [
   './js/student-exams.js',
   './js/student-dashboard.js',
   './js/latest-scope.js',
+  './js/confirm-dialog.js',
   './js/account-policy.js',
   './js/storage.js',
   './js/ui.js',

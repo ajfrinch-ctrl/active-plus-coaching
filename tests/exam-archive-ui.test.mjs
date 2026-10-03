@@ -135,10 +135,13 @@ test('a single question is edited and deleted without touching the others', asyn
   ctx.submit($('#teacherExamWorkspace [data-question-add]'));
   await ctx.waitFor(() => examByTitle('তৃতীয় পরীক্ষা')?.questions.length === 2);
 
-  /* Deleting asks first and leaves the rest alone. */
-  ctx.window.confirm = () => true;
+  /* Deleting asks first — in the app's own dialog, not the browser's — and
+     leaves the rest alone. */
   const before = examByTitle('তৃতীয় পরীক্ষা');
   ctx.click($(`#teacherExamWorkspace [data-exam-action="q-delete"][data-id="${before.questions[0].uid}"]`));
+  await ctx.waitFor(() => $('.apc-confirm-backdrop')?.hidden === false);
+  assert.equal($('#apcConfirmTitle').textContent, 'প্রশ্ন মুছে ফেলবেন?');
+  ctx.click($('.apc-confirm-actions [data-apc-confirm="ok"]'));
   await ctx.waitFor(() => examByTitle('তৃতীয় পরীক্ষা')?.questions.length === 1);
   const after = examByTitle('তৃতীয় পরীক্ষা');
   assert.equal(after.questions[0].uid, before.questions[1].uid, 'the surviving question keeps its own id');

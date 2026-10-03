@@ -18,6 +18,7 @@ import { initFixedShell } from './fixed-shell.js';
 import { initExamManager } from './exam-manager.js';
 import { listTeacherAssignments, saveTeacherAssignment, deleteTeacherAssignment, deleteAssignmentSubject, selectableSubjects, TEACHER_ASSIGNMENTS_KEY } from './teacher-assignments.js';
 import { listClasses } from './academics.js';
+import { confirmAction } from './confirm-dialog.js';
 import { initNotificationSettings } from './notification-settings.js';
 import { mountReports, refreshReports } from './reports.js';
 import { iconElement } from './icons.js';
@@ -436,7 +437,7 @@ $('#managerNoticeList').addEventListener('click', async event => {
   const notice = notices.find(item => item.id === button.dataset.id); if (!notice) return;
   if (button.dataset.managerAction === 'edit-notice') await editNotice(notice);
   if (button.dataset.managerAction === 'delete-notice') {
-    if (!window.confirm('এই নোটিশ মুছবেন?')) return;
+    if (!await confirmAction({ title: 'নোটিশ মুছে ফেলবেন?', message: 'এই নোটিশ মুছে ফেললে শিক্ষার্থী ও শিক্ষক প্যানেল থেকেও সরে যাবে।', confirmLabel: 'মুছে ফেলুন', tone: 'danger', eyebrow: 'ম্যানেজার প্যানেল' })) return;
     if (!(await managerGuard())) return toast('Manager session যাচাই হয়নি।', true);
     notices = notices.filter(item => item.id !== notice.id);
     if (saveNotices(notices)) { renderNotices(); toast('নোটিশ মুছে ফেলা হয়েছে।'); }
@@ -447,7 +448,7 @@ $('#managerRoutineList').addEventListener('click', async event => {
   const button = event.target.closest('[data-manager-action]'); if (!button) return;
   const index = Number(button.dataset.index); const rows = routine[routineDay]?.classes || [];
   if (button.dataset.managerAction === 'edit-routine') await changeRoutine(index);
-  if (button.dataset.managerAction === 'delete-routine' && window.confirm('এই routine entry মুছবেন?')) {
+  if (button.dataset.managerAction === 'delete-routine' && await confirmAction({ title: 'রুটিন থেকে মুছে ফেলবেন?', message: 'এই ক্লাসটি রুটিন থেকে সরে যাবে; অন্য দিনের ক্লাস অক্ষত থাকবে।', confirmLabel: 'মুছে ফেলুন', tone: 'danger', eyebrow: 'ম্যানেজার প্যানেল' })) {
     if (!(await managerGuard())) return toast('Manager session যাচাই হয়নি।', true);
     rows.splice(index, 1); if (!saveRoutine(routine)) return toast('Routine সংরক্ষণ হয়নি।', true); renderRoutine(); toast('Routine entry মুছে ফেলা হয়েছে।');
   }
@@ -479,7 +480,7 @@ $('#managerTeacherList').addEventListener('click', async event => {
     return;
   }
   const button = event.target.closest('[data-manager-action="delete-teacher-assignment"]');
-  if (!button || !window.confirm('এই Teacher assignment সরাবেন?')) return;
+  if (!button || !await confirmAction({ title: 'শিক্ষকের assignment সরাবেন?', message: 'এই শিক্ষক আর সেই ক্লাস/বিভাগে কাজ যোগ করতে পারবেন না; সংরক্ষিত নম্বর ও উপস্থিতি অক্ষত থাকবে।', confirmLabel: 'সরিয়ে ফেলুন', tone: 'danger', eyebrow: 'ম্যানেজার প্যানেল' })) return;
   if (!(await managerGuard())) return toast('Manager session যাচাই হয়নি।', true);
   try { await deleteTeacherAssignment(button.dataset.id); await renderTeachers(); toast('Teacher assignment সরানো হয়েছে।'); }
   catch (error) { toast(error.message || 'Assignment সরানো হয়নি।', true); }

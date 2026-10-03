@@ -207,7 +207,7 @@ test.describe('wallet offline shell', () => {
       if (!navigator.serviceWorker.controller) await new Promise(resolve => navigator.serviceWorker.addEventListener('controllerchange', resolve, { once: true }));
     });
     const cached = await page.evaluate(async () => {
-      const cache = await caches.open('active-plus-student-v152-minimal-education');
+      const cache = await caches.open('active-plus-student-v153-minimal-education');
       return Boolean(await cache.match('./css/ui-wallet.css')) && Boolean(await cache.match('./js/icon-set.js'));
     });
     expect(cached).toBe(true);

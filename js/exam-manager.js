@@ -6,6 +6,7 @@
    js/exam-data.js; this module only paints the buttons that are allowed. */
 import { examRepository as repo, EXAM_TYPES, EXAM_STATUSES, TEACHER_ACTOR, ADMIN_ACTOR, MANAGER_ACTOR, examTemplate, EXAM_SAMPLE_TEMPLATES, MCQ_30_SAMPLE, parseQuestions, totalMarks, watchExams, isLiveExam, examDateOf, examDurationMinutes, examDateFor, examCodeOf, examStageLabel, ensureChapter } from './exam-data.js';
 import { examRecord, questionPreview, resultMarkup, downloadResults, statusTag, typeTag, stageTag, codeTag, esc, num, when, shortExamId } from './exam-ui.js';
+import { confirmAction } from './confirm-dialog.js';
 import { downloadExamPDF } from './exam-pdf.js';
 import { enabledClasses } from './config.js';
 import { listClasses, listChapters, subjectsForClass, isSubjectEnabled } from './academics.js';
@@ -640,7 +641,7 @@ export function initExamManager(container, role) {
     else if (action === 'bank-edit') { bankEditing = bankEditing === target.dataset.id ? '' : target.dataset.id; bankView(); }
     else if (action === 'bank-cancel') { bankEditing = ''; bankView(); }
     else if (action === 'bank-toggle') run(() => questionBank.setActive(target.dataset.id, !questionById(target.dataset.id)?.active, actor.role === 'teacher' ? 'Teacher' : 'Manager'), 'প্রশ্নটি হালনাগাদ হয়েছে।', () => bankView());
-    else if (action === 'bank-delete' && window.confirm('এই প্রশ্নটি প্রশ্ন ব্যাংক থেকে মুছবেন? কোনো পরীক্ষার প্রশ্ন বা ফলাফল মুছে যাবে না।')) run(() => questionBank.remove(target.dataset.id, actor.role === 'teacher' ? 'Teacher' : 'Manager'), 'প্রশ্নটি ব্যাংক থেকে মুছে ফেলা হয়েছে; পরীক্ষাগুলো অক্ষত আছে।', () => bankView());
+    else if (action === 'bank-delete' && await confirmAction({ title: 'প্রশ্ন ব্যাংক থেকে মুছে ফেলবেন?', message: 'এই প্রশ্নটি প্রশ্ন ব্যাংক থেকে মুছবেন? কোনো পরীক্ষার প্রশ্ন বা ফলাফল মুছে যাবে না।', confirmLabel: 'মুছে ফেলুন', tone: 'danger' })) run(() => questionBank.remove(target.dataset.id, actor.role === 'teacher' ? 'Teacher' : 'Manager'), 'প্রশ্নটি ব্যাংক থেকে মুছে ফেলা হয়েছে; পরীক্ষাগুলো অক্ষত আছে।', () => bankView());
     else if (action === 'bank-add') {
       const exam = db.exams.find(item => item.id === selected);
       const row = questionById(target.dataset.id);
@@ -663,24 +664,24 @@ export function initExamManager(container, role) {
     else if (action === 'detail') detail(e);
     else if (action === 'q-edit') { openQuestion = target.dataset.id; questions(db.exams.find(item => item.id === selected)); scrollTop(); }
     else if (action === 'q-cancel') { openQuestion = null; questions(db.exams.find(item => item.id === selected)); }
-    else if (action === 'q-delete' && window.confirm('এই প্রশ্নটি মুছে ফেলবেন? বাকি প্রশ্ন ও পরীক্ষার অন্য কোনো তথ্য মুছে যাবে না।')) {
+    else if (action === 'q-delete' && await confirmAction({ title: 'প্রশ্ন মুছে ফেলবেন?', message: 'এই প্রশ্নটি মুছে ফেলবেন? বাকি প্রশ্ন ও পরীক্ষার অন্য কোনো তথ্য মুছে যাবে না।', confirmLabel: 'মুছে ফেলুন', tone: 'danger' })) {
       const exam = db.exams.find(item => item.id === selected);
       run(() => repo.deleteQuestion(exam.id, target.dataset.id, actor), 'প্রশ্ন মুছে ফেলা হয়েছে। বাকি প্রশ্ন অক্ষত আছে।', () => questions(db.exams.find(item => item.id === exam.id)));
     }
     else if (action === 'request') run(() => repo.requestApproval(e.id, actor), 'Manager-এর অনুমতির জন্য পাঠানো হয়েছে।');
-    else if (action === 'approve' && window.confirm('পরীক্ষাটি অনুমোদন করবেন? এরপর প্রকাশ করা যাবে।')) run(() => repo.approve(e.id, actor), 'পরীক্ষা অনুমোদিত হয়েছে — এখন প্রকাশ করা যাবে।');
-    else if (action === 'publish' && window.confirm('পরীক্ষাটি প্রকাশ করবেন? তারপর শিক্ষার্থীরা নির্ধারিত সময়ে প্রশ্ন দেখতে পাবে।')) run(() => repo.publish(e.id, actor), 'পরীক্ষা প্রকাশিত হয়েছে।');
-    else if (action === 'unpublish' && window.confirm('Unpublish করলে শিক্ষার্থীরা পরীক্ষাটি আর দেখতে পাবে না। সংরক্ষিত উত্তর ও ফলাফল মুছে যাবে না — আবার প্রকাশ করলে ফিরে আসবে।')) run(() => repo.unpublish(e.id, actor), 'পরীক্ষাটি Unpublish করা হয়েছে — প্রশ্ন ও ফলাফল অক্ষত আছে।');
-    else if (action === 'complete' && window.confirm('পরীক্ষাটি সম্পন্ন হিসেবে চিহ্নিত করবেন? ফলাফল ও উত্তর অক্ষত থাকবে।')) run(() => repo.complete(e.id, actor), 'পরীক্ষাটি সম্পন্ন হিসেবে চিহ্নিত হয়েছে।');
-    else if (action === 'archive' && window.confirm('পরীক্ষাটি আর্কাইভে সরাবেন? কোনো ডেটা মুছে যাবে না; পরে “ফিরিয়ে আনুন” দিয়ে ফেরানো যাবে।')) run(() => repo.archive(e.id, actor), 'পরীক্ষাটি আর্কাইভ করা হয়েছে।');
-    else if (action === 'restore' && window.confirm('আর্কাইভ থেকে ফিরিয়ে আনবেন?')) run(() => repo.restore(e.id, actor), 'পরীক্ষাটি আর্কাইভ থেকে ফিরে এসেছে।');
-    else if (action === 'duplicate' && window.confirm('এই প্রশ্নগুলো দিয়ে নতুন খসড়া পরীক্ষা বানাবেন? মূল পরীক্ষা অপরিবর্তিত থাকবে।')) {
+    else if (action === 'approve' && await confirmAction({ title: 'পরীক্ষা অনুমোদন করবেন?', message: 'পরীক্ষাটি অনুমোদন করবেন? এরপর প্রকাশ করা যাবে।', confirmLabel: 'অনুমোদন দিন' })) run(() => repo.approve(e.id, actor), 'পরীক্ষা অনুমোদিত হয়েছে — এখন প্রকাশ করা যাবে।');
+    else if (action === 'publish' && await confirmAction({ title: 'পরীক্ষা প্রকাশ করবেন?', message: 'পরীক্ষাটি প্রকাশ করবেন? তারপর শিক্ষার্থীরা নির্ধারিত সময়ে প্রশ্ন দেখতে পাবে।', confirmLabel: 'প্রকাশ করুন' })) run(() => repo.publish(e.id, actor), 'পরীক্ষা প্রকাশিত হয়েছে।');
+    else if (action === 'unpublish' && await confirmAction({ title: 'পরীক্ষা Unpublish করবেন?', message: 'Unpublish করলে শিক্ষার্থীরা পরীক্ষাটি আর দেখতে পাবে না। সংরক্ষিত উত্তর ও ফলাফল মুছে যাবে না — আবার প্রকাশ করলে ফিরে আসবে।', confirmLabel: 'Unpublish করুন' })) run(() => repo.unpublish(e.id, actor), 'পরীক্ষাটি Unpublish করা হয়েছে — প্রশ্ন ও ফলাফল অক্ষত আছে।');
+    else if (action === 'complete' && await confirmAction({ title: 'পরীক্ষা সম্পন্ন হিসেবে চিহ্নিত করবেন?', message: 'পরীক্ষাটি সম্পন্ন হিসেবে চিহ্নিত করবেন? ফলাফল ও উত্তর অক্ষত থাকবে।', confirmLabel: 'সম্পন্ন করুন' })) run(() => repo.complete(e.id, actor), 'পরীক্ষাটি সম্পন্ন হিসেবে চিহ্নিত হয়েছে।');
+    else if (action === 'archive' && await confirmAction({ title: 'আর্কাইভে সরাবেন?', message: 'পরীক্ষাটি আর্কাইভে সরাবেন? কোনো ডেটা মুছে যাবে না; পরে “ফিরিয়ে আনুন” দিয়ে ফেরানো যাবে।', confirmLabel: 'আর্কাইভ করুন' })) run(() => repo.archive(e.id, actor), 'পরীক্ষাটি আর্কাইভ করা হয়েছে।');
+    else if (action === 'restore' && await confirmAction({ title: 'আর্কাইভ থেকে ফিরিয়ে আনবেন?', message: 'আর্কাইভ থেকে ফিরিয়ে আনবেন? ফিরে আসা পরীক্ষা আবার তালিকায় দেখা যাবে।', confirmLabel: 'ফিরিয়ে আনুন' })) run(() => repo.restore(e.id, actor), 'পরীক্ষাটি আর্কাইভ থেকে ফিরে এসেছে।');
+    else if (action === 'duplicate' && await confirmAction({ title: 'নতুন খসড়া পরীক্ষা বানাবেন?', message: 'এই প্রশ্নগুলো দিয়ে নতুন খসড়া পরীক্ষা বানাবেন? মূল পরীক্ষা অপরিবর্তিত থাকবে।', confirmLabel: 'খসড়া বানান' })) {
       run(() => repo.duplicate(e.id, actor), 'নতুন খসড়া তৈরি হয়েছে — তারিখ ও শ্রেণি দেখে নিন।', () => {
         const copy = [...db.exams].filter(item => item.copiedFrom === e.id).sort((a, b) => Number(b.createdAt) - Number(a.createdAt))[0];
         if (copy) editor(copy.type, copy); else home();
       });
     }
-    else if (action === 'delete' && window.confirm(`“${e.title}” পরীক্ষাটি মুছে ফেলবেন? প্রশ্ন, নম্বর ও সময়সূচি সব মুছে যাবে — এটি ফেরানো যাবে না।`)) run(() => repo.deleteExam(e.id, actor), 'পরীক্ষাটি মুছে ফেলা হয়েছে।');
+    else if (action === 'delete' && await confirmAction({ title: 'পরীক্ষা মুছে ফেলবেন?', message: `“${e.title}” পরীক্ষাটি মুছে ফেলবেন? প্রশ্ন, নম্বর ও সময়সূচি সব মুছে যাবে — এটি ফেরানো যাবে না।`, confirmLabel: 'মুছে ফেলুন', tone: 'danger' })) run(() => repo.deleteExam(e.id, actor), 'পরীক্ষাটি মুছে ফেলা হয়েছে।');
     else if (action === 'report') report(e);
     else if (action === 'grade') { try { await grade(e); } catch (err) { error(err.message); } }
     else if (action === 'csv') downloadResults(db, e);
