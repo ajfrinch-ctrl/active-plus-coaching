@@ -903,9 +903,6 @@ html[data-theme="dark"] .auth-brand img { background: transparent; padding: 0; b
 .exam-option input { flex: none; }
 /* Instant MCQ practice — the self-study lane; official exam screens stay as they are. */
 .practice-card h2 { font-size: 16px; font-weight: 700; margin: 0 0 6px; }
-.practice-timer { display: flex; flex-wrap: wrap; gap: 2px 12px; align-items: baseline; border-color: var(--color-border); background: var(--color-surface-muted); color: var(--color-text); font-weight: 600; }
-.practice-timer strong { font-weight: 800; }
-.practice-timer small { flex-basis: 100%; font-weight: 600; }
 .practice-history { display: grid; gap: 8px; margin: 10px 0 4px; }
 .practice-history-row { display: flex; flex-wrap: wrap; gap: 2px 12px; align-items: baseline; font-size: 13px; margin: 0; }
 .practice-history-row span:last-of-type { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

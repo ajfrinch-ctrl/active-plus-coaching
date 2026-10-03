@@ -136,7 +136,8 @@ test('the backfill shelves past papers and completes legacy rows without duplica
   assert.equal(result.added, 1, 'only the missing question is shelved');
   assert.ok(result.updated >= 1, 'the legacy row is completed in place');
   const patched = bankRows().find(row => row.id === legacy.id);
-  assert.equal(patched.endAt, past.endAt, 'the legacy row now carries the window end');
+  assert.equal(patched.startAt, past.startAt, 'the legacy row now carries the window start');
+  assert.equal(patched.endAt, past.endAt, '…and the window end');
   assert.equal(patched.source?.examId, 'EX-BANK-3', '…and the paper it came from');
   assert.equal(bankCount(), before + 1, 'no duplicate rows were created');
   const again = await ensureExamsInBank(stored.exams, 'Manager');
@@ -156,10 +157,12 @@ test('the practice list offers only this student’s papers whose window has end
   assert.doesNotMatch(text, /আসন্ন গণিত MCQ পরীক্ষা/, 'an upcoming paper’s questions never leak');
   assert.doesNotMatch(text, /অন্য শ্রেণির MCQ পরীক্ষা/, 'another class’s paper stays out of this student’s lane');
   assert.equal($$2('#studentPracticeWorkspace [data-practice-action="start-paper"]').length, 1);
-  assert.match($$2('#studentPracticeWorkspace [data-practice-action="start-random"]')[0].textContent, /৩টি প্রশ্ন/, 'the random drill sizes itself to the bank');
+  assert.match($$2('#studentPracticeWorkspace [data-practice-action="start-random"]')[0].textContent, /৩টি প্রশ্ন • ৬ মিনিট/, 'the random drill sizes itself to the bank and its pace');
+  assert.match(workspace().textContent, /গত গণিত MCQ পরীক্ষা[\s\S]*৬০ মিনিট/, 'the paper card shows the original time limit');
   const rows = bankRows().filter(row => row.source?.examId);
   assert.ok(rows.length >= 8, 'the student’s own device backfilled the shelf from its papers');
   const pastRow = rows.find(row => row.source.examId === 'EX-PAST');
+  assert.equal(pastRow.startAt, uiExams()[0].startAt);
   assert.equal(pastRow.endAt, uiExams()[0].endAt);
 });
 
@@ -167,8 +170,12 @@ test('a paper is sat instantly — no clock, no window — and marked on the spo
   await uiContext();
   ctx2click($2('#studentPracticeWorkspace [data-practice-action="start-paper"]'));
   await uiCtx.waitFor(() => $$2('#studentPracticeWorkspace .exam-question').length === 3);
-  assert.equal($2('#studentPracticeWorkspace [data-exam-clock]'), null, 'no timer: practice is self-paced');
-  assert.match($2('#studentPracticeWorkspace .practice-timer').textContent, /সময়সীমা নেই/);
+  const clock = $2('#studentPracticeWorkspace [data-practice-clock]');
+  assert.ok(clock, 'the sheet runs under a clock, like the real exam');
+  assert.equal($2('#studentPracticeWorkspace [data-exam-clock]'), null, '…under its own clock, not the official one');
+  assert.match($2('#studentPracticeWorkspace .exam-timer').textContent, /৬০ মিনিট/, 'the past paper keeps its original one-hour window');
+  assert.match(clock.textContent, /সময় বাকি (৬০:০০|৫[০-৯]:[০-৯]{2})/, 'the countdown is live');
+  assert.equal(clock.dataset.lowTime, 'false', 'not yet in the last-five-minutes flag');
 
   const pick = async (fragment, option) => {
     const fieldset = $$2('#studentPracticeWorkspace .exam-question').find(node => node.textContent.includes(fragment));
@@ -207,12 +214,44 @@ test('a paper is sat instantly — no clock, no window — and marked on the spo
   assert.equal(practiceStore().active, null, 'a finished sheet is no longer in flight');
 });
 
+test('when the timer hits zero the sheet submits itself and the result appears', async () => {
+  await uiContext();
+  ctx2click($2('#studentPracticeWorkspace [data-practice-action="list"]'));
+  await uiCtx.waitFor(() => Boolean($2('#studentPracticeWorkspace [data-practice-action="start-paper"]')));
+  ctx2click($2('#studentPracticeWorkspace [data-practice-action="start-paper"]'));
+  await uiCtx.waitFor(() => $$2('#studentPracticeWorkspace .exam-question').length === 3);
+  const inFlight = practiceStore().active;
+  assert.ok(Number.isFinite(inFlight.endsAt) && inFlight.endsAt > Date.now(), 'the in-flight sheet carries an absolute deadline');
+
+  /* Move the wall clock just past the deadline, the way minutes would: the
+     one-second heartbeat then finds time up and closes the sheet itself. */
+  const realNow = Date.now;
+  const realWindowNow = uiCtx.window.Date.now;
+  const offset = inFlight.endsAt - realNow() + 1500;
+  const fakeNow = () => realNow() + offset;
+  Date.now = fakeNow;
+  uiCtx.window.Date.now = fakeNow;
+  try {
+    await uiCtx.waitFor(() => Boolean($2('#studentPracticeWorkspace .exam-summary')), 15000);
+  } finally {
+    Date.now = realNow;
+    uiCtx.window.Date.now = realWindowNow;
+  }
+  const summary = $2('#studentPracticeWorkspace .exam-summary').textContent;
+  assert.match(summary, /সময় শেষে স্বয়ংক্রিয় জমা/, 'the result says the sheet was closed by the clock');
+  assert.match($2('#studentPracticeWorkspace').textContent, /সময় শেষ/, 'the page says time is up too');
+  const record = practiceStore().sessions[0];
+  assert.equal(record.auto, true, 'the history marks it as an automatic close');
+  assert.equal(record.score, 0, 'nothing was answered, so nothing scores');
+  assert.equal(practiceStore().active, null, 'the sheet is closed for good');
+});
+
 test('the list remembers the best score, the history shows the session, and an in-flight sheet can be resumed', async () => {
   await uiContext();
   ctx2click($2('#studentPracticeWorkspace [data-practice-action="list"]'));
   await uiCtx.waitFor(() => Boolean($2('#studentPracticeWorkspace [data-practice-action="start-paper"]')));
   assert.match(workspace().textContent, /তোমার সেরা: ১\/৩/, 'the paper shows the student’s best');
-  assert.match($$2('#studentPracticeWorkspace .practice-history-row')[0].textContent, /১\/৩/, 'the history keeps the session');
+  assert.match($$2('#studentPracticeWorkspace .practice-history-row').map(node => node.textContent).join(' '), /১\/৩/, 'the history keeps the scored session');
 
   ctx2click($2('#studentPracticeWorkspace [data-practice-action="start-random"]'));
   await uiCtx.waitFor(() => $$2('#studentPracticeWorkspace .exam-question').length === 3);
@@ -232,7 +271,7 @@ test('the list remembers the best score, the history shows the session, and an i
   await uiCtx.waitFor(() => !$2('#studentPracticeWorkspace [data-practice-confirm]').hidden);
   ctx2click($2('#studentPracticeWorkspace [data-practice-action="finish"]'));
   await uiCtx.waitFor(() => Boolean($2('#studentPracticeWorkspace .exam-summary')));
-  assert.equal(practiceStore().sessions.length, 2, 'both practice sessions are on record');
+  assert.equal(practiceStore().sessions.length, 3, 'all three practice sessions are on record');
 });
 
 function ctx2click(element) { element.dispatchEvent(new uiCtx.window.Event('click', { bubbles: true, cancelable: true })); }
@@ -249,6 +288,6 @@ test('a reload restores the practice history and the best score', async () => {
   initStudentPractice({ getStudent: () => student, getAccount: () => ({ status: 'active' }) });
   await fresh.waitFor(() => Boolean(fresh.$('#studentPracticeWorkspace [data-practice-action="start-paper"]')));
   const rows = fresh.$$('#studentPracticeWorkspace .practice-history-row');
-  assert.equal(rows.length, 2, 'both sessions come back from the device');
+  assert.equal(rows.length, 3, 'all sessions come back from the device');
   assert.match(fresh.$('#studentPracticeWorkspace').textContent, /তোমার সেরা: ১\/৩/, 'the best score is restored too');
 });

@@ -67,9 +67,11 @@ export function normalizeQuestion(row = {}) {
     chapterId: text(row.chapterId),
     chapterName: text(row.chapterName),
     topic: text(row.topic),
-    /* The official window end of the paper this question came from (0 for
+    /* The official window of the paper this question came from (0 for
        standalone rows): the instant-practice lane only opens a paper after
-       this moment, so an upcoming exam's questions can never leak. */
+       `endAt` (so an upcoming exam's questions can never leak) and times the
+       drill with the paper's original duration (`endAt - startAt`). */
+    startAt: Number(row.startAt) || 0,
     endAt: Number(row.endAt) || 0,
     type,
     difficulty: Object.hasOwn(QUESTION_DIFFICULTIES, row.difficulty) ? row.difficulty : 'medium',
@@ -178,6 +180,7 @@ export function cleanBankQuestion(input = {}) {
   const className = String(input.className ?? '').trim().slice(0, 80);
   const subject = String(input.subject ?? '').trim().slice(0, 80);
   const group = String(input.group ?? '').trim().slice(0, 80);
+  const startAt = Math.max(0, Math.round(Number(input.startAt) || 0));
   const endAt = Math.max(0, Math.round(Number(input.endAt) || 0));
   const chapterName = String(input.chapterName ?? '').trim().slice(0, 120);
   const chapterId = String(input.chapterId ?? '').trim().slice(0, 120);
@@ -190,23 +193,23 @@ export function cleanBankQuestion(input = {}) {
     const answer = String(input.answer ?? '').trim().toUpperCase();
     if (options.length !== 4 || options.map(option => option.id).join('') !== 'ABCD' || options.some(option => !option.text || option.text.length > 500) || !['A', 'B', 'C', 'D'].includes(answer)) fail('MCQ: চারটি অপশন ও সঠিক উত্তর A/B/C/D দিন।');
     if (new Set(options.map(option => option.text)).size !== 4) fail('MCQ: একই অপশন একাধিকবার দেওয়া যাবে না।');
-    return { type, text: body, className, subject, group, endAt, chapterId, chapterName, topic, difficulty, marks: 1, options, answer, answerText: '' };
+    return { type, text: body, className, subject, group, startAt, endAt, chapterId, chapterName, topic, difficulty, marks: 1, options, answer, answerText: '' };
   }
   if (type === 'true_false') {
     const answer = ['সত্য', 'মিথ্যা'].includes(String(input.answer ?? '').trim()) ? String(input.answer).trim() : '';
     if (!answer) fail('সত্য/মিথ্যা: সঠিক উত্তর নির্বাচন করুন।');
     if (!Number.isFinite(marks) || marks <= 0 || marks > 1000) fail('সত্য/মিথ্যা: নম্বর ১ থেকে ১০০০-এর মধ্যে দিন।');
-    return { type, text: body, className, subject, group, endAt, chapterId, chapterName, topic, difficulty, marks, options: [], answer: '', answerText: answer };
+    return { type, text: body, className, subject, group, startAt, endAt, chapterId, chapterName, topic, difficulty, marks, options: [], answer: '', answerText: answer };
   }
   if (!Number.isFinite(marks) || marks <= 0 || marks > 1000 || Math.round(marks * 100) / 100 !== marks) fail('নম্বর ১ থেকে ১০০০-এর মধ্যে দিন।');
-  return { type, text: body, className, subject, group, endAt, chapterId, chapterName, topic, difficulty, marks, options: [], answer: '', answerText: String(input.answerText ?? '').trim().slice(0, 1200) };
+  return { type, text: body, className, subject, group, startAt, endAt, chapterId, chapterName, topic, difficulty, marks, options: [], answer: '', answerText: String(input.answerText ?? '').trim().slice(0, 1200) };
 }
 
 /** The metadata a shelf row still needs to serve the practice lane: the
     source (only while it is empty — the first paper that shelved a question
     stays its source), the window end and the batch. */
 function rowNeedsExamMetadata(row, clean) {
-  return row.source === null || row.endAt <= 0 || row.group !== clean.group;
+  return row.source === null || row.startAt <= 0 || row.endAt <= 0 || row.group !== clean.group;
 }
 
 /** The bank draft for one paper question. One builder for the manual
@@ -216,7 +219,7 @@ export function bankDraftForQuestion(exam, question) {
   return {
     id: '', type: exam.type === 'mcq' ? 'mcq' : 'written', text: question.text,
     className: exam.className || '', subject: exam.subject || '', group: exam.group || '',
-    endAt: Number(exam.endAt) || 0,
+    startAt: Number(exam.startAt) || 0, endAt: Number(exam.endAt) || 0,
     chapterId: exam.chapterId || '', chapterName: exam.chapterName || '', topic: exam.topic || '',
     difficulty: question.difficulty || 'medium', marks: question.marks,
     options: question.options || [], answer: question.answer || '', answerText: question.answerText || ''
@@ -264,6 +267,7 @@ export async function ensureExamsInBank(exams, actor = 'SYSTEM') {
              nothing. */
           Object.assign(existing, {
             ...(row.source === null ? { source: { ...source, at: Number(row.createdAt) || now } } : {}),
+            ...(row.startAt <= 0 ? { startAt: clean.startAt } : {}),
             ...(row.endAt <= 0 ? { endAt: clean.endAt } : {}),
             ...(row.group !== clean.group ? { group: clean.group } : {}),
             updatedBy: actorName, updatedAt: now
