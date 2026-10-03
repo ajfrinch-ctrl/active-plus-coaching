@@ -10,6 +10,7 @@ import { toBanglaNumber as bn } from './ui.js';
 import { initExamManager } from './exam-manager.js';
 import { initNotificationSettings } from './notification-settings.js';
 import { emptyState } from './ui-states.js';
+import { learningCard } from './learning-card.js';
 import { initFixedShell } from './fixed-shell.js';
 import { registerServiceWorker } from './service-worker.js';
 import { mountReports, refreshReports } from './reports.js';
@@ -312,6 +313,10 @@ function showEditor(type, old = null) {
     <div><label for="activity-details">${type === 'exam' ? 'সিলেবাস / প্রশ্ন ও নির্দেশনা' : type === 'homework' ? 'কাজের বিবরণ ও নির্দেশনা' : type === 'suggestion' ? 'সাজেশন / নোট' : 'ক্লাসের বিবরণ'}</label><textarea id="activity-details" name="details" rows="5" maxlength="3000">${esc(a.details || '')}</textarea></div>
     ${field('resourceURL', 'সহায়ক লিংক (ঐচ্ছিক)', 'url', 'maxlength="1000" placeholder="https://…"')}
     <div><label for="activity-status">অবস্থা *</label><select id="activity-status" name="status"><option value="draft" ${a.status === 'draft' ? 'selected' : ''}>খসড়া — শুধু শিক্ষক দেখবেন</option><option value="published" ${a.status === 'published' ? 'selected' : ''}>প্রকাশিত — শিক্ষার্থী দেখবে</option></select></div>
+    <div class="teacher-preview">
+      <button class="admin-btn ghost" type="button" id="activityPreviewToggle" aria-expanded="false" aria-controls="activityPreviewBox">শিক্ষার্থী যেভাবে দেখবে</button>
+      <div class="teacher-preview-box" id="activityPreviewBox" hidden></div>
+    </div>
     <p class="finance-hint">প্রকাশিত কাজ নির্দিষ্ট শ্রেণি/বিভাগের শিক্ষার্থী অ্যাপে দেখা যাবে (একই ব্রাউজারে)।</p>
     <p class="finance-error" id="teacherSaveError" role="alert" hidden></p>
     <div class="modal-actions"><button class="admin-btn primary" type="submit">সংরক্ষণ করুন</button><button class="admin-btn ghost" type="button" data-close-teacher>বাতিল</button></div>
@@ -322,6 +327,38 @@ function showEditor(type, old = null) {
     const values = Object.fromEntries(new FormData(form));
     save(form, () => teachingRepository.saveActivity({ ...values, type, id: old?.id, date: type === 'suggestion' ? a.date : values.date }), 'কাজটি সংরক্ষণ করা হয়েছে');
   });
+
+  /* The preview has to BE the student screen, not a picture of it: it calls the
+     same renderer the student app uses, so the two cannot drift apart. */
+  const paintPreview = () => {
+    const box = $('#activityPreviewBox');
+    if (!box || box.hidden) return;
+    const values = Object.fromEntries(new FormData($('#teacherActivityForm')));
+    const draft = {
+      id: old?.id || 'preview', type,
+      title: String(values.title || '').trim() || 'শিরোনাম লিখুন',
+      subject: String(values.subject || '').trim() || 'বিষয় লিখুন',
+      className: values.className || '', group: String(values.group || '').trim(),
+      date: type === 'suggestion' ? a.date : values.date, time: values.time || '', room: values.room || '',
+      totalMarks: Number(values.totalMarks) || 0,
+      details: values.details || '', resourceURL: values.resourceURL || '',
+      teacherName: state.teacher?.fullName || 'শিক্ষক', progress: {}, status: values.status || 'draft'
+    };
+    const pupil = { id: 'preview-pupil', className: draft.className, group: draft.group };
+    box.innerHTML = learningCard(draft, pupil);
+    /* Open the card so it is reviewable in one glance. The markup is untouched —
+       only its expanded state differs from a student's first tap. */
+    const toggle = box.querySelector('.learning-card-toggle');
+    const details = box.querySelector('.learning-card-details');
+    if (toggle && details) { toggle.setAttribute('aria-expanded', 'true'); details.hidden = false; }
+  };
+  $('#activityPreviewToggle').addEventListener('click', () => {
+    const box = $('#activityPreviewBox'), open = box.hidden;
+    box.hidden = !open;
+    $('#activityPreviewToggle').setAttribute('aria-expanded', String(open));
+    paintPreview();
+  });
+  $('#teacherActivityForm').addEventListener('input', paintPreview);
 }
 async function save(form, operation, message) {
   if (state.busy || !state.ready) return;

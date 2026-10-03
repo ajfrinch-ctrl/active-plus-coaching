@@ -1,3 +1,6 @@
+// v159: the teacher sees what the student will see — js/learning-card.js is now
+// the one renderer for published work, called by both the student app and the
+// homework editor's preview, so the two cannot drift apart.
 // v158: a pupil reads their own published work — the student app no longer
 // reads through the teacher-scoped snapshot, so homework shows on a student's
 // phone without that device holding the teacher's assignment records.
@@ -27,7 +30,7 @@
 // answer-key PDFs, the student Learning Hub (class → subject → chapter) and the
 // shared brand module. v148: date-wise examination workspace — question
 // archive, review workflow and question-level editing for the Manager.
-const CACHE_VERSION = 158;
+const CACHE_VERSION = 159;
 const CACHE_NAME = `active-plus-student-v${CACHE_VERSION}-minimal-education`;
 const APP_SHELL = [
   './css/notifications.css',
@@ -176,6 +179,7 @@ const APP_SHELL = [
   './js/teacher.js',
   './js/teaching-data.js',
   './js/teacher-assignments.js',
+  './js/learning-card.js',
   './js/student-teaching.js',
   './js/admin-data.js',
   './js/office-data.js',
