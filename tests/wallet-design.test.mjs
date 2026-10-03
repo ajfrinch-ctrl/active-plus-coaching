@@ -83,6 +83,23 @@ test('secondary screens have accessible home/back controls and staff More has ro
   }
 });
 
+test('notification settings live inside a hidden view, never floating outside the panels', () => {
+  for (const name of ['index', 'admin', 'manager', 'teacher']) {
+    const document = doc(name);
+    const mount = document.getElementById('notificationSettings');
+    assert.ok(mount, name + ' is missing its notification settings mount');
+    // The mount must sit inside a view panel that is hidden by default, so the
+    // settings never render outside the open page (below/around the active view).
+    const view = mount.closest('.view, .admin-view, .manager-view, .teacher-view');
+    assert.ok(view, name + ' settings mount is outside every view panel');
+    if (name === 'teacher') assert.equal(view.hidden, true, name + ' settings view is not hidden by default');
+    else assert.equal(view.classList.contains('active'), false, name + ' settings view is active by default');
+    // A view panel hides its whole subtree; the mount must not escape it.
+    assert.equal(mount.parentElement, view, name + ' settings mount is not a direct view child subtree');
+  }
+  assert.equal(doc('payment').getElementById('notificationSettings'), null, 'counter has no staff settings mount');
+});
+
 test('counter keeps only the requested today/search/payment surfaces, not wallet dashboard extras', () => {
   const document = doc('payment');
   for (const selector of ['.admin-bottom','#payStickyBar','#payKeypad','#payDeskTools','#payQuickPicks','#payTodayAmount','#payMonthAmount','#payDueStudents']) assert.equal(document.querySelector(selector),null,selector);
