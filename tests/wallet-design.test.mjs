@@ -83,6 +83,28 @@ test('secondary screens have accessible home/back controls and staff More has ro
   }
 });
 
+test('hero band covers the whole hero and the summary card straddles its edge', () => {
+  const css = read('css/ui-wallet.css');
+  // The band must reach the hero's bottom edge: the greeting/name/meta are
+  // white text and would sit on the page background in light mode otherwise.
+  assert.match(css, /\.pay-hero::before \{\s*content: ''; position: absolute; z-index: -1; top: 0; bottom: 0;/);
+  // The card pulls up onto the band edge (wallet signature) instead of
+  // floating in a dead gap below it.
+  assert.match(css, /\.study-progress-card \{\s*position: relative; margin: -22px 0 0;/);
+  // The compact one-screen home keeps its small hero — no overlap there.
+  assert.match(css, /#homeView\.is-empty-routine \.study-progress-card \{ margin-top: 0;/);
+});
+
+test('exam workspace rows keep one even gap with no dead space', () => {
+  const css = read('css/exam-archive.css');
+  // The grid gap is the only spacer: direct <p> rows carry no margins of
+  // their own (no 12px + 16px stacks), an empty status row takes no space,
+  // and the first content row does not double the gap.
+  assert.match(css, /\.exam-workspace>p\{margin:0\}/);
+  assert.match(css, /\.exam-auto-notice:empty\{display:none\}/);
+  assert.match(css, /\[data-exam-content\]>\.exam-actions:first-child\{margin-top:0\}/);
+});
+
 test('notification settings live inside a hidden view, never floating outside the panels', () => {
   for (const name of ['index', 'admin', 'manager', 'teacher']) {
     const document = doc(name);

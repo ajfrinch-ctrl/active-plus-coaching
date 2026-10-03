@@ -1,3 +1,4 @@
+// v152: row/line spacing fixes — hero band now covers the full hero (white text safe in light mode) and the summary card straddles its edge; exam workspace rows keep one even grid gap (no dead space); chip rows stop double-spacing.
 // v151: notification settings fixed to live inside the profile view of the
 // Manager and Teacher panels (they previously rendered outside every view,
 // visible at the bottom of all pages). v150: student home — আজকের অনুপ্রেরণা (a deterministic daily quote card
@@ -7,7 +8,7 @@
 // answer-key PDFs, the student Learning Hub (class → subject → chapter) and the
 // shared brand module. v148: date-wise examination workspace — question
 // archive, review workflow and question-level editing for the Manager.
-const CACHE_VERSION = 151;
+const CACHE_VERSION = 152;
 const CACHE_NAME = `active-plus-student-v${CACHE_VERSION}-minimal-education`;
 const APP_SHELL = [
   './css/notifications.css',

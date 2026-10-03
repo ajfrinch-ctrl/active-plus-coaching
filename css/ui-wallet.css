@@ -51,20 +51,21 @@ body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; 
 .notification-dot { box-shadow: 0 0 0 2px var(--pay-hero-a); }
 
 /* 3 ── Hero band (student home) ───────────────────────────────────────────
-   The band is a full-bleed layer behind the hero; it stops 40px above the
-   bottom of the hero so the summary card hangs half over it, half over the
-   page — the signature of a wallet home screen. */
+   The band is a full-bleed layer behind the whole hero (it must cover the
+   greeting/name/meta line even in light mode, where the text is white).
+   The summary card is pulled up onto its edge so it hangs half over the
+   band, half over the page — the signature of a wallet home screen. */
 .app-main { padding: 0 16px calc(104px + var(--safe-bottom)); }
 .app-main .view { padding-top: 0; }
 .app-main .student-home-view { padding-top: 0; }
 .pay-hero { position: relative; isolation: isolate; padding: 4px 0 0; color: var(--pay-on-hero); }
 .pay-hero::before {
-  content: ''; position: absolute; z-index: -1; top: 0; bottom: 44px; left: 50%;
+  content: ''; position: absolute; z-index: -1; top: 0; bottom: 0; left: 50%;
   width: 100vw; transform: translateX(-50%);
   background: linear-gradient(180deg, var(--pay-hero-a) 0%, var(--pay-hero-b) 100%);
   border-radius: 0 0 30px 30px;
 }
-.pay-hero-id { display: flex; align-items: center; gap: 12px; padding: 4px 0 20px; }
+.pay-hero-id { display: flex; align-items: center; gap: 12px; padding: 4px 0 26px; }
 .pay-avatar {
   display: grid; place-items: center; flex: none; width: 52px; height: 52px; border-radius: 50%;
   background: var(--pay-on-hero); color: var(--pay-hero-b); font-size: 22px; font-weight: 700;
@@ -84,9 +85,11 @@ body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; 
 .pay-hero-link:hover { background: var(--pay-hero-line); }
 .pay-hero-link svg { width: 20px; height: 20px; }
 
-/* Summary card — the "balance" of a student: progress, done, pending, exams. */
+/* Summary card — the "balance" of a student: progress, done, pending, exams.
+   Pulled up 22px so it straddles the hero band's edge (no dead gap, no text
+   left on the page background). */
 .study-progress-card {
-  position: relative; margin: 0; padding: 16px; overflow: visible; color: var(--color-text);
+  position: relative; margin: -22px 0 0; padding: 16px; overflow: visible; color: var(--color-text);
   background: var(--color-surface); border: 1px solid var(--color-border);
   border-radius: 22px; box-shadow: var(--pay-shadow);
 }
@@ -1094,7 +1097,7 @@ svg.apc-color-icon, svg.apc-glyph-icon { flex-shrink: 0; pointer-events: none; }
 #homeView.is-empty-routine .pay-hero-id { padding: 4px 0 10px; gap: 10px; }
 #homeView.is-empty-routine .pay-avatar { width: 46px; height: 46px; }
 #homeView.is-empty-routine .pay-hero-name { font-size: 18px; }
-#homeView.is-empty-routine .study-progress-card { padding: 12px; }
+#homeView.is-empty-routine .study-progress-card { margin-top: 0; padding: 12px; }
 #homeView.is-empty-routine .study-progress-top { gap: 10px; }
 #homeView.is-empty-routine .progress-ring { width: 52px; height: 52px; }
 #homeView.is-empty-routine .progress-ring::before { inset: 5px; }
