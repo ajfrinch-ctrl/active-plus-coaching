@@ -16,6 +16,7 @@
 */
 
 import { loadNotices } from './office-data.js';
+import { emptyState } from './ui-states.js';
 import { classByName, subjectsForClass } from './academics.js';
 import { KEYS, readRaw } from './database.js';
 import { iconMarkup } from './icons.js';
@@ -137,14 +138,14 @@ export function initCourseHub({ getStudent }) {
           '<span class="course-chapter-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></span>' +
         '</button>' +
         (chapter.description ? '<p class="course-chapter-note">' + esc(chapter.description) + '</p>' : '') +
-        (open ? '<div class="course-chapter-body">' + (items.map(contentCard).join('') || '<p class="admin-empty">এই চ্যাপ্টারে এখনো কিছু যোগ করা হয়নি।</p>') + '</div>' : '') +
+        (open ? '<div class="course-chapter-body">' + (items.map(contentCard).join('') || emptyState({ icon: 'book', title: 'এই চ্যাপ্টারে এখনো কিছু যোগ করা হয়নি।' })) + '</div>' : '') +
       '</section>';
   }
 
   function examSection(subject) {
     const current = student();
     const exams = examsFor(current, subject?.name);
-    if (!exams.length) return '<p class="admin-empty">এই বিষয়ে এখন কোনো পরীক্ষা প্রকাশ হয়নি।</p>';
+    if (!exams.length) return emptyState({ icon: 'exam', title: 'এই বিষয়ে এখন কোনো পরীক্ষা প্রকাশ হয়নি।' });
     return exams.map(exam => {
       const when = exam.startAt ? new Date(exam.startAt) : null;
       const label = when && Number.isFinite(when.getTime())
@@ -162,7 +163,7 @@ export function initCourseHub({ getStudent }) {
   function resultSection(subject) {
     const current = student();
     const rows = resultsFor(current, subject?.name);
-    if (!rows.length) return '<p class="admin-empty">এখনো কোনো ফলাফল প্রকাশ হয়নি।</p>';
+    if (!rows.length) return emptyState({ icon: 'result', title: 'এখনো কোনো ফলাফল প্রকাশ হয়নি।' });
     return rows.map(({ exam, attempt }) => '<article class="course-item">' +
         '<header class="course-item-head"><span class="course-item-icon" aria-hidden="true">' + iconMarkup('icon-result') + '</span>' +
         '<div><small class="course-item-type">ফলাফল</small><h4>' + esc(exam.title || exam.subject || 'পরীক্ষা') + '</h4></div></header>' +
@@ -232,7 +233,7 @@ export function initCourseHub({ getStudent }) {
       (list.length
         ? '<div class="course-subjects chip-row" role="tablist" aria-label="বিষয়">' + list.map(item =>
             '<button class="chip' + (item.id === subjectId ? ' active' : '') + '" type="button" role="tab" aria-selected="' + (item.id === subjectId ? 'true' : 'false') + '" data-course-subject="' + esc(item.id) + '">' + esc(item.name) + '</button>').join('') + '</div>'
-        : '<p class="admin-empty">Admin এখনো এই শ্রেণির কোনো বিষয় চালু করেননি।</p>') +
+        : emptyState({ icon: 'classes', title: 'Admin এখনো এই শ্রেণির কোনো বিষয় চালু করেননি।' })) +
       noticeStrip() +
       '<div class="course-sections chip-row" role="tablist" aria-label="বিভাগ">' + COURSE_SECTIONS.map(entry =>
         '<button class="chip' + (entry.key === section ? ' active' : '') + '" type="button" role="tab" aria-selected="' + (entry.key === section ? 'true' : 'false') + '" data-course-section="' + entry.key + '">' +

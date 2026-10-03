@@ -1,6 +1,7 @@
 /* Minimal counter: today's own transactions and query-only identity search.
    No roster, dues, detailed profiles, history/report or contact-sharing views. */
 import { feeCategories, paymentMethods } from './admin-data.js';
+import { emptyState } from './ui-states.js';
 import { monthLabel } from './finance-data.js';
 import { searchCounterStudents, listCounterTodayTransactions, saveCounterPayment } from './counter-data.js';
 import { mountCounterReports } from './counter-reports.js';
@@ -46,7 +47,7 @@ function renderToday() {
     <button class="pay-activity-row" type="button" data-pay-tx="${esc(tx.id)}">
       <span class="pay-activity-copy"><strong>${esc(tx.studentName)}</strong><small>${tx.transactionNo ? `${esc(tx.transactionNo)} · ` : ''}${esc(tx.receiptNo || tx.id)} · ${esc(tx.method)} · ${status(tx)}</small></span>
       <span class="pay-activity-amount">${money(tx.amount)}</span>
-    </button>`).join('') : '<p class="admin-empty">আজ এখনও কোনো লেনদেন নেই।</p>';
+    </button>`).join('') : emptyState({ icon: 'wallet', title: 'আজ এখনও কোনো লেনদেন নেই।' });
 }
 async function refreshToday() {
   try {

@@ -13,6 +13,7 @@
    The student app reads the same records through js/course-hub.js. */
 
 import { iconMarkup } from './icons.js';
+import { emptyState } from './ui-states.js';
 import { classByName, subjectsForClass } from './academics.js';
 import { enabledClasses } from './config.js';
 import { assignedClasses, subjectsForTeacherClass } from './teacher-assignments.js';
@@ -128,7 +129,7 @@ export function initCourseEditor({ mount, role = 'teacher', actor = '', toast = 
           <header class="admin-card-head"><div><p class="eyebrow">Learning library</p>
             <h2>${record ? 'কনটেন্ট সম্পাদনা' : 'নতুন কনটেন্ট'}</h2></div>
             ${record ? '<button class="mini-btn" type="button" data-course-cancel>নতুন কিছু লিখুন</button>' : ''}</header>
-          ${classes.length ? '' : '<p class="admin-empty">আপনার জন্য এখনো কোনো ক্লাস বরাদ্দ হয়নি — Manager থেকে ক্লাস ও বিষয় নিন।</p>'}
+          ${classes.length ? '' : emptyState({ icon: 'classes', title: 'আপনার জন্য এখনো কোনো ক্লাস বরাদ্দ হয়নি', message: 'Manager থেকে ক্লাস ও বিষয় নিন।' })}
           <label>ক্লাস<select name="className"${classes.length ? '' : ' disabled'}>${classes.map(item => `<option value="${esc(item.name)}"${item.name === className ? ' selected' : ''}>${esc(item.name)}</option>`).join('')}</select></label>
           <label>বিষয়<select name="subject"${subjects.length ? '' : ' disabled'}>${subjects.map(name => `<option value="${esc(name)}"${name === pickedSubject ? ' selected' : ''}>${esc(name)}</option>`).join('')}</select></label>
           <label>ধরন<select name="type">${typeOptions(record ? typeOf(record) : 'lesson')}</select></label>
@@ -146,7 +147,7 @@ export function initCourseEditor({ mount, role = 'teacher', actor = '', toast = 
         </form>
         <div class="course-manage-list">
           <h2 class="exam-section-title">এই বিষয়ের কনটেন্ট <span>${bn(listed.length)}</span></h2>
-          ${listed.length ? listed.map(card).join('') : '<p class="admin-empty">এই বিষয়ে এখনো কিছু যোগ করা হয়নি।</p>'}
+          ${listed.length ? listed.map(card).join('') : emptyState({ icon: 'book', title: 'এই বিষয়ে এখনো কিছু যোগ করা হয়নি।' })}
         </div>
       </div>`;
   }

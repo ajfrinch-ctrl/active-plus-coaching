@@ -59,11 +59,12 @@ Master prompt-এর ৪৫টি ধারার ভিত্তিতে প�
 `rc-preview-empty`, `empty-routine`, `dashboard-empty`, `admin-empty-search`। বেশিরভাগই শুধু
 এক লাইন টেক্সট — আইকন বা action নেই (ধারা ৩১ চায় আইকন + বার্তা + action)।
 
-**v154-এ যা এক হয়েছে:** Manager প্যানেলের ১০টি ও Teacher প্যানেলের ১৩টি খালি তালিকা এবং
-শিক্ষার্থীর হোমওয়ার্ক তালিকা এখন `js/ui-states.js`-এর একটি কার্ডে (`admin-empty`/`teacher-empty`
-দুটি পরিবারই এই দুই প্যানেল থেকে গেছে)। বাকি পরিবার — `notice-empty`, `notice-empty-art`,
-`rc-preview-empty`, `empty-routine`, `dashboard-empty`, `admin-empty-search` এবং admin/course/staff
-প্যানেলের `admin-empty` — এখনো বাকি।
+**v154–v155-এ যা এক হয়েছে:** Manager (১০), Teacher (১৩), শিক্ষার্থীর হোমওয়ার্ক তালিকা,
+তারপর Admin/Academic Setup/Course Editor/Learning Hub/Staff/Payment (২০) — মোট ৪৩টি খালি
+তালিকা এখন `js/ui-states.js`-এর একটি কার্ডে। `admin-empty`, `teacher-empty` ও
+`admin-empty-search` পরিবার তিনটি কোড থেকে উঠে গেছে; শুধু `js/notification-settings.js:99`-এর
+একটি বুট-লোডিং লাইন বাকি (ওটি “খালি” নয়, “এখনো চালু হচ্ছে”)। বাকি পরিবার — `notice-empty`,
+`notice-empty-art`, `rc-preview-empty`, `empty-routine`, `dashboard-empty` — এখনো বাকি।
 
 ### ১.৫ তারিখ ও ফিল্টার
 
@@ -234,7 +235,7 @@ Teacher প্যানেলের ১৩টি ও শিক্ষার্থ
 রকম দেখায় না। লেখাগুলো অপরিবর্তিত — শুধু গড়ন এক হয়েছে।
 
 **Phase 4-এ বাকি:** এক বটম-নেভ/রাউটার, এক বাটন স্কেল, বাকি empty-state পরিবার
-(`notice-empty`, `dashboard-empty`, `empty-routine`, `admin-empty-search`, `rc-preview-empty`)।
+(`notice-empty`, `notice-empty-art`, `rc-preview-empty`, `empty-routine`, `dashboard-empty`)।
 
 **টেস্ট:** `tests/latest-scope.test.mjs` (৮টি) — বিশুদ্ধ নিয়ম + আসল `index.html` বুট করে
 dashboard ও প্যানেল দুটোই চালানো। পুরো suite: **৮০২টি টেস্ট, ৮০২ পাস**।

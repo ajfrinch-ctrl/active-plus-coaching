@@ -1,4 +1,5 @@
 import { iconMarkup } from './icons.js';
+import { emptyState } from './ui-states.js';
 import { listNotifications, SECTION_LABEL } from './notification-store.js';
 /* Settings → Notification Settings.
 
@@ -80,7 +81,7 @@ function toggleRow(id, label, note, checked, disabled = false) {
 }
 
 function historyRows(records) {
-  if (!records.length) return '<p class="admin-empty">এখনো কোনো নোটিফিকেশন আসেনি।</p>';
+  if (!records.length) return emptyState({ icon: 'notice', title: 'এখনো কোনো নোটিফিকেশন আসেনি।' });
   return records.slice(0, 20).map(record => {
     const section = SECTION_LABEL[record.type] || record.section || 'নোটিশ';
     return '<button type="button" class="notice-history-row' + (record.read === false ? ' unread' : '') + '" data-notice-history="' + esc(record.key) + '">' +

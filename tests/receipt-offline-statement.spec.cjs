@@ -20,7 +20,7 @@ async function readyOfflineShell(page, context) {
     if (!navigator.serviceWorker.controller) await new Promise(resolve => navigator.serviceWorker.addEventListener('controllerchange', resolve, { once: true }));
   });
   expect(await page.evaluate(async () => {
-    const cache = await caches.open('active-plus-student-v154-minimal-education');
+    const cache = await caches.open('active-plus-student-v155-minimal-education');
     return Boolean(await cache.match('./js/finance-receipt.js'))
       && Boolean(await cache.match('./assets/fonts/NotoSansBengali-Variable.ttf'));
   })).toBe(true);

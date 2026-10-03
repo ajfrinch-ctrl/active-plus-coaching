@@ -1,4 +1,5 @@
 import { studentRecordMarkup } from './student-record.js';
+import { emptyState } from './ui-states.js';
 import { initAdminAcademics } from './admin-academics.js';
 import { initNotificationSettings } from './notification-settings.js';
 import { iconMarkup } from './icons.js';
@@ -380,8 +381,8 @@ function renderStudents() {
           </article>`;
       }).join('')
     : state.query.trim()
-      ? `<div class="admin-empty-search"><p>🔍 "${escapeHtml(state.query.trim())}" দিয়ে কোনো শিক্ষার্থী পাওয়া যায়নি</p><small>Student ID, নাম, পিতার নাম, শ্রেণি বা মোবাইল নম্বর দিয়ে খুঁজে দেখুন।</small></div>`
-      : '<p class="admin-empty">এই ফিল্টারে কোনো শিক্ষার্থী নেই। সার্চ বা ফিল্টার বদলে দেখুন।</p>';
+      ? emptyState({ icon: 'search', title: `"${state.query.trim()}" দিয়ে কোনো শিক্ষার্থী পাওয়া যায়নি`, message: 'Student ID, নাম, পিতার নাম, শ্রেণি বা মোবাইল নম্বর দিয়ে খুঁজে দেখুন।' })
+      : emptyState({ icon: 'search', title: 'এই ফিল্টারে কোনো শিক্ষার্থী নেই।', message: 'সার্চ বা ফিল্টার বদলে দেখুন।' });
 }
 function findStudent(id) {
   return state.students.find(student => student.id === id);
@@ -686,7 +687,7 @@ function renderFeeProfile() {
   if (!profile) return; // No collection profile should render in Admin's read-only view.
   const student = state.students.find(s => s.id === state.feeStudentId);
   if (!student) {
-    profile.innerHTML = '<p class="admin-empty">উপরে সার্চ করে শিক্ষার্থীর নামের উপর ক্লিক করুন।</p>';
+    profile.innerHTML = emptyState({ icon: 'search', title: 'উপরে সার্চ করে শিক্ষার্থীর নামের উপর ক্লিক করুন।' });
     return;
   }
   const summary = studentFeeSummary(student, state.transactions);
@@ -753,7 +754,7 @@ function renderRecentTransactions() {
           <button class="mini-btn" type="button" data-action="download-receipt" data-trx-id="${escapeHtml(tx.id)}">ডাউনলোড</button>
         </div>
       </div>`).join('')
-    : '<p class="admin-empty">এখনও কোনো ফি কালেকশন রেকর্ড নেই।</p>';
+    : emptyState({ icon: 'wallet', title: 'এখনও কোনো ফি কালেকশন রেকর্ড নেই।' });
 }
 
 function renderStudentLedger() {
@@ -801,7 +802,7 @@ function renderStudentLedger() {
           </div>
         </div>
       </article>`).join('')
-    : '<p class="admin-empty">কোনো শিক্ষার্থী পাওয়া যায়নি।</p>';
+    : emptyState({ icon: 'students', title: 'কোনো শিক্ষার্থী পাওয়া যায়নি।' });
 }
 
 function money(amount) {
@@ -1317,7 +1318,7 @@ async function renderSecurity() {
               <button class="mini-btn" type="button" data-security-reset="${escapeHtml(staff.staffId)}">রিসেট</button>
             </div>`).join('')}
         </div>`
-      : '<p class="admin-empty">সব অ্যাকাউন্টের পাসওয়ার্ড হালনাগাদ — বকেয়া কিছু নেই।</p>'}
+      : emptyState({ icon: 'approval', title: 'সব অ্যাকাউন্টের পাসওয়ার্ড হালনাগাদ', message: 'বকেয়া কিছু নেই।' })}
       <p class="finance-hint">Admin রিসেট করলে নতুন পাসওয়ার্ড সাময়িক থাকে: সংশ্লিষ্ট স্টাফ প্রথম লগইনে তা বদলাতে বাধ্য থাকে। পাসওয়ার্ড কখনো দেখানো হয় না।</p>
     </article>
     <article class="admin-card">
@@ -1332,7 +1333,7 @@ async function renderSecurity() {
               <dt><span class="staff-id-badge">${escapeHtml(staff.staffId)}</span> ${escapeHtml(staffRoleLabel(staff.role))}</dt>
               <dd>${escapeHtml(staff.fullName)} — মুছে ফেলা ও নিষ্ক্রিয় করা বন্ধ, যাতে System Owner লক-আউট না হয়।</dd>
             </div>
-          </div>`).join('') || '<p class="admin-empty">কোনো সুরক্ষিত অ্যাকাউন্ট পাওয়া যায়নি।</p>'}
+          </div>`).join('') || emptyState({ icon: 'users', title: 'কোনো সুরক্ষিত অ্যাকাউন্ট পাওয়া যায়নি।' })}
       </div>
     </article>
     <article class="admin-card">

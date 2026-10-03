@@ -4,6 +4,7 @@
    notice, courses) updates from one place. Nothing is ever deleted: a class or
    subject is switched off, and historical exams/results/assignments stay. */
 import { iconMarkup } from './icons.js';
+import { emptyState } from './ui-states.js';
 import {
   listClasses, listSubjects, listMappings, subjectsForClass, saveClass, saveSubject,
   setClassActive, setSubjectActive, setClassSubject
@@ -29,7 +30,7 @@ function render() {
     const enabled = new Set(mappings.filter(map => map.classId === item.id && map.active !== false).map(map => map.subjectId));
     const chips = activeSubjects.length
       ? activeSubjects.map(subject => `<label class="academics-subject"><input type="checkbox" data-academic-map="${esc(item.id)}" data-subject-id="${esc(subject.id)}" ${enabled.has(subject.id) ? 'checked' : ''} ${item.active === false ? 'disabled' : ''}> ${esc(subject.name)}</label>`).join('')
-      : '<p class="admin-empty">এখনো কোনো বিষয় নেই — উপরে “নতুন বিষয়” যোগ করুন।</p>';
+      : emptyState({ icon: 'book', title: 'এখনো কোনো বিষয় নেই', message: 'উপরে “নতুন বিষয়” যোগ করুন।' });
     return `<article class="academics-class${item.active === false ? ' is-off' : ''}" data-academic-class="${esc(item.id)}">
       <header class="academics-class-head">
         <div><h3>${esc(item.name)}</h3><small>${bn(enabled.size)}টি বিষয় চালু${item.active === false ? ' • ক্লাস বন্ধ' : ''}</small></div>
@@ -54,11 +55,11 @@ function render() {
     <p class="academics-status" data-academic-status role="status" hidden></p>
     <article class="admin-card">
       <header class="admin-card-head"><div><p class="eyebrow">Subjects</p><h2>বিষয়গুলো</h2></div><small>${bn(activeSubjects.length)} / ${bn(subjects.length)} চালু</small></header>
-      <div class="academics-chips">${subjectRows || '<p class="admin-empty">এখনো কোনো বিষয় নেই।</p>'}</div>
+      <div class="academics-chips">${subjectRows || emptyState({ icon: 'book', title: 'এখনো কোনো বিষয় নেই।' })}</div>
       <p class="form-note">বন্ধ করলে নতুন পরীক্ষা, রুটিন বা শিক্ষক বরাদ্দে বিষয়টি আর দেখা যাবে না — পুরোনো পরীক্ষা, ফলাফল ও রেকর্ড অক্ষত থাকবে।</p>
     </article>
     <h2 class="exam-section-title">ক্লাসের বিষয় ঠিক করুন</h2>
-    ${rows || '<p class="admin-empty">এখনো কোনো ক্লাস নেই।</p>'}`;
+    ${rows || emptyState({ icon: 'classes', title: 'এখনো কোনো ক্লাস নেই।' })}`;
 }
 
 function say(text, isError = false) {

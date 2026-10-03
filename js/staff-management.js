@@ -16,6 +16,7 @@
 */
 
 import { enabledClasses } from './config.js';
+import { emptyState } from './ui-states.js';
 import { toBanglaNumber } from './ui.js';
 import { escapeHtml } from './sanitize.js';
 import { iconMarkup, paintIcon } from './icons.js';
@@ -312,12 +313,12 @@ function renderList() {
       : 'কোনো স্টাফ পাওয়া যায়নি';
   }
   if (!state.staff.length) {
-    host.innerHTML = '<p class="admin-empty">এখনো কোনো স্টাফ অ্যাকাউন্ট নেই। নিচের “স্টাফ ক্রিয়েট” বাটনে চেপে প্রথম স্টাফ যোগ করুন।</p>';
+    host.innerHTML = emptyState({ icon: 'users', title: 'এখনো কোনো স্টাফ অ্যাকাউন্ট নেই।', message: 'নিচের “স্টাফ ক্রিয়েট” বাটনে চেপে প্রথম স্টাফ যোগ করুন।' });
     return;
   }
   host.innerHTML = rows.length
     ? rows.map(staffCard).join('')
-    : `<p class="admin-empty">“${escapeHtml(state.query)}” দিয়ে কোনো স্টাফ পাওয়া যায়নি। Staff ID, নাম, ইউজারনেম বা মোবাইল দিয়ে খুঁজুন।</p>`;
+    : emptyState({ icon: 'search', title: `“${escapeHtml(state.query)}” দিয়ে কোনো স্টাফ পাওয়া যায়নি।`, message: `Staff ID, নাম, ইউজারনেম বা মোবাইল দিয়ে খুঁজুন।` });
 }
 
 export async function renderStaff() {

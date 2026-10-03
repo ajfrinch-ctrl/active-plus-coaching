@@ -1,3 +1,5 @@
+// v155: the same empty state reaches the Admin, Course, Staff and Payment
+// panels — no admin-empty card is left outside a boot-time loading line.
 // v154: one empty state — an empty list says so the same way everywhere,
 // through js/ui-states.js (icon + one line + the action that helps).
 // v153: one confirmation for the whole app — js/confirm-dialog.js replaces the
@@ -16,7 +18,7 @@
 // answer-key PDFs, the student Learning Hub (class → subject → chapter) and the
 // shared brand module. v148: date-wise examination workspace — question
 // archive, review workflow and question-level editing for the Manager.
-const CACHE_VERSION = 154;
+const CACHE_VERSION = 155;
 const CACHE_NAME = `active-plus-student-v${CACHE_VERSION}-minimal-education`;
 const APP_SHELL = [
   './css/notifications.css',
